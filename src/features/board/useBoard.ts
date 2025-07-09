@@ -49,8 +49,6 @@ export function useBoard() {
 
   const handleAddEdge = useCallback(
     (source: string, target: string, options: Partial<BoardEdge['data']> = {}) => {
-      console.log('handleAddEdge called with:', { source, target, options })
-      
       // Validate connection
       const validation = canCreateConnection(edges, source, target)
       if (!validation.valid) {
@@ -59,10 +57,7 @@ export function useBoard() {
       }
 
       const newEdge = createEdge(source, target, options)
-      console.log('Created edge:', newEdge)
-      
       addEdge(newEdge)
-      console.log('Added edge to store')
       return true
     },
     [edges, addEdge]

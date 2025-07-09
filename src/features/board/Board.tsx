@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -58,14 +58,7 @@ export default function Board() {
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
 
-  // Debug: Log current edges state
-  useEffect(() => {
-    console.log('Board rendering with edges:', edges)
-    console.log('ReactFlow edges structure:', JSON.stringify(edges, null, 2))
-  }, [edges])
-
   const handleConnect = (connection: Connection) => {
-    console.log('handleConnect called with:', connection)
     if (!connection.source || !connection.target) return
     
     const sourceNode = getNodeById(nodes, connection.source)
@@ -83,14 +76,11 @@ export default function Board() {
     
     // Determine connection type for our data model
     const connectionType = getConnectionType(sourceNode, targetNode)
-    console.log('Connection type:', connectionType)
     
     // Create enhanced edge - use connectionType for data, floating type for rendering
-    const result = addEdge(connection.source, connection.target, { 
+    addEdge(connection.source, connection.target, { 
       type: connectionType  // This is our internal type: 'default' | 'ai' | 'focus'
     })
-    console.log('addEdge result:', result)
-    console.log('Current edges after add:', edges)
   }
 
   const handleAddNode = () => {

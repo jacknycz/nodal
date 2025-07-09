@@ -4,24 +4,14 @@ import type { EdgeProps } from '@xyflow/react'
 
 // Returns the position (top, right, bottom, left) passed node compared to the other node
 function getNodeIntersection(intersectionNode: any, otherNode: any) {
-  console.log('getNodeIntersection called with:', { intersectionNode, otherNode })
-  
   const intersectionNodeWidth = intersectionNode.measured?.width
   const intersectionNodeHeight = intersectionNode.measured?.height
   const intersectionNodePosition = intersectionNode.internals?.positionAbsolute
   const otherNodePosition = otherNode.internals?.positionAbsolute
 
-  console.log('getNodeIntersection extracted:', { 
-    intersectionNodeWidth, 
-    intersectionNodeHeight, 
-    intersectionNodePosition, 
-    otherNodePosition 
-  })
-
   // Check if required properties exist
   if (!intersectionNodePosition || !otherNodePosition || 
       !intersectionNodeWidth || !intersectionNodeHeight) {
-    console.log('getNodeIntersection: Missing required properties, returning {x: 0, y: 0}')
     return { x: 0, y: 0 }
   }
 
@@ -41,7 +31,6 @@ function getNodeIntersection(intersectionNode: any, otherNode: any) {
   const x = w * (xx3 + yy3) + x2
   const y = h * (-xx3 + yy3) + y2
 
-  console.log('getNodeIntersection final position:', { x, y })
   return { x, y }
 }
 
@@ -86,18 +75,14 @@ function getNodeHandle(node: any, handlePosition: Position) {
 }
 
 function getEdgePosition(node: any, otherNode: any) {
-  console.log('getEdgePosition called with:', { node, otherNode })
-  
   // Check if nodes have required properties
   if (!node || !otherNode) {
-    console.log('getEdgePosition: Missing nodes, returning defaults')
     return [{ x: 0, y: 0 }, { x: 0, y: 0 }]
   }
 
   const n1 = getNodeIntersection(node, otherNode)
   const n2 = getNodeIntersection(otherNode, node)
 
-  console.log('getEdgePosition returning:', [n1, n2])
   return [n1, n2]
 }
 
@@ -108,24 +93,15 @@ export default function FloatingEdge({
   markerEnd,
   style,
 }: EdgeProps) {
-  console.log('FloatingEdge rendering with:', { id, source, target, markerEnd, style })
   
   const sourceNode = useStore((store) => store.nodeLookup.get(source))
   const targetNode = useStore((store) => store.nodeLookup.get(target))
 
-  console.log('FloatingEdge nodes:', { sourceNode, targetNode })
-  console.log('FloatingEdge sourceNode structure:', JSON.stringify(sourceNode, null, 2))
-  console.log('FloatingEdge targetNode structure:', JSON.stringify(targetNode, null, 2))
-
   if (!sourceNode || !targetNode) {
-    console.log('FloatingEdge: Missing nodes, returning null')
     return null
   }
 
   const [sourcePosition, targetPosition] = getEdgePosition(sourceNode, targetNode)
-  console.log('FloatingEdge positions:', { sourcePosition, targetPosition })
-  console.log('FloatingEdge sourcePosition:', sourcePosition)
-  console.log('FloatingEdge targetPosition:', targetPosition)
 
   const [edgePath] = getBezierPath({
     sourceX: sourcePosition.x,
@@ -133,8 +109,6 @@ export default function FloatingEdge({
     targetX: targetPosition.x,
     targetY: targetPosition.y,
   })
-
-  console.log('FloatingEdge path:', edgePath)
 
   return (
     <path
