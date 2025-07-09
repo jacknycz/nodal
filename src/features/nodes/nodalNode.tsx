@@ -131,84 +131,30 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         selected ? 'border-tertiary-500 shadow-tertiary-200' : 'border-gray-200'
       } ${(isEditingLabel || isEditingContent) ? 'border-blue-400 bg-blue-50' : ''} group`}
     >
-      {/* Easy Connect Pattern: Single source handle covering entire node */}
+      {/* Easy Connect Pattern: Simple visible handles */}
       <Handle
         type="source"
-        position={Position.Top}
-        className="!opacity-0 !pointer-events-auto !cursor-crosshair"
+        position={Position.Right}
+        className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white !opacity-100 !right-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-blue-600 transition-colors"
         style={{ 
-          top: '0%', 
-          left: '0%',
-          width: '100%',
-          height: '100%',
-          border: 'none',
-          borderRadius: '0.5rem',
-          background: 'transparent',
-          zIndex: 1
+          zIndex: 10,
+          cursor: 'crosshair'
         }}
       />
       
-      {/* Target handles positioned at edges - small and non-interfering */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!opacity-0"
-        style={{ 
-          top: '-6px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          width: '12px',
-          height: '12px'
-        }}
-      />
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        className="!opacity-0"
-        style={{ 
-          bottom: '-6px', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          width: '12px',
-          height: '12px'
-        }}
-      />
       <Handle
         type="target"
         position={Position.Left}
-        className="!opacity-0"
+        className="!w-4 !h-4 !bg-gray-400 !border-2 !border-white !opacity-100 !left-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-gray-600 transition-colors"
         style={{ 
-          left: '-6px', 
-          top: '50%', 
-          transform: 'translateY(-50%)',
-          width: '12px',
-          height: '12px'
-        }}
-      />
-      <Handle
-        type="target"
-        position={Position.Right}
-        className="!opacity-0"
-        style={{ 
-          right: '-6px', 
-          top: '50%', 
-          transform: 'translateY(-50%)',
-          width: '12px',
-          height: '12px'
+          zIndex: 10
         }}
       />
       
-      {/* Connection hint overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-5">
-        <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow-lg">
-          Drag to connect
-        </div>
-      </div>
-      
-      {/* Content wrapper with higher z-index for text editing */}
-      <div className="relative z-10 pointer-events-none">
+      {/* Content wrapper */}
+      <div className="relative z-10">
         {/* Drag Handle for node movement */}
-        <div className="nodal-drag-handle cursor-move mb-2 p-2 -m-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded pointer-events-auto">
+        <div className="nodal-drag-handle cursor-move mb-2 p-2 -m-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -221,7 +167,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         
         <div className="space-y-3">
           {/* Editable Label */}
-          <div className="relative pointer-events-auto">
+          <div className="relative">
             {isEditingLabel ? (
               <input
                 ref={labelInputRef}
@@ -239,7 +185,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                 onDoubleClick={handleLabelDoubleClick}
                 className="px-2 py-1 cursor-pointer hover:bg-gray-50 rounded group"
               >
-                <Heading size="h4" className="font-medium dark:text-white" variant="custom">{nodeData.label}</Heading>
+                <Heading size="h4" className="font-medium dark:text-white">{nodeData.label}</Heading>
                 <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
                   Double-click to edit
                 </div>
@@ -248,7 +194,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
           </div>
           
           {/* Editable Content Area */}
-          <div className="relative pointer-events-auto">
+          <div className="relative">
             {isEditingContent ? (
               <div className="space-y-2">
                 <textarea
@@ -300,7 +246,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
           
           {/* AI Generated Indicator */}
           {nodeData.aiGenerated && (
-            <div className="flex items-center space-x-1 text-xs text-blue-600 px-2 pointer-events-auto">
+            <div className="flex items-center space-x-1 text-xs text-blue-600 px-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
               <span>AI Generated</span>
             </div>
