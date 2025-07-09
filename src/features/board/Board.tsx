@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -11,7 +11,9 @@ import { useBoard } from './useBoard'
 import NodalNode from '../nodes/nodalNode'
 import Toolbar from '@/components/Toolbar'
 import AddNodeButton from '@/components/AddNodeButton'
+import AINodeGenerator from '@/components/AINodeGenerator'
 import { useViewportCenter } from '@/hooks/useViewportCenter'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 import '@xyflow/react/dist/style.css'
 
@@ -32,6 +34,7 @@ export default function Board() {
   } = useBoard()
 
   const { getViewportCenter } = useViewportCenter()
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
 
   const handleConnect = (connection: Connection) => {
     if (connection.source && connection.target) {
@@ -43,6 +46,27 @@ export default function Board() {
     const center = getViewportCenter()
     addNode(`Node ${nodes.length + 1}`, center)
   }
+
+  // Keyboard shortcuts (defined after functions)
+  useKeyboardShortcuts([
+    {
+      key: 'g',
+      ctrl: true,
+      action: () => setShowAIGenerator(true),
+      description: 'Open AI Node Generator'
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      action: handleAddNode,
+      description: 'Add new node'
+    },
+    {
+      key: 'Escape',
+      action: () => setShowAIGenerator(false),
+      description: 'Close AI Node Generator'
+    }
+  ])
 
   const handleClearBoard = () => {
     if (confirm('Are you sure you want to clear the board?')) {
@@ -92,6 +116,7 @@ export default function Board() {
         onClearBoard={handleClearBoard}
         onExportBoard={handleExportBoard}
         onImportBoard={handleImportBoard}
+        onOpenAIGenerator={() => setShowAIGenerator(true)}
       />
       
       <ReactFlow
@@ -111,6 +136,11 @@ export default function Board() {
       </ReactFlow>
       
       <AddNodeButton onAddNode={handleAddNode} />
+      
+      <AINodeGenerator 
+        isOpen={showAIGenerator}
+        onClose={() => setShowAIGenerator(false)}
+      />
     </div>
   )
 } 

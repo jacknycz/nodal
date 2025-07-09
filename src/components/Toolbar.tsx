@@ -6,6 +6,7 @@ interface ToolbarProps {
   onClearBoard?: () => void
   onExportBoard?: () => void
   onImportBoard?: () => void
+  onOpenAIGenerator?: () => void
 }
 
 export default function Toolbar({
@@ -13,29 +14,41 @@ export default function Toolbar({
   onClearBoard,
   onExportBoard,
   onImportBoard,
+  onOpenAIGenerator,
 }: ToolbarProps) {
   return (
     <div className="absolute top-4 left-4 z-10 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
-      <Heading size="h5" className="mb-3">Board Tools</Heading>
+      <Heading size="h5" className="mb-3 text-black">Board Tools</Heading>
       
       <div className="space-y-2">
         <Button 
           onClick={onAddNode}
           className="w-full"
+          variant="custom"
         >
           Add Node
+        </Button>
+
+        <Button 
+          onClick={onOpenAIGenerator}
+          variant="custom"
+          className="w-full"
+        >
+          🤖 AI Generate
         </Button>
         
         <ButtonGroup className="w-full">
           <Button 
             onClick={onExportBoard}
             className="flex-1"
+            variant="custom"
           >
             Export
           </Button>
           <Button 
             onClick={onImportBoard}
             className="flex-1"
+            variant="custom"
           >
             Import
           </Button>
@@ -43,7 +56,8 @@ export default function Toolbar({
         
         <Button 
           onClick={onClearBoard}
-          className="w-full text-red-600 hover:text-red-700"
+          className="w-full"
+          variant="custom"
         >
           Clear Board
         </Button>
