@@ -18,7 +18,7 @@ export default function Toolbar({
 }: ToolbarProps) {
   return (
     <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
-      <Heading size="h5" className="mb-3 text-black">Board Tools</Heading>
+      <Heading size="h5" className="mb-3 dark:text-white">Board Tools</Heading>
       
       <div className="space-y-2">
         <Button 

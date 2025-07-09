@@ -127,7 +127,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   return (
     <div 
       ref={nodeRef}
-      className={`relative min-w-96 p-4 bg-white rounded-lg shadow-lg border-2 transition-all duration-200 ${
+      className={`relative min-w-96 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 dark:border-gray-700 transition-all duration-200 ${
         selected ? 'border-tertiary-500 shadow-tertiary-200' : 'border-gray-200'
       } ${(isEditingLabel || isEditingContent) ? 'border-blue-400 bg-blue-50' : ''} group`}
     >
@@ -208,7 +208,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
       {/* Content wrapper with higher z-index for text editing */}
       <div className="relative z-10 pointer-events-none">
         {/* Drag Handle for node movement */}
-        <div className="nodal-drag-handle cursor-move mb-2 p-2 -m-2 hover:bg-gray-50 rounded pointer-events-auto">
+        <div className="nodal-drag-handle cursor-move mb-2 p-2 -m-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded pointer-events-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
@@ -239,7 +239,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                 onDoubleClick={handleLabelDoubleClick}
                 className="px-2 py-1 cursor-pointer hover:bg-gray-50 rounded group"
               >
-                <Heading size="h4">{nodeData.label}</Heading>
+                <Heading size="h4" className="font-medium dark:text-white" variant="custom">{nodeData.label}</Heading>
                 <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
                   Double-click to edit
                 </div>
