@@ -23,6 +23,8 @@ export default function Board() {
   const {
     nodes,
     edges,
+    onNodesChange,
+    onEdgesChange,
     addNode,
     addEdge,
     clearBoard,
@@ -96,6 +98,8 @@ export default function Board() {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onMove={(_, viewport) => updateViewport(viewport)}
         fitView

@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/react'
 
 export interface BoardNode extends Node {
+  dragHandle?: string
   data: {
     label: string
     content?: string
@@ -32,8 +33,10 @@ export interface BoardActions {
   addNode: (node: Omit<BoardNode, 'id'>) => void
   updateNode: (id: string, updates: Partial<BoardNode>) => void
   deleteNode: (id: string) => void
+  setNodes: (nodes: BoardNode[]) => void
   addEdge: (edge: Omit<BoardEdge, 'id'>) => void
   deleteEdge: (id: string) => void
+  setEdges: (edges: BoardEdge[]) => void
   setSelectedNode: (id: string | null) => void
   updateViewport: (viewport: Partial<BoardState['viewport']>) => void
   clearBoard: () => void

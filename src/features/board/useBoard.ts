@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
 import { useBoardStore } from './boardSlice'
 import { createNode, createEdge } from './boardUtils'
 import type { BoardNode, BoardEdge } from './boardTypes'
@@ -12,8 +13,10 @@ export function useBoard() {
     addNode,
     updateNode,
     deleteNode,
+    setNodes,
     addEdge,
     deleteEdge,
+    setEdges,
     setSelectedNode,
     updateViewport,
     clearBoard,
@@ -73,6 +76,21 @@ export function useBoard() {
     [updateViewport]
   )
 
+  // React Flow change handlers
+  const onNodesChange = useCallback(
+    (changes: any) => {
+      setNodes(applyNodeChanges(changes, nodes))
+    },
+    [nodes, setNodes]
+  )
+
+  const onEdgesChange = useCallback(
+    (changes: any) => {
+      setEdges(applyEdgeChanges(changes, edges))
+    },
+    [edges, setEdges]
+  )
+
   const selectedNode = selectedNodeId
     ? nodes.find((node) => node.id === selectedNodeId)
     : null
@@ -94,6 +112,10 @@ export function useBoard() {
     selectNode: handleNodeSelect,
     updateViewport: handleViewportChange,
     clearBoard,
+    
+    // React Flow handlers
+    onNodesChange,
+    onEdgesChange,
     
     // Computed
     hasNodes: nodes.length > 0,

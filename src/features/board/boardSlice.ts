@@ -43,6 +43,10 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
     }))
   },
 
+  setNodes: (nodes) => {
+    set({ nodes })
+  },
+
   addEdge: (edge) => {
     const newEdge: BoardEdge = {
       ...edge,
@@ -57,6 +61,10 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
     set((state) => ({
       edges: state.edges.filter((edge) => edge.id !== id),
     }))
+  },
+
+  setEdges: (edges) => {
+    set({ edges })
   },
 
   setSelectedNode: (id) => {

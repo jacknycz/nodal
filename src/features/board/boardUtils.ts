@@ -9,6 +9,7 @@ export function createNode(
   return {
     type: 'default',
     position,
+    dragHandle: '.nodal-drag-handle',
     data: {
       label,
       type: 'default',
