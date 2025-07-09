@@ -17,3 +17,106 @@
 .react-flow__node .node-medium { min-width: 300px; }
 .react-flow__node .node-large { min-width: 400px; }
 .react-flow__node .node-extra-large { min-width: 500px; }
+
+/* Enhanced Connection Styles */
+.react-flow__edge-default {
+  stroke: #6b7280;
+  stroke-width: 2;
+}
+
+.react-flow__edge.ai-connection {
+  stroke: #3b82f6;
+  stroke-width: 2;
+  stroke-dasharray: 5,5;
+  animation: dash 1s linear infinite;
+}
+
+.react-flow__edge.focus-connection {
+  stroke: #10b981;
+  stroke-width: 3;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Enhanced Connection handles */
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #374151;
+  background: #ffffff;
+  border-radius: 50%;
+  opacity: 0.8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: crosshair;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  opacity: 1;
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.react-flow__handle.connecting {
+  background: #3b82f6;
+  border-color: #1d4ed8;
+  animation: pulse 2s infinite;
+}
+
+/* Handle pulse animation */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+/* Enhanced Connection line preview - Easy Connect style */
+.react-flow__connectionline {
+  stroke: #3b82f6 !important;
+  stroke-width: 3px !important;
+  stroke-dasharray: 5,5 !important;
+  animation: dash 1s linear infinite !important;
+  opacity: 0.8 !important;
+  pointer-events: none !important;
+}
+
+.react-flow__connectionline path {
+  stroke: #3b82f6 !important;
+  stroke-width: 3px !important;
+  fill: none !important;
+}
+
+/* Animated connection line for CustomConnectionLine */
+.animated path {
+  animation: dash 1s linear infinite;
+}
+
+/* Floating edge specific styles */
+.react-flow__edge-floating {
+  stroke: #6b7280;
+  stroke-width: 2;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.react-flow__edge-floating:hover {
+  stroke: #374151;
+  stroke-width: 3;
+}
+
+/* AI connection styling for floating edges */
+.react-flow__edge-floating[data-animated="true"] {
+  stroke: #3b82f6;
+  stroke-dasharray: 5,5;
+  animation: dash 1s linear infinite;
+}

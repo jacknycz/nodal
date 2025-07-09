@@ -52,9 +52,13 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
       ...edge,
       id: uuidv4(),
     }
-    set((state) => ({
-      edges: [...state.edges, newEdge],
-    }))
+    console.log('boardSlice.addEdge - Adding edge to store:', newEdge)
+    console.log('boardSlice.addEdge - Edge structure:', JSON.stringify(newEdge, null, 2))
+    set((state) => {
+      const newEdges = [...state.edges, newEdge]
+      console.log('boardSlice.addEdge - New edges array:', newEdges)
+      return { edges: newEdges }
+    })
   },
 
   deleteEdge: (id) => {

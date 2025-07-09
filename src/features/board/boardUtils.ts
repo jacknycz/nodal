@@ -25,12 +25,16 @@ export function createEdge(
   target: string,
   options: Partial<BoardEdge['data']> = {}
 ): Omit<BoardEdge, 'id'> {
+  const connectionType = options.type || 'default'
+  
   return {
     source,
     target,
-    type: 'default',
+    type: 'floating', // Always use floating for React Flow edge type (Easy Connect)
+    animated: connectionType === 'ai', // Animate AI connections
+    style: getEdgeStyle(connectionType), // Style based on connection type
     data: {
-      type: 'default',
+      type: connectionType, // Store our internal type in data
       ...options,
     },
   }
@@ -90,4 +94,66 @@ export function validateEdge(edge: BoardEdge): boolean {
     edge.target &&
     edge.source !== edge.target
   )
+}
+
+// Enhanced connection utilities
+export function connectionExists(
+  edges: BoardEdge[],
+  source: string,
+  target: string
+): boolean {
+  return edges.some(
+    (edge) =>
+      (edge.source === source && edge.target === target)
+  )
+}
+
+export function canCreateConnection(
+  edges: BoardEdge[],
+  source: string,
+  target: string
+): { valid: boolean; reason?: string } {
+  if (source === target) {
+    return { valid: false, reason: 'Cannot connect a node to itself' }
+  }
+
+  if (connectionExists(edges, source, target)) {
+    return { valid: false, reason: 'Connection already exists' }
+  }
+
+  return { valid: true }
+}
+
+export function getConnectionType(
+  sourceNode: BoardNode,
+  targetNode: BoardNode
+): 'default' | 'ai' | 'focus' {
+  // AI-generated connections
+  if (sourceNode.data.aiGenerated || targetNode.data.aiGenerated) {
+    return 'ai'
+  }
+
+  // Default connection type
+  return 'default'
+}
+
+export function getEdgeStyle(edgeType: string) {
+  switch (edgeType) {
+    case 'ai':
+      return {
+        stroke: '#3b82f6',
+        strokeWidth: 2,
+        strokeDasharray: '5,5',
+      }
+    case 'focus':
+      return {
+        stroke: '#10b981',
+        strokeWidth: 3,
+      }
+    default:
+      return {
+        stroke: '#6b7280',
+        strokeWidth: 2,
+      }
+  }
 } 

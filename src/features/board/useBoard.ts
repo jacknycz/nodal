@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { applyNodeChanges, applyEdgeChanges } from '@xyflow/react'
 import { useBoardStore } from './boardSlice'
-import { createNode, createEdge } from './boardUtils'
+import { createNode, createEdge, canCreateConnection } from './boardUtils'
 import type { BoardNode, BoardEdge } from './boardTypes'
 
 export function useBoard() {
@@ -48,11 +48,24 @@ export function useBoard() {
   )
 
   const handleAddEdge = useCallback(
-    (source: string, target: string) => {
-      const newEdge = createEdge(source, target)
+    (source: string, target: string, options: Partial<BoardEdge['data']> = {}) => {
+      console.log('handleAddEdge called with:', { source, target, options })
+      
+      // Validate connection
+      const validation = canCreateConnection(edges, source, target)
+      if (!validation.valid) {
+        console.warn('Connection rejected:', validation.reason)
+        return false
+      }
+
+      const newEdge = createEdge(source, target, options)
+      console.log('Created edge:', newEdge)
+      
       addEdge(newEdge)
+      console.log('Added edge to store')
+      return true
     },
-    [addEdge]
+    [edges, addEdge]
   )
 
   const handleDeleteEdge = useCallback(
