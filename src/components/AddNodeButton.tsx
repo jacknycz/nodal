@@ -11,7 +11,7 @@ export default function AddNodeButton({ onAddNode, disabled = false }: AddNodeBu
     <Button
       onClick={onAddNode}
       disabled={disabled}
-      className="fixed bottom-4 right-4 z-10 rounded-full w-12 h-12 shadow-lg"
+      className="fixed bg-black bottom-96 right-4 z-10 rounded-full w-12 h-12 shadow-lg"
     >
       +
     </Button>
