@@ -17,7 +17,7 @@ export default function Toolbar({
   onOpenAIGenerator,
 }: ToolbarProps) {
   return (
-    <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 p-4">
+    <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
       <Heading size="h5" className="mb-3 text-black">Board Tools</Heading>
       
       <div className="space-y-2">

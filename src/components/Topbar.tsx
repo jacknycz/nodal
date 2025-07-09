@@ -17,9 +17,6 @@ export default function Topbar() {
             alt="Nodal Logo"
             className="h-8 w-auto"
           />
-          <span className="text-xl font-semibold text-gray-900 dark:text-white">
-            Nodal
-          </span>
         </div>
 
         {/* Theme Toggle */}
