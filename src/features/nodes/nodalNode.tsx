@@ -128,7 +128,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     <div 
       ref={nodeRef}
       className={`relative min-w-96 p-4 bg-white rounded-lg shadow-lg border-2 transition-all duration-200 ${
-        selected ? 'border-blue-500 shadow-blue-200' : 'border-gray-200'
+        selected ? 'border-tertiary-500 shadow-tertiary-200' : 'border-gray-200'
       } ${(isEditingLabel || isEditingContent) ? 'border-blue-400 bg-blue-50' : ''} group`}
     >
       {/* Easy Connect Pattern: Single source handle covering entire node */}

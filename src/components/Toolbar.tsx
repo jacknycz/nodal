@@ -17,38 +17,39 @@ export default function Toolbar({
   onOpenAIGenerator,
 }: ToolbarProps) {
   return (
-    <div className="absolute top-4 left-4 z-10 bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+    <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 p-4">
       <Heading size="h5" className="mb-3 text-black">Board Tools</Heading>
       
       <div className="space-y-2">
         <Button 
           onClick={onAddNode}
-          className="w-full"
-          variant="custom"
+          className="w-full bg-primary-500 text-white"
+          variant="primary"
         >
           Add Node
         </Button>
 
         <Button 
           onClick={onOpenAIGenerator}
-          variant="custom"
-          className="w-full"
+          className="w-full bg-primary-500 text-white"
+          variant="primary"
         >
-          🤖 AI Generate
+          AI Generate
         </Button>
         
-        <ButtonGroup className="w-full">
+        <ButtonGroup className="w-full gap-2">
           <Button 
             onClick={onExportBoard}
-            className="flex-1"
-            variant="custom"
+            className="flex-1 bg-primary-500 text-white"
+            variant="primary"
           >
             Export
           </Button>
+
           <Button 
             onClick={onImportBoard}
-            className="flex-1"
-            variant="custom"
+            className="flex-1 bg-primary-500 text-white"
+            variant="primary"
           >
             Import
           </Button>
@@ -56,8 +57,8 @@ export default function Toolbar({
         
         <Button 
           onClick={onClearBoard}
-          className="w-full"
-          variant="custom"
+          className="w-full bg-primary-500 text-white"
+          variant="primary"
         >
           Clear Board
         </Button>

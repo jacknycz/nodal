@@ -151,7 +151,7 @@ export default function Board() {
   }
 
   return (
-    <div className="w-screen h-screen relative">
+    <div className="w-full h-full relative">
       <Toolbar
         onAddNode={handleAddNode}
         onClearBoard={handleClearBoard}
@@ -174,7 +174,7 @@ export default function Board() {
         connectionLineStyle={connectionLineStyle}
         defaultEdgeOptions={defaultEdgeOptions}
         fitView
-        className="bg-gray-50"
+        className="bg-gray-50 dark:bg-gray-900"
       >
         <MiniMap />
         <Controls />

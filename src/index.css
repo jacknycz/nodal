@@ -1,3 +1,48 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Primary Colors */
+  --color-primary-50: #E0FBFE;
+  --color-primary-100: #B6F1FB;
+  --color-primary-200: #8CE8F8;
+  --color-primary-300: #62DEF5;
+  --color-primary-400: #38D5F3;
+  --color-primary-500: #00CFF5; /* base */
+  --color-primary-600: #00B5D8;
+  --color-primary-700: #009BBB;
+  --color-primary-800: #00819E;
+  --color-primary-900: #006881;
+  --color-primary-950: #004D61;
+
+  /* Secondary Colors */
+  --color-secondary-50: #FFFBE0;
+  --color-secondary-100: #FFF6B6;
+  --color-secondary-200: #FFF18C;
+  --color-secondary-300: #FFEC62;
+  --color-secondary-400: #FFE738;
+  --color-secondary-500: #FFDE00; /* base */
+  --color-secondary-600: #E6C700;
+  --color-secondary-700: #CCB000;
+  --color-secondary-800: #B39900;
+  --color-secondary-900: #998200;
+  --color-secondary-950: #665700;
+
+  /* Tertiary Colors */
+  --color-tertiary-50: #FFE0F4;
+  --color-tertiary-100: #FFB6E4;
+  --color-tertiary-200: #FF8CD3;
+  --color-tertiary-300: #FF62C3;
+  --color-tertiary-400: #FF38B2;
+  --color-tertiary-500: #FF00A8; /* base */
+  --color-tertiary-600: #E60097;
+  --color-tertiary-700: #CC0086;
+  --color-tertiary-800: #B30075;
+  --color-tertiary-900: #990064;
+  --color-tertiary-950: #660043;
+}
+
 /* XYFlow Node Overrides */
 .react-flow__node {
   width: auto !important;
@@ -119,4 +164,38 @@
   stroke: #3b82f6;
   stroke-dasharray: 5,5;
   animation: dash 1s linear infinite;
+}
+
+/* Enhanced Theme Toggle Styles */
+.theme-toggle {
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle:hover {
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle-active {
+  box-shadow: 
+    inset 0 2px 4px rgba(59, 130, 246, 0.2),
+    0 0 0 3px rgba(59, 130, 246, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.theme-toggle-knob {
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle-knob:hover {
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
 }
