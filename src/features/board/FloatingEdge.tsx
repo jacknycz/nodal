@@ -1,5 +1,5 @@
-import React from 'react'
-import { useStore, getBezierPath, Position } from '@xyflow/react'
+import React, { useState } from 'react'
+import { useStore, getBezierPath, Position, EdgeLabelRenderer } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
 
 // Returns the position (top, right, bottom, left) passed node compared to the other node
@@ -92,7 +92,9 @@ export default function FloatingEdge({
   target,
   markerEnd,
   style,
+  data,
 }: EdgeProps) {
+  const [isHovered, setIsHovered] = useState(false)
   
   const sourceNode = useStore((store) => store.nodeLookup.get(source))
   const targetNode = useStore((store) => store.nodeLookup.get(target))
@@ -103,21 +105,76 @@ export default function FloatingEdge({
 
   const [sourcePosition, targetPosition] = getEdgePosition(sourceNode, targetNode)
 
-  const [edgePath] = getBezierPath({
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: sourcePosition.x,
     sourceY: sourcePosition.y,
     targetX: targetPosition.x,
     targetY: targetPosition.y,
   })
 
+  const handleDelete = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    // Dispatch a custom event that the Board component can listen to
+    const deleteEvent = new CustomEvent('edge-delete', { detail: { edgeId: id } })
+    window.dispatchEvent(deleteEvent)
+  }
+
   return (
-    <path
-      id={id}
-      className="react-flow__edge-path"
-      d={edgePath}
-      fill="none"
-      markerEnd={markerEnd}
-      style={style}
-    />
+    <>
+      {/* Invisible wider path for better hover detection */}
+      <path
+        d={edgePath}
+        fill="none"
+        strokeWidth={20}
+        stroke="transparent"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      />
+      
+      {/* Visible edge path */}
+      <path
+        id={id}
+        className="react-flow__edge-path"
+        d={edgePath}
+        fill="none"
+        markerEnd={markerEnd}
+        style={style}
+        pointerEvents="none"
+      />
+      
+      {isHovered && (
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              pointerEvents: 'all',
+            }}
+            className="nodrag nopan"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            <button
+              onClick={handleDelete}
+              className="w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors duration-200 border border-white"
+              title="Delete connection"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
   )
 } 

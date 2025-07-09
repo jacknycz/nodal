@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   ReactFlow,
   Background,
@@ -51,12 +51,24 @@ export default function Board() {
     onEdgesChange,
     addNode,
     addEdge,
+    deleteEdge,
     clearBoard,
     updateViewport,
   } = useBoard()
 
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
+
+  // Listen for edge delete events from FloatingEdge components
+  useEffect(() => {
+    const handleEdgeDelete = (event: CustomEvent) => {
+      const { edgeId } = event.detail
+      deleteEdge(edgeId)
+    }
+
+    window.addEventListener('edge-delete', handleEdgeDelete as EventListener)
+    return () => window.removeEventListener('edge-delete', handleEdgeDelete as EventListener)
+  }, [deleteEdge])
 
   const handleConnect = (connection: Connection) => {
     if (!connection.source || !connection.target) return
