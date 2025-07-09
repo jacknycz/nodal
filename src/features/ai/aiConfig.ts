@@ -2,10 +2,10 @@ import type { AIConfig, OpenAIModel, UserPreferences } from './aiTypes'
 
 // Default Configuration
 export const DEFAULT_AI_CONFIG: Omit<AIConfig, 'apiKey'> = {
-  defaultModel: 'gpt-4o-mini',
+  defaultModel: (import.meta.env.VITE_OPENAI_DEFAULT_MODEL as OpenAIModel) || 'gpt-4o-mini',
   modelPreferences: {
     chat: 'gpt-4o',
-    nodeGeneration: 'gpt-4o-mini',
+    nodeGeneration: (import.meta.env.VITE_OPENAI_DEFAULT_MODEL as OpenAIModel) || 'gpt-4o-mini',
     documentProcessing: 'gpt-4-turbo',
     analysis: 'gpt-4'
   },
@@ -47,9 +47,13 @@ export function validateAPIKey(apiKey: string): boolean {
     return false
   }
   
-  // OpenAI API keys start with 'sk-' and are 51 characters long
-  const apiKeyRegex = /^sk-[a-zA-Z0-9]{48}$/
-  return apiKeyRegex.test(apiKey)
+  // OpenAI API keys can be:
+  // 1. Old format: sk- followed by 48 alphanumeric characters (total 51 chars)
+  // 2. New format: sk-proj- followed by more characters (variable length)
+  const oldFormatRegex = /^sk-[a-zA-Z0-9]{48}$/
+  const newFormatRegex = /^sk-proj-[a-zA-Z0-9_-]{20,}$/
+  
+  return oldFormatRegex.test(apiKey) || newFormatRegex.test(apiKey)
 }
 
 export function validateModel(model: string): model is OpenAIModel {
@@ -233,8 +237,19 @@ export class AIConfigManager {
   // API Key Management
   private getStoredAPIKey(): string | null {
     try {
-      // In a real app, you'd want more secure storage
-      return localStorage.getItem(STORAGE_KEYS.API_KEY)
+      // First try localStorage (set via UI)
+      const localStorageKey = localStorage.getItem(STORAGE_KEYS.API_KEY)
+      if (localStorageKey) {
+        return localStorageKey
+      }
+      
+      // Fallback to environment variable
+      const envKey = import.meta.env.VITE_OPENAI_API_KEY
+      if (envKey && envKey !== 'your-openai-api-key-here') {
+        return envKey
+      }
+      
+      return null
     } catch {
       return null
     }

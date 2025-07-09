@@ -124,7 +124,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   }
   
   return (
-    <div className={`p-4 bg-white rounded-lg shadow-lg border-2 transition-colors ${
+    <div className={`min-w-96 p-4 bg-white rounded-lg shadow-lg border-2 transition-colors ${
       selected ? 'border-blue-500' : 'border-gray-200'
     } ${(isEditingLabel || isEditingContent) ? 'border-blue-400 bg-blue-50' : ''}`}>
       <Handle type="target" position={Position.Top} className="w-3 h-3" />

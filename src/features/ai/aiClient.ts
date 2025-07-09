@@ -25,8 +25,8 @@ class AIClient {
 
   constructor(config: AIConfig) {
     this.config = {
-      baseUrl: 'https://api.openai.com/v1',
-      model: 'gpt-4',
+      baseUrl: import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1',
+      model: import.meta.env.VITE_OPENAI_DEFAULT_MODEL || 'gpt-4',
       ...config,
     }
   }

@@ -402,7 +402,8 @@ export class OpenAIService {
       { role: 'user' as const, content: prompt }
     ]
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const baseUrl = import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1'
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -454,7 +455,8 @@ export class OpenAIService {
       { role: 'user' as const, content: prompt }
     ]
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const baseUrl = import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1'
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
