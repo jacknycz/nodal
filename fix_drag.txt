@@ -1,0 +1,95 @@
+  // Native DOM event handlers to bypass React Flow - stable version  
+  useEffect(() => {
+    const boardElement = document.querySelector('.react-flow') as HTMLElement
+    if (!boardElement) return
+
+    let dragLeaveTimer: NodeJS.Timeout | null = null
+    let isDraggingDocuments = false
+
+    const handleNativeDragEnter = (e: DragEvent) => {
+      e.preventDefault()
+      
+      if (e.dataTransfer?.types.includes('Files')) {
+        console.log('📂 Dragging documents detected')
+        isDraggingDocuments = true
+        
+        // Clear any pending drag leave timer
+        if (dragLeaveTimer) {
+          clearTimeout(dragLeaveTimer)
+          dragLeaveTimer = null
+        }
+        setIsDragOver(true)
+      }
+    }
+
+    const handleNativeDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      if (isDraggingDocuments) {
+        e.dataTransfer.dropEffect = 'copy'
+        // Keep overlay active while dragging documents
+        setIsDragOver(true)
+      }
+    }
+
+    const handleNativeDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      
+      if (!isDraggingDocuments) return
+      
+      // Use timeout to avoid flickering when crossing child elements
+      if (dragLeaveTimer) clearTimeout(dragLeaveTimer)
+      
+      dragLeaveTimer = setTimeout(() => {
+        console.log('🚪 Left document drag area')
+        isDraggingDocuments = false
+        setIsDragOver(false)
+      }, 100) // Generous delay to handle React Flow's nested elements
+    }
+
+    const handleNativeDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      console.log('🎯 Document drop success!')
+      
+      // Clean up drag state
+      isDraggingDocuments = false
+      if (dragLeaveTimer) {
+        clearTimeout(dragLeaveTimer)
+        dragLeaveTimer = null
+      }
+      setIsDragOver(false)
+      
+      if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) {
+        console.log('❌ No files in drop')
+        return
+      }
+
+      const files = e.dataTransfer.files
+      console.log('✅ Processing', files.length, 'documents')
+      
+      // Calculate position relative to board
+      const rect = boardElement.getBoundingClientRect()
+      const position = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      }
+      
+      console.log('�� Drop position:', position)
+      handleFileUpload(files, position)
+    }
+
+    // Use capture: true to intercept before React Flow
+    boardElement.addEventListener('dragenter', handleNativeDragEnter, { capture: true })
+    boardElement.addEventListener('dragover', handleNativeDragOver, { capture: true })
+    boardElement.addEventListener('dragleave', handleNativeDragLeave, { capture: true })
+    boardElement.addEventListener('drop', handleNativeDrop, { capture: true })
+
+    return () => {
+      if (dragLeaveTimer) clearTimeout(dragLeaveTimer)
+      boardElement.removeEventListener('dragenter', handleNativeDragEnter, { capture: true })
+      boardElement.removeEventListener('dragover', handleNativeDragOver, { capture: true })
+      boardElement.removeEventListener('dragleave', handleNativeDragLeave, { capture: true })
+      boardElement.removeEventListener('drop', handleNativeDrop, { capture: true })
+    }
+  }, [handleFileUpload])

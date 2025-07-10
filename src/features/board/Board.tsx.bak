@@ -294,76 +294,82 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     setIsDragOver(false)
   }, [])
 
-
-  // Window-level file drag detection - bypasses React Flow completely!
+  // Native DOM event handlers to bypass React Flow
   useEffect(() => {
-    let isFileBeingDragged = false
+    const boardElement = document.querySelector('.react-flow') as HTMLElement
+    if (!boardElement) return
 
-    const handleWindowDragEnter = (e: DragEvent) => {
-      // Only activate if we have files and haven't already activated
-      if (!isFileBeingDragged && e.dataTransfer?.types.includes("Files")) {
-        isFileBeingDragged = true
+    let dragCounter = 0
+
+    const handleNativeDragEnter = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter++
+      console.log('🔥 Native drag enter, counter:', dragCounter)
+      
+      if (e.dataTransfer?.types.includes('Files')) {
+        console.log('🔥 Native drag enter with files detected')
         setIsDragOver(true)
-        console.log("🔄 File drag detected - overlay ON")
       }
     }
 
-    const handleWindowDragOver = (e: DragEvent) => {
-      // Prevent browser from opening files
-      if (isFileBeingDragged && e.dataTransfer) {
-        e.preventDefault()
-        e.dataTransfer.dropEffect = "copy"
+    const handleNativeDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.dataTransfer.dropEffect = 'copy'
       }
     }
 
-    const handleWindowDragEnd = (e: DragEvent) => {
-      // Drag operation completely ended
-      if (isFileBeingDragged) {
-        isFileBeingDragged = false
+    const handleNativeDragLeave = (e: DragEvent) => {
+      e.preventDefault()
+      dragCounter--
+      console.log('🔥 Native drag leave, counter:', dragCounter)
+      
+      if (dragCounter === 0) {
+        console.log('🔥 Actually left the board')
         setIsDragOver(false)
-        console.log("🏁 File drag ended - overlay OFF")
       }
     }
 
-    const handleWindowDrop = (e: DragEvent) => {
-      if (!isFileBeingDragged) return
+    const handleNativeDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
       
-      // Check if we're dropping on the board
-      const boardElement = document.querySelector(".react-flow") as HTMLElement
-      if (boardElement) {
-        const rect = boardElement.getBoundingClientRect()
-        const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right && 
-                         e.clientY >= rect.top && e.clientY <= rect.bottom
-        
-        if (isOnBoard && e.dataTransfer?.files) {
-          e.preventDefault()
-          e.stopPropagation()
-          
-          console.log("🎯 Files dropped on board!")
-          const position = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-          }
-          handleFileUpload(e.dataTransfer.files, position)
-        }
-      }
+      console.log('🔥🎯 NATIVE DROP EVENT FIRED!')
+      console.log('🔥 Files count:', e.dataTransfer?.files?.length || 0)
       
-      // Always end drag state on any drop
-      isFileBeingDragged = false
+      dragCounter = 0
       setIsDragOver(false)
+      
+      if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) {
+        console.log('❌ No files in native drop')
+        return
+      }
+
+      const files = e.dataTransfer.files
+      console.log('✅ Native processing', files.length, 'files')
+      
+      // Calculate position relative to board
+      const rect = boardElement.getBoundingClientRect()
+      const position = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      }
+      
+      console.log('🔥 Native drop position:', position)
+      handleFileUpload(files, position)
     }
 
-    // Window-level events - no React Flow interference!
-    window.addEventListener("dragenter", handleWindowDragEnter)
-    window.addEventListener("dragover", handleWindowDragOver)
-    window.addEventListener("dragend", handleWindowDragEnd)
-    window.addEventListener("drop", handleWindowDrop)
+    // Use capture: true to catch events BEFORE React Flow sees them
+    boardElement.addEventListener('dragenter', handleNativeDragEnter, { capture: true })
+    boardElement.addEventListener('dragover', handleNativeDragOver, { capture: true })
+    boardElement.addEventListener('dragleave', handleNativeDragLeave, { capture: true })
+    boardElement.addEventListener('drop', handleNativeDrop, { capture: true })
 
     return () => {
-      window.removeEventListener("dragenter", handleWindowDragEnter)
-      window.removeEventListener("dragover", handleWindowDragOver)
-      window.removeEventListener("dragend", handleWindowDragEnd)
-      window.removeEventListener("drop", handleWindowDrop)
+      boardElement.removeEventListener('dragenter', handleNativeDragEnter, { capture: true })
+      boardElement.removeEventListener('dragover', handleNativeDragOver, { capture: true })
+      boardElement.removeEventListener('dragleave', handleNativeDragLeave, { capture: true })
+      boardElement.removeEventListener('drop', handleNativeDrop, { capture: true })
     }
   }, [handleFileUpload])
 

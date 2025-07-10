@@ -8,7 +8,13 @@ export function useNodeActions(nodeId: string) {
 
   const updateNodeLabel = useCallback(
     (label: string) => {
-      updateNode(nodeId, { data: { label } })
+      const nodes = useBoardStore.getState().nodes
+      const node = nodes.find(n => n.id === nodeId)
+      if (node) {
+        updateNode(nodeId, { 
+          data: { ...node.data, label } 
+        })
+      }
     },
     [nodeId, updateNode]
   )

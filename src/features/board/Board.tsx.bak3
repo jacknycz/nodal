@@ -294,80 +294,80 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     setIsDragOver(false)
   }, [])
 
-
-  // Window-level file drag detection - bypasses React Flow completely!
+  // Dragover-only approach - much more stable!
   useEffect(() => {
-    let isFileBeingDragged = false
+    const boardElement = document.querySelector(".react-flow") as HTMLElement
+    if (!boardElement) return
 
-    const handleWindowDragEnter = (e: DragEvent) => {
-      // Only activate if we have files and haven't already activated
-      if (!isFileBeingDragged && e.dataTransfer?.types.includes("Files")) {
-        isFileBeingDragged = true
-        setIsDragOver(true)
-        console.log("🔄 File drag detected - overlay ON")
-      }
-    }
+    let dragTimeout: NodeJS.Timeout | null = null
+    let lastDragTime = 0
 
-    const handleWindowDragOver = (e: DragEvent) => {
-      // Prevent browser from opening files
-      if (isFileBeingDragged && e.dataTransfer) {
-        e.preventDefault()
-        e.dataTransfer.dropEffect = "copy"
-      }
-    }
-
-    const handleWindowDragEnd = (e: DragEvent) => {
-      // Drag operation completely ended
-      if (isFileBeingDragged) {
-        isFileBeingDragged = false
-        setIsDragOver(false)
-        console.log("🏁 File drag ended - overlay OFF")
-      }
-    }
-
-    const handleWindowDrop = (e: DragEvent) => {
-      if (!isFileBeingDragged) return
+    const handleNativeDragOver = (e: DragEvent) => {
+      e.preventDefault()
       
-      // Check if we're dropping on the board
-      const boardElement = document.querySelector(".react-flow") as HTMLElement
-      if (boardElement) {
-        const rect = boardElement.getBoundingClientRect()
-        const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right && 
-                         e.clientY >= rect.top && e.clientY <= rect.bottom
-        
-        if (isOnBoard && e.dataTransfer?.files) {
-          e.preventDefault()
-          e.stopPropagation()
-          
-          console.log("🎯 Files dropped on board!")
-          const position = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-          }
-          handleFileUpload(e.dataTransfer.files, position)
+      if (!e.dataTransfer?.types.includes("Files")) return
+      
+      // Update last drag time
+      lastDragTime = Date.now()
+      
+      // Show overlay immediately
+      setIsDragOver(true)
+      e.dataTransfer.dropEffect = "copy"
+      
+      // Clear existing timeout
+      if (dragTimeout) clearTimeout(dragTimeout)
+      
+      // Set timeout to hide overlay if no more drag events
+      dragTimeout = setTimeout(() => {
+        if (Date.now() - lastDragTime >= 300) {
+          console.log("🚪 Document drag ended")
+          setIsDragOver(false)
         }
-      }
-      
-      // Always end drag state on any drop
-      isFileBeingDragged = false
-      setIsDragOver(false)
+      }, 350) // Wait 350ms after last dragover
     }
 
-    // Window-level events - no React Flow interference!
-    window.addEventListener("dragenter", handleWindowDragEnter)
-    window.addEventListener("dragover", handleWindowDragOver)
-    window.addEventListener("dragend", handleWindowDragEnd)
-    window.addEventListener("drop", handleWindowDrop)
+    const handleNativeDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      console.log("🎯 Document drop success!")
+      
+      // Clean up timers
+      if (dragTimeout) {
+        clearTimeout(dragTimeout)
+        dragTimeout = null
+      }
+      setIsDragOver(false)
+      
+      if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) {
+        console.log("❌ No files in drop")
+        return
+      }
+
+      const files = e.dataTransfer.files
+      console.log("✅ Processing", files.length, "documents")
+      
+      // Calculate position relative to board
+      const rect = boardElement.getBoundingClientRect()
+      const position = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      }
+      
+      console.log("📍 Drop position:", position)
+      handleFileUpload(files, position)
+    }
+
+    // Only dragover and drop - much simpler!
+    boardElement.addEventListener("dragover", handleNativeDragOver, { capture: true })
+    boardElement.addEventListener("drop", handleNativeDrop, { capture: true })
 
     return () => {
-      window.removeEventListener("dragenter", handleWindowDragEnter)
-      window.removeEventListener("dragover", handleWindowDragOver)
-      window.removeEventListener("dragend", handleWindowDragEnd)
-      window.removeEventListener("drop", handleWindowDrop)
+      if (dragTimeout) clearTimeout(dragTimeout)
+      boardElement.removeEventListener("dragover", handleNativeDragOver, { capture: true })
+      boardElement.removeEventListener("drop", handleNativeDrop, { capture: true })
     }
-  }, [handleFileUpload])
-
-  const handleSaveBoard = async (boardName: string) => {
+  }, [handleFileUpload]);  const handleSaveBoard = async (boardName: string) => {
     try {
       setSaveStatus('saving')
       const boardData = {

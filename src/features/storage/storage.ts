@@ -27,8 +27,33 @@ interface StorageConfig {
   description?: string
 }
 
+// Document storage interfaces
+export interface DocumentFile {
+  id: string
+  fileName: string
+  fileType: string
+  fileSize: number
+  content: Blob
+  extractedText: string
+  uploadedAt: number
+  boardId: string
+  nodeId?: string // Associated node if any
+}
+
+export interface DocumentMetadata {
+  id: string
+  fileName: string
+  fileType: string
+  fileSize: number
+  uploadedAt: number
+  boardId: string
+  nodeId?: string
+  previewUrl?: string
+}
+
 class BoardStorage {
   private store: LocalForage
+  private documentStore: LocalForage
   private config: StorageConfig
 
   constructor(config: StorageConfig = {}) {
@@ -42,11 +67,128 @@ class BoardStorage {
       name: this.config.storeName,
       description: this.config.description,
     })
+
+    // Separate store for document files
+    this.documentStore = localforage.createInstance({
+      name: 'nodal-documents',
+      description: 'Nodal document file storage',
+    })
   }
 
   // Generate a unique ID for boards
   private generateBoardId(): string {
     return `board_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }
+
+  // Generate a unique ID for documents
+  private generateDocumentId(): string {
+    return `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }
+
+  // Document storage methods
+  async saveDocument(
+    fileName: string,
+    file: Blob,
+    extractedText: string,
+    boardId: string,
+    nodeId?: string
+  ): Promise<string> {
+    try {
+      const documentId = this.generateDocumentId()
+      const now = Date.now()
+
+      const documentFile: DocumentFile = {
+        id: documentId,
+        fileName,
+        fileType: file.type || 'application/octet-stream',
+        fileSize: file.size,
+        content: file,
+        extractedText,
+        uploadedAt: now,
+        boardId,
+        nodeId,
+      }
+
+      await this.documentStore.setItem(documentId, documentFile)
+      console.log(`Document "${fileName}" saved with ID: ${documentId}`)
+      return documentId
+    } catch (error) {
+      console.error('Failed to save document:', error)
+      throw error
+    }
+  }
+
+  async getDocument(documentId: string): Promise<DocumentFile | null> {
+    try {
+      return await this.documentStore.getItem<DocumentFile>(documentId)
+    } catch (error) {
+      console.error('Failed to get document:', error)
+      return null
+    }
+  }
+
+  async getDocumentMetadata(documentId: string): Promise<DocumentMetadata | null> {
+    try {
+      const doc = await this.documentStore.getItem<DocumentFile>(documentId)
+      if (!doc) return null
+
+      return {
+        id: doc.id,
+        fileName: doc.fileName,
+        fileType: doc.fileType,
+        fileSize: doc.fileSize,
+        uploadedAt: doc.uploadedAt,
+        boardId: doc.boardId,
+        nodeId: doc.nodeId,
+        previewUrl: doc.content ? URL.createObjectURL(doc.content) : undefined,
+      }
+    } catch (error) {
+      console.error('Failed to get document metadata:', error)
+      return null
+    }
+  }
+
+  async getBoardDocuments(boardId: string): Promise<DocumentMetadata[]> {
+    try {
+      const keys = await this.documentStore.keys()
+      const documents: DocumentMetadata[] = []
+
+      for (const key of keys) {
+        const doc = await this.documentStore.getItem<DocumentFile>(key)
+        if (doc && doc.boardId === boardId) {
+          documents.push({
+            id: doc.id,
+            fileName: doc.fileName,
+            fileType: doc.fileType,
+            fileSize: doc.fileSize,
+            uploadedAt: doc.uploadedAt,
+            boardId: doc.boardId,
+            nodeId: doc.nodeId,
+            previewUrl: doc.content ? URL.createObjectURL(doc.content) : undefined,
+          })
+        }
+      }
+
+      return documents.sort((a, b) => b.uploadedAt - a.uploadedAt)
+    } catch (error) {
+      console.error('Failed to get board documents:', error)
+      return []
+    }
+  }
+
+  async deleteDocument(documentId: string): Promise<void> {
+    try {
+      const doc = await this.documentStore.getItem<DocumentFile>(documentId)
+      if (!doc) {
+        throw new Error(`Document with ID ${documentId} not found`)
+      }
+
+      await this.documentStore.removeItem(documentId)
+      console.log(`Document "${doc.fileName}" deleted successfully`)
+    } catch (error) {
+      console.error('Failed to delete document:', error)
+      throw error
+    }
   }
 
   // Save a named board

@@ -5,9 +5,17 @@ export interface BoardNode extends Node {
   data: {
     label: string
     content?: string
-    type?: 'default' | 'input' | 'output'
+    type?: 'default' | 'input' | 'output' | 'document'
     expanded?: boolean
     aiGenerated?: boolean
+    // Document-specific fields
+    documentId?: string
+    fileName?: string
+    fileType?: string
+    fileSize?: number
+    uploadedAt?: number
+    extractedText?: string
+    previewUrl?: string
   }
 }
 

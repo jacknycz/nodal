@@ -2,16 +2,22 @@ import { v4 as uuidv4 } from 'uuid'
 import type { BoardNode, BoardEdge } from './boardTypes'
 
 export function createNode(
-  label: string,
-  position: { x: number; y: number },
+  labelOrNode: string | Omit<BoardNode, 'id'>,
+  position?: { x: number; y: number },
   options: Partial<BoardNode['data']> = {}
 ): Omit<BoardNode, 'id'> {
+  // If first parameter is a complete node object, return it as-is
+  if (typeof labelOrNode === 'object') {
+    return labelOrNode
+  }
+
+  // Otherwise, create a new node from label and options
   return {
-    type: 'default',
-    position,
+    type: options.type === 'document' ? 'document' : 'default',
+    position: position!,
     dragHandle: '.nodal-drag-handle',
     data: {
-      label,
+      label: labelOrNode,
       type: 'default',
       expanded: false,
       aiGenerated: false,

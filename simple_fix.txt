@@ -1,0 +1,1 @@
+}, 50) // Much shorter timeout - 50ms instead of 350ms

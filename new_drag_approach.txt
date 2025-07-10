@@ -1,0 +1,84 @@
+  // Document-level drag tracking - ignores React Flow nested chaos!
+  useEffect(() => {
+    const boardElement = document.querySelector(".react-flow") as HTMLElement
+    if (!boardElement) return
+
+    let isDraggingFiles = false
+
+    const isOverBoard = (x: number, y: number) => {
+      const rect = boardElement.getBoundingClientRect()
+      return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+    }
+
+    const handleDocumentDragEnter = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes("Files")) {
+        isDraggingFiles = true
+        console.log("📁 Files dragging started")
+      }
+    }
+
+    const handleDocumentDragOver = (e: DragEvent) => {
+      if (!isDraggingFiles) return
+      
+      e.preventDefault()
+      const overBoard = isOverBoard(e.clientX, e.clientY)
+      
+      if (overBoard) {
+        setIsDragOver(true)
+        e.dataTransfer.dropEffect = "copy"
+      } else {
+        setIsDragOver(false)
+      }
+    }
+
+    const handleDocumentDragLeave = (e: DragEvent) => {
+      // Only hide if we're leaving the entire document
+      if (e.clientX === 0 && e.clientY === 0) {
+        console.log("📤 Files left the page")
+        isDraggingFiles = false
+        setIsDragOver(false)
+      }
+    }
+
+    const handleBoardDrop = (e: DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      
+      console.log("🎯 Board drop success!")
+      
+      isDraggingFiles = false
+      setIsDragOver(false)
+      
+      if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) {
+        console.log("❌ No files in drop")
+        return
+      }
+
+      const files = e.dataTransfer.files
+      console.log("✅ Processing", files.length, "documents")
+      
+      const rect = boardElement.getBoundingClientRect()
+      const position = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      }
+      
+      console.log("�� Drop position:", position)
+      handleFileUpload(files, position)
+    }
+
+    // Document-level events for global file drag tracking
+    document.addEventListener("dragenter", handleDocumentDragEnter)
+    document.addEventListener("dragover", handleDocumentDragOver)
+    document.addEventListener("dragleave", handleDocumentDragLeave)
+    
+    // Board-specific drop with capture
+    boardElement.addEventListener("drop", handleBoardDrop, { capture: true })
+
+    return () => {
+      document.removeEventListener("dragenter", handleDocumentDragEnter)
+      document.removeEventListener("dragover", handleDocumentDragOver)
+      document.removeEventListener("dragleave", handleDocumentDragLeave)
+      boardElement.removeEventListener("drop", handleBoardDrop, { capture: true })
+    }
+  }, [handleFileUpload])
