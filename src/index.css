@@ -142,6 +142,11 @@
   fill: none !important;
 }
 
+/* Active Node Styles */
+.react-flow__node.selected {
+  box-shadow: none !important;
+}
+
 /* Animated connection line for CustomConnectionLine */
 .animated path {
   animation: dash 1s linear infinite;
@@ -193,9 +198,53 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.theme-toggle-knob:hover {
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.15),
-    0 2px 4px rgba(0, 0, 0, 0.1);
-  transform: scale(1.05);
+/* Animated Gradient Background */
+/* .animated-gradient-bg {
+  background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #174a87, #f1f5f9);
+  background-size: 400% 400%;
+  animation: gradientWave 10s ease infinite;
+}
+
+.dark .animated-gradient-bg {
+  background: linear-gradient(-45deg, #0f172a, #1e293b, #334155, #1a202c);
+  background-size: 400% 400%;
+  animation: gradientWave 15s ease infinite;
+}
+
+@keyframes gradientWave {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+} */
+
+/* Bokeh Background Animation */
+.bokeh-circle {
+  animation: bokehFloat ease-in-out infinite;
+  opacity: 0.4;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes bokehFloat {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0px) translateX(0px);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translate(-50%, -50%) translateY(-30px) translateX(15px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-15px) translateX(-10px);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translate(-50%, -50%) translateY(-45px) translateX(20px);
+    opacity: 0.7;
+  }
 }

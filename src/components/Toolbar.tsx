@@ -17,13 +17,13 @@ export default function Toolbar({
   onOpenAIGenerator,
 }: ToolbarProps) {
   return (
-    <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div className="absolute top-4 left-4 z-10 backdrop-blur-sm bg-white/50 dark:bg-gray-900/70 rounded-4xl border border-gray-200 dark:border-gray-700 p-4">
       <Heading size="h5" className="mb-3 dark:text-white">Board Tools</Heading>
       
-      <div className="space-y-2">
+      <div className="space-y-4">
         <Button 
           onClick={onAddNode}
-          className="w-full bg-primary-500 text-white"
+          className="w-full bg-primary-500 dark:bg-primary-700 text-white"
           variant="primary"
         >
           Add Node
@@ -31,16 +31,16 @@ export default function Toolbar({
 
         <Button 
           onClick={onOpenAIGenerator}
-          className="w-full bg-primary-500 text-white"
+          className="w-full bg-primary-500 dark:bg-primary-700 text-white"
           variant="primary"
         >
           AI Generate
         </Button>
         
-        <ButtonGroup className="w-full gap-2">
+        <ButtonGroup className="w-full gap-4">
           <Button 
             onClick={onExportBoard}
-            className="flex-1 bg-primary-500 text-white"
+            className="flex-1 bg-primary-500 dark:bg-primary-700 text-white"
             variant="primary"
           >
             Export
@@ -48,7 +48,7 @@ export default function Toolbar({
 
           <Button 
             onClick={onImportBoard}
-            className="flex-1 bg-primary-500 text-white"
+            className="flex-1 bg-primary-500 dark:bg-primary-700 text-white"
             variant="primary"
           >
             Import
@@ -57,7 +57,7 @@ export default function Toolbar({
         
         <Button 
           onClick={onClearBoard}
-          className="w-full bg-primary-500 text-white"
+          className="w-full bg-primary-500 dark:bg-primary-700 text-white"
           variant="primary"
         >
           Clear Board

@@ -17,6 +17,7 @@ import CustomConnectionLine from './CustomConnectionLine'
 import Toolbar from '@/components/Toolbar'
 import AddNodeButton from '@/components/AddNodeButton'
 import AINodeGenerator from '@/components/AINodeGenerator'
+import BokehBackground from '@/components/BokehBackground'
 import { useViewportCenter } from '@/hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
@@ -188,6 +189,7 @@ export default function Board() {
         fitView
         className="bg-gray-50 dark:bg-gray-900"
       >
+        <BokehBackground />
         <MiniMap />
         <Controls />
         <Background />

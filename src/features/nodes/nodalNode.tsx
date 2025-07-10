@@ -198,8 +198,8 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     <>
       <div 
         ref={nodeRef}
-        className={`relative min-w-96 max-w-[800px] p-4 bg-white dark:bg-gray-800 rounded-4xl dark:border-gray-700 transition-all duration-200 ${
-          selected ? 'border shadow-lg border-tertiary-500 shadow-tertiary-200' : 'borderborder-gray-200'
+        className={`relative min-w-96 max-w-[800px] p-4 backdrop-blur-sm bg-white/50 dark:bg-gray-900/50 rounded-4xl dark:border-gray-700 transition-all duration-200 ${
+          selected ? 'border shadow-lg border-tertiary-500 shadow-tertiary-200' : 'border border-gray-200'
         } ${(isEditingLabel || isEditingContent) ? 'border border-blue-400 bg-blue-50' : ''} group`}
       >
         {/* Easy Connect Pattern: Simple visible handles */}
