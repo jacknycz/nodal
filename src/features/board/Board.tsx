@@ -22,6 +22,7 @@ import AINodeGenerator from '@/components/AINodeGenerator'
 import BoardNameModal from '@/components/BoardNameModal'
 import BoardRoomModal from '@/components/BoardRoomModal'
 import BokehBackground from '@/components/BokehBackground'
+import ChatPanel from '@/components/ChatPanel'
 import { useViewportCenter } from '@/hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { boardStorage, type SavedBoard } from '../storage/storage'
@@ -86,6 +87,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showBoardRoom, setShowBoardRoom] = useState(false)
+  const [showChat, setShowChat] = useState(false)
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
   const [currentBoardId, setCurrentBoardId] = useState<string | undefined>(undefined)
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
@@ -521,11 +523,18 @@ export default function Board({ onBoardStateChange }: BoardProps) {
       description: 'Open Board Room'
     },
     {
+      key: 'c',
+      ctrl: true,
+      action: () => setShowChat(true),
+      description: 'Open Superman Chat'
+    },
+    {
       key: 'Escape',
       action: () => {
         setShowAIGenerator(false)
         setShowSaveModal(false)
         setShowBoardRoom(false)
+        setShowChat(false)
       },
       description: 'Close modals'
     }
@@ -587,6 +596,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
         onOpenAIGenerator={() => setShowAIGenerator(true)}
         onSaveBoard={() => setShowSaveModal(true)}
         onOpenBoardRoom={() => setShowBoardRoom(true)}
+        onOpenChat={() => setShowChat(true)}
       />
       
       {/* Upload error notification */}
@@ -600,6 +610,12 @@ export default function Board({ onBoardStateChange }: BoardProps) {
           </div>
         </div>
       )}
+
+      {/* Superman Chat Panel */}
+      <ChatPanel 
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
+      />
 
       {/* Drag and drop overlay */}
       {isDragOver && (

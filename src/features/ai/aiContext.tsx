@@ -119,12 +119,19 @@ export function AIProvider({ children }: AIProviderProps) {
       // Create AI service
       const newService = createOpenAIService(newConfig)
       
-      // Test connection
-      const isHealthy = await newService.healthCheck()
+      // Test connection - suppress console errors during health check
+      let isHealthy = false
+      try {
+        isHealthy = await newService.healthCheck()
+      } catch (err) {
+        // Health check failed, but don't spam console with errors
+        console.warn('Health check failed:', err instanceof Error ? err.message : 'Unknown error')
+      }
+      
       if (!isHealthy) {
         setError({
           code: 'network_error',
-          message: 'Failed to connect to OpenAI API',
+          message: 'Failed to connect to OpenAI API - please check your API key',
           timestamp: new Date()
         })
         return false
@@ -311,13 +318,24 @@ export function AIProvider({ children }: AIProviderProps) {
       try {
         const savedConfig = await configManager.loadConfig()
         if (savedConfig) {
+          console.log('Attempting to initialize with saved API key...')
           const success = await initialize(savedConfig.apiKey)
           if (!success) {
-            console.warn('Failed to initialize AI service with saved config')
+            console.warn('Failed to initialize AI service with saved config - clearing invalid API key')
+            // Clear invalid API key to prevent repeated failures
+            localStorage.removeItem('nodal_api_key')
+            localStorage.removeItem('nodal_ai_config')
+            // Reset config manager state
+            configManager.clearConfig()
           }
+        } else {
+          console.log('No saved AI configuration found')
         }
       } catch (err) {
         console.error('Failed to load initial AI configuration:', err)
+        // Clear potentially corrupt config
+        localStorage.removeItem('nodal_api_key')
+        localStorage.removeItem('nodal_ai_config')
       }
     }
 

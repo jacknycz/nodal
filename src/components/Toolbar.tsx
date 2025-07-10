@@ -9,6 +9,7 @@ interface ToolbarProps {
   onOpenAIGenerator?: () => void
   onSaveBoard?: () => void
   onOpenBoardRoom?: () => void
+  onOpenChat?: () => void
 }
 
 export default function Toolbar({
@@ -19,6 +20,7 @@ export default function Toolbar({
   onOpenAIGenerator,
   onSaveBoard,
   onOpenBoardRoom,
+  onOpenChat,
 }: ToolbarProps) {
   return (
     <div className="absolute top-4 left-4 z-10 backdrop-blur-sm bg-white/90 dark:bg-gray-900/70 rounded-4xl border border-gray-200 dark:border-gray-700 p-4">
@@ -41,6 +43,14 @@ export default function Toolbar({
           variant="primary"
         >
           AI Generate
+        </Button>
+
+        <Button 
+          onClick={onOpenChat}
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+          variant="primary"
+        >
+          🦸‍♂️ Chat
         </Button>
 
         <ButtonGroup className="w-full gap-4">
