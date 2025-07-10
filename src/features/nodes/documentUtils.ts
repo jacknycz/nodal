@@ -1,6 +1,7 @@
 // Document processing utilities
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardNode } from '../board/boardTypes'
+import { extractTextFromFile as extractTextFromBlob, isTextExtractable } from '../storage/textExtractor'
 
 // Supported file types
 export const SUPPORTED_FILE_TYPES = {
@@ -19,89 +20,26 @@ export const SUPPORTED_FILE_TYPES = {
 // File size limits (in bytes)
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-// Extract text from different file types
+// Extract text from different file types using our new extraction utilities
 export async function extractTextFromFile(file: File): Promise<string> {
-  const fileType = file.type.toLowerCase()
+  console.log(`🚀 Starting text extraction for: ${file.name}`)
   
   try {
-    if (fileType.includes('text') || fileType.includes('markdown')) {
-      return await extractFromTextFile(file)
+    // Use our new text extraction utilities
+    const extractedText = await extractTextFromBlob(file, file.type, file.name)
+    
+    if (extractedText) {
+      console.log(`✅ Text extraction successful: ${extractedText.length} characters`)
+      return extractedText
+    } else {
+      console.log(`⚠️ No text extracted from: ${file.name}`)
+      return `[${file.name}]\n\nNo extractable text content available.\n\nFile type: ${file.type}\nFile size: ${formatFileSize(file.size)}\nUploaded: ${new Date().toLocaleDateString()}`
     }
     
-    if (fileType.includes('pdf')) {
-      return await extractFromPDF(file)
-    }
-    
-    if (fileType.includes('word') || fileType.includes('document')) {
-      return await extractFromWordDocument(file)
-    }
-    
-    if (fileType.includes('image')) {
-      return await extractFromImage(file)
-    }
-    
-    // Fallback: try to read as text
-    return await extractFromTextFile(file)
   } catch (error) {
-    console.error('Failed to extract text from file:', error)
-    return `[Could not extract text from ${file.name}]`
+    console.error('❌ Text extraction failed:', error)
+    return `[Error extracting text from ${file.name}]\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nFile type: ${file.type}\nFile size: ${formatFileSize(file.size)}`
   }
-}
-
-// Extract text from plain text files
-async function extractFromTextFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      resolve(text || '')
-    }
-    reader.onerror = () => reject(new Error('Failed to read text file'))
-    reader.readAsText(file)
-  })
-}
-
-// Extract text from PDF (placeholder - would need pdf.js or similar library)
-async function extractFromPDF(file: File): Promise<string> {
-  // For now, return a placeholder message
-  // In a real implementation, you'd use pdf.js:
-  // import * as pdfjsLib from 'pdfjs-dist'
-  
-  return `[PDF Document: ${file.name}]
-  
-This is a PDF document that has been uploaded. 
-To implement full text extraction, you would integrate a library like pdf.js.
-
-File size: ${formatFileSize(file.size)}
-Upload date: ${new Date().toLocaleDateString()}`
-}
-
-// Extract text from Word documents (placeholder)
-async function extractFromWordDocument(file: File): Promise<string> {
-  // For now, return a placeholder message
-  // In a real implementation, you'd use mammoth.js or similar library
-  
-  return `[Word Document: ${file.name}]
-  
-This is a Word document that has been uploaded.
-To implement full text extraction, you would integrate a library like mammoth.js.
-
-File size: ${formatFileSize(file.size)}
-Upload date: ${new Date().toLocaleDateString()}`
-}
-
-// Extract text from images (placeholder - would need OCR)
-async function extractFromImage(file: File): Promise<string> {
-  // For now, return a placeholder message
-  // In a real implementation, you'd use Tesseract.js or similar OCR library
-  
-  return `[Image: ${file.name}]
-  
-This is an image file that has been uploaded.
-To implement text extraction, you would integrate an OCR library like Tesseract.js.
-
-File size: ${formatFileSize(file.size)}
-Upload date: ${new Date().toLocaleDateString()}`
 }
 
 // Validate file for upload
@@ -143,13 +81,21 @@ export function createDocumentNode(
   const fileName = file.name
   const baseName = fileName.split('.').slice(0, -1).join('.') || fileName
   
+  // Check if text extraction was successful
+  const hasExtractedText = isTextExtractable(file.type, file.name) && 
+                          extractedText && 
+                          extractedText.length > 0 &&
+                          !extractedText.startsWith('[Error') &&
+                          !extractedText.includes('No extractable text content available') &&
+                          !extractedText.includes('[' + file.name + ']')
+  
   return {
     type: 'document',
     position,
     dragHandle: '.nodal-drag-handle',
     data: {
       label: baseName,
-      content: extractedText.slice(0, 500), // Store first 500 chars in content
+      content: hasExtractedText ? extractedText.slice(0, 500) : `Document: ${fileName}`, // Store first 500 chars in content
       type: 'document',
       expanded: false,
       aiGenerated: false,

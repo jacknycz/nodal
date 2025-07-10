@@ -21,7 +21,7 @@ export default function Toolbar({
   onOpenBoardRoom,
 }: ToolbarProps) {
   return (
-    <div className="absolute top-4 left-4 z-10 backdrop-blur-sm bg-white/50 dark:bg-gray-900/70 rounded-4xl border border-gray-200 dark:border-gray-700 p-4">
+    <div className="absolute top-4 left-4 z-10 backdrop-blur-sm bg-white/90 dark:bg-gray-900/70 rounded-4xl border border-gray-200 dark:border-gray-700 p-4">
       <div className="mb-3">
         <Heading size="h5" className="dark:text-white">Board Tools</Heading>
       </div>

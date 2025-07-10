@@ -132,15 +132,17 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   const [editLabelValue, setEditLabelValue] = useState(nodeData.label)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [documentContent, setDocumentContent] = useState<string>('')
+  const [imageUrl, setImageUrl] = useState<string>('')
   const [isLoadingContent, setIsLoadingContent] = useState(false)
+  const [contentType, setContentType] = useState<'text' | 'image' | 'pdf' | 'unsupported'>('unsupported')
   
   // Refs
   const labelInputRef = useRef<HTMLInputElement>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
 
-  // Load document content when expanded
+  // Enhanced document loading with file type detection
   useEffect(() => {
-    if (nodeData.expanded && nodeData.documentId && !documentContent && !isLoadingContent) {
+    if (nodeData.expanded && nodeData.documentId && !documentContent && !imageUrl && !isLoadingContent) {
       loadDocumentContent()
     }
   }, [nodeData.expanded, nodeData.documentId])
@@ -151,15 +153,65 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
     setIsLoadingContent(true)
     try {
       const document = await boardStorage.getDocument(nodeData.documentId)
-      if (document?.extractedText) {
-        setDocumentContent(document.extractedText)
+      if (!document) return
+
+      const fileType = document.fileType.toLowerCase()
+      console.log('🔍 Loading document preview:', document.fileName, fileType)
+      
+      // Use pre-extracted text from upload process
+      const extractedText = document.extractedText || ''
+      
+      // Determine content type and set appropriate content
+      if (fileType.includes('image/')) {
+        // Image files - create blob URL for preview
+        const imageUrl = URL.createObjectURL(document.content)
+        setImageUrl(imageUrl)
+        setContentType('image')
+        console.log('📸 Image preview loaded')
+        
+      } else if (extractedText && 
+                 extractedText.length > 0 && 
+                 !extractedText.startsWith('[Error') &&
+                 !extractedText.includes('No extractable text content available') &&
+                 !extractedText.includes('[' + document.fileName + ']')) {
+        // Files with successfully extracted text (PDF, Word, Text files)
+        setDocumentContent(extractedText)
+        
+        if (fileType.includes('pdf')) {
+          setContentType('pdf')
+          console.log('📄 PDF with extracted text loaded:', extractedText.length, 'characters')
+        } else if (fileType.includes('word') || fileType.includes('document') || document.fileName.endsWith('.docx')) {
+          setContentType('text') // Show Word docs as text since we have extracted content
+          console.log('📝 Word document with extracted text loaded:', extractedText.length, 'characters')
+        } else {
+          setContentType('text')
+          console.log('📝 Text content loaded:', extractedText.length, 'characters')
+        }
+        
+      } else {
+        // Files without extractable text or failed extraction - show file info
+        setDocumentContent(`File: ${document.fileName}\nType: ${fileType}\nSize: ${formatFileSize(document.fileSize)}\nUploaded: ${formatDate(document.uploadedAt || Date.now())}\n\n${extractedText || 'No text content available'}`)
+        setContentType('unsupported')
+        console.log('ℹ️ File info displayed for:', document.fileName)
       }
+      
     } catch (error) {
       console.error('Failed to load document content:', error)
+      setDocumentContent('Error loading document content')
+      setContentType('unsupported')
     } finally {
       setIsLoadingContent(false)
     }
   }
+
+  // Cleanup blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl)
+      }
+    }
+  }, [imageUrl])
 
   // Focus input when editing
   useEffect(() => {
@@ -230,6 +282,87 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   // Prevent dragging when clicking on inputs
   const handleInputClick = (e: React.MouseEvent) => {
     e.stopPropagation()
+  }
+
+  // Smart Content Preview Component
+  const renderContentPreview = () => {
+    if (isLoadingContent) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-sm text-gray-500">Loading preview...</span>
+        </div>
+      )
+    }
+
+    switch (contentType) {
+      case 'text':
+        return (
+          <div className="max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded p-3 text-sm text-gray-700 dark:text-gray-300">
+            <pre className="whitespace-pre-wrap font-sans">{documentContent.slice(0, 1000)}</pre>
+            {documentContent.length > 1000 && (
+              <p className="text-gray-500 dark:text-gray-400 mt-2 italic">
+                ... and {documentContent.length - 1000} more characters
+              </p>
+            )}
+          </div>
+        )
+        
+      case 'image':
+        return (
+          <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+            <img 
+              src={imageUrl} 
+              alt={nodeData.fileName}
+              className="max-w-full max-h-48 object-contain mx-auto rounded"
+              onError={() => {
+                console.error('Failed to load image preview')
+                setContentType('unsupported')
+              }}
+            />
+          </div>
+        )
+        
+      case 'pdf':
+        return (
+          <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+            {documentContent && documentContent.length > 0 ? (
+              <div className="max-h-48 overflow-y-auto text-sm text-gray-700 dark:text-gray-300">
+                <div className="flex items-center mb-2 text-xs text-red-600 dark:text-red-400">
+                  <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                  </svg>
+                  PDF Content Extracted
+                </div>
+                <pre className="whitespace-pre-wrap font-sans">{documentContent.slice(0, 1000)}</pre>
+                {documentContent.length > 1000 && (
+                  <p className="text-gray-500 dark:text-gray-400 mt-2 italic">
+                    ... and {documentContent.length - 1000} more characters
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 mx-auto mb-3 text-red-500">
+                  <svg fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                  </svg>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">PDF Preview</p>
+                <p className="text-xs text-gray-500 mt-1">No text content extracted</p>
+              </div>
+            )}
+          </div>
+        )
+        
+      default:
+        return (
+          <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">File Information</p>
+            <pre className="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap">{documentContent}</pre>
+          </div>
+        )
+    }
   }
 
   const isMinimized = !nodeData.expanded
@@ -385,26 +518,17 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
               <span>{nodeData.uploadedAt ? formatDate(nodeData.uploadedAt) : ''}</span>
             </div>
 
-            {/* Document Content Preview */}
+            {/* Enhanced Document Content Preview */}
             <div className="border-t border-gray-200 dark:border-gray-600 pt-3">
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Content Preview</h4>
-              {isLoadingContent ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-sm text-gray-500">Loading content...</span>
-                </div>
-              ) : documentContent ? (
-                <div className="max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-700 rounded p-3 text-sm text-gray-700 dark:text-gray-300">
-                  <pre className="whitespace-pre-wrap font-sans">{documentContent.slice(0, 500)}</pre>
-                  {documentContent.length > 500 && (
-                    <p className="text-gray-500 dark:text-gray-400 mt-2 italic">
-                      ... and {documentContent.length - 500} more characters
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-sm italic">No text content available</p>
-              )}
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Content Preview
+                {contentType !== 'unsupported' && (
+                  <span className="ml-2 text-xs text-gray-500 bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded">
+                    {contentType.toUpperCase()}
+                  </span>
+                )}
+              </h4>
+              {renderContentPreview()}
             </div>
           </div>
         )}
