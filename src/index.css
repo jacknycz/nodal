@@ -143,7 +143,13 @@
 }
 
 /* Active Node Styles */
-.react-flow__node.selected {
+.react-flow__node.selected,
+.react-flow__node.selected:hover {
+  box-shadow: none !important;
+}
+
+/* Remove default React Flow node hover shadow */
+.react-flow__node:hover {
   box-shadow: none !important;
 }
 

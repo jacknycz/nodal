@@ -17,9 +17,11 @@ import CustomConnectionLine from './CustomConnectionLine'
 import Toolbar from '@/components/Toolbar'
 import AddNodeButton from '@/components/AddNodeButton'
 import AINodeGenerator from '@/components/AINodeGenerator'
+import BoardNameModal from '@/components/BoardNameModal'
 import BokehBackground from '@/components/BokehBackground'
 import { useViewportCenter } from '@/hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { boardStorage } from '../storage/storage'
 
 import '@xyflow/react/dist/style.css'
 
@@ -55,10 +57,28 @@ export default function Board() {
     deleteEdge,
     clearBoard,
     updateViewport,
+    viewport,
   } = useBoard()
 
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
+  const [currentBoardId, setCurrentBoardId] = useState<string | undefined>(undefined)
+  const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
+
+  // Load existing board names for validation
+  useEffect(() => {
+    const loadBoardNames = async () => {
+      try {
+        const names = await boardStorage.getBoardNames()
+        setExistingBoardNames(names)
+      } catch (error) {
+        console.error('Failed to load board names:', error)
+      }
+    }
+    loadBoardNames()
+  }, [])
 
   // Listen for edge delete events from FloatingEdge components
   useEffect(() => {
@@ -101,6 +121,35 @@ export default function Board() {
     addNode(`Node ${nodes.length + 1}`, center)
   }
 
+  const handleSaveBoard = async (boardName: string) => {
+    try {
+      const boardData = {
+        nodes,
+        edges,
+        viewport: viewport || { x: 0, y: 0, zoom: 1 }
+      }
+
+      if (currentBoardId && currentBoardName === boardName) {
+        // Update existing board
+        await boardStorage.updateBoard(currentBoardId, boardData)
+        console.log('Board updated successfully!')
+      } else {
+        // Save new board
+        const boardId = await boardStorage.saveBoard(boardName, boardData)
+        setCurrentBoardId(boardId)
+        setCurrentBoardName(boardName)
+        console.log('Board saved successfully!')
+      }
+
+      // Refresh board names list
+      const names = await boardStorage.getBoardNames()
+      setExistingBoardNames(names)
+    } catch (error) {
+      console.error('Failed to save board:', error)
+      // TODO: Show error toast
+    }
+  }
+
   // Keyboard shortcuts (defined after functions)
   useKeyboardShortcuts([
     {
@@ -116,15 +165,26 @@ export default function Board() {
       description: 'Add new node'
     },
     {
+      key: 's',
+      ctrl: true,
+      action: () => setShowSaveModal(true),
+      description: 'Save board'
+    },
+    {
       key: 'Escape',
-      action: () => setShowAIGenerator(false),
-      description: 'Close AI Node Generator'
+      action: () => {
+        setShowAIGenerator(false)
+        setShowSaveModal(false)
+      },
+      description: 'Close modals'
     }
   ])
 
   const handleClearBoard = () => {
     if (confirm('Are you sure you want to clear the board?')) {
       clearBoard()
+      setCurrentBoardName(undefined)
+      setCurrentBoardId(undefined)
     }
   }
 
@@ -135,7 +195,7 @@ export default function Board() {
     const url = URL.createObjectURL(dataBlob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'board-export.json'
+    link.download = `${currentBoardName || 'board'}-export.json`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -171,6 +231,8 @@ export default function Board() {
         onExportBoard={handleExportBoard}
         onImportBoard={handleImportBoard}
         onOpenAIGenerator={() => setShowAIGenerator(true)}
+        onSaveBoard={() => setShowSaveModal(true)}
+        currentBoardName={currentBoardName}
       />
       
       <ReactFlow
@@ -200,6 +262,14 @@ export default function Board() {
       <AINodeGenerator 
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
+      />
+
+      <BoardNameModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveBoard}
+        defaultName={currentBoardName || ''}
+        existingNames={existingBoardNames.filter(name => name !== currentBoardName)}
       />
     </div>
   )

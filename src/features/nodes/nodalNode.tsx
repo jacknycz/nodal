@@ -198,8 +198,8 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     <>
       <div 
         ref={nodeRef}
-        className={`relative min-w-96 max-w-[800px] p-4 backdrop-blur-sm bg-white/50 dark:bg-gray-900/50 rounded-4xl dark:border-gray-700 transition-all duration-200 ${
-          selected ? 'border shadow-lg border-tertiary-500 shadow-tertiary-200' : 'border border-gray-200'
+        className={`relative min-w-96 max-w-[800px] p-4 backdrop-blur-sm bg-white/90 dark:bg-gray-950/50 rounded-4xl dark:border-gray-700 transition-all duration-200 ${
+          selected ? 'border shadow-lg border-tertiary-50 shadow-tertiary-100/50 dark:border-secondary-200/30 dark:shadow-lg dark:shadow-secondary-300/30' : 'border border-gray-50 dark:border-gray-950/90'
         } ${(isEditingLabel || isEditingContent) ? 'border border-blue-400 bg-blue-50' : ''} group`}
       >
         {/* Easy Connect Pattern: Simple visible handles */}
@@ -257,7 +257,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                     className="py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 rounded group"
                   >
                     <div className="flex items-center justify-between">
-                      <Heading size="h4" className="font-medium text-lg dark:text-white" variant="custom">{nodeData.label}</Heading>
+                      <Heading size="h4" className="font-medium text-lg dark:text-white mb-0" variant="custom">{nodeData.label}</Heading>
                       <svg 
                         className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" 
                         fill="none" 
