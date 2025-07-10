@@ -120,6 +120,8 @@ export function useBoard() {
     selectNode: handleNodeSelect,
     updateViewport: handleViewportChange,
     clearBoard,
+    setNodes,
+    setEdges,
     
     // React Flow handlers
     onNodesChange,

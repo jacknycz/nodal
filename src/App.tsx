@@ -1,19 +1,39 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from '@/features/ai/aiContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Board from '@/features/board/Board'
 import Topbar from './components/Topbar'
 
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
+
 export default function App() {
+  const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+
+  const handleBoardStateChange = (
+    boardName: string | undefined,
+    status: SaveStatus,
+    unsavedChanges: boolean
+  ) => {
+    setCurrentBoardName(boardName)
+    setSaveStatus(status)
+    setHasUnsavedChanges(unsavedChanges)
+  }
+
   return (
     <ThemeProvider>
       <AIProvider>
         <ReactFlowProvider>
           <div className="w-screen h-screen bg-gray-50 dark:bg-gray-900">
-            <Topbar />
+            <Topbar 
+              currentBoardName={currentBoardName}
+              saveStatus={saveStatus}
+              hasUnsavedChanges={hasUnsavedChanges}
+            />
             <div className="pt-16 w-full h-full">
-              <Board />
+              <Board onBoardStateChange={handleBoardStateChange} />
             </div>
           </div>
         </ReactFlowProvider>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
@@ -18,12 +18,23 @@ import Toolbar from '@/components/Toolbar'
 import AddNodeButton from '@/components/AddNodeButton'
 import AINodeGenerator from '@/components/AINodeGenerator'
 import BoardNameModal from '@/components/BoardNameModal'
+import BoardRoomModal from '@/components/BoardRoomModal'
 import BokehBackground from '@/components/BokehBackground'
 import { useViewportCenter } from '@/hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
-import { boardStorage } from '../storage/storage'
+import { boardStorage, type SavedBoard } from '../storage/storage'
 
 import '@xyflow/react/dist/style.css'
+
+type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
+
+interface BoardProps {
+  onBoardStateChange: (
+    boardName: string | undefined,
+    saveStatus: SaveStatus,
+    hasUnsavedChanges: boolean
+  ) => void
+}
 
 const nodeTypes = {
   default: NodalNode,
@@ -46,7 +57,7 @@ const connectionLineStyle = {
   strokeWidth: 3,
 }
 
-export default function Board() {
+export default function Board({ onBoardStateChange }: BoardProps) {
   const {
     nodes,
     edges,
@@ -58,14 +69,105 @@ export default function Board() {
     clearBoard,
     updateViewport,
     viewport,
+    setNodes,
+    setEdges,
   } = useBoard()
 
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
+  const [showBoardRoom, setShowBoardRoom] = useState(false)
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
   const [currentBoardId, setCurrentBoardId] = useState<string | undefined>(undefined)
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  
+  // Refs for autosave
+  const autosaveTimeoutRef = useRef<number | null>(null)
+  const lastSavedDataRef = useRef<string>('')
+
+  // Create a hash of the current board state for change detection
+  const getCurrentDataHash = useCallback(() => {
+    const data = { nodes, edges }
+    return JSON.stringify(data)
+  }, [nodes, edges])
+
+  // Auto-save function
+  const performAutosave = useCallback(async () => {
+    if (!currentBoardId || !currentBoardName) {
+      // Can't autosave without a board name/ID
+      setSaveStatus('unsaved')
+      return
+    }
+
+    try {
+      setSaveStatus('saving')
+      const boardData = {
+        nodes,
+        edges,
+        viewport: viewport || { x: 0, y: 0, zoom: 1 }
+      }
+
+      await boardStorage.updateBoard(currentBoardId, boardData)
+      
+      // Update the last saved data hash
+      lastSavedDataRef.current = getCurrentDataHash()
+      setHasUnsavedChanges(false)
+      setSaveStatus('saved')
+      
+      console.log('Auto-saved successfully!')
+    } catch (error) {
+      console.error('Auto-save failed:', error)
+      setSaveStatus('error')
+    }
+  }, [currentBoardId, currentBoardName, nodes, edges, viewport, getCurrentDataHash])
+
+  // Track changes and trigger autosave
+  useEffect(() => {
+    const currentDataHash = getCurrentDataHash()
+    
+    // Skip if this is the initial load or if data hasn't actually changed
+    if (lastSavedDataRef.current === '' || lastSavedDataRef.current === currentDataHash) {
+      return
+    }
+
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true)
+    if (currentBoardId) {
+      setSaveStatus('unsaved')
+    }
+
+    // Clear existing timeout
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current)
+    }
+
+    // Set new autosave timeout (debounced by 3 seconds)
+    autosaveTimeoutRef.current = setTimeout(() => {
+      performAutosave()
+    }, 3000)
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current)
+      }
+    }
+  }, [getCurrentDataHash, currentBoardId, performAutosave])
+
+  // Initialize last saved data when board is loaded/saved
+  useEffect(() => {
+    if (currentBoardId && !hasUnsavedChanges) {
+      lastSavedDataRef.current = getCurrentDataHash()
+      setSaveStatus('saved')
+    }
+  }, [currentBoardId, hasUnsavedChanges, getCurrentDataHash])
+
+  // Notify parent of board state changes
+  useEffect(() => {
+    onBoardStateChange(currentBoardName, saveStatus, hasUnsavedChanges)
+  }, [currentBoardName, saveStatus, hasUnsavedChanges, onBoardStateChange])
 
   // Load existing board names for validation
   useEffect(() => {
@@ -123,11 +225,19 @@ export default function Board() {
 
   const handleSaveBoard = async (boardName: string) => {
     try {
+      setSaveStatus('saving')
       const boardData = {
         nodes,
         edges,
         viewport: viewport || { x: 0, y: 0, zoom: 1 }
       }
+
+      console.log('Save attempt:', {
+        boardName,
+        currentBoardId,
+        currentBoardName,
+        condition: currentBoardId && currentBoardName === boardName
+      })
 
       if (currentBoardId && currentBoardName === boardName) {
         // Update existing board
@@ -138,16 +248,106 @@ export default function Board() {
         const boardId = await boardStorage.saveBoard(boardName, boardData)
         setCurrentBoardId(boardId)
         setCurrentBoardName(boardName)
-        console.log('Board saved successfully!')
+        console.log('Board saved successfully! New ID:', boardId)
       }
+
+      // Update tracking state
+      lastSavedDataRef.current = getCurrentDataHash()
+      setHasUnsavedChanges(false)
+      setSaveStatus('saved')
 
       // Refresh board names list
       const names = await boardStorage.getBoardNames()
       setExistingBoardNames(names)
     } catch (error) {
       console.error('Failed to save board:', error)
+      setSaveStatus('error')
       // TODO: Show error toast
     }
+  }
+
+  const handleLoadBoard = async (board: SavedBoard) => {
+    try {
+      // Load the board data
+      setNodes(board.data.nodes)
+      setEdges(board.data.edges)
+      
+      // Update viewport if available
+      if (board.data.viewport) {
+        updateViewport(board.data.viewport)
+      }
+      
+      // Update current board tracking
+      setCurrentBoardId(board.id)
+      setCurrentBoardName(board.name)
+      
+      // Reset save state
+      setHasUnsavedChanges(false)
+      setSaveStatus('saved')
+      
+      // Close the board room
+      setShowBoardRoom(false)
+      
+      console.log(`Board "${board.name}" loaded successfully!`)
+    } catch (error) {
+      console.error('Failed to load board:', error)
+      // TODO: Show error toast
+    }
+  }
+
+  const handleRenameBoard = async (boardId: string, newName: string) => {
+    try {
+      await boardStorage.renameBoard(boardId, newName)
+      
+      // Update current board name if it's the active board
+      if (boardId === currentBoardId) {
+        setCurrentBoardName(newName)
+      }
+      
+      // Refresh board names list
+      const names = await boardStorage.getBoardNames()
+      setExistingBoardNames(names)
+      
+      console.log(`Board renamed to "${newName}" successfully!`)
+    } catch (error) {
+      console.error('Failed to rename board:', error)
+      throw error // Re-throw so the modal can handle it
+    }
+  }
+
+  const handleDeleteBoard = async (boardId: string) => {
+    try {
+      await boardStorage.deleteBoard(boardId)
+      
+      // If we deleted the current board, clear the current board tracking
+      if (boardId === currentBoardId) {
+        setCurrentBoardId(undefined)
+        setCurrentBoardName(undefined)
+        setHasUnsavedChanges(false)
+        setSaveStatus('saved')
+      }
+      
+      // Refresh board names list
+      const names = await boardStorage.getBoardNames()
+      setExistingBoardNames(names)
+      
+      console.log('Board deleted successfully!')
+    } catch (error) {
+      console.error('Failed to delete board:', error)
+      throw error // Re-throw so the modal can handle it
+    }
+  }
+
+  const handleNewBoard = () => {
+    // Clear the current board
+    clearBoard()
+    setCurrentBoardId(undefined)
+    setCurrentBoardName(undefined)
+    setHasUnsavedChanges(false)
+    setSaveStatus('saved')
+    lastSavedDataRef.current = ''
+    
+    console.log('Started new board!')
   }
 
   // Keyboard shortcuts (defined after functions)
@@ -171,10 +371,17 @@ export default function Board() {
       description: 'Save board'
     },
     {
+      key: 'o',
+      ctrl: true,
+      action: () => setShowBoardRoom(true),
+      description: 'Open Board Room'
+    },
+    {
       key: 'Escape',
       action: () => {
         setShowAIGenerator(false)
         setShowSaveModal(false)
+        setShowBoardRoom(false)
       },
       description: 'Close modals'
     }
@@ -185,6 +392,9 @@ export default function Board() {
       clearBoard()
       setCurrentBoardName(undefined)
       setCurrentBoardId(undefined)
+      setHasUnsavedChanges(false)
+      setSaveStatus('saved')
+      lastSavedDataRef.current = ''
     }
   }
 
@@ -232,7 +442,7 @@ export default function Board() {
         onImportBoard={handleImportBoard}
         onOpenAIGenerator={() => setShowAIGenerator(true)}
         onSaveBoard={() => setShowSaveModal(true)}
-        currentBoardName={currentBoardName}
+        onOpenBoardRoom={() => setShowBoardRoom(true)}
       />
       
       <ReactFlow
@@ -270,6 +480,16 @@ export default function Board() {
         onSave={handleSaveBoard}
         defaultName={currentBoardName || ''}
         existingNames={existingBoardNames.filter(name => name !== currentBoardName)}
+      />
+
+      <BoardRoomModal
+        isOpen={showBoardRoom}
+        onClose={() => setShowBoardRoom(false)}
+        onLoadBoard={handleLoadBoard}
+        onRenameBoard={handleRenameBoard}
+        onDeleteBoard={handleDeleteBoard}
+        onNewBoard={handleNewBoard}
+        currentBoardId={currentBoardId}
       />
     </div>
   )
