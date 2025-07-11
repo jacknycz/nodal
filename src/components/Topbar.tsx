@@ -3,6 +3,7 @@ import ThemeToggle from './ThemeToggle'
 import { useTheme } from '../contexts/ThemeContext'
 import nodalBlackLogo from '../assets/nodal-black.svg'
 import nodalWhiteLogo from '../assets/nodal-white.svg'
+import { TestTube, ArrowLeft } from 'lucide-react'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -10,12 +11,16 @@ interface TopbarProps {
   currentBoardName?: string
   saveStatus?: SaveStatus
   hasUnsavedChanges?: boolean
+  isTestMode?: boolean
+  onToggleTestMode?: () => void
 }
 
 export default function Topbar({ 
   currentBoardName, 
   saveStatus = 'saved', 
-  hasUnsavedChanges = false 
+  hasUnsavedChanges = false,
+  isTestMode = false,
+  onToggleTestMode
 }: TopbarProps) {
   const { isDark } = useTheme()
 
@@ -73,8 +78,29 @@ export default function Topbar({
           </div>
         )}
 
-        {/* Right - Theme Toggle */}
-        <ThemeToggle />
+        {/* Right - Controls */}
+        <div className="flex items-center gap-3">
+          {onToggleTestMode && (
+            <button
+              onClick={onToggleTestMode}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              title={isTestMode ? "Exit Test Mode" : "Enter Test Mode"}
+            >
+              {isTestMode ? (
+                <>
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Exit Test</span>
+                </>
+              ) : (
+                <>
+                  <TestTube className="w-4 h-4" />
+                  <span>Test Mode</span>
+                </>
+              )}
+            </button>
+          )}
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )
