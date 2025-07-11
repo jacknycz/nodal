@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import Board from '@/features/board/Board'
 import Topbar from './components/Topbar'
 import TestPage from './components/TestPage'
+import FloatingChat from './components/FloatingChat'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -43,6 +44,7 @@ export default function App() {
                 <Board onBoardStateChange={handleBoardStateChange} />
               </div>
             </div>
+            <FloatingChat />
           </ReactFlowProvider>
         </AIProvider>
       )}

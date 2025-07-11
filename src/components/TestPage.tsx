@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from '@/features/ai/aiContext'
 import Board from '@/features/board/Board'
-import ChatPanel from '@/components/ChatPanel'
 import Topbar from '@/components/Topbar'
 import { useChat } from '@/hooks/useChat'
 import { Play, TestTube, Zap, Brain, Target, Users, Lightbulb, BarChart3 } from 'lucide-react'
@@ -222,29 +221,28 @@ function TestPageInternal({ onExitTestMode }: TestPageProps) {
               {/* Test Environment */}
         <div className="flex-1 relative">
           <Board onBoardStateChange={() => {}} />
-          <ChatPanel />
 
-        {/* Test Status Overlay */}
-        {selectedScenario && (
-          <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-w-md">
-            <div className="flex items-center gap-2 mb-2">
-              {selectedScenario.icon}
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                Testing: {selectedScenario.title}
-              </h3>
+          {/* Test Status Overlay */}
+          {selectedScenario && (
+            <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-w-md">
+              <div className="flex items-center gap-2 mb-2">
+                {selectedScenario.icon}
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  Testing: {selectedScenario.title}
+                </h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                {selectedScenario.description}
+              </p>
+              <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-sm font-mono text-gray-800 dark:text-gray-200">
+                {selectedScenario.command}
+              </div>
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Status: {testResults[selectedScenario.id] || 'ready'}
+              </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              {selectedScenario.description}
-            </p>
-            <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded text-sm font-mono text-gray-800 dark:text-gray-200">
-              {selectedScenario.command}
-            </div>
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Status: {testResults[selectedScenario.id] || 'ready'}
-            </div>
-          </div>
-                 )}
-       </div>
+          )}
+        </div>
       </div>
     </div>
   )
