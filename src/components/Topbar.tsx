@@ -1,9 +1,11 @@
 import React from 'react'
 import ThemeToggle from './ThemeToggle'
+import AvatarMenu from './AvatarMenu'
 import { useTheme } from '../contexts/ThemeContext'
 import nodalBlackLogo from '../assets/nodal-black.svg'
 import nodalWhiteLogo from '../assets/nodal-white.svg'
 import { TestTube, ArrowLeft } from 'lucide-react'
+import type { SavedBoard } from '../features/storage/storage'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -13,6 +15,12 @@ interface TopbarProps {
   hasUnsavedChanges?: boolean
   isTestMode?: boolean
   onToggleTestMode?: () => void
+  onSaveBoard?: () => void
+  onOpenBoardRoom?: () => void
+  onExportBoard?: () => void
+  onImportBoard?: () => void
+  onOpenSettings?: () => void
+  onLoadBoard?: (board: SavedBoard) => void
 }
 
 export default function Topbar({ 
@@ -20,7 +28,13 @@ export default function Topbar({
   saveStatus = 'saved', 
   hasUnsavedChanges = false,
   isTestMode = false,
-  onToggleTestMode
+  onToggleTestMode,
+  onSaveBoard,
+  onOpenBoardRoom,
+  onExportBoard,
+  onImportBoard,
+  onOpenSettings,
+  onLoadBoard
 }: TopbarProps) {
   const { isDark } = useTheme()
 
@@ -99,7 +113,20 @@ export default function Topbar({
               )}
             </button>
           )}
+          
           <ThemeToggle />
+          
+          <AvatarMenu
+            currentBoardName={currentBoardName}
+            saveStatus={saveStatus}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onSaveBoard={onSaveBoard}
+            onOpenBoardRoom={onOpenBoardRoom}
+            onExportBoard={onExportBoard}
+            onImportBoard={onImportBoard}
+            onOpenSettings={onOpenSettings}
+            onLoadBoard={onLoadBoard}
+          />
         </div>
       </div>
     </header>

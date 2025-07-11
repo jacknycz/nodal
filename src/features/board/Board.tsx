@@ -16,7 +16,7 @@ import NodalNode from '../nodes/nodalNode'
 import DocumentNode from '../nodes/DocumentNode'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
-import Toolbar from '@/components/Toolbar'
+import FloatingActionButton from '@/components/FloatingActionButton'
 import AddNodeButton from '@/components/AddNodeButton'
 import AINodeGenerator from '@/components/AINodeGenerator'
 import BoardNameModal from '@/components/BoardNameModal'
@@ -109,14 +109,13 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   }, [nodes, edges])
 
   // Auto-save function
-  const performAutosave = useCallback(async () => {
-    if (!currentBoardId || !currentBoardName) {
-      // Can't autosave without a board name/ID
-      setSaveStatus('unsaved')
-      return
-    }
+  const autoSave = useCallback(async () => {
+    if (!currentBoardId || !currentBoardName) return
 
     try {
+      const currentData = getCurrentDataHash()
+      if (currentData === lastSavedDataRef.current) return
+
       setSaveStatus('saving')
       const boardData = {
         nodes,
@@ -125,59 +124,36 @@ export default function Board({ onBoardStateChange }: BoardProps) {
       }
 
       await boardStorage.updateBoard(currentBoardId, boardData)
-      
-      // Update the last saved data hash
-      lastSavedDataRef.current = getCurrentDataHash()
+      lastSavedDataRef.current = currentData
       setHasUnsavedChanges(false)
       setSaveStatus('saved')
-      
-      console.log('Auto-saved successfully!')
     } catch (error) {
       console.error('Auto-save failed:', error)
       setSaveStatus('error')
     }
-  }, [currentBoardId, currentBoardName, nodes, edges, viewport, getCurrentDataHash])
+  }, [nodes, edges, viewport, currentBoardId, currentBoardName, getCurrentDataHash])
 
-  // Track changes and trigger autosave
+  // Auto-save on changes
   useEffect(() => {
-    const currentDataHash = getCurrentDataHash()
-    
-    // Skip if this is the initial load or if data hasn't actually changed
-    if (lastSavedDataRef.current === '' || lastSavedDataRef.current === currentDataHash) {
-      return
-    }
-
-    // Mark as having unsaved changes
-    setHasUnsavedChanges(true)
-    if (currentBoardId) {
-      setSaveStatus('unsaved')
-    }
-
-    // Clear existing timeout
     if (autosaveTimeoutRef.current) {
       clearTimeout(autosaveTimeoutRef.current)
     }
 
-    // Set new autosave timeout (debounced by 3 seconds)
-    autosaveTimeoutRef.current = setTimeout(() => {
-      performAutosave()
-    }, 3000)
+    const currentData = getCurrentDataHash()
+    if (currentData !== lastSavedDataRef.current) {
+      setHasUnsavedChanges(true)
+      setSaveStatus('unsaved')
+      
+      // Auto-save after 2 seconds of inactivity
+      autosaveTimeoutRef.current = window.setTimeout(autoSave, 2000)
+    }
 
-    // Cleanup timeout on unmount
     return () => {
       if (autosaveTimeoutRef.current) {
         clearTimeout(autosaveTimeoutRef.current)
       }
     }
-  }, [getCurrentDataHash, currentBoardId, performAutosave])
-
-  // Initialize last saved data when board is loaded/saved
-  useEffect(() => {
-    if (currentBoardId && !hasUnsavedChanges) {
-      lastSavedDataRef.current = getCurrentDataHash()
-      setSaveStatus('saved')
-    }
-  }, [currentBoardId, hasUnsavedChanges, getCurrentDataHash])
+  }, [getCurrentDataHash, autoSave])
 
   // Notify parent of board state changes
   useEffect(() => {
@@ -207,6 +183,57 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     window.addEventListener('edge-delete', handleEdgeDelete as EventListener)
     return () => window.removeEventListener('edge-delete', handleEdgeDelete as EventListener)
   }, [deleteEdge])
+
+  // Listen for topbar actions
+  useEffect(() => {
+    const handleOpenSaveModal = () => setShowSaveModal(true)
+    const handleOpenBoardRoom = () => setShowBoardRoom(true)
+    const handleExportBoard = () => {
+      const boardData = { nodes, edges }
+      const dataStr = JSON.stringify(boardData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${currentBoardName || 'board'}-export.json`
+      link.click()
+      URL.revokeObjectURL(url)
+    }
+    const handleImportBoard = () => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json'
+      input.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (file) {
+          const reader = new FileReader()
+          reader.onload = (e) => {
+            try {
+              const data = JSON.parse(e.target?.result as string)
+              // TODO: Implement import logic
+              console.log('Import data:', data)
+            } catch (error) {
+              console.error('Failed to parse import file:', error)
+            }
+          }
+          reader.readAsText(file)
+        }
+      }
+      input.click()
+    }
+
+    window.addEventListener('open-save-modal', handleOpenSaveModal)
+    window.addEventListener('open-board-room', handleOpenBoardRoom)
+    window.addEventListener('export-board', handleExportBoard)
+    window.addEventListener('import-board', handleImportBoard)
+
+    return () => {
+      window.removeEventListener('open-save-modal', handleOpenSaveModal)
+      window.removeEventListener('open-board-room', handleOpenBoardRoom)
+      window.removeEventListener('export-board', handleExportBoard)
+      window.removeEventListener('import-board', handleImportBoard)
+    }
+  }, [nodes, edges, currentBoardName])
 
   const handleConnect = (connection: Connection) => {
     if (!connection.source || !connection.target) return
@@ -414,27 +441,18 @@ export default function Board({ onBoardStateChange }: BoardProps) {
 
   const handleLoadBoard = async (board: SavedBoard) => {
     try {
-      // Load the board data
-      setNodes(board.data.nodes)
-      setEdges(board.data.edges)
-      
-      // Update viewport if available
-      if (board.data.viewport) {
-        updateViewport(board.data.viewport)
+      const boardData = await boardStorage.loadBoard(board.id)
+      if (boardData) {
+        setNodes(boardData.data.nodes)
+        setEdges(boardData.data.edges)
+        updateViewport(boardData.data.viewport)
+        setCurrentBoardId(board.id)
+        setCurrentBoardName(board.name)
+        lastSavedDataRef.current = JSON.stringify({ nodes: boardData.data.nodes, edges: boardData.data.edges })
+        setHasUnsavedChanges(false)
+        setSaveStatus('saved')
+        console.log('Board loaded successfully!')
       }
-      
-      // Update current board tracking
-      setCurrentBoardId(board.id)
-      setCurrentBoardName(board.name)
-      
-      // Reset save state
-      setHasUnsavedChanges(false)
-      setSaveStatus('saved')
-      
-      // Close the board room
-      setShowBoardRoom(false)
-      
-      console.log(`Board "${board.name}" loaded successfully!`)
     } catch (error) {
       console.error('Failed to load board:', error)
       // TODO: Show error toast
@@ -445,7 +463,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     try {
       await boardStorage.renameBoard(boardId, newName)
       
-      // Update current board name if it's the active board
+      // If we renamed the current board, update the current board name
       if (boardId === currentBoardId) {
         setCurrentBoardName(newName)
       }
@@ -454,7 +472,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
       const names = await boardStorage.getBoardNames()
       setExistingBoardNames(names)
       
-      console.log(`Board renamed to "${newName}" successfully!`)
+      console.log('Board renamed successfully!')
     } catch (error) {
       console.error('Failed to rename board:', error)
       throw error // Re-throw so the modal can handle it
@@ -541,14 +559,12 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   ])
 
   const handleClearBoard = () => {
-    if (confirm('Are you sure you want to clear the board?')) {
-      clearBoard()
-      setCurrentBoardName(undefined)
-      setCurrentBoardId(undefined)
-      setHasUnsavedChanges(false)
-      setSaveStatus('saved')
-      lastSavedDataRef.current = ''
-    }
+    clearBoard()
+    setCurrentBoardName(undefined)
+    setCurrentBoardId(undefined)
+    setHasUnsavedChanges(false)
+    setSaveStatus('saved')
+    lastSavedDataRef.current = ''
   }
 
   const handleExportBoard = () => {
@@ -588,15 +604,12 @@ export default function Board({ onBoardStateChange }: BoardProps) {
 
   return (
     <div className="w-full h-full relative">
-      <Toolbar
+      {/* Floating Action Button */}
+      <FloatingActionButton
         onAddNode={handleAddNode}
-        onClearBoard={handleClearBoard}
-        onExportBoard={handleExportBoard}
-        onImportBoard={handleImportBoard}
         onOpenAIGenerator={() => setShowAIGenerator(true)}
-        onSaveBoard={() => setShowSaveModal(true)}
-        onOpenBoardRoom={() => setShowBoardRoom(true)}
-        onOpenChat={() => setShowChat(true)}
+        onClearBoard={handleClearBoard}
+        hasNodes={nodes.length > 0}
       />
       
       {/* Upload error notification */}
