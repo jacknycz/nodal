@@ -24,15 +24,19 @@ interface NodeAwareChatPanelProps {
   onClose?: () => void
   onToggleMode?: () => void
   className?: string
+  selectionContext?: string
+  onSelectionContextUsed?: () => void
 }
 
 export default function NodeAwareChatPanel({ 
   isOpen = false, 
   onClose,
   onToggleMode,
-  className = ''
+  className = '',
+  selectionContext,
+  onSelectionContextUsed
 }: NodeAwareChatPanelProps) {
-  const { messages, sendMessage, applyNode, applyAllNodes, isLoading, error } = useNodeAwareChat()
+  const { messages, sendMessage, sendMessageWithSelection, applyNode, applyAllNodes, isLoading, error } = useNodeAwareChat()
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
@@ -51,6 +55,24 @@ export default function NodeAwareChatPanel({
   const messagesRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const apiKeyInputRef = useRef<HTMLInputElement>(null)
+  
+  // Handle selection context
+  const [hasProcessedSelection, setHasProcessedSelection] = useState(false)
+  
+  // Process selection context when provided
+  useEffect(() => {
+    if (selectionContext && isOpen && !hasProcessedSelection && !showAPIKeySetup) {
+      setCurrentMessage('Tell me about these selected nodes and suggest ways to enhance or connect them.')
+      setHasProcessedSelection(true)
+    }
+  }, [selectionContext, isOpen, hasProcessedSelection, showAPIKeySetup])
+  
+  // Reset selection processing when panel closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHasProcessedSelection(false)
+    }
+  }, [isOpen])
 
   // Check AI configuration status
   const configStatus = getConfigurationStatus()
@@ -72,12 +94,12 @@ export default function NodeAwareChatPanel({
     }
   }, [messages])
 
-  // Focus input when panel opens
+  // Focus input when panel opens or selection changes
   useEffect(() => {
     if (isOpen && isExpanded && !showAPIKeySetup && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [isOpen, isExpanded, showAPIKeySetup])
+  }, [isOpen, isExpanded, showAPIKeySetup, selectionContext])
 
   // Handle dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -146,12 +168,18 @@ export default function NodeAwareChatPanel({
     if (!currentMessage.trim() || isLoading) return
 
     try {
-      await sendMessage(currentMessage.trim())
+      // Use selection context if available
+      if (selectionContext) {
+        await sendMessageWithSelection(currentMessage.trim(), selectionContext)
+        onSelectionContextUsed?.()
+      } else {
+        await sendMessage(currentMessage.trim())
+      }
       setCurrentMessage('')
     } catch (error) {
       console.error('Chat error:', error)
     }
-  }, [currentMessage, isLoading, sendMessage])
+  }, [currentMessage, isLoading, sendMessage, sendMessageWithSelection, selectionContext, onSelectionContextUsed])
 
   // Handle key press
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
@@ -320,6 +348,11 @@ export default function NodeAwareChatPanel({
       </div>
     )
   }
+
+  // Extract node titles from selectionContext for display
+  const selectionTitles = selectionContext
+    ? Array.from(selectionContext.matchAll(/\*\*(.*?)\*\*/g)).map(m => m[1])
+    : []
 
   return (
     <div
@@ -501,6 +534,41 @@ export default function NodeAwareChatPanel({
 
           {/* Input */}
           <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            {/* Selection notification area */}
+            {selectionContext && isOpen && (
+              <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
+                <div className="flex items-center gap-2">
+                  {selectionTitles.length === 1 ? (
+                    <>
+                      <span>Asking about:</span>
+                      <span className="font-semibold">{selectionTitles[0]}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Asking about {selectionTitles.length} nodes</span>
+                      <span
+                        className="font-mono cursor-pointer underline decoration-dotted"
+                        title={selectionTitles.join(', ')}
+                      >
+                        (hover to see titles)
+                      </span>
+                    </>
+                  )}
+                </div>
+                {/* Clear selection context button */}
+                <button
+                  onClick={onSelectionContextUsed}
+                  className="ml-2 p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-800 transition"
+                  title="Remove selection context"
+                  type="button"
+                >
+                  <span className="sr-only">Remove selection context</span>
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                    <path d="M6 6l8 8M6 14L14 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            )}
             <div className="flex gap-2">
               <textarea
                 ref={inputRef}

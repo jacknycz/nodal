@@ -31,6 +31,7 @@ interface UseNodeAwareChatOptions {
 interface UseNodeAwareChatResult {
   messages: ChatMessage[]
   sendMessage: (message: string) => Promise<void>
+  sendMessageWithSelection: (message: string, selectionContext: string) => Promise<void>
   applyNode: (nodeResponse: NodeResponse, messageId: string) => Promise<void>
   applyAllNodes: (messageId: string) => Promise<void>
   applyConnections: (connections: ConnectionSuggestion[]) => Promise<void>
@@ -379,11 +380,42 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
     }
   }, [isInitialized, nodes.length, edges.length, selectedNode, generate, generateBreakdownNodes, selectOptimalModel, parseAIResponse])
 
+  // Send message with selection context
+  const sendMessageWithSelection = useCallback(async (message: string, selectionContext: string) => {
+    if (!message.trim()) return
+    
+    // Prepend selection context to the message
+    const contextualMessage = `${selectionContext}\n\n**User Question:** ${message.trim()}`
+    
+    // Use the regular sendMessage function with the enhanced context
+    await sendMessage(contextualMessage)
+  }, [sendMessage])
+
   // Apply a suggested node to the board
   const applyNode = useCallback(async (nodeResponse: NodeResponse, messageId: string) => {
     try {
       const center = getViewportCenter()
-      
+      const currentNodes = useBoardStore.getState().nodes
+      // Deduplication: check if node with same label exists
+      const existingNode = currentNodes.find(n => n.data.label.trim().toLowerCase() === nodeResponse.title.trim().toLowerCase())
+      if (existingNode) {
+        // Optionally update content or just skip
+        console.log(`⚠️ Node "${nodeResponse.title}" already exists, skipping creation.`)
+        // Optionally update content:
+        // useBoardStore.getState().updateNode(existingNode.id, { data: { ...existingNode.data, content: nodeResponse.content, aiGenerated: true } })
+        // Mark as applied in message
+        setMessages(prev => prev.map(msg => 
+          msg.id === messageId && msg.nodeResponses 
+            ? {
+                ...msg,
+                nodeResponses: msg.nodeResponses.map(nr => 
+                  nr === nodeResponse ? { ...nr, apply: true } : nr
+                )
+              }
+            : msg
+        ))
+        return
+      }
       // Create and add the node
       addNode(nodeResponse.title, center)
       
@@ -472,12 +504,20 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
       // Calculate positions for all nodes
       const positions = calculateNodePositions(nodeResponses.length)
       
+      // Deduplication: get current nodes
+      const currentNodes = useBoardStore.getState().nodes
       // Apply all nodes first
       const appliedNodeTitles: string[] = []
       for (let i = 0; i < nodeResponses.length; i++) {
         const nodeResponse = nodeResponses[i]
         const position = positions[i]
-        
+        // Deduplication: check if node with same label exists
+        const existingNode = currentNodes.find(n => n.data.label.trim().toLowerCase() === nodeResponse.title.trim().toLowerCase())
+        if (existingNode) {
+          console.log(`⚠️ Node "${nodeResponse.title}" already exists, skipping creation.`)
+          appliedNodeTitles.push(nodeResponse.title)
+          continue
+        }
         // Create and add the node
         addNode(nodeResponse.title, position)
         appliedNodeTitles.push(nodeResponse.title)
@@ -557,6 +597,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
   return {
     messages,
     sendMessage,
+    sendMessageWithSelection,
     applyNode,
     applyAllNodes,
     applyConnections,

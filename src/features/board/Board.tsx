@@ -25,6 +25,7 @@ import BoardRoomModal from '../../components/BoardRoomModal'
 import BokehBackground from '../../components/BokehBackground'
 import ChatPanel from '../../components/ChatPanel'
 import NodeAwareChatPanel from '../../components/NodeAwareChatPanel'
+import AskAboutSelectionFAB from '../../components/AskAboutSelectionFAB'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { boardStorage, type SavedBoard } from '../storage/storage'
@@ -104,6 +105,9 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   // Upload state
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
+  
+  // Selection context state
+  const [selectionContext, setSelectionContext] = useState<string | undefined>(undefined)
 
   // Create a hash of the current board state for change detection
   const getCurrentDataHash = useCallback(() => {
@@ -616,6 +620,16 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     input.click()
   }
 
+  const handleOpenChatWithSelection = (context: string) => {
+    setSelectionContext(context)
+    setShowChat(true)
+    setChatMode('node-aware')
+  }
+  
+  const handleSelectionContextUsed = () => {
+    setSelectionContext(undefined)
+  }
+
   return (
     <div className="w-full h-full relative">
       {/* DEBUG: Chat Mode Indicator */}
@@ -655,8 +669,15 @@ export default function Board({ onBoardStateChange }: BoardProps) {
           isOpen={showChat}
           onClose={() => setShowChat(false)}
           onToggleMode={() => setChatMode('superman')}
+          selectionContext={selectionContext}
+          onSelectionContextUsed={handleSelectionContextUsed}
         />
       )}
+
+      {/* Ask About Selection FAB */}
+      <AskAboutSelectionFAB 
+        onOpenChatWithSelection={handleOpenChatWithSelection}
+      />
 
 
       
