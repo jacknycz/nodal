@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react'
 import { v4 as uuidv4 } from 'uuid'
 import { useBoard } from './useBoard'
+import { useBoardStore } from './boardSlice'
 import { canCreateConnection, getConnectionType, getNodeById } from './boardUtils'
 import NodalNode from '../nodes/nodalNode'
 import DocumentNode from '../nodes/DocumentNode'
@@ -302,9 +303,10 @@ export default function Board({ onBoardStateChange }: BoardProps) {
           extractedText
         )
 
-        // Add document node to board using the board store directly
+        // Add document node to board - get fresh nodes state to prevent stale closure
         const newNode = { ...documentNode, id: uuidv4() }
-        setNodes([...nodes, newNode])
+        const currentNodes = useBoardStore.getState().nodes
+        setNodes([...currentNodes, newNode])
         console.log(`Document "${file.name}" uploaded successfully!`)
         
       } catch (error) {

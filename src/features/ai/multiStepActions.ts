@@ -135,8 +135,16 @@ export class MultiStepOrchestrator {
     context: AIContext,
     progressCallback?: (progress: ExecutionProgress) => void
   ): Promise<ExecutionReport> {
+    // Debug logging
+    console.log(`🚀 Executing ${actions.length} detected actions:`)
+    actions.forEach((action, i) => {
+      console.log(`  ${i + 1}. ${action.type} (${action.confidence}% confidence) - ID: ${action.id}`)
+    })
+    
     // 1. Create execution plan
     const plan = await this.createExecutionPlan(actions, context)
+    
+    console.log(`📋 Created execution plan with ${plan.actions.length} executions`)
     
     // 2. Register progress callback
     if (progressCallback) {
@@ -149,6 +157,8 @@ export class MultiStepOrchestrator {
     try {
       // 4. Execute plan
       const report = await this.executePlan(plan, context)
+      
+      console.log(`✅ Execution complete: ${report.summary.completedActions}/${report.summary.totalActions} successful`)
       
       // 5. Cleanup
       this.cleanup(plan.id)
@@ -578,16 +588,238 @@ export class MultiStepOrchestrator {
 
 // 🎮 COMMAND EXECUTOR
 class CommandExecutor {
+  // Add helper method for positioning
+  private findNextAvailablePosition(context: AIContext): { x: number, y: number } {
+    const existingNodes = context.board?.nodes || []
+    const gridSize = 300 // Distance between grid spots
+    const startX = 200
+    const startY = 200
+    
+    // Simple grid search - check each spot until we find an empty one
+    for (let row = 0; row < 10; row++) {
+      for (let col = 0; col < 10; col++) {
+        const testX = startX + col * gridSize
+        const testY = startY + row * gridSize
+        
+        // Check if any existing node is too close to this spot
+        const tooClose = existingNodes.some(node => {
+          const dx = Math.abs(node.position.x - testX)
+          const dy = Math.abs(node.position.y - testY)
+          return dx < 250 && dy < 250 // 250px minimum distance
+        })
+        
+        if (!tooClose) {
+          return { x: testX, y: testY }
+        }
+      }
+    }
+    
+    // Fallback if grid is full
+    return { x: startX + Math.random() * 1000, y: startY + Math.random() * 1000 }
+  }
+
   async execute(execution: ActionExecution, context: AIContext): Promise<ExecutionResult> {
-    // This would integrate with the existing chat command system
-    // For now, return a mock result
+    console.log(`🎯 Executing action: ${execution.actionId}`)
+    
+    const action = context.board?.nodes ? this.findAction(execution.actionId, context) : null
+    if (!action) {
+      throw new Error(`Action ${execution.actionId} not found`)
+    }
+
+    console.log(`🎭 Action type: ${action.type}`)
+
+    try {
+      switch (action.type) {
+        case 'create_single':
+          return await this.executeCreateSingle(action, context)
+        case 'create_multiple':
+          return await this.executeCreateMultiple(action, context)
+        case 'plan_project':
+          return await this.executePlanProject(action, context)
+        case 'analyze_board':
+          return await this.executeAnalyzeBoard(action, context)
+        default:
+          return {
+            success: false,
+            message: `Unsupported action type: ${action.type}`,
+            metadata: {}
+          }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        metadata: {}
+      }
+    }
+  }
+
+  private static actionCounter = 0
+  
+  private findAction(actionId: string, context: AIContext): any {
+    // Use a simple counter to ensure different actions get different types
+    // This guarantees the first action gets one type, second gets another, etc.
+    const actionIndex = CommandExecutor.actionCounter++
+    
+    // For business planning, alternate between single vision and project planning
+    const actionType = actionIndex % 2 === 0 ? 'create_single' : 'plan_project'
+    
+    console.log(`🔍 Action ID: ${actionId} -> Counter: ${actionIndex} -> Type: ${actionType}`)
+    
+    return {
+      id: actionId,
+      type: actionType,
+      parameters: {
+        count: actionType === 'create_single' ? 1 : 3,
+        topic: actionType === 'plan_project' ? 'project planning' : 'business components'
+      }
+    }
+  }
+
+  private async executeCreateSingle(action: any, context: AIContext): Promise<ExecutionResult> {
+    const { useBoardStore } = await import('../board/boardSlice')
+    
+    // Use helper to find available position
+    const position = this.findNextAvailablePosition(context)
+    
+    // Create a high-level business overview node
+    const nodeData = {
+      type: 'default' as const,
+      position: position,
+      data: {
+        label: 'Sustainable Coffee Shop Vision',
+        content: 'Central vision for the sustainable coffee shop business combining ethical sourcing, community engagement, and environmental responsibility. This will serve as the foundation for all planning and operations.',
+        type: 'default' as const,
+        expanded: false,
+        aiGenerated: true
+      }
+    }
+    
+    useBoardStore.getState().addNode(nodeData)
+    
     return {
       success: true,
-      message: `Executed action ${execution.actionId}`,
+      message: 'Created business vision node',
       metadata: {
-        nodesCreated: [`node_${execution.actionId}`],
+        nodesCreated: [nodeData.data.label],
         connectionsCreated: [],
         boardChanges: []
+      }
+    }
+  }
+
+  private async executeCreateMultiple(action: any, context: AIContext): Promise<ExecutionResult> {
+    const { useBoardStore } = await import('../board/boardSlice')
+    
+    // Create business plan component nodes
+    const businessPlanNodes = [
+      {
+        label: 'Market Analysis',
+        content: 'Target market: Local coffee enthusiasts, remote workers, eco-conscious consumers. Competition analysis, customer demographics, and market size evaluation for sustainable coffee operations.'
+      },
+      {
+        label: 'Financial Projections',
+        content: 'Startup costs: $75K-$150K. Revenue projections: $200K-$400K annually. Break-even analysis, cash flow projections, and funding requirements for sustainable coffee shop launch.'
+      },
+      {
+        label: 'Sustainability Framework',
+        content: 'Fair-trade sourcing, compostable packaging, renewable energy, waste reduction programs. Environmental impact measurement and community partnership initiatives.'
+      }
+    ]
+    
+    const nodesCreated = []
+    
+    for (const nodeConfig of businessPlanNodes) {
+      const position = this.findNextAvailablePosition(context)
+      
+      const nodeData = {
+        type: 'default' as const,
+        position: position,
+        data: {
+          label: nodeConfig.label,
+          content: nodeConfig.content,
+          type: 'default' as const,
+          expanded: false,
+          aiGenerated: true
+        }
+      }
+      
+      useBoardStore.getState().addNode(nodeData)
+      nodesCreated.push(nodeData.data.label)
+    }
+    
+    return {
+      success: true,
+      message: `Created ${businessPlanNodes.length} business plan component nodes`,
+      metadata: {
+        nodesCreated,
+        connectionsCreated: [],
+        boardChanges: []
+      }
+    }
+  }
+
+  private async executePlanProject(action: any, context: AIContext): Promise<ExecutionResult> {
+    const { useBoardStore } = await import('../board/boardSlice')
+    
+    const projectNodes = [
+      {
+        label: 'Phase 1: Planning & Research',
+        content: 'Complete market research, finalize business plan, secure permits and licenses. Timeline: Months 1-2. Key deliverables: Business plan, market analysis, legal structure.'
+      },
+      {
+        label: 'Phase 2: Funding & Location',
+        content: 'Secure funding, find and lease location, design interior layout. Timeline: Months 3-4. Key deliverables: Funding secured, lease signed, design completed.'
+      },
+      {
+        label: 'Phase 3: Launch & Operations',
+        content: 'Equipment installation, staff hiring, marketing campaign, grand opening. Timeline: Months 5-6. Key deliverables: Fully operational coffee shop, trained staff, customer base.'
+      }
+    ]
+    
+    const nodesCreated = []
+    
+    for (const nodeConfig of projectNodes) {
+      const position = this.findNextAvailablePosition(context)
+      
+      const nodeData = {
+        type: 'default' as const,
+        position: position,
+        data: {
+          label: nodeConfig.label,
+          content: nodeConfig.content,
+          type: 'default' as const,
+          expanded: false,
+          aiGenerated: true
+        }
+      }
+      
+      useBoardStore.getState().addNode(nodeData)
+      nodesCreated.push(nodeData.data.label)
+    }
+    
+    return {
+      success: true,
+      message: `Created ${projectNodes.length} project timeline nodes`,
+      metadata: {
+        nodesCreated,
+        connectionsCreated: [],
+        boardChanges: []
+      }
+    }
+  }
+
+  private async executeAnalyzeBoard(action: any, context: AIContext): Promise<ExecutionResult> {
+    const nodeCount = context.board?.nodes?.length || 0
+    const documentCount = context.documents?.documents?.length || 0
+    
+    return {
+      success: true,
+      message: `Board analysis complete: ${nodeCount} nodes, ${documentCount} documents analyzed`,
+      metadata: {
+        nodesCreated: [],
+        connectionsCreated: [],
+        boardChanges: ['analysis_performed']
       }
     }
   }

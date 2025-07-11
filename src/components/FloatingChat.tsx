@@ -10,8 +10,8 @@ export default function FloatingChat() {
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(false) // Start minimized
   const [position, setPosition] = useState({ 
-    x: typeof window !== 'undefined' ? window.innerWidth - 420 : 0, // Bottom-right corner
-    y: typeof window !== 'undefined' ? window.innerHeight - 80 : 0 
+    x: 20, // Top-left corner
+    y: 100 // Below the topbar/logo
   })
   const [size, setSize] = useState({ width: 400, height: 600 })
   const [isDragging, setIsDragging] = useState(false)
