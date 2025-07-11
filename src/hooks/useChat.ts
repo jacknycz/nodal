@@ -7,7 +7,12 @@ import { useBoardAI } from '../features/ai/useAI'
 import { useViewportCenter } from './useViewportCenter'
 import { boardStorage } from '../features/storage/storage'
 import type { BoardNode } from '../features/board/boardTypes'
-import type { AIRequest } from '../features/ai/aiTypes'
+import type { AIRequest, AIContext } from '../features/ai/aiTypes'
+// 🦸‍♂️ PHASE 2 IMPORTS - Superman's Advanced Intelligence
+import { actionDetectionEngine } from '../features/ai/actionDetection'
+import { multiStepOrchestrator } from '../features/ai/multiStepActions'
+import type { DetectedAction, ActionType } from '../features/ai/actionDetection'
+import type { ExecutionProgress, ExecutionReport } from '../features/ai/multiStepActions'
 
 interface ChatMessage {
   id: string
@@ -19,6 +24,11 @@ interface ChatMessage {
     actionType?: string
     tokens?: number
     command?: string
+    // 🦸‍♂️ Phase 2 metadata
+    actionsExecuted?: number
+    detectedActions?: DetectedAction[]
+    executionReport?: ExecutionReport
+    processingTime?: number
   }
 }
 
@@ -320,8 +330,130 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
         
         setMessages(prev => [...prev, commandMessage])
       } else {
-        // Natural language AI response with full context AND action execution
-        const contextPrompt = `You are Superman AI, an advanced assistant helping users build knowledge graphs. You have full access to their board and documents.
+        // 🦸‍♂️ PHASE 2: ADVANCED ACTION DETECTION & ORCHESTRATION
+        const phaseStartTime = Date.now()
+        
+        // 1. Build comprehensive AI context
+        const aiContext: AIContext = {
+          board: {
+            nodes: context.boardNodes,
+            edges: edges,
+            selectedNodeId: context.selectedNode?.id || null,
+            focusedNodeIds: context.focusedNodes,
+            boardSummary: `Board with ${context.nodeCount} nodes and ${context.connectionCount} connections`
+          },
+          documents: context.documentCount > 0 ? {
+            documents: Object.entries(context.extractedTexts).map(([nodeId, text]) => ({
+              id: nodeId,
+              name: context.boardNodes.find(n => n.id === nodeId)?.data.label || 'Unknown',
+              type: 'document',
+              content: text,
+              uploadedAt: new Date(),
+              nodeIds: [nodeId]
+            }))
+          } : undefined,
+          conversation: {
+            messages: messages.map(msg => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.timestamp,
+              metadata: msg.metadata
+            })),
+            sessionId: 'current',
+            startedAt: new Date()
+          }
+        }
+        
+        // 2. Detect actions using Phase 2 engine
+        const detectedActions = await actionDetectionEngine.detectActions(message, aiContext)
+        
+        // 3. Check if complex actions were detected
+        if (detectedActions.length > 0 && detectedActions[0].confidence > 0.5) {
+          // Phase 2 execution path - use Multi-Step Orchestrator
+          let executionReport: ExecutionReport | null = null
+          let progressUpdates: string[] = []
+          
+          try {
+            // Execute actions using orchestrator
+            executionReport = await multiStepOrchestrator.executeActions(
+              detectedActions,
+              aiContext,
+              (progress: ExecutionProgress) => {
+                progressUpdates.push(`⚡ ${progress.completedActions}/${progress.totalSteps} actions completed`)
+              }
+            )
+            
+            // Generate enhanced response
+            const actionSummary = detectedActions.map(action => 
+              `🎯 **${action.type.replace('_', ' ').toUpperCase()}** (${Math.round(action.confidence * 100)}% confidence)`
+            ).join('\n')
+            
+            const executionSummary = `🚀 **Execution Complete!**\n` +
+              `• ${executionReport.summary.completedActions}/${executionReport.summary.totalActions} actions successful\n` +
+              `• ${executionReport.summary.totalTime}ms total execution time\n` +
+              `• ${Math.round(executionReport.performance.successRate * 100)}% success rate`
+            
+            const finalResponse = `🦸‍♂️ **Superman Phase 2 Activated!**\n\n` +
+              `**Actions Detected:**\n${actionSummary}\n\n` +
+              `**Execution Results:**\n${executionSummary}\n\n` +
+              `${progressUpdates.join('\n')}\n\n` +
+              `**Created:** ${executionReport.results.flatMap(r => r.metadata?.nodesCreated || []).length} nodes\n` +
+              `**Performance:** ${executionReport.performance.parallelEfficiency > 0.8 ? '🔥 Excellent' : '⚡ Good'} parallel efficiency`
+            
+            const assistantMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: finalResponse,
+              timestamp: new Date(),
+              metadata: {
+                actionType: 'phase2_execution',
+                tokens: 0,
+                actionsExecuted: detectedActions.length,
+                detectedActions: detectedActions,
+                executionReport: executionReport,
+                processingTime: Date.now() - phaseStartTime
+              }
+            }
+            
+            setMessages(prev => [...prev, assistantMessage])
+            
+          } catch (error) {
+            console.error('Phase 2 execution error:', error)
+            
+            // Fallback to Phase 1 if Phase 2 fails
+            const fallbackResponse = `🦸‍♂️ **Superman Phase 2 encountered an issue, falling back to Phase 1...**\n\n` +
+              `**Detected Actions:** ${detectedActions.length}\n` +
+              `**Error:** ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
+              `Let me handle this the traditional way...`
+            
+            const errorMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: fallbackResponse,
+              timestamp: new Date(),
+              metadata: {
+                actionType: 'phase2_fallback',
+                actionsExecuted: 0,
+                detectedActions: detectedActions,
+                processingTime: Date.now() - phaseStartTime
+              }
+            }
+            
+            setMessages(prev => [...prev, errorMessage])
+            
+            // Execute Phase 1 fallback
+            await executePhase1Fallback(message, aiContext)
+          }
+          
+        } else {
+          // Phase 1 execution path - traditional AI response with simple commands
+          await executePhase1Fallback(message, aiContext)
+        }
+        
+        // Phase 1 fallback function
+        async function executePhase1Fallback(message: string, aiContext: AIContext) {
+          const contextPrompt = `You are Superman AI, an advanced assistant helping users build knowledge graphs. You have full access to their board and documents.
 
 **Current Board Context:**
 - ${context.nodeCount} nodes, ${context.connectionCount} connections
@@ -360,61 +492,63 @@ When users ask you to create nodes or take actions, you MUST include the appropr
 
 User message: ${message}`
 
-        const aiResponse = await generate(contextPrompt, {
-          model: selectOptimalModel('chat'),
-          temperature: 0.7,
-          maxTokens: 800,
-          systemPrompt: 'You are Superman AI. When users ask you to create nodes or take actions, you MUST include the appropriate command in your response (like "/create [description]"). You have the power to both respond naturally AND execute real actions on the board. Be a DOER, not just a talker!'
-        })
-        
-        // Check if the AI response contains commands and execute them
-        let finalResponse = aiResponse.content
-        const commandRegex = /\/(\w+)\s+([^\n]*)/g
-        const commandMatches = [...finalResponse.matchAll(commandRegex)]
-        
-        if (commandMatches.length > 0) {
-          let actionResults = []
+          const aiResponse = await generate(contextPrompt, {
+            model: selectOptimalModel('chat'),
+            temperature: 0.7,
+            maxTokens: 800,
+            systemPrompt: 'You are Superman AI. When users ask you to create nodes or take actions, you MUST include the appropriate command in your response (like "/create [description]"). You have the power to both respond naturally AND execute real actions on the board. Be a DOER, not just a talker!'
+          })
           
-          for (const match of commandMatches) {
-            const [fullMatch, command, args] = match
-            const argArray = args.trim().split(' ').filter(arg => arg.length > 0)
+          // Check if the AI response contains commands and execute them
+          let finalResponse = aiResponse.content
+          const commandRegex = /\/(\w+)\s+([^\n]*)/g
+          const commandMatches = [...finalResponse.matchAll(commandRegex)]
+          
+          if (commandMatches.length > 0) {
+            let actionResults = []
             
-            try {
-              const result = await executeCommand(command.toLowerCase(), argArray)
-              actionResults.push({
-                command: fullMatch,
-                result: result
-              })
-            } catch (error) {
-              actionResults.push({
-                command: fullMatch,
-                result: `❌ Error executing ${command}: ${error instanceof Error ? error.message : 'Unknown error'}`
-              })
+            for (const match of commandMatches) {
+              const [fullMatch, command, args] = match
+              const argArray = args.trim().split(' ').filter(arg => arg.length > 0)
+              
+              try {
+                const result = await executeCommand(command.toLowerCase(), argArray)
+                actionResults.push({
+                  command: fullMatch,
+                  result: result
+                })
+              } catch (error) {
+                actionResults.push({
+                  command: fullMatch,
+                  result: `❌ Error executing ${command}: ${error instanceof Error ? error.message : 'Unknown error'}`
+                })
+              }
+            }
+            
+            // Replace command mentions with action results
+            let resultIndex = 0
+            finalResponse = finalResponse.replace(commandRegex, (match) => {
+              const { command, result } = actionResults[resultIndex] || { command: match, result: 'No result' }
+              resultIndex++
+              return `**[EXECUTED]** ${command}\n\n${result}`
+            })
+          }
+          
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: finalResponse,
+            timestamp: new Date(),
+            metadata: {
+              actionType: 'phase1_chat',
+              tokens: aiResponse.usage?.totalTokens,
+              actionsExecuted: commandMatches.length || 0,
+              processingTime: Date.now() - phaseStartTime
             }
           }
           
-          // Replace command mentions with action results
-          let resultIndex = 0
-          finalResponse = finalResponse.replace(commandRegex, (match) => {
-            const { command, result } = actionResults[resultIndex] || { command: match, result: 'No result' }
-            resultIndex++
-            return `**[EXECUTED]** ${command}\n\n${result}`
-          })
+          setMessages(prev => [...prev, assistantMessage])
         }
-        
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: finalResponse,
-          timestamp: new Date(),
-          metadata: {
-            actionType: 'chat',
-            tokens: aiResponse.usage?.totalTokens,
-            actionsExecuted: commandMatches.length || 0
-          }
-        }
-        
-        setMessages(prev => [...prev, assistantMessage])
       }
       
       // Auto-save if enabled
