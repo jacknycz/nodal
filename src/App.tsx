@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
-import { AIProvider } from '@/features/ai/aiContext'
+import { AIProvider } from './features/ai/aiContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import Board from '@/features/board/Board'
+import Board from './features/board/Board'
 import Topbar from './components/Topbar'
 import TestPage from './components/TestPage'
 import FloatingChat from './components/FloatingChat'
-import { type SavedBoard } from '@/features/storage/storage'
+import { type SavedBoard } from './features/storage/storage'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -85,7 +85,7 @@ export default function App() {
                 <Board onBoardStateChange={handleBoardStateChange} />
               </div>
             </div>
-            <FloatingChat />
+            {/* <FloatingChat /> */}
           </ReactFlowProvider>
         </AIProvider>
       )}

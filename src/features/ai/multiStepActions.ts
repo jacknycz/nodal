@@ -135,14 +135,47 @@ export class MultiStepOrchestrator {
     context: AIContext,
     progressCallback?: (progress: ExecutionProgress) => void
   ): Promise<ExecutionReport> {
+    // 🚨 Filter out very low confidence actions to prevent false positives
+    const CONFIDENCE_THRESHOLD = 0.4 // 40% minimum confidence for Superman mode
+    const filteredActions = actions.filter(action => action.confidence >= CONFIDENCE_THRESHOLD)
+    
+    if (filteredActions.length < actions.length) {
+      console.log(`🧹 Filtered out ${actions.length - filteredActions.length} low-confidence actions (< ${CONFIDENCE_THRESHOLD * 100}%)`)
+    }
+    
+    // If no actions meet the threshold, return empty report
+    if (filteredActions.length === 0) {
+      console.log(`❌ No actions meet confidence threshold - treating as conversational input`)
+      return {
+        planId: `empty_${Date.now()}`,
+        success: true,
+        summary: {
+          totalActions: 0,
+          completedActions: 0,
+          failedActions: 0,
+          skippedActions: actions.length,
+          totalTime: 0,
+          averageActionTime: 0
+        },
+        results: [],
+        errors: [],
+        performance: {
+          parallelEfficiency: 1,
+          timeVsBudget: 1,
+          successRate: 1
+        },
+        recommendations: ['Input appears to be conversational - consider using Node-Aware mode for structured responses']
+      }
+    }
+    
     // Debug logging
-    console.log(`🚀 Executing ${actions.length} detected actions:`)
-    actions.forEach((action, i) => {
-      console.log(`  ${i + 1}. ${action.type} (${action.confidence}% confidence) - ID: ${action.id}`)
+    console.log(`🚀 Executing ${filteredActions.length} detected actions:`)
+    filteredActions.forEach((action, i) => {
+      console.log(`  ${i + 1}. ${action.type} (${(action.confidence * 100).toFixed(1)}% confidence) - ID: ${action.id}`)
     })
     
     // 1. Create execution plan
-    const plan = await this.createExecutionPlan(actions, context)
+    const plan = await this.createExecutionPlan(filteredActions, context)
     
     console.log(`📋 Created execution plan with ${plan.actions.length} executions`)
     
@@ -186,6 +219,9 @@ export class MultiStepOrchestrator {
     context: AIContext
   ): Promise<ExecutionPlan> {
     const planId = `plan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // 🎯 Cache detected actions for the CommandExecutor
+    this.commandExecutor.setDetectedActions(actions)
     
     // Convert actions to executions
     const executions: ActionExecution[] = actions.map(action => ({
@@ -621,27 +657,33 @@ class CommandExecutor {
   async execute(execution: ActionExecution, context: AIContext): Promise<ExecutionResult> {
     console.log(`🎯 Executing action: ${execution.actionId}`)
     
-    const action = context.board?.nodes ? this.findAction(execution.actionId, context) : null
-    if (!action) {
-      throw new Error(`Action ${execution.actionId} not found`)
+    // Get the detected action with all its rich context
+    const detectedAction = this.getDetectedAction(execution.actionId, context)
+    if (!detectedAction) {
+      throw new Error(`Detected action ${execution.actionId} not found`)
     }
 
-    console.log(`🎭 Action type: ${action.type}`)
+    console.log(`🎭 Action type: ${detectedAction.type}`)
+    console.log(`📝 Original prompt: "${detectedAction.metadata.originalText}"`)
+    console.log(`🎯 Topic: ${detectedAction.parameters.topic || 'none'}`)
+    console.log(`💡 Intent: ${detectedAction.intent.primary}`)
 
     try {
-      switch (action.type) {
+      switch (detectedAction.type) {
         case 'create_single':
-          return await this.executeCreateSingle(action, context)
+          return await this.executeCreateSingle(detectedAction, context)
         case 'create_multiple':
-          return await this.executeCreateMultiple(action, context)
+          return await this.executeCreateMultiple(detectedAction, context)
+        case 'brainstorm_ideas':
+          return await this.executeBrainstormIdeas(detectedAction, context)
         case 'plan_project':
-          return await this.executePlanProject(action, context)
+          return await this.executePlanProject(detectedAction, context)
         case 'analyze_board':
-          return await this.executeAnalyzeBoard(action, context)
+          return await this.executeAnalyzeBoard(detectedAction, context)
         default:
           return {
             success: false,
-            message: `Unsupported action type: ${action.type}`,
+            message: `Unsupported action type: ${detectedAction.type}`,
             metadata: {}
           }
       }
@@ -654,41 +696,165 @@ class CommandExecutor {
     }
   }
 
-  private static actionCounter = 0
-  
-  private findAction(actionId: string, context: AIContext): any {
-    // Use a simple counter to ensure different actions get different types
-    // This guarantees the first action gets one type, second gets another, etc.
-    const actionIndex = CommandExecutor.actionCounter++
+  private detectedActionsCache: Map<string, DetectedAction> = new Map()
+
+  // Store detected actions for later retrieval
+  setDetectedActions(actions: DetectedAction[]): void {
+    for (const action of actions) {
+      this.detectedActionsCache.set(action.id, action)
+    }
+  }
+
+  // Get detected action by ID with all its rich context
+  private getDetectedAction(actionId: string, context: AIContext): DetectedAction | null {
+    return this.detectedActionsCache.get(actionId) || null
+  }
+
+  // Generate contextually appropriate content based on the detected action
+  private async generateContextualContent(detectedAction: DetectedAction, mode: 'single' | 'multiple'): Promise<{ title: string; description: string } | { title: string; description: string }[]> {
+    const prompt = detectedAction.metadata.originalText
+    const topic = detectedAction.parameters.topic || this.extractTopicFromPrompt(prompt)
+    const intent = detectedAction.intent.primary
     
-    // For business planning, alternate between single vision and project planning
-    const actionType = actionIndex % 2 === 0 ? 'create_single' : 'plan_project'
-    
-    console.log(`🔍 Action ID: ${actionId} -> Counter: ${actionIndex} -> Type: ${actionType}`)
-    
-    return {
-      id: actionId,
-      type: actionType,
-      parameters: {
-        count: actionType === 'create_single' ? 1 : 3,
-        topic: actionType === 'plan_project' ? 'project planning' : 'business components'
+    if (mode === 'single') {
+      // Generate single node content
+      if (topic && topic.includes('flavor')) {
+        return {
+          title: 'Signature Coffee Blend',
+          description: `A unique house blend combining Ethiopian Yirgacheffe for brightness, Colombian Supremo for body, and Brazilian Santos for chocolate notes. Roasted to a medium-dark profile to highlight the natural sweetness while maintaining origin characteristics.`
+        }
+      } else if (topic && topic.includes('plan')) {
+        return {
+          title: 'Project Vision',
+          description: `High-level overview and vision for the project. This serves as the foundation for all planning and development activities.`
+        }
+      } else {
+        return {
+          title: this.generateTitleFromPrompt(prompt),
+          description: `Generated based on your request: "${prompt}". This node provides a focused response to your specific needs.`
+        }
+      }
+    } else {
+      // Generate multiple node content
+      if (topic && topic.includes('flavor')) {
+        return [
+          {
+            title: 'Lavender Honey Latte',
+            description: 'A soothing blend featuring organic lavender flowers and local wildflower honey. The floral notes complement the espresso\'s richness while the honey adds natural sweetness and a silky texture.'
+          },
+          {
+            title: 'Maple Cinnamon Cold Brew',
+            description: 'Cold brew infused with pure maple syrup and Ceylon cinnamon. Served over ice with a cinnamon stick garnish. The maple provides caramel-like sweetness while cinnamon adds warmth and complexity.'
+          },
+          {
+            title: 'Cardamom Rose Cappuccino',
+            description: 'Traditional cappuccino elevated with ground cardamom and rose water. The cardamom adds aromatic spice while rose water provides a delicate floral finish. Topped with rose petals for presentation.'
+          }
+        ]
+      } else if (topic && topic.includes('plan')) {
+        return [
+          {
+            title: 'Market Analysis',
+            description: 'Target market identification, competitor analysis, and market size evaluation. Understanding the competitive landscape and customer demographics.'
+          },
+          {
+            title: 'Financial Projections',
+            description: 'Revenue forecasts, cost analysis, and profitability timeline. Break-even analysis and funding requirements.'
+          },
+          {
+            title: 'Implementation Strategy',
+            description: 'Step-by-step execution plan, resource allocation, and timeline for bringing the project to market.'
+          }
+        ]
+      } else {
+        // Generic multiple nodes based on the prompt
+        const baseTitle = this.generateTitleFromPrompt(prompt)
+        return [
+          {
+            title: `${baseTitle} - Concept 1`,
+            description: `First approach to ${topic || 'your request'}, focusing on foundational elements and core requirements.`
+          },
+          {
+            title: `${baseTitle} - Concept 2`,
+            description: `Alternative approach to ${topic || 'your request'}, exploring different angles and possibilities.`
+          },
+          {
+            title: `${baseTitle} - Concept 3`,
+            description: `Advanced approach to ${topic || 'your request'}, incorporating innovative ideas and best practices.`
+          }
+        ]
       }
     }
   }
 
-  private async executeCreateSingle(action: any, context: AIContext): Promise<ExecutionResult> {
+  // Helper method to extract topic from prompt
+  private extractTopicFromPrompt(prompt: string): string {
+    // Simple keyword extraction
+    const keywords = prompt.toLowerCase().match(/\b(flavor|plan|idea|concept|strategy|design|business|coffee|marketing|development)\w*\b/g)
+    return keywords ? keywords[0] : 'general'
+  }
+
+  // Helper method to generate title from prompt
+  private generateTitleFromPrompt(prompt: string): string {
+    // Clean up the prompt and create a title
+    const cleanPrompt = prompt.replace(/^(create|make|add|generate|can you|please)\s+/i, '')
+    const words = cleanPrompt.split(' ').slice(0, 3)
+    return words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  }
+
+  // Execute brainstorming ideas action
+  private async executeBrainstormIdeas(detectedAction: DetectedAction, context: AIContext): Promise<ExecutionResult> {
+    const { useBoardStore } = await import('../board/boardSlice')
+    
+    // Generate multiple idea nodes
+    const ideas = await this.generateContextualContent(detectedAction, 'multiple') as { title: string; description: string }[]
+    const nodesCreated: string[] = []
+    
+    for (const idea of ideas) {
+      const position = this.findNextAvailablePosition(context)
+      
+      const nodeData = {
+        type: 'default' as const,
+        position: position,
+        data: {
+          label: idea.title,
+          content: idea.description,
+          type: 'default' as const,
+          expanded: false,
+          aiGenerated: true
+        }
+      }
+      
+      useBoardStore.getState().addNode(nodeData)
+      nodesCreated.push(nodeData.data.label)
+    }
+    
+    return {
+      success: true,
+      message: `Generated ${ideas.length} brainstorming ideas based on your request`,
+      metadata: {
+        nodesCreated,
+        connectionsCreated: [],
+        boardChanges: []
+      }
+    }
+  }
+
+  private async executeCreateSingle(detectedAction: DetectedAction, context: AIContext): Promise<ExecutionResult> {
     const { useBoardStore } = await import('../board/boardSlice')
     
     // Use helper to find available position
     const position = this.findNextAvailablePosition(context)
     
-    // Create a high-level business overview node
+    // Generate contextually appropriate content based on the original prompt
+    const content = await this.generateContextualContent(detectedAction, 'single') as { title: string; description: string }
+    
     const nodeData = {
       type: 'default' as const,
       position: position,
       data: {
-        label: 'Sustainable Coffee Shop Vision',
-        content: 'Central vision for the sustainable coffee shop business combining ethical sourcing, community engagement, and environmental responsibility. This will serve as the foundation for all planning and operations.',
+        label: content.title,
+        content: content.description,
         type: 'default' as const,
         expanded: false,
         aiGenerated: true
@@ -699,7 +865,7 @@ class CommandExecutor {
     
     return {
       success: true,
-      message: 'Created business vision node',
+      message: `Created "${content.title}" node based on your request`,
       metadata: {
         nodesCreated: [nodeData.data.label],
         connectionsCreated: [],
@@ -708,36 +874,22 @@ class CommandExecutor {
     }
   }
 
-  private async executeCreateMultiple(action: any, context: AIContext): Promise<ExecutionResult> {
+  private async executeCreateMultiple(detectedAction: DetectedAction, context: AIContext): Promise<ExecutionResult> {
     const { useBoardStore } = await import('../board/boardSlice')
     
-    // Create business plan component nodes
-    const businessPlanNodes = [
-      {
-        label: 'Market Analysis',
-        content: 'Target market: Local coffee enthusiasts, remote workers, eco-conscious consumers. Competition analysis, customer demographics, and market size evaluation for sustainable coffee operations.'
-      },
-      {
-        label: 'Financial Projections',
-        content: 'Startup costs: $75K-$150K. Revenue projections: $200K-$400K annually. Break-even analysis, cash flow projections, and funding requirements for sustainable coffee shop launch.'
-      },
-      {
-        label: 'Sustainability Framework',
-        content: 'Fair-trade sourcing, compostable packaging, renewable energy, waste reduction programs. Environmental impact measurement and community partnership initiatives.'
-      }
-    ]
+    // Generate contextually appropriate multiple nodes
+    const nodeConfigs = await this.generateContextualContent(detectedAction, 'multiple') as { title: string; description: string }[]
+    const nodesCreated: string[] = []
     
-    const nodesCreated = []
-    
-    for (const nodeConfig of businessPlanNodes) {
+    for (const nodeConfig of nodeConfigs) {
       const position = this.findNextAvailablePosition(context)
       
       const nodeData = {
         type: 'default' as const,
         position: position,
         data: {
-          label: nodeConfig.label,
-          content: nodeConfig.content,
+          label: nodeConfig.title,
+          content: nodeConfig.description,
           type: 'default' as const,
           expanded: false,
           aiGenerated: true
@@ -750,7 +902,7 @@ class CommandExecutor {
     
     return {
       success: true,
-      message: `Created ${businessPlanNodes.length} business plan component nodes`,
+      message: `Created ${nodeConfigs.length} nodes based on your request`,
       metadata: {
         nodesCreated,
         connectionsCreated: [],
@@ -759,25 +911,12 @@ class CommandExecutor {
     }
   }
 
-  private async executePlanProject(action: any, context: AIContext): Promise<ExecutionResult> {
+  private async executePlanProject(detectedAction: DetectedAction, context: AIContext): Promise<ExecutionResult> {
     const { useBoardStore } = await import('../board/boardSlice')
     
-    const projectNodes = [
-      {
-        label: 'Phase 1: Planning & Research',
-        content: 'Complete market research, finalize business plan, secure permits and licenses. Timeline: Months 1-2. Key deliverables: Business plan, market analysis, legal structure.'
-      },
-      {
-        label: 'Phase 2: Funding & Location',
-        content: 'Secure funding, find and lease location, design interior layout. Timeline: Months 3-4. Key deliverables: Funding secured, lease signed, design completed.'
-      },
-      {
-        label: 'Phase 3: Launch & Operations',
-        content: 'Equipment installation, staff hiring, marketing campaign, grand opening. Timeline: Months 5-6. Key deliverables: Fully operational coffee shop, trained staff, customer base.'
-      }
-    ]
-    
-    const nodesCreated = []
+    // Generate project plan nodes based on the detected action
+    const projectNodes = await this.generateProjectPlan(detectedAction)
+    const nodesCreated: string[] = []
     
     for (const nodeConfig of projectNodes) {
       const position = this.findNextAvailablePosition(context)
@@ -786,8 +925,8 @@ class CommandExecutor {
         type: 'default' as const,
         position: position,
         data: {
-          label: nodeConfig.label,
-          content: nodeConfig.content,
+          label: nodeConfig.title,
+          content: nodeConfig.description,
           type: 'default' as const,
           expanded: false,
           aiGenerated: true
@@ -800,7 +939,7 @@ class CommandExecutor {
     
     return {
       success: true,
-      message: `Created ${projectNodes.length} project timeline nodes`,
+      message: `Created ${projectNodes.length} project plan nodes based on your request`,
       metadata: {
         nodesCreated,
         connectionsCreated: [],
@@ -809,13 +948,52 @@ class CommandExecutor {
     }
   }
 
-  private async executeAnalyzeBoard(action: any, context: AIContext): Promise<ExecutionResult> {
+  // Generate project plan nodes based on the detected action
+  private async generateProjectPlan(detectedAction: DetectedAction): Promise<{ title: string; description: string }[]> {
+    const prompt = detectedAction.metadata.originalText
+    const topic = detectedAction.parameters.topic || this.extractTopicFromPrompt(prompt)
+    
+    if (topic.includes('business') || topic.includes('coffee')) {
+      return [
+        {
+          title: 'Phase 1: Planning & Research',
+          description: 'Complete market research, finalize business plan, secure permits and licenses. Timeline: Months 1-2. Key deliverables: Business plan, market analysis, legal structure.'
+        },
+        {
+          title: 'Phase 2: Funding & Location',
+          description: 'Secure funding, find and lease location, design interior layout. Timeline: Months 3-4. Key deliverables: Funding secured, lease signed, design completed.'
+        },
+        {
+          title: 'Phase 3: Launch & Operations',
+          description: 'Equipment installation, staff hiring, marketing campaign, grand opening. Timeline: Months 5-6. Key deliverables: Fully operational coffee shop, trained staff, customer base.'
+        }
+      ]
+    } else {
+      // Generic project plan
+      return [
+        {
+          title: 'Phase 1: Planning & Design',
+          description: `Initial planning and design phase for ${topic}. Define requirements, create specifications, and establish timeline.`
+        },
+        {
+          title: 'Phase 2: Development & Implementation',
+          description: `Development and implementation phase for ${topic}. Execute the plan, build components, and integrate systems.`
+        },
+        {
+          title: 'Phase 3: Testing & Launch',
+          description: `Testing and launch phase for ${topic}. Quality assurance, user testing, and final deployment.`
+        }
+      ]
+    }
+  }
+
+  private async executeAnalyzeBoard(detectedAction: DetectedAction, context: AIContext): Promise<ExecutionResult> {
     const nodeCount = context.board?.nodes?.length || 0
     const documentCount = context.documents?.documents?.length || 0
     
     return {
       success: true,
-      message: `Board analysis complete: ${nodeCount} nodes, ${documentCount} documents analyzed`,
+      message: `Board analysis complete: ${nodeCount} nodes, ${documentCount} documents analyzed based on your request: "${detectedAction.metadata.originalText}"`,
       metadata: {
         nodesCreated: [],
         connectionsCreated: [],

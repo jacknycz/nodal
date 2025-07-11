@@ -316,6 +316,27 @@ export class ActionDetectionEngine {
   // 📋 PATTERN INITIALIZATION
   private initializePatterns(): void {
     this.patterns = [
+      // BRAINSTORMING PATTERNS (Check first - most specific)
+      {
+        id: 'brainstorm_ideas',
+        name: 'Brainstorm Ideas',
+        description: 'Generate creative ideas and concepts',
+        patterns: [
+          /brainstorm\s+(.+)/,
+          /ideas?\s+for\s+(.+)/,
+          /(.+?)(?:\s+ideas?)/,
+          /create.+?ideas?/,
+          /generate.+?ideas?/,
+          /come\s+up\s+with\s+(.+)/,
+          /think\s+of\s+(.+)/
+        ],
+        keywords: ['brainstorm', 'ideas', 'think', 'creative', 'concepts', 'flavor', 'generate'],
+        examples: ['brainstorm marketing ideas', 'ideas for the app', 'coffee flavor ideas', 'create some ideas'],
+        actionType: 'brainstorm_ideas',
+        defaultParameters: { count: 3 },
+        confidence: 0.9
+      },
+
       // CREATE PATTERNS
       {
         id: 'create_single',
@@ -339,14 +360,17 @@ export class ActionDetectionEngine {
         description: 'Create multiple nodes with specific count',
         patterns: [
           /create\s+(\d+)\s+(.+?)(?:\s+nodes?)?$/,
+          /create\s+(?:some|several|multiple)\s+(.+?)(?:\s+nodes?)?/,
           /make\s+(\d+)\s+(.+?)(?:\s+nodes?)?$/,
-          /generate\s+(\d+)\s+(.+?)(?:\s+nodes?)?$/
+          /make\s+(?:some|several|multiple)\s+(.+?)(?:\s+nodes?)?/,
+          /generate\s+(\d+)\s+(.+?)(?:\s+nodes?)?$/,
+          /generate\s+(?:some|several|multiple)\s+(.+?)(?:\s+nodes?)?/
         ],
-        keywords: ['create', 'make', 'generate', 'multiple', 'nodes'],
-        examples: ['create 5 marketing nodes', 'make 3 todo items', 'generate 10 ideas'],
+        keywords: ['create', 'make', 'generate', 'multiple', 'nodes', 'some', 'several'],
+        examples: ['create 5 marketing nodes', 'create some nodes', 'make multiple items', 'generate several ideas'],
         actionType: 'create_multiple',
         defaultParameters: { count: 3 },
-        confidence: 0.9
+        confidence: 0.8
       },
       
       // ANALYSIS PATTERNS
@@ -392,33 +416,18 @@ export class ActionDetectionEngine {
         description: 'Create comprehensive project plan',
         patterns: [
           /plan\s+(?:a\s+)?(.+?)(?:\s+project)?$/,
-          /create\s+(?:a\s+)?(.+?)(?:\s+plan)?$/,
-          /design\s+(?:a\s+)?(.+?)(?:\s+strategy)?$/
+          /create\s+(?:a\s+)?(.+?)\s+plan$/,
+          /design\s+(?:a\s+)?(.+?)(?:\s+strategy)?$/,
+          /roadmap\s+for\s+(.+)/,
+          /timeline\s+for\s+(.+)/
         ],
-        keywords: ['plan', 'project', 'strategy', 'roadmap', 'timeline'],
-        examples: ['plan a startup', 'create a marketing plan', 'design a strategy'],
+        keywords: ['plan', 'project', 'strategy', 'roadmap', 'timeline', 'phases', 'steps'],
+        examples: ['plan a startup', 'create a marketing plan', 'design a strategy', 'project roadmap'],
         actionType: 'plan_project',
-        defaultParameters: { count: 8 },
+        defaultParameters: { count: 3 },
         confidence: 0.8
       },
-      
-      // BRAINSTORMING PATTERNS
-      {
-        id: 'brainstorm_ideas',
-        name: 'Brainstorm Ideas',
-        description: 'Generate creative ideas and concepts',
-        patterns: [
-          /brainstorm\s+(.+)/,
-          /ideas?\s+for\s+(.+)/,
-          /come\s+up\s+with\s+(.+)/,
-          /think\s+of\s+(.+)/
-        ],
-        keywords: ['brainstorm', 'ideas', 'think', 'creative', 'concepts'],
-        examples: ['brainstorm marketing ideas', 'ideas for the app', 'think of features'],
-        actionType: 'brainstorm_ideas',
-        defaultParameters: { count: 5 },
-        confidence: 0.7
-      },
+
       
       // RESEARCH PATTERNS
       {

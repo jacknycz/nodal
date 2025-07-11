@@ -78,4 +78,40 @@ export interface EdgeEvent extends AppEvent {
 export interface BoardEvent extends AppEvent {
   type: 'board:cleared' | 'board:saved' | 'board:loaded' | 'board:exported'
   payload?: any
+}
+
+// Node-Aware AI Response Types
+export interface ConnectionSuggestion {
+  source: string // Node title to connect from
+  target: string // Node title to connect to  
+  type?: 'default' | 'ai' | 'focus'
+  reason?: string // Why this connection makes sense
+  strength?: number // Connection strength (0-1)
+}
+
+export interface NodeResponse {
+  title: string
+  type: 'note' | 'question' | 'task' | 'action' | 'code' | 'concept'
+  content: string
+  metadata?: {
+    tags?: string[]
+    connections?: string[]
+    priority?: 'low' | 'medium' | 'high'
+    [key: string]: any
+  }
+  apply: boolean
+}
+
+export interface AIResponse {
+  message?: string // Optional regular chat message
+  nodeResponse?: NodeResponse // Optional structured node
+  multipleNodes?: NodeResponse[] // For multiple node suggestions
+  connections?: ConnectionSuggestion[] // Optional connection suggestions
+}
+
+export interface ParsedAIResponse {
+  hasStructuredResponse: boolean
+  regularMessage: string
+  nodeResponses: NodeResponse[]
+  connectionSuggestions: ConnectionSuggestion[]
 } 

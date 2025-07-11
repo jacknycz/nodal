@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useAI } from './useAI'
 import { useBoard } from '../board/useBoard'
-import { useViewportCenter } from '@/hooks/useViewportCenter'
+import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useBoardStore } from '../board/boardSlice'
 import type { OpenAIModel } from './aiTypes'
 import type { BoardNode } from '../board/boardTypes'
@@ -19,6 +19,7 @@ export interface UseAINodeGeneratorResult {
   generateContextualNodes: (count?: number, options?: AINodeGeneratorOptions) => Promise<string[]>
   generateBridgeNode: (sourceNodeId: string, targetNodeId: string, options?: AINodeGeneratorOptions) => Promise<string | null>
   generateRelatedCluster: (centerNodeId: string, count?: number, options?: AINodeGeneratorOptions) => Promise<string[]>
+  generateBreakdownNodes: (concept: string, options?: AINodeGeneratorOptions) => Promise<string[]>
   isGenerating: boolean
   error: string | null
 }
@@ -512,11 +513,118 @@ Provide only the concept titles, one per line:`
     }
   }, [generate, nodes, addNode, generateNodeContent])
 
+  // Generate a breakdown of a concept into multiple component nodes
+  const generateBreakdownNodes = useCallback(async (
+    concept: string,
+    options: AINodeGeneratorOptions = {}
+  ): Promise<string[]> => {
+    const {
+      model = 'gpt-4o-mini',
+      positionStrategy = 'circular',
+      temperature = 0.7
+    } = options
+
+    setIsGenerating(true)
+    setError(null)
+
+    try {
+      const context = buildContext(false) // Don't include existing context for breakdown
+      
+      // First, identify the key components of the concept
+      const breakdownPrompt = `Break down the concept "${concept}" into its key components or aspects.
+
+Provide 4-6 main components that together comprehensively explain this concept. Each component should be:
+- A distinct aspect or element
+- Important for understanding the overall concept
+- Suitable as a separate knowledge node
+- Clearly named (2-4 words)
+
+Provide only the component titles, one per line, without explanations or numbering:`
+
+      const response = await generate(breakdownPrompt, {
+        model,
+        temperature,
+        maxTokens: 200,
+        systemPrompt: 'You are a helpful assistant that breaks down complex concepts into clear, distinct components. Focus on creating comprehensive but manageable breakdowns.'
+      })
+
+      const componentTitles = response.content
+        .split('\n')
+        .map(line => line.trim().replace(/^[-•*\d.]\s*/, '').replace(/^["']|["']$/g, ''))
+        .filter(title => title.length > 0)
+        .slice(0, 6) // Limit to 6 components max
+
+      if (componentTitles.length === 0) {
+        throw new Error('Failed to generate breakdown components')
+      }
+
+      // Generate positions for all component nodes
+      const positions = calculatePosition(positionStrategy, componentTitles.length)
+      
+      // Create nodes for each component with detailed content
+      const createdTitles: string[] = []
+      
+      for (let i = 0; i < componentTitles.length; i++) {
+        const title = componentTitles[i]
+        const position = positions[i]
+        
+        // Generate specific content for this component
+        const componentContentPrompt = `Generate detailed content for the "${title}" component of ${concept}.
+
+Explain this component specifically, including:
+- What it is and why it's important
+- How it relates to the overall concept of ${concept}
+- Key characteristics or features
+- Practical applications or examples
+
+Keep it concise but comprehensive (2-4 sentences):`
+
+        const contentResponse = await generate(componentContentPrompt, {
+          model,
+          temperature,
+          maxTokens: 200,
+          systemPrompt: 'You are a helpful assistant that creates detailed explanations for concept components. Focus on clarity and practical understanding.'
+        })
+
+        const content = contentResponse.content.trim()
+        
+        // Add node
+        addNode(title, position)
+        
+        // Update with content and AI flag
+        setTimeout(() => {
+          const newNodes = useBoardStore.getState().nodes
+          const newNode = newNodes.find(n => n.data.label === title && Math.abs(n.position.x - position.x) < 10)
+          if (newNode) {
+            useBoardStore.getState().updateNode(newNode.id, {
+              data: {
+                ...newNode.data,
+                content,
+                aiGenerated: true
+              }
+            })
+          }
+        }, 10 + i * 5) // Stagger updates slightly
+        
+        createdTitles.push(title)
+      }
+      
+      return createdTitles
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate breakdown nodes'
+      setError(errorMessage)
+      return []
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [generate, buildContext, calculatePosition, addNode])
+
   return {
     generateNode,
     generateContextualNodes,
     generateBridgeNode,
     generateRelatedCluster,
+    generateBreakdownNodes,
     isGenerating,
     error
   }

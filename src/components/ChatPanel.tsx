@@ -19,12 +19,14 @@ interface ChatMessage {
 interface ChatPanelProps {
   isOpen?: boolean
   onClose?: () => void
+  onToggleMode?: () => void
   className?: string
 }
 
 export default function ChatPanel({ 
   isOpen = false, 
   onClose,
+  onToggleMode,
   className = ''
 }: ChatPanelProps) {
   const { messages, sendMessage, isLoading, error, context } = useChat()
@@ -195,25 +197,36 @@ export default function ChatPanel({
     >
       {/* Header */}
       <div
-        className="drag-handle flex items-center justify-between p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg cursor-move"
+        className="drag-handle flex items-center justify-between p-3 bg-gradient-to-r from-red-500 to-orange-600 text-white rounded-t-lg cursor-move"
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center space-x-2">
           <MessageCircle size={20} />
           <span className="font-semibold">
-            {showAPIKeySetup ? '🔑 Setup Required' : '🦸‍♂️ Superman AI'}
+            {showAPIKeySetup ? '🔑 Setup Required' : '🦸‍♂️ Superman Mode'}
           </span>
         </div>
         <div className="flex items-center space-x-1">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1 hover:bg-white/20 rounded transition-colors"
+            title={isExpanded ? "Minimize" : "Maximize"}
           >
             {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
+          {onToggleMode && (
+            <button
+              onClick={onToggleMode}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="Switch to Node-Aware mode"
+            >
+              🧠
+            </button>
+          )}
           <button
             onClick={onClose}
             className="p-1 hover:bg-white/20 rounded transition-colors"
+            title="Close chat"
           >
             <X size={16} />
           </button>

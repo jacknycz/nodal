@@ -17,15 +17,16 @@ import NodalNode from '../nodes/nodalNode'
 import DocumentNode from '../nodes/DocumentNode'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
-import FloatingActionButton from '@/components/FloatingActionButton'
-import AddNodeButton from '@/components/AddNodeButton'
-import AINodeGenerator from '@/components/AINodeGenerator'
-import BoardNameModal from '@/components/BoardNameModal'
-import BoardRoomModal from '@/components/BoardRoomModal'
-import BokehBackground from '@/components/BokehBackground'
-import ChatPanel from '@/components/ChatPanel'
-import { useViewportCenter } from '@/hooks/useViewportCenter'
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import FloatingActionButton from '../../components/FloatingActionButton'
+import AddNodeButton from '../../components/AddNodeButton'
+import AINodeGenerator from '../../components/AINodeGenerator'
+import BoardNameModal from '../../components/BoardNameModal'
+import BoardRoomModal from '../../components/BoardRoomModal'
+import BokehBackground from '../../components/BokehBackground'
+import ChatPanel from '../../components/ChatPanel'
+import NodeAwareChatPanel from '../../components/NodeAwareChatPanel'
+import { useViewportCenter } from '../../hooks/useViewportCenter'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { boardStorage, type SavedBoard } from '../storage/storage'
 import { 
   extractTextFromFile, 
@@ -88,7 +89,8 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showBoardRoom, setShowBoardRoom] = useState(false)
-  const [showChat, setShowChat] = useState(false)
+  const [showChat, setShowChat] = useState(true) // Auto-open to show new system
+  const [chatMode, setChatMode] = useState<'superman' | 'node-aware'>('node-aware')
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
   const [currentBoardId, setCurrentBoardId] = useState<string | undefined>(undefined)
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
@@ -516,7 +518,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     console.log('Started new board!')
   }
 
-  // Keyboard shortcuts (defined after functions)
+  // Keyboard shortcuts (updated)
   useKeyboardShortcuts([
     {
       key: 'g',
@@ -546,7 +548,17 @@ export default function Board({ onBoardStateChange }: BoardProps) {
       key: 'c',
       ctrl: true,
       action: () => setShowChat(true),
-      description: 'Open Superman Chat'
+      description: 'Open Chat'
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      shift: true,
+      action: () => {
+        setChatMode(prev => prev === 'superman' ? 'node-aware' : 'superman')
+        console.log(`Switched to ${chatMode === 'superman' ? 'node-aware' : 'superman'} chat mode`)
+      },
+      description: 'Toggle Chat Mode'
     },
     {
       key: 'Escape',
@@ -606,6 +618,11 @@ export default function Board({ onBoardStateChange }: BoardProps) {
 
   return (
     <div className="w-full h-full relative">
+      {/* DEBUG: Chat Mode Indicator */}
+      <div className="fixed top-2 left-2 z-50 bg-black text-white px-3 py-1 rounded text-xs font-mono">
+        Chat Mode: {chatMode} | Show: {showChat ? 'true' : 'false'}
+      </div>
+      
       {/* Floating Action Button */}
       <FloatingActionButton
         onAddNode={handleAddNode}
@@ -626,35 +643,22 @@ export default function Board({ onBoardStateChange }: BoardProps) {
         </div>
       )}
 
-      {/* Superman Chat Panel */}
-      <ChatPanel 
-        isOpen={showChat}
-        onClose={() => setShowChat(false)}
-      />
-
-      {/* Drag and drop overlay */}
-      {isDragOver && (
-        <div 
-          className="absolute inset-0 z-30 bg-blue-500 bg-opacity-20 border-4 border-dashed border-blue-500 flex items-center justify-center"
-          onClick={resetDragState}
-        >
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-xl text-center">
-            <svg className="w-16 h-16 mx-auto mb-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Drop Documents Here</h3>
-            <p className="text-gray-600 dark:text-gray-400">
-              Support for PDF, Word, Text, Markdown, and Images
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-              Max file size: 10MB
-            </p>
-            <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 italic">
-              Click here if overlay gets stuck
-            </p>
-          </div>
-        </div>
+      {/* Chat Panels - conditionally render based on mode */}
+      {chatMode === 'superman' ? (
+        <ChatPanel 
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          onToggleMode={() => setChatMode('node-aware')}
+        />
+      ) : (
+        <NodeAwareChatPanel 
+          isOpen={showChat}
+          onClose={() => setShowChat(false)}
+          onToggleMode={() => setChatMode('superman')}
+        />
       )}
+
+
       
       <div
         className="w-full h-full"
