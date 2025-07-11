@@ -42,7 +42,7 @@ export default function FloatingActionButton({
         onAddNode?.()
         setIsExpanded(false)
       },
-      color: 'bg-blue-500 hover:bg-blue-600',
+      color: 'bg-primary-500 hover:bg-primary-600',
     },
     {
       id: 'ai-generate',
@@ -52,7 +52,7 @@ export default function FloatingActionButton({
         onOpenAIGenerator?.()
         setIsExpanded(false)
       },
-      color: 'bg-purple-500 hover:bg-purple-600',
+      color: 'bg-tertiary-500 hover:bg-tertiary-600',
     },
     {
       id: 'clear-board',
@@ -124,6 +124,7 @@ export default function FloatingActionButton({
                     hover:shadow-xl transition-all duration-200 transform hover:scale-110
                     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
                     ${action.destructive ? 'ring-2 ring-red-200 dark:ring-red-800' : ''}
+                    flex items-center justify-center
                   `}
                   title={action.label}
                 >
@@ -139,10 +140,10 @@ export default function FloatingActionButton({
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={`
-          w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white 
+          w-14 h-14 rounded-full bg-primary-500 text-white 
           shadow-lg hover:shadow-xl transition-all duration-300 transform
           ${isExpanded ? 'rotate-45 scale-110' : 'hover:scale-105'}
-          focus:outline-none focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800
+          focus:outline-none focus:ring-4 focus:ring-primary-200 dark:focus:ring-primary-800
         `}
         title={isExpanded ? 'Close actions' : 'Open actions'}
       >
@@ -151,7 +152,7 @@ export default function FloatingActionButton({
 
       {/* Floating hint for first-time users */}
       {!isExpanded && (
-        <div className="absolute -top-2 -right-2 w-3 h-3 bg-blue-400 rounded-full animate-pulse" />
+        <div className="absolute -top-2 -right-2 w-3 h-3 bg-primary-400 rounded-full animate-pulse" />
       )}
     </div>
   )

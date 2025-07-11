@@ -192,7 +192,7 @@ export default function FloatingChat() {
     >
       {/* Header */}
       <div
-        className="drag-handle flex items-center justify-between p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg cursor-move"
+        className="drag-handle flex items-center justify-between p-3 bg-primary-500 text-white rounded-t-lg cursor-move"
         onMouseDown={handleMouseDown}
       >
         <div className="flex items-center space-x-2">
