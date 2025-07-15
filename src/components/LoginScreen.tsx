@@ -92,6 +92,7 @@ export default function LoginScreen() {
           <Button
             onClick={handleGoogleAuth}
             disabled={isLoading}
+            variant="custom"
             className="w-full h-12 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center justify-center space-x-3 mb-6"
           >
             {isLoading ? (

@@ -82,22 +82,7 @@ export default function App() {
     setCurrentBoardName(board.name)
   }
 
-  const handleNewBoard = async () => {
-    // Create a new board and open it
-    const { boardStorage } = await import('./features/storage/storage')
-    const emptyBoardData = {
-      nodes: [],
-      edges: [],
-      viewport: { x: 0, y: 0, zoom: 1 },
-    }
-    const newBoardId = await boardStorage.saveBoard('Untitled Board', emptyBoardData)
-    const newBoard = await boardStorage.loadBoard(newBoardId)
-    if (newBoard) {
-      setCurrentBoard(newBoard)
-      setCurrentBoardName(newBoard.name)
-      setCurrentView('board')
-    }
-  }
+
 
   // Show loading state while checking authentication
   if (user === undefined) {
@@ -141,7 +126,7 @@ export default function App() {
               />
               <div className="pt-16 w-full h-full">
                 {currentView === 'boardroom' ? (
-                  <BoardRoom onOpenBoard={handleLoadBoard} onNewBoard={handleNewBoard} />
+                  <BoardRoom onOpenBoard={handleLoadBoard} />
                 ) : (
                   <Board 
                     onBoardStateChange={handleBoardStateChange} 

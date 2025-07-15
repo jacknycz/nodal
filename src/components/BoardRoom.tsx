@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
+import BoardNameModal from './BoardNameModal'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard) => void
-  onNewBoard: () => void
 }
 
 function BoardCard({ board, onLoad, onRename, onDelete }: {
@@ -121,11 +121,12 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   )
 }
 
-const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard, onNewBoard }) => {
+const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [boards, setBoards] = useState<SavedBoard[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState('')
+  const [showNewBoardModal, setShowNewBoardModal] = useState(false)
 
   const loadBoards = async () => {
     setLoading(true)
@@ -165,6 +166,31 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard, onNewBoard }) => {
     }
   }
 
+  const handleCreateNewBoard = async (boardName: string) => {
+    try {
+      const { boardStorage } = await import('../features/storage/storage')
+      const emptyBoardData = {
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      }
+      const boardId = await boardStorage.saveBoard(boardName, emptyBoardData)
+      const newBoard = await boardStorage.loadBoard(boardId)
+      if (newBoard) {
+        setShowNewBoardModal(false)
+        await loadBoards() // Refresh the board list
+        onOpenBoard({ ...newBoard, isNew: true }) // Mark as new
+      }
+    } catch (error) {
+      console.error('Failed to create new board:', error)
+      setError('Failed to create new board')
+    }
+  }
+
+  const handleNewBoardClick = () => {
+    setShowNewBoardModal(true)
+  }
+
   const filteredBoards = boards.filter(board =>
     board.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -175,7 +201,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard, onNewBoard }) => {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
           <button
-            onClick={onNewBoard}
+            onClick={handleNewBoardClick}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,6 +244,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard, onNewBoard }) => {
           </div>
         )}
       </div>
+
+      <BoardNameModal
+        isOpen={showNewBoardModal}
+        onClose={() => setShowNewBoardModal(false)}
+        onSave={handleCreateNewBoard}
+        defaultName=""
+        existingNames={boards.map(board => board.name)}
+      />
     </div>
   )
 }

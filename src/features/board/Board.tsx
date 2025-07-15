@@ -193,6 +193,15 @@ export default function Board({ onBoardStateChange, initialBoard }: BoardProps) 
     }
   }, [initialBoard])
 
+  // Detect if initialBoard has isNew property set to true, and if so, show the setup modal (setShowSetup(true)) and remove the isNew property so it doesn't trigger again. Do this in a useEffect that runs when initialBoard changes.
+  useEffect(() => {
+    if (initialBoard && initialBoard.isNew) {
+      setShowSetup(true)
+      // Remove the isNew flag so it doesn't trigger again
+      initialBoard.isNew = false
+    }
+  }, [initialBoard])
+
   // Load existing board names for validation
   useEffect(() => {
     const loadBoardNames = async () => {
@@ -805,15 +814,7 @@ export default function Board({ onBoardStateChange, initialBoard }: BoardProps) 
         existingNames={existingBoardNames.filter(name => name !== currentBoardName)}
       />
 
-      <BoardRoomModal
-        isOpen={showBoardRoom}
-        onClose={() => setShowBoardRoom(false)}
-        onLoadBoard={handleLoadBoard}
-        onRenameBoard={handleRenameBoard}
-        onDeleteBoard={handleDeleteBoard}
-        onNewBoard={handleNewBoard}
-        currentBoardId={currentBoardId}
-      />
+      {/* Removed BoardRoomModal and related state/logic */}
 
       {/* <TopicModal
         isOpen={showTopicModal}
