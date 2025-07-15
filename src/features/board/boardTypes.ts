@@ -62,4 +62,5 @@ export interface BoardActions {
   updateViewport: (viewport: Partial<BoardState['viewport']>) => void
   clearBoard: () => void
   setTopic: (topic: string | null) => void
+  setBoardBrief: (brief: BoardBrief) => void
 } 

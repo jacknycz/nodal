@@ -127,6 +127,33 @@ class AIClient {
 
     return connections
   }
+
+  async getEmbedding(input: string | string[]): Promise<number[] | number[][]> {
+    const isBatch = Array.isArray(input)
+    const inputArr = isBatch ? input : [input]
+    try {
+      const response = await fetch(`${this.config.baseUrl}/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'text-embedding-3-small',
+          input: inputArr,
+        }),
+      })
+      if (!response.ok) {
+        throw new Error(`Embedding API error: ${response.status} ${response.statusText}`)
+      }
+      const data = await response.json()
+      const embeddings = data.data.map((item: any) => item.embedding)
+      return isBatch ? embeddings : embeddings[0]
+    } catch (error) {
+      console.error('Embedding API request failed:', error)
+      throw error
+    }
+  }
 }
 
 export default AIClient

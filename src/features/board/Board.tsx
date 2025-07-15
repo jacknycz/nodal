@@ -37,6 +37,11 @@ import {
   createDocumentNode,
   SUPPORTED_FILE_TYPES 
 } from '../nodes/documentUtils'
+import BoardSetupModal from '../../components/BoardSetupModal'
+import PreSessionChat from '../../components/PreSessionChat'
+import { useAINodeGenerator } from '../ai/useAINodeGenerator'
+import { useAI } from '../ai/useAI'
+import AIClient from '../ai/aiClient'
 
 import '@xyflow/react/dist/style.css'
 
@@ -72,6 +77,12 @@ const connectionLineStyle = {
   strokeWidth: 3,
 }
 
+declare global {
+  interface Window {
+    __nodal_vectorizedDocs?: any[];
+  }
+}
+
 export default function Board({ onBoardStateChange }: BoardProps) {
   const {
     nodes,
@@ -88,7 +99,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     setEdges,
   } = useBoard()
 
-  const { topic, setTopic } = useBoardStore()
+  const { topic, setTopic, boardBrief, setBoardBrief } = useBoardStore()
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -101,6 +112,8 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [showSetup, setShowSetup] = React.useState(!boardBrief)
+  const [showPreSession, setShowPreSession] = React.useState(false)
   
   // Refs for autosave
   const autosaveTimeoutRef = useRef<number | null>(null)
@@ -245,6 +258,21 @@ export default function Board({ onBoardStateChange }: BoardProps) {
       window.removeEventListener('import-board', handleImportBoard)
     }
   }, [nodes, edges, currentBoardName])
+
+  // Effect to show setup modal if boardBrief is not set
+  useEffect(() => {
+    if (!boardBrief) setShowSetup(true)
+    else setShowSetup(false)
+  }, [boardBrief])
+
+  // Show pre-session chat after setup
+  useEffect(() => {
+    if (boardBrief && !boardBrief.isReady) setShowPreSession(true)
+    else setShowPreSession(false)
+  }, [boardBrief])
+
+  const { generateNode, isGenerating, error: aiError } = useAINodeGenerator()
+  const ai = useAI()
 
   const handleConnect = (connection: Connection) => {
     if (!connection.source || !connection.target) return
@@ -651,6 +679,16 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     setShowTopicModal(true)
   }
 
+  const [vectorizing, setVectorizing] = useState(false)
+  const [vectorizationError, setVectorizationError] = useState<string | null>(null)
+  const [brainstorming, setBrainstorming] = useState(false)
+  const [brainstormError, setBrainstormError] = useState<string | null>(null)
+  const aiConfig = {
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+    baseUrl: import.meta.env.VITE_OPENAI_BASE_URL || 'https://api.openai.com/v1',
+  }
+  const aiClient = new AIClient(aiConfig)
+
   return (
     <div className="w-full h-full relative">
       {/* DEBUG: Chat Mode Indicator */}
@@ -765,6 +803,149 @@ export default function Board({ onBoardStateChange }: BoardProps) {
         onSave={handleSaveTopic}
         isFirstTime={!topic && nodes.length === 0}
       /> */}
+
+      <BoardSetupModal
+        isOpen={showSetup}
+        onComplete={async brief => {
+          setBoardBrief({ ...brief, isReady: false })
+          setShowSetup(false)
+          setNodes([])
+          setVectorizing(true)
+          setVectorizationError(null)
+          setBrainstorming(false)
+          setBrainstormError(null)
+          let extractedResults = []
+          let embeddings: number[][] = []
+          try {
+            // Extract text from all uploaded files
+            const files = brief.uploadedFiles || []
+            extractedResults = await Promise.all(
+              files.map(async file => {
+                const text = await extractTextFromFile(file)
+                return { file, text }
+              })
+            )
+            // Batch vectorize all extracted text
+            const texts = extractedResults.map(r => r.text)
+            if (texts.length > 0) {
+              embeddings = await aiClient.getEmbedding(texts) as number[][]
+            }
+            window.__nodal_vectorizedDocs = extractedResults.map((r, i) => ({
+              fileName: r.file.name,
+              text: r.text,
+              embedding: embeddings[i],
+            }))
+          } catch (err) {
+            setVectorizationError(err instanceof Error ? err.message : 'Vectorization failed')
+          } finally {
+            setVectorizing(false)
+          }
+          // --- AI Brainstorm Map Generation ---
+          setBrainstorming(true)
+          setBrainstormError(null)
+          try {
+            // Build a context string from all onboarding info and extracted doc text
+            const docText = (window.__nodal_vectorizedDocs || []).map(d => `Document: ${d.fileName}\n${d.text.slice(0, 2000)}`).join('\n\n')
+            const context = `Topic: ${brief.topic}\nGoal: ${brief.goal}\nAudience: ${brief.audience}\nResources: ${brief.resources.join(', ')}\nNotes: ${brief.notes || ''}\n${docText}`
+            // Prompt the AI for a brainstorm map
+            const brainstormPrompt = `Given the following context, generate a brainstorm map for a mindmap app.\n\nContext:\n${context}\n\nInstructions:\n- Suggest the best central node (if not obvious, use the topic)\n- Brainstorm as many relevant subtopics as make sense (not just 4), each as a prompt or question to explore\n- Optionally, group or cluster subtopics if themes emerge\n- Respond in JSON with this structure:\n{\n  \'center\': 'Central Node Title',\n  \'subtopics\': [\n    { \'title\': 'Subtopic', \'prompt\': 'Prompt or question', \'group\': 'Group Name (optional)' },\n    ...\n  ]\n}`
+            const response = await ai.generate(brainstormPrompt, {
+              model: 'gpt-4o',
+              temperature: 0.7,
+              maxTokens: 1200,
+              systemPrompt: 'You are a helpful brainstorming assistant for a mindmap app.'
+            })
+            let brainstorm
+            try {
+              let raw = response.content.trim();
+              // Remove Markdown code block if present
+              if (raw.startsWith('```')) {
+                raw = raw.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+              }
+              brainstorm = JSON.parse(raw)
+            } catch (e) {
+              throw new Error('AI did not return valid JSON. Raw response: ' + response.content)
+            }
+            // Create nodes and edges
+            const centerNode = {
+              id: 'center',
+              type: 'default',
+              position: { x: 400, y: 300 },
+              data: { label: brainstorm.center, content: '', aiGenerated: true }
+            }
+            const angleStep = (2 * Math.PI) / Math.max(1, brainstorm.subtopics.length)
+            const radius = 250
+            const subtopicNodes = brainstorm.subtopics.map((s: any, i: number) => ({
+              id: `subtopic-${i}`,
+              type: 'default',
+              position: {
+                x: 400 + Math.cos(i * angleStep) * radius,
+                y: 300 + Math.sin(i * angleStep) * radius
+              },
+              data: { label: s.title, content: s.prompt, group: s.group, aiGenerated: true }
+            }))
+            const edges = subtopicNodes.map((n: any) => ({
+              id: `edge-center-${n.id}`,
+              source: 'center',
+              target: n.id,
+              type: 'floating',
+              data: { type: 'ai' }
+            }))
+            setNodes([centerNode, ...subtopicNodes])
+            setEdges(edges)
+          } catch (err) {
+            setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed')
+            setNodes([
+              {
+                id: 'ai-fail',
+                type: 'default',
+                position: { x: 400, y: 200 },
+                data: { label: 'AI could not generate a brainstorm map. Try again or check your API key.' }
+              }
+            ])
+            setEdges([])
+          } finally {
+            setBrainstorming(false)
+          }
+        }}
+        onClose={() => {}}
+      />
+{(isGenerating || vectorizing || brainstorming) && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center">
+      <div className="mb-4 text-lg font-semibold">{brainstorming ? 'Brainstorming your map...' : vectorizing ? 'Processing documents...' : 'Generating your board...'}</div>
+      <div className="text-gray-500">{brainstorming ? 'AI is creating a brainstorm map from your context.' : vectorizing ? 'Extracting and vectorizing your uploaded files.' : 'AI is thoughtfully creating your starting nodes.'}</div>
+    </div>
+  </div>
+)}
+{brainstormError && (
+  <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 text-red-800 px-4 py-2 rounded shadow">
+    Brainstorm Error: {brainstormError}
+  </div>
+)}
+      {aiError && (
+        <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 text-red-800 px-4 py-2 rounded shadow">
+          AI Error: {aiError}
+        </div>
+      )}
+      {boardBrief && showPreSession && (
+        <PreSessionChat
+          boardBrief={boardBrief}
+          onReady={chat => {
+            setBoardBrief({ ...boardBrief, isReady: true, preSessionChat: chat })
+            setShowPreSession(false)
+          }}
+        />
+      )}
+      {boardBrief && boardBrief.isReady && !showSetup && !showPreSession && (
+        <>
+          {/* Topic display, board UI, etc. */}
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
+            <TopicDisplay topic={topic} onEdit={() => {}} />
+          </div>
+          {/* ...rest of board UI... */}
+        </>
+      )}
     </div>
   )
 } 
