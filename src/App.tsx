@@ -12,6 +12,7 @@ import { useTheme } from './contexts/ThemeContext'
 import nodalBlackLogo from './assets/nodal-black.svg'
 import nodalWhiteLogo from './assets/nodal-white.svg'
 import { type SavedBoard } from './features/storage/storage'
+import BoardRoom from './components/BoardRoom'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -39,9 +40,11 @@ function LoadingScreen() {
 export default function App() {
   const user = useSupabaseUser()
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
+  const [currentBoard, setCurrentBoard] = useState<any | undefined>(undefined)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isTestMode, setIsTestMode] = useState(false)
+  const [currentView, setCurrentView] = useState<'boardroom' | 'board'>('boardroom')
 
   const handleBoardStateChange = (
     boardName: string | undefined,
@@ -54,37 +57,46 @@ export default function App() {
   }
 
   const handleSaveBoard = () => {
-    // The Board component handles saving through its own modal
-    // We'll trigger it via a custom event
     window.dispatchEvent(new CustomEvent('open-save-modal'))
   }
 
   const handleOpenBoardRoom = () => {
-    // The Board component handles board room through its own modal
-    // We'll trigger it via a custom event
-    window.dispatchEvent(new CustomEvent('open-board-room'))
+    setCurrentView('boardroom')
   }
 
   const handleExportBoard = () => {
-    // The Board component handles export
-    // We'll trigger it via a custom event
     window.dispatchEvent(new CustomEvent('export-board'))
   }
 
   const handleImportBoard = () => {
-    // The Board component handles import
-    // We'll trigger it via a custom event
     window.dispatchEvent(new CustomEvent('import-board'))
   }
 
   const handleOpenSettings = () => {
-    // TODO: Implement settings modal
     alert('Settings modal coming soon!')
   }
 
-  const handleLoadBoard = (board: SavedBoard) => {
-    // This will be handled by the Board component through the BoardRoomModal
-    console.log('Loading board:', board.name)
+  const handleLoadBoard = (board: any) => {
+    setCurrentBoard(board)
+    setCurrentView('board')
+    setCurrentBoardName(board.name)
+  }
+
+  const handleNewBoard = async () => {
+    // Create a new board and open it
+    const { boardStorage } = await import('./features/storage/storage')
+    const emptyBoardData = {
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    }
+    const newBoardId = await boardStorage.saveBoard('Untitled Board', emptyBoardData)
+    const newBoard = await boardStorage.loadBoard(newBoardId)
+    if (newBoard) {
+      setCurrentBoard(newBoard)
+      setCurrentBoardName(newBoard.name)
+      setCurrentView('board')
+    }
   }
 
   // Show loading state while checking authentication
@@ -128,7 +140,14 @@ export default function App() {
                 onLoadBoard={handleLoadBoard}
               />
               <div className="pt-16 w-full h-full">
-                <Board onBoardStateChange={handleBoardStateChange} />
+                {currentView === 'boardroom' ? (
+                  <BoardRoom onOpenBoard={handleLoadBoard} onNewBoard={handleNewBoard} />
+                ) : (
+                  <Board 
+                    onBoardStateChange={handleBoardStateChange} 
+                    initialBoard={currentBoard}
+                  />
+                )}
               </div>
             </div>
             {/* <FloatingChat /> */}

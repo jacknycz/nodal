@@ -59,6 +59,47 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 
 ---
 
+## Authentication & User Management
+- **Supabase** — Authentication provider with Google OAuth
+- **User Flow** — Login → Board Room → Board Editor
+- **User Data** — Google profile (name, email, avatar) integrated throughout UI
+- **Session Management** — Automatic auth state detection and routing
+
+---
+
+## Navigation & Routing Patterns
+- **View State Management** — `currentView` state controls Board Room vs Board Editor
+- **Landing Page** — Board Room serves as dashboard/landing page after login
+- **Board Room** — Full-page dashboard, not a modal (separate from board editor)
+- **Navigation Flow** — Login → Board Room → Board → Board Room (via topbar)
+
+---
+
+## Component Architecture
+- **Board Room** — `src/components/BoardRoom.tsx` (full-page dashboard)
+- **Login Screen** — `src/components/LoginScreen.tsx` (dual sign-in/sign-up)
+- **Avatar Menu** — `src/components/AvatarMenu.tsx` (user menu with Google avatar)
+- **Storage Integration** — Board data managed via `src/features/storage/storage.ts`
+
+---
+
+## Current Implementation Notes
+- **Board Room** — Landing page with board management, user welcome, create/open actions
+- **Authentication** — Google OAuth with email/password fallback
+- **User Experience** — Personalized with Google profile data (name, avatar)
+- **Board Management** — Create, open, rename, delete boards with real-time updates
+- **Theme Integration** — Full dark/light mode support with Nodal branding
+
+---
+
+## Development Patterns
+- **State Management** — View state (`boardroom` | `board`) controls app routing
+- **Event Handling** — Custom events for board operations (save, export, etc.)
+- **Storage** — LocalForage-based board storage with metadata
+- **Error Handling** — Graceful fallbacks for auth failures and storage errors
+
+---
+
 ## When You're Helping Me:
 - Write idiomatic, modern React + TypeScript code
 - Keep code readable, maintainable, and clearly organized by feature/slice
@@ -77,5 +118,6 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - Light use of Framer Motion for subtle transitions
 
 ---
+
 
 *This file is here to help AI agents, copilots, or teammates get aligned before contributing to Nodal. When in doubt, ask Jack.*

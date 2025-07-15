@@ -53,6 +53,7 @@ interface BoardProps {
     saveStatus: SaveStatus,
     hasUnsavedChanges: boolean
   ) => void
+  initialBoard?: any
 }
 
 const nodeTypes = {
@@ -83,7 +84,7 @@ declare global {
   }
 }
 
-export default function Board({ onBoardStateChange }: BoardProps) {
+export default function Board({ onBoardStateChange, initialBoard }: BoardProps) {
   const {
     nodes,
     edges,
@@ -183,6 +184,14 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   useEffect(() => {
     onBoardStateChange(currentBoardName, saveStatus, hasUnsavedChanges)
   }, [currentBoardName, saveStatus, hasUnsavedChanges, onBoardStateChange])
+
+  // Load initial board if provided
+  useEffect(() => {
+    if (initialBoard) {
+      console.log('Loading initial board:', initialBoard)
+      handleLoadBoard(initialBoard)
+    }
+  }, [initialBoard])
 
   // Load existing board names for validation
   useEffect(() => {
@@ -481,18 +490,21 @@ export default function Board({ onBoardStateChange }: BoardProps) {
 
   const handleLoadBoard = async (board: SavedBoard) => {
     try {
-      const boardData = await boardStorage.loadBoard(board.id)
-      if (boardData) {
-        setNodes(boardData.data.nodes)
-        setEdges(boardData.data.edges)
-        updateViewport(boardData.data.viewport)
-        setCurrentBoardId(board.id)
-        setCurrentBoardName(board.name)
-        lastSavedDataRef.current = JSON.stringify({ nodes: boardData.data.nodes, edges: boardData.data.edges })
-        setHasUnsavedChanges(false)
-        setSaveStatus('saved')
-        console.log('Board loaded successfully!')
-      }
+      console.log('Loading board:', board)
+      console.log('Board data:', board.data)
+      console.log('Nodes to set:', board.data.nodes)
+      console.log('Edges to set:', board.data.edges)
+      
+      // Use the board data directly - no need to reload from storage
+      setNodes(board.data.nodes)
+      setEdges(board.data.edges)
+      updateViewport(board.data.viewport)
+      setCurrentBoardId(board.id)
+      setCurrentBoardName(board.name)
+      lastSavedDataRef.current = getCurrentDataHash() // Use the same format as getCurrentDataHash
+      setHasUnsavedChanges(false)
+      setSaveStatus('saved')
+      console.log('Board loaded successfully!')
     } catch (error) {
       console.error('Failed to load board:', error)
       // TODO: Show error toast
@@ -542,16 +554,23 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     }
   }
 
-  const handleNewBoard = () => {
-    // Clear the current board
-    clearBoard()
-    setCurrentBoardId(undefined)
-    setCurrentBoardName(undefined)
-    setHasUnsavedChanges(false)
-    setSaveStatus('saved')
-    lastSavedDataRef.current = ''
-    
-    console.log('Started new board!')
+  // Handler for creating a new board from the modal
+  const handleCreateNewBoard = async (boardName: string) => {
+    try {
+      const emptyBoardData = {
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      }
+      const boardId = await boardStorage.saveBoard(boardName, emptyBoardData)
+      const newBoard = await boardStorage.loadBoard(boardId)
+      if (newBoard) {
+        handleLoadBoard(newBoard)
+        setShowSaveModal(false)
+      }
+    } catch (error) {
+      console.error('Failed to create new board:', error)
+    }
   }
 
   // Keyboard shortcuts (updated)
@@ -781,7 +800,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
       <BoardNameModal
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        onSave={handleSaveBoard}
+        onSave={handleCreateNewBoard}
         defaultName={currentBoardName || ''}
         existingNames={existingBoardNames.filter(name => name !== currentBoardName)}
       />
