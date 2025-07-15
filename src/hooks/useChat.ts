@@ -13,6 +13,7 @@ import { actionDetectionEngine } from '../features/ai/actionDetection'
 import { multiStepOrchestrator } from '../features/ai/multiStepActions'
 import type { DetectedAction, ActionType } from '../features/ai/actionDetection'
 import type { ExecutionProgress, ExecutionReport } from '../features/ai/multiStepActions'
+import { useBoardStore } from '../features/board/boardSlice'
 
 interface ChatMessage {
   id: string
@@ -41,6 +42,7 @@ interface ChatContext {
   connectionCount: number
   focusedNodes: string[]
   extractedTexts: Record<string, string>
+  topic?: string
 }
 
 interface ChatCommand {
@@ -87,6 +89,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
   const { generate } = useAI()
   const { getViewportCenter } = useViewportCenter()
   const { selectOptimalModel, isInitialized } = useAIContext()
+  const { topic } = useBoardStore()
 
   // Build comprehensive context
   const context: ChatContext = {
@@ -102,7 +105,8 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
         acc[node.id] = node.data.extractedText
       }
       return acc
-    }, {} as Record<string, string>)
+    }, {} as Record<string, string>),
+    topic: topic || undefined,
   }
 
   // Superman Commands with god-mode powers

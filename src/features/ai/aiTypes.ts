@@ -107,6 +107,7 @@ export interface AIContext {
   documents?: DocumentContext
   conversation?: ConversationContext
   userPreferences?: UserPreferences
+  topic?: string
 }
 
 // Configuration Types

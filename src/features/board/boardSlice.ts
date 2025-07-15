@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import type { BoardState, BoardActions, BoardNode, BoardEdge } from './boardTypes'
+import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief } from './boardTypes'
 
 const initialState: BoardState = {
   nodes: [],
@@ -11,6 +11,8 @@ const initialState: BoardState = {
     y: 0,
     zoom: 1,
   },
+  topic: null,
+  boardBrief: undefined,
 }
 
 export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
@@ -81,4 +83,10 @@ export const useBoardStore = create<BoardState & BoardActions>((set, get) => ({
   clearBoard: () => {
     set(initialState)
   },
+
+  setTopic: (topic) => {
+    set({ topic })
+  },
+
+  setBoardBrief: (brief: BoardBrief) => set({ boardBrief: brief }),
 })) 

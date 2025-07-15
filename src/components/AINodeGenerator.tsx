@@ -5,6 +5,7 @@ import { useBoard } from '../features/board/useBoard'
 import { useAIConfig } from '../features/ai/aiContext'
 import type { OpenAIModel } from '../features/ai/aiTypes'
 import type { AINodeGeneratorOptions } from '../features/ai/useAINodeGenerator'
+import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 
 // Simple UI components as replacements
 const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
@@ -88,16 +89,20 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
   const { generateNode, generateContextualNodes, generateBridgeNode, generateRelatedCluster, isGenerating, error } = useAINodeGenerator()
   const { nodes, selectedNode } = useBoard()
   const { getConfigurationStatus, config } = useAIConfig()
+  const aiSettings = useAISettingsStore()
   
   const configStatus = getConfigurationStatus()
   const isConfigured = configStatus.configured
   
   const [mode, setMode] = useState<GenerationMode>('single')
   const [prompt, setPrompt] = useState('')
-  const [model, setModel] = useState<OpenAIModel>('gpt-4o-mini')
-  const [positionStrategy, setPositionStrategy] = useState<AINodeGeneratorOptions['positionStrategy']>('center')
+  // Use global settings as defaults
+  const [model, setModel] = useState<OpenAIModel>(aiSettings.model)
+  const allowedStrategies = ['center', 'grid', 'circular', 'connected'] as const;
+  type AllowedStrategy = typeof allowedStrategies[number];
+  const [positionStrategy, setPositionStrategy] = useState<AllowedStrategy>('center');
+  const [temperature, setTemperature] = useState<number>(aiSettings.temperature)
   const [nodeCount, setNodeCount] = useState(3)
-  const [temperature, setTemperature] = useState(0.7)
   const [includeContext, setIncludeContext] = useState(true)
   const [lastResult, setLastResult] = useState<string | string[] | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -115,6 +120,15 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
   useEffect(() => {
     setLastResult(null)
   }, [mode])
+
+  // Sync with global settings
+  useEffect(() => { setModel(aiSettings.model) }, [aiSettings.model])
+  useEffect(() => {
+    if (allowedStrategies.includes(aiSettings.positionStrategy as AllowedStrategy)) {
+      setPositionStrategy(aiSettings.positionStrategy as AllowedStrategy);
+    }
+  }, [aiSettings.positionStrategy]);
+  useEffect(() => { setTemperature(aiSettings.temperature) }, [aiSettings.temperature])
 
   const handleGenerate = async () => {
     if (!prompt.trim() && mode === 'single') return
@@ -292,77 +306,15 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
     }
   }
 
+  // Remove advanced controls for model, position, temperature
   const renderAdvancedSettings = () => {
     if (!showAdvanced) return null
-    
     return (
       <div className="space-y-4 pt-4 border-t border-gray-200">
-        <div className="space-y-2">
-          <Label htmlFor="model">AI Model</Label>
-          <Select
-            id="model"
-            value={model}
-            onValueChange={(value) => setModel(value as OpenAIModel)}
-            disabled={isGenerating}
-          >
-            {MODELS.map(({ value, label, description }) => (
-              <option key={value} value={value} title={description}>
-                {label}
-              </option>
-            ))}
-          </Select>
+        <div className="text-xs text-gray-500 bg-blue-50 dark:bg-blue-900/20 rounded p-2">
+          Model, position strategy, and creativity are now set in the top bar AI settings menu.
         </div>
-
-                 <div className="space-y-2">
-           <Label htmlFor="position">Position Strategy</Label>
-           <Select
-             id="position"
-             value={positionStrategy || 'center'}
-             onValueChange={(value) => setPositionStrategy(value as typeof positionStrategy)}
-             disabled={isGenerating}
-           >
-            {POSITION_STRATEGIES.map(({ value, label, description }) => (
-              <option key={value} value={value} title={description}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
-
-        {(mode === 'contextual' || mode === 'cluster') && (
-          <div className="space-y-2">
-            <Label htmlFor="count">Number of Nodes</Label>
-            <Input
-              id="count"
-              type="number"
-              min="1"
-              max="10"
-              value={nodeCount}
-              onChange={(e) => setNodeCount(Math.max(1, Math.min(10, parseInt(e.target.value) || 1)))}
-              disabled={isGenerating}
-            />
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label htmlFor="temperature">Creativity (Temperature: {temperature})</Label>
-          <input
-            id="temperature"
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={temperature}
-            onChange={(e) => setTemperature(parseFloat(e.target.value))}
-            disabled={isGenerating}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>Focused</span>
-            <span>Creative</span>
-          </div>
-        </div>
-
+        {/* Keep other advanced settings if any */}
         <div className="flex items-center space-x-2">
           <input
             id="includeContext"

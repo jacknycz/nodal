@@ -26,6 +26,8 @@ import BokehBackground from '../../components/BokehBackground'
 import ChatPanel from '../../components/ChatPanel'
 import NodeAwareChatPanel from '../../components/NodeAwareChatPanel'
 import AskAboutSelectionFAB from '../../components/AskAboutSelectionFAB'
+import TopicModal from '../../components/TopicModal'
+import TopicDisplay from '../../components/TopicDisplay'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { boardStorage, type SavedBoard } from '../storage/storage'
@@ -86,10 +88,12 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     setEdges,
   } = useBoard()
 
+  const { topic, setTopic } = useBoardStore()
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showBoardRoom, setShowBoardRoom] = useState(false)
+  const [showTopicModal, setShowTopicModal] = useState(false)
   const [showChat, setShowChat] = useState(true) // Auto-open to show new system
   const [chatMode, setChatMode] = useState<'superman' | 'node-aware'>('node-aware')
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
@@ -630,6 +634,23 @@ export default function Board({ onBoardStateChange }: BoardProps) {
     setSelectionContext(undefined)
   }
 
+  // Show topic modal on new/empty board
+  useEffect(() => {
+    if (!topic && nodes.length === 0) {
+      setShowTopicModal(true)
+    }
+  }, [topic, nodes.length])
+
+  // Handler for saving topic
+  const handleSaveTopic = (newTopic: string) => {
+    setTopic(newTopic)
+  }
+
+  // Handler for editing topic
+  const handleEditTopic = () => {
+    setShowTopicModal(true)
+  }
+
   return (
     <div className="w-full h-full relative">
       {/* DEBUG: Chat Mode Indicator */}
@@ -679,6 +700,10 @@ export default function Board({ onBoardStateChange }: BoardProps) {
         onOpenChatWithSelection={handleOpenChatWithSelection}
       />
 
+      {/* Topic Display */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
+        <TopicDisplay topic={topic} onEdit={handleEditTopic} />
+      </div>
 
       
       <div
@@ -732,6 +757,14 @@ export default function Board({ onBoardStateChange }: BoardProps) {
         onNewBoard={handleNewBoard}
         currentBoardId={currentBoardId}
       />
+
+      {/* <TopicModal
+        isOpen={showTopicModal}
+        onClose={() => setShowTopicModal(false)}
+        defaultTopic={topic || ''}
+        onSave={handleSaveTopic}
+        isFirstTime={!topic && nodes.length === 0}
+      /> */}
     </div>
   )
 } 

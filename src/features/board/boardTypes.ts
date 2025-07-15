@@ -26,6 +26,17 @@ export interface BoardEdge extends Edge {
   }
 }
 
+export interface BoardBrief {
+  topic: string
+  goal: string
+  audience: string
+  resources: string[]
+  aiHelpPreferences: string[]
+  notes?: string
+  isReady?: boolean
+  preSessionChat?: { role: 'user' | 'ai', content: string }[]
+}
+
 export interface BoardState {
   nodes: BoardNode[]
   edges: BoardEdge[]
@@ -35,6 +46,8 @@ export interface BoardState {
     y: number
     zoom: number
   }
+  topic: string | null
+  boardBrief?: BoardBrief
 }
 
 export interface BoardActions {
@@ -48,4 +61,5 @@ export interface BoardActions {
   setSelectedNode: (id: string | null) => void
   updateViewport: (viewport: Partial<BoardState['viewport']>) => void
   clearBoard: () => void
+  setTopic: (topic: string | null) => void
 } 

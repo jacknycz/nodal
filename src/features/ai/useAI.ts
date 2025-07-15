@@ -13,6 +13,7 @@ import type {
   OpenAIModel,
   AIActionType
 } from './aiTypes'
+import { useBoardStore } from '../board/boardSlice'
 
 // Enhanced useAI hook with more options
 export function useAI(options: UseAIOptions = {}): UseAIResult {
@@ -20,6 +21,7 @@ export function useAI(options: UseAIOptions = {}): UseAIResult {
   const { selectOptimalModel } = useAIContext()
   const [isLoading, setIsLoading] = useState(false)
   const activeRequestRef = useRef<AbortController | null>(null)
+  const { topic } = useBoardStore()
 
   // Enhanced generate function with better error handling and options
   const generate = useCallback(async (
@@ -36,13 +38,21 @@ export function useAI(options: UseAIOptions = {}): UseAIResult {
     activeRequestRef.current = new AbortController()
 
     try {
+      let contextToUse = options.context || requestOptions.context
+      if (!contextToUse && topic) {
+        // If no context provided, use topic as fallback in a minimal AIContext
+        contextToUse = { userPreferences: undefined, board: undefined, documents: undefined, conversation: undefined, topic } as any
+      } else if (typeof contextToUse === 'object' && topic && !(contextToUse as any).topic) {
+        // If context is an object but topic is not included, add it
+        contextToUse = { ...contextToUse, topic }
+      }
       const request: AIRequest = {
         prompt,
         model: options.model || selectOptimalModel('chat'),
         temperature: options.temperature,
         maxTokens: options.maxTokens,
         stream: false,
-        context: options.context,
+        context: contextToUse,
         ...requestOptions
       }
 
@@ -52,7 +62,7 @@ export function useAI(options: UseAIOptions = {}): UseAIResult {
       setIsLoading(false)
       activeRequestRef.current = null
     }
-  }, [baseAI, options, selectOptimalModel])
+  }, [baseAI, options, selectOptimalModel, topic])
 
   // Enhanced streaming function
   const generateStream = useCallback(async function* (
