@@ -131,6 +131,7 @@ export default function App() {
                   <Board 
                     onBoardStateChange={handleBoardStateChange} 
                     initialBoard={currentBoard}
+                    onOpenBoardRoom={handleOpenBoardRoom}
                   />
                 )}
               </div>

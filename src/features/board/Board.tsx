@@ -54,6 +54,7 @@ interface BoardProps {
     hasUnsavedChanges: boolean
   ) => void
   initialBoard?: any
+  onOpenBoardRoom: () => void
 }
 
 const nodeTypes = {
@@ -84,7 +85,7 @@ declare global {
   }
 }
 
-export default function Board({ onBoardStateChange, initialBoard }: BoardProps) {
+export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoom }: BoardProps) {
   const {
     nodes,
     edges,
@@ -928,7 +929,10 @@ export default function Board({ onBoardStateChange, initialBoard }: BoardProps) 
             setBrainstorming(false)
           }
         }}
-        onClose={() => {}}
+        onClose={() => {
+          setShowSetup(false)
+          onOpenBoardRoom()
+        }}
       />
 {(isGenerating || vectorizing || brainstorming) && (
   <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
