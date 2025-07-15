@@ -13,6 +13,7 @@ import {
   FileText
 } from 'lucide-react'
 import type { SavedBoard } from '../features/storage/storage'
+import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -39,6 +40,7 @@ export default function AvatarMenu({
   onLoadBoard,
   className = ''
 }: AvatarMenuProps) {
+  const user = useSupabaseUser()
   const [isOpen, setIsOpen] = useState(false)
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const [showRecentBoards, setShowRecentBoards] = useState(false)
@@ -139,6 +141,39 @@ export default function AvatarMenu({
     }
   }
 
+  // Get user display name
+  const getUserDisplayName = () => {
+    if (!user) return 'User'
+    
+    // Try to get the best available name
+    if (user.user_metadata?.full_name) {
+      return user.user_metadata.full_name
+    }
+    if (user.user_metadata?.name) {
+      return user.user_metadata.name
+    }
+    if (user.email) {
+      return user.email.split('@')[0] // Just the username part
+    }
+    
+    return 'User'
+  }
+
+  // Get user avatar
+  const getUserAvatar = () => {
+    if (!user) return null
+    
+    // Try to get avatar from Google OAuth metadata
+    if (user.user_metadata?.avatar_url) {
+      return user.user_metadata.avatar_url
+    }
+    if (user.user_metadata?.picture) {
+      return user.user_metadata.picture
+    }
+    
+    return null
+  }
+
   return (
     <div ref={menuRef} className={`relative ${className}`}>
       {/* Avatar Button */}
@@ -146,15 +181,48 @@ export default function AvatarMenu({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
-          <User className="w-5 h-5 text-white" />
-        </div>
+        {getUserAvatar() ? (
+          <img 
+            src={getUserAvatar()} 
+            alt={getUserDisplayName()}
+            className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+          />
+        ) : (
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <User className="w-5 h-5 text-white" />
+          </div>
+        )}
         <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+          {/* User Info */}
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center space-x-3">
+              {getUserAvatar() ? (
+                <img 
+                  src={getUserAvatar()} 
+                  alt={getUserDisplayName()}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {getUserDisplayName()}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  Signed in as {user?.email || 'user'}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Current Board Info */}
           {currentBoardName && (
             <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -292,7 +360,14 @@ export default function AvatarMenu({
 
           {/* Sign Out */}
           <button
-            onClick={() => alert('Sign out functionality coming soon!')}
+            onClick={async () => {
+              try {
+                await signOut();
+                window.location.reload(); // Or redirect to login page if you have one
+              } catch (err) {
+                alert('Sign out failed: ' + (err instanceof Error ? err.message : err));
+              }
+            }}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 text-red-600 dark:text-red-400"
           >
             <LogOut className="w-4 h-4" />

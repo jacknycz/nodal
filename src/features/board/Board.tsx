@@ -112,7 +112,7 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [showSetup, setShowSetup] = React.useState(!boardBrief)
+  const [showSetup, setShowSetup] = React.useState(false); // was: !boardBrief
   const [showPreSession, setShowPreSession] = React.useState(false)
   
   // Refs for autosave
@@ -260,10 +260,10 @@ export default function Board({ onBoardStateChange }: BoardProps) {
   }, [nodes, edges, currentBoardName])
 
   // Effect to show setup modal if boardBrief is not set
-  useEffect(() => {
-    if (!boardBrief) setShowSetup(true)
-    else setShowSetup(false)
-  }, [boardBrief])
+  // useEffect(() => {
+  //   if (!boardBrief) setShowSetup(true)
+  //   else setShowSetup(false)
+  // }, [boardBrief])
 
   // Show pre-session chat after setup
   useEffect(() => {

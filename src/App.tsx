@@ -6,11 +6,38 @@ import Board from './features/board/Board'
 import Topbar from './components/Topbar'
 import TestPage from './components/TestPage'
 import FloatingChat from './components/FloatingChat'
+import LoginScreen from './components/LoginScreen'
+import { useSupabaseUser } from './features/auth/authUtils'
+import { useTheme } from './contexts/ThemeContext'
+import nodalBlackLogo from './assets/nodal-black.svg'
+import nodalWhiteLogo from './assets/nodal-white.svg'
 import { type SavedBoard } from './features/storage/storage'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
+function LoadingScreen() {
+  const { isDark } = useTheme()
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
+      <div className="text-center">
+        <div className="mb-4 animate-pulse">
+          <img 
+            src={isDark ? nodalWhiteLogo : nodalBlackLogo} 
+            alt="Nodal" 
+            className="h-12 mx-auto"
+          />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Loading Nodal...
+        </h1>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
+  const user = useSupabaseUser()
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -60,6 +87,25 @@ export default function App() {
     console.log('Loading board:', board.name)
   }
 
+  // Show loading state while checking authentication
+  if (user === undefined) {
+    return (
+      <ThemeProvider>
+        <LoadingScreen />
+      </ThemeProvider>
+    )
+  }
+
+  // Show login screen if not authenticated
+  if (!user) {
+    return (
+      <ThemeProvider>
+        <LoginScreen />
+      </ThemeProvider>
+    )
+  }
+
+  // Show main app if authenticated
   return (
     <ThemeProvider>
       {isTestMode ? (
