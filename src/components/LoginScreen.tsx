@@ -78,7 +78,7 @@ export default function LoginScreen() {
         </div>
 
         {/* Auth Card */}
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-8">
+        <div className="bg-white/90 dark:bg-gray-800/30 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-8">
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}

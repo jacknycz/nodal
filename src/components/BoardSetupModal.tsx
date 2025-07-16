@@ -30,8 +30,10 @@ const AI_HELP_OPTIONS = [
 ]
 
 export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSetupModalProps) {
+  const [mode, setMode] = useState<'choose' | 'ai' | 'blank'>('choose')
   const [step, setStep] = useState(0)
   const [topic, setTopic] = useState('')
+  const [ramble, setRamble] = useState('') // New state for ramble content
   const [goal, setGoal] = useState('')
   const [goalOther, setGoalOther] = useState('')
   const [audience, setAudience] = useState('')
@@ -42,14 +44,40 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [notes, setNotes] = useState('')
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
 
+  // Reset mode to 'choose' when modal opens
+  React.useEffect(() => {
+    if (isOpen) setMode('choose')
+  }, [isOpen])
+
+  // If mode is blank, immediately complete with minimal data
+  React.useEffect(() => {
+    if (mode === 'blank') {
+      onComplete({
+        topic: '',
+        ramble: '',
+        goal: '',
+        audience: '',
+        resources: [],
+        aiHelpPreferences: [],
+        notes: '',
+        isReady: true,
+        preSessionChat: [],
+        uploadedFiles: [],
+      })
+    }
+  }, [mode, onComplete])
+
   const steps = [
     {
-      label: 'What are you brainstorming?',
+      label: 'What is the base topic for your board in a few words?',
       content: (
         <div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Don't worry - literally your next step is to ramble about all the things...
+          </p>
           <input
             type="text"
-            className="w-full px-3 py-2 border rounded-lg"
+            className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white"
             placeholder="e.g. Marketing Plan, Research Project, App Idea..."
             value={topic}
             onChange={e => setTopic(e.target.value)}
@@ -60,11 +88,29 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       canContinue: !!topic.trim(),
     },
     {
+      label: 'Now - ramble all the things!',
+      content: (
+        <div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            Let us know why you are here and don't worry about structure, we want the chaos.
+          </p>
+          <textarea
+            className="w-full px-3 py-2 border rounded-lg min-h-[120px] resize-none text-gray-900 dark:text-white"
+            placeholder="Just start typing... whatever comes to mind about your topic, goals, challenges, ideas, etc. We'll help organize it all!"
+            value={ramble}
+            onChange={e => setRamble(e.target.value)}
+            autoFocus
+          />
+        </div>
+      ),
+      canContinue: !!ramble.trim(),
+    },
+    {
       label: 'What’s your goal?',
       content: (
         <div>
           <select
-            className="w-full px-3 py-2 border rounded-lg mb-2"
+            className="w-full px-3 py-2 border rounded-lg mb-2 text-gray-900 dark:text-white"
             value={goal}
             onChange={e => setGoal(e.target.value)}
           >
@@ -74,7 +120,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           {goal === 'Other' && (
             <input
               type="text"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white"
               placeholder="Describe your goal..."
               value={goalOther}
               onChange={e => setGoalOther(e.target.value)}
@@ -89,7 +135,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       content: (
         <div>
           <select
-            className="w-full px-3 py-2 border rounded-lg mb-2"
+            className="w-full px-3 py-2 border rounded-lg mb-2 text-gray-900 dark:text-white"
             value={audience}
             onChange={e => setAudience(e.target.value)}
           >
@@ -99,7 +145,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           {audience === 'Other' && (
             <input
               type="text"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white"
               placeholder="Describe the audience..."
               value={audienceOther}
               onChange={e => setAudienceOther(e.target.value)}
@@ -116,7 +162,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           <div className="flex gap-2 mb-2">
             <input
               type="text"
-              className="flex-1 px-3 py-2 border rounded-lg"
+              className="flex-1 px-3 py-2 border rounded-lg text-gray-900 dark:text-white"
               placeholder="Paste a link, note, or context..."
               value={resourceInput}
               onChange={e => setResourceInput(e.target.value)}
@@ -210,7 +256,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       label: 'Any notes or context?',
       content: (
         <textarea
-          className="w-full px-3 py-2 border rounded-lg"
+          className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white"
           placeholder="Anything else you want to share before starting?"
           value={notes}
           onChange={e => setNotes(e.target.value)}
@@ -225,6 +271,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const handleFinish = () => {
     onComplete({
       topic: topic.trim(),
+      ramble: ramble.trim(), // Add ramble content to the output
       goal: goal === 'Other' ? goalOther.trim() : goal,
       audience: audience === 'Other' ? audienceOther.trim() : audience,
       resources,
@@ -237,6 +284,38 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   }
 
   if (!isOpen) return null
+
+  if (mode === 'choose') {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700 text-center">
+          <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">How do you want to start?</h2>
+          <p className="mb-6 text-gray-600 dark:text-gray-300">Let AI help you brainstorm, or start with a blank board.</p>
+          <div className="flex flex-col gap-4">
+            <button
+              className="px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition"
+              onClick={() => setMode('ai')}
+            >
+              <span role="img" aria-label="AI">🤖</span> AI Assisted (Recommended)
+            </button>
+            <button
+              className="px-6 py-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-semibold text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              onClick={() => setMode('blank')}
+            >
+              <span role="img" aria-label="Blank">📝</span> Start Blank
+            </button>
+          </div>
+          <button
+            className="mt-8 text-gray-500 hover:underline"
+            onClick={onClose}
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

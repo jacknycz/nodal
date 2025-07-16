@@ -71,7 +71,7 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - **Keep It Light** — Avoid UI clutter; prioritize clarity
 - **Composable** — Components should be small, reusable, and easy to extend
 - **Themeable** — Pres Start theming via Tailwind presets
-- **Glassmorphism** — Semi-transparent elements with backdrop blur for modern look
+- **Glassmorphism** — Semi-transparent elements with backdrop blur for modern look (in dark mode mostly)
 
 ---
 

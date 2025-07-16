@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import BoardNameModal from './BoardNameModal'
+import { Button } from 'pres-start-core'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard) => void
@@ -196,11 +197,11 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
+    <div className="h-full bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
-          <button
+          <Button
             onClick={handleNewBoardClick}
             className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
           >
@@ -208,7 +209,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span>New Board</span>
-          </button>
+          </Button>
         </div>
         <div className="mb-6">
           <input

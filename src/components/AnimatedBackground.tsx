@@ -35,8 +35,8 @@ export default function AnimatedBackground() {
         this.y = Math.random() * canvas.height
         this.vx = (Math.random() - 0.5) * 0.5
         this.vy = (Math.random() - 0.5) * 0.5
-        this.size = Math.random() * 3 + 1
-        this.opacity = Math.random() * 0.5 + 0.1
+        this.size = Math.random() * 5 + 1
+        this.opacity = Math.random() * 0.7 + 0.1
         this.color = isDark ? '#6366f1' : '#3b82f6' // Indigo/Blue based on theme
       }
 

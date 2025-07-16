@@ -28,6 +28,7 @@ export interface BoardEdge extends Edge {
 
 export interface BoardBrief {
   topic: string
+  ramble: string // Add the new ramble field
   goal: string
   audience: string
   resources: string[]

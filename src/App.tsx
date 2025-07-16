@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from './features/ai/aiContext'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -45,6 +45,81 @@ export default function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isTestMode, setIsTestMode] = useState(false)
   const [currentView, setCurrentView] = useState<'boardroom' | 'board'>('boardroom')
+  const [isRestoringBoard, setIsRestoringBoard] = useState(false)
+  const [hasCheckedSavedBoard, setHasCheckedSavedBoard] = useState(false)
+  const previousUserRef = useRef<any>(null)
+
+  const handleLoadBoard = (board: any) => {
+    console.log('handleLoadBoard called with:', board)
+    setCurrentBoard(board)
+    setCurrentView('board')
+    setCurrentBoardName(board.name)
+    
+    // Save board state for persistence
+    console.log('Saving board to localStorage:', { id: board.id, name: board.name })
+    localStorage.setItem('nodal_current_board_id', board.id)
+    localStorage.setItem('nodal_current_board_name', board.name)
+  }
+
+  // Track user state changes to detect actual logout vs loading
+  useEffect(() => {
+    // Only clear saved board if we had a user before and now we don't (actual logout)
+    if (previousUserRef.current && !user) {
+      console.log('User logged out, clearing saved board state')
+      localStorage.removeItem('nodal_current_board_id')
+      localStorage.removeItem('nodal_current_board_name')
+      setCurrentView('boardroom')
+      setCurrentBoard(undefined)
+      setCurrentBoardName(undefined)
+      setHasCheckedSavedBoard(false)
+    }
+    
+    // Update the previous user reference
+    previousUserRef.current = user
+  }, [user])
+
+  // Restore board state from localStorage on app load (only for page refreshes)
+  useEffect(() => {
+    if (user && currentView === 'boardroom' && !hasCheckedSavedBoard) {
+      const savedBoardId = localStorage.getItem('nodal_current_board_id')
+      const savedBoardName = localStorage.getItem('nodal_current_board_name')
+      
+      console.log('Checking for saved board:', { savedBoardId, savedBoardName })
+      
+      if (savedBoardId && savedBoardName) {
+        // Set loading state to prevent flash
+        setIsRestoringBoard(true)
+        
+        // Load the saved board
+        const loadSavedBoard = async () => {
+          try {
+            const { boardStorage } = await import('./features/storage/storage')
+            const savedBoard = await boardStorage.loadBoard(savedBoardId)
+            console.log('Loaded saved board:', savedBoard)
+            if (savedBoard) {
+              handleLoadBoard(savedBoard)
+            } else {
+              // Board no longer exists, clear saved state
+              localStorage.removeItem('nodal_current_board_id')
+              localStorage.removeItem('nodal_current_board_name')
+            }
+          } catch (error) {
+            console.error('Failed to load saved board:', error)
+            // Clear saved state on error
+            localStorage.removeItem('nodal_current_board_id')
+            localStorage.removeItem('nodal_current_board_name')
+          } finally {
+            setIsRestoringBoard(false)
+            setHasCheckedSavedBoard(true)
+          }
+        }
+        
+        loadSavedBoard()
+      } else {
+        setHasCheckedSavedBoard(true)
+      }
+    }
+  }, [user, currentView, hasCheckedSavedBoard])
 
   const handleBoardStateChange = (
     boardName: string | undefined,
@@ -62,6 +137,9 @@ export default function App() {
 
   const handleOpenBoardRoom = () => {
     setCurrentView('boardroom')
+    // Clear saved board state when going back to Board Room
+    localStorage.removeItem('nodal_current_board_id')
+    localStorage.removeItem('nodal_current_board_name')
   }
 
   const handleExportBoard = () => {
@@ -75,14 +153,6 @@ export default function App() {
   const handleOpenSettings = () => {
     alert('Settings modal coming soon!')
   }
-
-  const handleLoadBoard = (board: any) => {
-    setCurrentBoard(board)
-    setCurrentView('board')
-    setCurrentBoardName(board.name)
-  }
-
-
 
   // Show loading state while checking authentication
   if (user === undefined) {
@@ -102,6 +172,15 @@ export default function App() {
     )
   }
 
+  // Show loading screen while restoring board
+  if (isRestoringBoard) {
+    return (
+      <ThemeProvider>
+        <LoadingScreen />
+      </ThemeProvider>
+    )
+  }
+
   // Show main app if authenticated
   return (
     <ThemeProvider>
@@ -110,7 +189,7 @@ export default function App() {
       ) : (
         <AIProvider>
           <ReactFlowProvider>
-            <div className="w-screen h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="w-screen h-screen bg-gray-50 dark:bg-gray-900 h-full">
               <Topbar 
                 currentBoardName={currentBoardName}
                 saveStatus={saveStatus}
@@ -124,7 +203,7 @@ export default function App() {
                 onOpenSettings={handleOpenSettings}
                 onLoadBoard={handleLoadBoard}
               />
-              <div className="pt-16 w-full h-full">
+              <div className="pt-16 w-full min-h-dvh h-full">
                 {currentView === 'boardroom' ? (
                   <BoardRoom onOpenBoard={handleLoadBoard} />
                 ) : (
