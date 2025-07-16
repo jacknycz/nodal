@@ -4,6 +4,7 @@ import type { NodeProps } from '@xyflow/react'
 import type { BoardNode } from '../board/boardTypes'
 import { useNodeActions } from './useNodeActions'
 import { boardStorage } from '../storage/storage'
+import { useBoardStore } from '../board/boardSlice'
 
 // Document type icons
 const getDocumentIcon = (fileType: string) => {
@@ -125,7 +126,7 @@ function DeleteDocumentModal({
 
 export default function DocumentNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
-  const { updateNodeLabel, removeNode, toggleNodeExpanded } = useNodeActions(id)
+  const { updateNodeLabel, removeNode, toggleNodeExpanded, updateNodeContent } = useNodeActions(id)
   
   // State
   const [isEditingLabel, setIsEditingLabel] = useState(false)
@@ -260,6 +261,20 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
       // Delete the document file
       if (nodeData.documentId) {
         await boardStorage.deleteDocument(nodeData.documentId)
+        // Update all nodes referencing this documentId
+        const currentNodes = useBoardStore.getState().nodes
+        currentNodes.forEach(n => {
+          if (n.data.documentId === nodeData.documentId) {
+            useBoardStore.getState().updateNode(n.id, {
+              data: {
+                ...n.data,
+                documentId: undefined,
+                status: 'error',
+                extractedText: '',
+              }
+            })
+          }
+        })
       }
       // Remove the node
       removeNode()
@@ -365,7 +380,47 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
     }
   }
 
+  // Retry extraction handler
+  const handleRetryExtraction = async () => {
+    if (!nodeData.fileName || !nodeData.documentId) return
+    setIsLoadingContent(true)
+    try {
+      // Fetch the file again (assume we have a way to get the Blob, or show error if not)
+      // For now, just show a message (real implementation would need file re-upload or download)
+      setDocumentContent('Re-extraction not implemented: file blob required.')
+      // TODO: Implement actual re-extraction logic if file Blob is available
+      // Example: const newText = await extractTextFromFile(file)
+      // updateNodeContent(newText, newText)
+    } catch (err) {
+      setDocumentContent('Retry failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    } finally {
+      setIsLoadingContent(false)
+    }
+  }
+
   const isMinimized = !nodeData.expanded
+
+  // Main render
+  if (nodeData.status === 'error') {
+    return (
+      <div className="p-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded shadow">
+        <div className="flex items-center mb-2">
+          <span className="text-red-600 dark:text-red-300 mr-2">⚠️</span>
+          <span className="font-semibold text-red-700 dark:text-red-200">Document Processing Error</span>
+        </div>
+        <div className="text-sm text-red-700 dark:text-red-200 mb-3">
+          {documentContent || 'There was a problem extracting or processing this document.'}
+        </div>
+        <button
+          onClick={handleRetryExtraction}
+          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+          disabled={isLoadingContent}
+        >
+          {isLoadingContent ? 'Retrying...' : 'Retry Extraction'}
+        </button>
+      </div>
+    )
+  }
 
   return (
     <>

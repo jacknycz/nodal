@@ -210,5 +210,46 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 
 ---
 
+## Document AI Flow
+
+Here’s how documents become searchable and useful for AI in Nodal:
+
+1. **Upload**
+   - User uploads a document (PDF, text, Word, image, etc.)
+   - File is validated for type and size
+
+2. **Extraction**
+   - Text is extracted from the document (if possible)
+   - Extraction errors are handled and surfaced in the UI
+
+3. **Vectorization**
+   - Extracted text is converted to embeddings (vector representations)
+   - Embeddings are stored in the app state for semantic search
+
+4. **Node Creation**
+   - A Document Node is created on the board
+   - Node contains metadata, extracted text, status, and a reference to the document
+
+5. **AI Context**
+   - When you chat with the AI, the most recent document nodes (with snippets) are included in the prompt context
+   - Node Aware mode and other AI features can reference document content
+
+6. **Search/Reference**
+   - You can “search” documents by asking the AI in chat
+   - The AI uses the included snippets to answer, summarize, or connect ideas
+
+```mermaid
+graph TD;
+  A[Upload Document] --> B[Extract Text]
+  B --> C[Vectorize (Embeddings)]
+  C --> D[Create Document Node]
+  D --> E[AI Context (Prompt)]
+  E --> F[AI Search/Reference]
+```
+
+*For full-document search or advanced retrieval, see future roadmap!*
+
+---
+
 
 *This file is here to help AI agents, copilots, or teammates get aligned before contributing to Nodal. When in doubt, ask Jack.*

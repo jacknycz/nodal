@@ -20,12 +20,21 @@ export function useNodeActions(nodeId: string) {
   )
 
   const updateNodeContent = useCallback(
-    (content: string) => {
+    (content: string, extractedText?: string) => {
       const nodes = useBoardStore.getState().nodes
       const node = nodes.find(n => n.id === nodeId)
       if (node) {
+        let newData = { ...node.data, content }
+        if (node.data.type === 'document') {
+          // Update status and extractedText for document nodes
+          newData = {
+            ...newData,
+            extractedText: extractedText !== undefined ? extractedText : node.data.extractedText || '',
+            status: content && !content.startsWith('[Error') ? 'ready' : (content.startsWith('[Error') ? 'error' : 'processing'),
+          }
+        }
         updateNode(nodeId, { 
-          data: { ...node.data, content } 
+          data: newData
         })
       }
     },

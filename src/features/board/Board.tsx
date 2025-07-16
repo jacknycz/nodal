@@ -718,6 +718,9 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   }
   const aiClient = new AIClient(aiConfig)
 
+  const setEmbeddings = useBoardStore(state => state.setEmbeddings)
+  const embeddings = useBoardStore(state => state.embeddings)
+
   return (
     <div className="w-full h-full relative">
       {/* DEBUG: Chat Mode Indicator */}
@@ -836,7 +839,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           setBrainstorming(false)
           setBrainstormError(null)
           let extractedResults = []
-          let embeddings: number[][] = []
+          let embeddingVectors: number[][] = []
           try {
             // Extract text from all uploaded files
             const files = brief.uploadedFiles || []
@@ -849,13 +852,14 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
             // Batch vectorize all extracted text
             const texts = extractedResults.map(r => r.text)
             if (texts.length > 0) {
-              embeddings = await aiClient.getEmbedding(texts) as number[][]
+              embeddingVectors = await aiClient.getEmbedding(texts) as number[][]
             }
-            window.__nodal_vectorizedDocs = extractedResults.map((r, i) => ({
+            setEmbeddings(extractedResults.map((r, i) => ({
+              documentId: '', // You may want to set this if available
               fileName: r.file.name,
               text: r.text,
-              embedding: embeddings[i],
-            }))
+              embedding: embeddingVectors[i],
+            })))
           } catch (err) {
             setVectorizationError(err instanceof Error ? err.message : 'Vectorization failed')
           } finally {
@@ -866,7 +870,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           setBrainstormError(null)
           try {
             // Build a context string from all onboarding info and extracted doc text
-            const docText = (window.__nodal_vectorizedDocs || []).map(d => `Document: ${d.fileName}\n${d.text.slice(0, 2000)}`).join('\n\n')
+            const docText = (embeddings || []).map(d => `Document: ${d.fileName}\n${d.text.slice(0, 2000)}`).join('\n\n')
             const context = `Topic: ${brief.topic}\nRamble: ${brief.ramble || ''}\nGoal: ${brief.goal}\nAudience: ${brief.audience}\nResources: ${brief.resources.join(', ')}\nNotes: ${brief.notes || ''}\n${docText}`
             // Prompt the AI for a brainstorm map
             const brainstormPrompt = `Given the following context, generate a brainstorm map for a mindmap app.\n\nContext:\n${context}\n\nInstructions:\n- Suggest the best central node (if not obvious, use the topic)\n- Brainstorm as many relevant subtopics as make sense (not just 4), each as a prompt or question to explore\n- Optionally, group or cluster subtopics if themes emerge\n- Respond in JSON with this structure:\n{\n  \'center\': 'Central Node Title',\n  \'subtopics\': [\n    { \'title\': 'Subtopic', \'prompt\': 'Prompt or question', \'group\': 'Group Name (optional)' },\n    ...\n  ]\n}`

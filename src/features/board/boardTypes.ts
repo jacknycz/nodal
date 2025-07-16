@@ -16,6 +16,8 @@ export interface BoardNode extends Node {
     uploadedAt?: number
     extractedText?: string
     previewUrl?: string
+    // Document processing status: 'processing', 'ready', 'error'
+    status?: 'processing' | 'ready' | 'error'
   }
 }
 
@@ -38,6 +40,14 @@ export interface BoardBrief {
   preSessionChat?: { role: 'user' | 'ai', content: string }[]
 }
 
+// Embedding info for a document
+export interface DocumentEmbedding {
+  documentId: string
+  fileName: string
+  text: string
+  embedding: number[]
+}
+
 export interface BoardState {
   nodes: BoardNode[]
   edges: BoardEdge[]
@@ -49,6 +59,7 @@ export interface BoardState {
   }
   topic: string | null
   boardBrief?: BoardBrief
+  embeddings?: DocumentEmbedding[]
 }
 
 export interface BoardActions {

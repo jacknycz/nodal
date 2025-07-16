@@ -163,3 +163,19 @@ export function getEdgeStyle(edgeType: string) {
       }
   }
 } 
+
+// Utility to build a consistent document context for AI features
+export function getDocumentContext(nodes: BoardNode[]) {
+  return nodes
+    .filter(node => node.data.type === 'document' && node.data.documentId)
+    .map(node => ({
+      id: node.data.documentId!,
+      label: node.data.label,
+      fileName: node.data.fileName,
+      fileType: node.data.fileType,
+      fileSize: node.data.fileSize,
+      uploadedAt: node.data.uploadedAt,
+      status: node.data.status || 'processing',
+      snippet: node.data.extractedText ? node.data.extractedText.slice(0, 200) : '',
+    }))
+} 

@@ -337,9 +337,15 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
         : ''
       
       // Build document context
-      const documentNodes = nodes.filter(node => node.data.type === 'document' && node.data.extractedText)
-      const documentContext = documentNodes.length > 0 
-        ? `Documents available: ${documentNodes.map(node => `"${node.data.label}"`).join(', ')}`
+      const documentNodes = nodes
+        .filter(node => node.data.type === 'document' && node.data.extractedText)
+        .sort((a, b) => (b.data.uploadedAt || 0) - (a.data.uploadedAt || 0))
+        .slice(0, 5)
+      const documentContext = documentNodes.length > 0
+        ? `Documents available:\n` +
+          documentNodes.map(node =>
+            `- ${node.data.label}: ${node.data.extractedText?.slice(0, 200) || ''}`
+          ).join('\n')
         : ''
       
       const contextualSystemPrompt = NODE_AWARE_SYSTEM_PROMPT

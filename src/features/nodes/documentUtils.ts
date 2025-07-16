@@ -95,7 +95,7 @@ export function createDocumentNode(
     dragHandle: '.nodal-drag-handle',
     data: {
       label: baseName,
-      content: hasExtractedText ? extractedText.slice(0, 500) : `Document: ${fileName}`, // Store first 500 chars in content
+      content: hasExtractedText ? extractedText.slice(0, 500) : `Document: ${fileName}`,
       type: 'document',
       expanded: false,
       aiGenerated: false,
@@ -104,7 +104,8 @@ export function createDocumentNode(
       fileType: file.type,
       fileSize: file.size,
       uploadedAt: Date.now(),
-      extractedText,
+      extractedText: extractedText || '',
+      status: hasExtractedText ? 'ready' : (extractedText.startsWith('[Error') ? 'error' : 'processing'),
     },
   }
 }
