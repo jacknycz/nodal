@@ -6,6 +6,7 @@ import type { SavedBoard } from '../features/storage/storage'
 import AvatarMenu from './AvatarMenu'
 import ThemeToggle from './ThemeToggle'
 import AISettingsMenu from './AISettingsMenu'
+import DocumentsMenu from './DocumentsMenu'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -98,6 +99,7 @@ export default function Topbar({
             isTestMode={isTestMode}
             onToggleTestMode={onToggleTestMode}
           />
+          <DocumentsMenu />
           <ThemeToggle />
           
           <AvatarMenu
