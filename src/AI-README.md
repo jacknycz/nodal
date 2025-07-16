@@ -54,6 +54,20 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - **Brainstorming** — AI-generated mindmap structures from context
 - **Context Analysis** — AI analyzes board state for relevant suggestions
 - **Multi-step Actions** — Complex AI operations broken into manageable steps
+- **Conversation Buffer** — Last 10 messages maintained for multi-turn context awareness
+- **Intent Tracking** — Pending questions (e.g., location requests) tracked and fulfilled
+- **Google Places Integration** — Real local business search via `searchPlacesGoogle()` utility
+- **Smart Follow-ups** — AI recognizes when users provide missing info and fulfills original requests
+
+---
+
+## Conversational AI Patterns
+- **Multi-turn Memory** — AI maintains context across conversation turns using message buffer
+- **Intent Fulfillment** — When AI asks for info (location, details), tracks pending intent and fulfills when user provides it
+- **Context-Aware Responses** — AI considers board state, selected nodes, and conversation history
+- **Real Action Integration** — Conversational requests trigger actual API calls (Google Places, node creation)
+- **Fallback Handling** — Graceful degradation when APIs are unavailable (hypothetical examples)
+- **Conversation Flow** — Natural progression from questions → clarifications → actions → results
 
 ---
 
