@@ -59,10 +59,7 @@ class BoardStorage {
   }
 
   async getDocument(documentId: string): Promise<DocumentFile | null> {
-    // For now, we'll need to implement this in supabaseStorage
-    // This would require downloading the file from Supabase Storage
-    console.warn('getDocument not yet implemented for Supabase storage')
-    return null
+    return supabaseStorage.getDocument(documentId)
   }
 
   async getDocumentMetadata(documentId: string): Promise<DocumentMetadata | null> {
@@ -86,8 +83,7 @@ class BoardStorage {
   }
 
   async deleteDocument(documentId: string): Promise<void> {
-    // This would need to be implemented in supabaseStorage
-    console.warn('deleteDocument not yet implemented for Supabase storage')
+    return supabaseStorage.deleteDocument(documentId)
   }
 
   // Save a named board

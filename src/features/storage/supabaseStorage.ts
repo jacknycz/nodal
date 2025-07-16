@@ -294,6 +294,101 @@ class SupabaseStorage {
       return []
     }
   }
+
+  // Get a specific document by ID
+  async getDocument(documentId: string): Promise<DocumentFile | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // Get document metadata from database
+      const { data: docData, error: dbError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', documentId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (dbError || !docData) {
+        console.error('Document not found or access denied:', dbError)
+        return null
+      }
+
+      // Download the file from Supabase Storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('documents')
+        .download(docData.file_path)
+
+      if (downloadError) {
+        console.error('Failed to download document file:', downloadError)
+        return null
+      }
+
+      // Convert to DocumentFile format
+      const documentFile: DocumentFile = {
+        id: docData.id,
+        fileName: docData.file_name,
+        fileType: docData.file_type,
+        fileSize: docData.file_size,
+        content: fileData,
+        extractedText: docData.extracted_text,
+        uploadedAt: docData.uploaded_at,
+        boardId: docData.board_id,
+        nodeId: docData.node_id,
+        userId: docData.user_id,
+      }
+
+      console.log(`Document "${docData.file_name}" loaded successfully`)
+      return documentFile
+    } catch (error) {
+      console.error('Failed to get document from Supabase:', error)
+      return null
+    }
+  }
+
+  // Delete a document
+  async deleteDocument(documentId: string): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // First, get the document metadata to find the file path
+      const { data: docData, error: fetchError } = await supabase
+        .from('documents')
+        .select('file_path, file_name')
+        .eq('id', documentId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (fetchError || !docData) {
+        throw new Error('Document not found or access denied')
+      }
+
+      // Delete the file from Supabase Storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([docData.file_path])
+
+      if (storageError) {
+        console.error('Failed to delete file from storage:', storageError)
+        // Continue with database deletion even if storage deletion fails
+      }
+
+      // Delete the document record from database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId)
+        .eq('user_id', user.id)
+
+      if (dbError) throw dbError
+
+      console.log(`Document "${docData.file_name}" deleted successfully`)
+    } catch (error) {
+      console.error('Failed to delete document from Supabase:', error)
+      throw error
+    }
+  }
 }
 
 export const supabaseStorage = new SupabaseStorage() 
