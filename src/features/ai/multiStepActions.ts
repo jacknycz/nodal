@@ -1,6 +1,8 @@
 import type { DetectedAction, ActionSequence, ActionType, ActionParameters } from './actionDetection'
 import type { AIContext } from './aiTypes'
 import type { BoardNode } from '../board/boardTypes'
+import type { PlaceResult } from '../places/placesApi'
+import { searchPlacesGoogle } from '../places/placesApi'
 
 // 🎭 MULTI-STEP ORCHESTRATOR TYPES
 export interface ExecutionContext {
@@ -715,28 +717,44 @@ class CommandExecutor {
     const prompt = detectedAction.metadata.originalText
     const topic = detectedAction.parameters.topic || this.extractTopicFromPrompt(prompt)
     const intent = detectedAction.intent.primary
-    
-    if (mode === 'single') {
-      // Generate single node content
-      if (topic && topic.includes('flavor')) {
+    // Use optional chaining and key check for location
+    const location = (detectedAction.parameters && 'location' in detectedAction.parameters) ? (detectedAction.parameters as any).location : ''
+    // --- Local place/nursery suggestion logic ---
+    const isNurseryRequest = /local (plant )?nurser(y|ies)/i.test(prompt) || /nurser(y|ies)/i.test(topic) || /local [a-z ]+/i.test(prompt)
+    if (isNurseryRequest) {
+      if (!location) {
+        // Prompt for location if not provided
+        return {
+          title: 'Location Needed',
+          description: 'To suggest real local plant nurseries, please provide your city or area (e.g., "Seattle").'
+        }
+      }
+      // Use Google Places API utility
+      const places: PlaceResult[] = await searchPlacesGoogle('plant nursery', location)
+      if (mode === 'single') {
+        // Just return the first result as a node
+        const first = places[0]
+        return {
+          title: first.name,
+          description: `${first.address}\n[View on Google Maps](${first.url})`
+        }
+      } else {
+        // Return multiple nodes for each place
+        return places.map(place => ({
+          title: place.name,
+          description: `${place.address}\n[View on Google Maps](${place.url})`
+        }))
+      }
+    }
+    // Generic generation for other actions
+    if (topic && topic.includes('flavor')) {
+      if (mode === 'single') {
+        // Generate single node content
         return {
           title: 'Signature Coffee Blend',
           description: `A unique house blend combining Ethiopian Yirgacheffe for brightness, Colombian Supremo for body, and Brazilian Santos for chocolate notes. Roasted to a medium-dark profile to highlight the natural sweetness while maintaining origin characteristics.`
         }
-      } else if (topic && topic.includes('plan')) {
-        return {
-          title: 'Project Vision',
-          description: `High-level overview and vision for the project. This serves as the foundation for all planning and development activities.`
-        }
-      } else {
-        return {
-          title: this.generateTitleFromPrompt(prompt),
-          description: `Generated based on your request: "${prompt}". This node provides a focused response to your specific needs.`
-        }
-      }
-    } else {
-      // Generate multiple node content
-      if (topic && topic.includes('flavor')) {
+      } else if (mode === 'multiple') {
         return [
           {
             title: 'Lavender Honey Latte',
@@ -751,7 +769,14 @@ class CommandExecutor {
             description: 'Traditional cappuccino elevated with ground cardamom and rose water. The cardamom adds aromatic spice while rose water provides a delicate floral finish. Topped with rose petals for presentation.'
           }
         ]
-      } else if (topic && topic.includes('plan')) {
+      }
+    } else if (topic && topic.includes('plan')) {
+      if (mode === 'single') {
+        return {
+          title: 'Project Vision',
+          description: `High-level overview and vision for the project. This serves as the foundation for all planning and development activities.`
+        }
+      } else if (mode === 'multiple') {
         return [
           {
             title: 'Market Analysis',
@@ -766,9 +791,16 @@ class CommandExecutor {
             description: 'Step-by-step execution plan, resource allocation, and timeline for bringing the project to market.'
           }
         ]
-      } else {
-        // Generic multiple nodes based on the prompt
-        const baseTitle = this.generateTitleFromPrompt(prompt)
+      }
+    } else {
+      // Generic multiple nodes based on the prompt
+      const baseTitle = this.generateTitleFromPrompt(prompt)
+      if (mode === 'single') {
+        return {
+          title: this.generateTitleFromPrompt(prompt),
+          description: `Generated based on your request: "${prompt}". This node provides a focused response to your specific needs.`
+        }
+      } else if (mode === 'multiple') {
         return [
           {
             title: `${baseTitle} - Concept 1`,
@@ -784,6 +816,11 @@ class CommandExecutor {
           }
         ]
       }
+    }
+    // Fallback return to satisfy all code paths
+    return {
+      title: 'No suggestion available',
+      description: 'Unable to generate a suggestion for your request.'
     }
   }
 
