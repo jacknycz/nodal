@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { Button } from 'pres-start-core'
+import { Button, Link, TextInput } from 'pres-start-core'
 import { Chrome, Loader2, Sparkles, Users, Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../features/auth/authUtils'
 import { useTheme } from '../contexts/ThemeContext'
 import nodalBlackLogo from '../assets/nodal-black.svg'
 import nodalWhiteLogo from '../assets/nodal-white.svg'
+import AnimatedBackground from './AnimatedBackground'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -58,8 +59,10 @@ export default function LoginScreen() {
   const isFormValid = email.trim() && password.length >= 6
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+        <AnimatedBackground />
+      
+      <div className="w-full max-w-md relative z-10">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
           <div className="mb-6">
@@ -75,7 +78,7 @@ export default function LoginScreen() {
         </div>
 
         {/* Auth Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
+        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-8">
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}
@@ -93,7 +96,7 @@ export default function LoginScreen() {
             onClick={handleGoogleAuth}
             disabled={isLoading}
             variant="custom"
-            className="w-full h-12 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center justify-center space-x-3 mb-6"
+            className="w-full h-12 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-white dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center space-x-3 mb-6"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -111,33 +114,39 @@ export default function LoginScreen() {
               <div className="w-full border-t border-gray-300 dark:border-gray-600" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">or</span>
+              <span className="px-2 bg-white/90 dark:bg-gray-800/90 text-gray-500">or</span>
             </div>
           </div>
 
           {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Email address
-              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                {/* <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-tertiary-400 dark:color-tertiary-500 dark:text-tertiary-500" />
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your email"
                   disabled={isLoading}
                   required
+                /> */}
+                <TextInput
+                  id="email"
+                  type="email"
+                  label="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  iconLeft={<Mail className="w-4 h-4 text-tertiary-400 dark:color-tertiary-500 dark:text-tertiary-500" />}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {/* <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Password
               </label>
               <div className="relative">
@@ -147,7 +156,7 @@ export default function LoginScreen() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your password"
                   disabled={isLoading}
                   required
@@ -160,12 +169,23 @@ export default function LoginScreen() {
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
-              </div>
+              </div> */}
+
+              <TextInput
+                id="password"
+                placeholder="Enter your password"
+                type="password"
+                label="Password"
+                variant="custom"
+                iconLeft={<Lock className="w-4 h-4 text-tertiary-400 dark:color-tertiary-500 dark:text-tertiary-500" />}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="p-3 bg-red-50/80 dark:bg-red-900/20 backdrop-blur-sm border border-red-200 dark:border-red-800 rounded-lg">
                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
@@ -188,12 +208,12 @@ export default function LoginScreen() {
           <div className="text-center mt-6">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {mode === 'signin' ? "Don't have an account?" : "Already have an account?"}{' '}
-              <button
+              <Link
                 onClick={toggleMode}
-                className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                className="text-tertiary-600 dark:text-tertiary-400 hover:underline font-medium cursor-pointer"
               >
                 {mode === 'signin' ? 'Sign up' : 'Sign in'}
-              </button>
+              </Link>
             </p>
           </div>
 
