@@ -251,5 +251,44 @@ graph TD;
 
 ---
 
+## Recent Implementation Notes & Patterns
+
+### Node Layout & Positioning
+- **Mind Map Layout:**
+  - Nodal uses a custom fan/radial mind map layout for all node positioning. Nodes are spaced based on their connections, radiating out from the root or parent node. See `layoutMindMap` in `Board.tsx` for the core algorithm. All batch node sets (AI brainstorm, document upload, board import) use this layout for consistency.
+- **Single Node Placement:**
+  - Single nodes (e.g., manual add) are placed at the viewport center or near the selected node.
+
+### Handle Visibility Pattern
+- **UX Pattern:**
+  - Node connection handles are hidden by default and only appear on node hover, using Tailwind’s `group-hover` utility. See `NodalNode.tsx` for the implementation.
+
+### AI Node Generation
+- **Positioning:**
+  - AI-generated nodes use a simple fallback positioning for now, but can be upgraded to use the mind map layout for more contextual placement.
+
+### Refactoring/Tech Debt
+- **Legacy Positioning Utilities:**
+  - The old `findIntelligentPositions` utility has been fully removed in favor of the new layout. If you see any references to it, they should be cleaned up.
+
+### How to Add New Node Types
+- To add a new node type, create a new component in `src/features/nodes/`, register it in `Board.tsx`, and follow the same patterns for handles, hover, and content editing.
+
+### Testing Layout Changes
+- After changing layout logic, test with:
+  - Large boards (20+ nodes)
+  - Deeply nested/branched mind maps
+  - Boards with disconnected nodes
+  - Document uploads and AI brainstorm flows
+
+### Troubleshooting
+- **Handles Always Visible:**
+  - If node handles are always visible, ensure the `group` class is on the main node container and not duplicated on children. Handles should use `opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto`.
+
+### AI/Agent Collaboration
+- If you’re an AI agent or copilot, always check for existing layout and UX patterns before introducing new ones. Consistency is key!
+
+---
+
 
 *This file is here to help AI agents, copilots, or teammates get aligned before contributing to Nodal. When in doubt, ask Jack.*

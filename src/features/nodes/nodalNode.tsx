@@ -198,14 +198,14 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     <>
       <div
         ref={nodeRef}
-        className={`relative min-w-96 max-w-[800px] p-4 backdrop-blur-sm bg-white/90 dark:bg-gray-950/70 rounded-4xl dark:border-gray-700 transition-all duration-200 ${selected ? 'border shadow-lg border-tertiary-50 shadow-tertiary-100/50 dark:border-secondary-200/30 dark:shadow-lg dark:shadow-secondary-300/30' : 'border border-gray-50 dark:border-gray-950/90'
+        className={`relative min-w-60 max-w-[600px] p-4 backdrop-blur-sm bg-white/90 dark:bg-gray-950/70 rounded-4xl dark:border-gray-700 transition-all duration-200 ${selected ? 'border shadow-lg border-tertiary-50 shadow-tertiary-100/50 dark:border-secondary-200/30 dark:shadow-lg dark:shadow-secondary-300/30' : 'border border-gray-50 dark:border-gray-950/90'
           } ${(isEditingLabel || isEditingContent) ? 'border border-blue-400 bg-blue-50' : ''} group`}
       >
         {/* Easy Connect Pattern: Simple visible handles */}
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-4 !h-4 !bg-gray-500 !border-2 !border-white !opacity-100 !right-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors"
+          className="!w-4 !h-4 !bg-gray-500 !border-2 !border-white !right-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors"
           style={{
             zIndex: 10,
             cursor: 'crosshair'
@@ -215,7 +215,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-4 !h-4 !bg-gray-500 !border-2 !border-white !opacity-100 !left-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors"
+          className="!w-4 !h-4 !bg-gray-500 !border-2 !border-white !left-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors"
           style={{
             zIndex: 10
           }}
@@ -224,51 +224,51 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         {/* Content wrapper */}
         <div className="relative z-10">
           {/* Drag Handle for node movement */}
-            <div className="flex items-center justify-between">
-              <div className="relative">
-                {isEditingLabel ? (
-                  <input
-                    ref={labelInputRef}
-                    type="text"
-                    value={editLabelValue}
-                    onChange={(e) => setEditLabelValue(e.target.value)}
-                    onKeyDown={handleLabelKeyDown}
-                    onClick={handleInputClick}
-                    onBlur={handleLabelSave}
-                    className="w-full px-2 py-1 text-lg text-black dark:text-white font-semibold border border-blue-300 rounded cursor-text focus:outline-none focus:ring-2 focus:ring-blue-500 nodrag"
-                    maxLength={100}
-                  />
-                ) : (
-                  <div
-                    onDoubleClick={handleLabelDoubleClick}
-                    className="py-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded group"
-                  >
-                    <div className="flex items-center space-x-2 justify-between">
-                      <Heading size="h4" className="font-medium text-lg dark:text-white mb-0" variant="custom">{nodeData.label}</Heading>
-                      <svg
-                        className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </div>
-                    {/* <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center justify-between">
+            <div className="relative">
+              {isEditingLabel ? (
+                <input
+                  ref={labelInputRef}
+                  type="text"
+                  value={editLabelValue}
+                  onChange={(e) => setEditLabelValue(e.target.value)}
+                  onKeyDown={handleLabelKeyDown}
+                  onClick={handleInputClick}
+                  onBlur={handleLabelSave}
+                  className="w-full px-2 py-1 text-lg text-black dark:text-white font-semibold border border-blue-300 rounded cursor-text focus:outline-none focus:ring-2 focus:ring-blue-500 nodrag"
+                  maxLength={100}
+                />
+              ) : (
+                <div
+                  onDoubleClick={handleLabelDoubleClick}
+                  className="py-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded group"
+                >
+                  <div className="flex items-center space-x-2 justify-between">
+                    <Heading size="h4" className="font-medium text-lg dark:text-white mb-0" variant="custom">{nodeData.label}</Heading>
+                    <svg
+                      className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </div>
+                  {/* <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       Double-click to edit
                     </div> */}
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
+          </div>
 
-          <div className="space-y-3"> 
-          {/* Editable Content Area */}
+          <div className="space-y-3">
+            {/* Editable Content Area */}
             <div className="relative">
               {isEditingContent ? (
                 <div className="space-y-2">
@@ -291,8 +291,8 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                 <div
                   onDoubleClick={handleContentClick}
                   className={`px-3 py-2 cursor-pointer rounded border-2 border-dashed transition-colors group ${nodeData.content
-                      ? 'border-transparent hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      : 'border-gray-500/50 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                    ? 'border-transparent hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'border-gray-500/50 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                     }`}
                 >
                   {nodeData.content ? (

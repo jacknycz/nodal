@@ -204,6 +204,15 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.group:hover .react-flow__handle {
+  opacity: 1 !important;
+  transition: opacity 0.2s;
+}
+.group .react-flow__handle {
+  opacity: 0.1 !important;
+  transition: opacity 0.2s;
+}
+
 /* Animated Gradient Background */
 /* .animated-gradient-bg {
   background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #174a87, #f1f5f9);
