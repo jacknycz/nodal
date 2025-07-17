@@ -180,175 +180,6 @@ export function getDocumentContext(nodes: BoardNode[]) {
     }))
 } 
 
-// Enhanced positioning utility for intelligent node placement
-export interface PositioningContext {
-  parentNode?: { x: number; y: number; id: string }
-  relatedNodes?: Array<{ x: number; y: number; id: string }>
-  existingNodes: Array<{ x: number; y: number; id?: string }>
-  viewportCenter?: { x: number; y: number }
-  direction?: 'north' | 'south' | 'east' | 'west' | 'northeast' | 'northwest' | 'southeast' | 'southwest'
-  spacing?: number
-  nodeSize?: number
-  minSpacing?: number
-}
-
-// Calculate intelligent positions for batch node creation
-export function calculateIntelligentPositions(
-  count: number,
-  context: PositioningContext
-): { x: number; y: number }[] {
-  const {
-    parentNode,
-    relatedNodes = [],
-    existingNodes,
-    viewportCenter,
-    direction,
-    spacing = 250,
-    nodeSize = 180,
-    minSpacing = 40
-  } = context
-
-  const positions: { x: number; y: number }[] = []
-  
-  // Determine the center point for positioning
-  let centerPoint: { x: number; y: number }
-  
-  if (parentNode) {
-    // Use parent node as center
-    centerPoint = { x: parentNode.x, y: parentNode.y }
-  } else if (relatedNodes.length > 0) {
-    // Use average position of related nodes
-    const avgX = relatedNodes.reduce((sum, node) => sum + node.x, 0) / relatedNodes.length
-    const avgY = relatedNodes.reduce((sum, node) => sum + node.y, 0) / relatedNodes.length
-    centerPoint = { x: avgX, y: avgY }
-  } else if (viewportCenter) {
-    // Fallback to viewport center
-    centerPoint = viewportCenter
-  } else {
-    // Default center
-    centerPoint = { x: 400, y: 300 }
-  }
-
-  // If we have a specific direction, use directional placement
-  if (direction && count === 1) {
-    const angle = getDirectionAngle(direction)
-    const pos = {
-      x: centerPoint.x + Math.cos(angle) * spacing,
-      y: centerPoint.y + Math.sin(angle) * spacing
-    }
-    positions.push(avoidOverlap(pos, existingNodes, nodeSize, minSpacing))
-    return positions
-  }
-
-  // For multiple nodes, use intelligent spreading
-  if (count === 1) {
-    // Single node - place near center with slight offset
-    const angle = Math.random() * 2 * Math.PI
-    const radius = spacing * 0.3
-    const pos = {
-      x: centerPoint.x + Math.cos(angle) * radius,
-      y: centerPoint.y + Math.sin(angle) * radius
-    }
-    positions.push(avoidOverlap(pos, existingNodes, nodeSize, minSpacing))
-  } else if (count <= 4) {
-    // Small batch - use cross pattern around center
-    const angles = [0, Math.PI/2, Math.PI, 3*Math.PI/2].slice(0, count)
-    for (let i = 0; i < count; i++) {
-      const pos = {
-        x: centerPoint.x + Math.cos(angles[i]) * spacing * 0.6,
-        y: centerPoint.y + Math.sin(angles[i]) * spacing * 0.6
-      }
-      positions.push(avoidOverlap(pos, existingNodes, nodeSize, minSpacing))
-    }
-  } else if (count <= 8) {
-    // Medium batch - use circular pattern
-    const angleStep = (2 * Math.PI) / count
-    for (let i = 0; i < count; i++) {
-      const angle = i * angleStep
-      const pos = {
-        x: centerPoint.x + Math.cos(angle) * spacing * 0.8,
-        y: centerPoint.y + Math.sin(angle) * spacing * 0.8
-      }
-      positions.push(avoidOverlap(pos, existingNodes, nodeSize, minSpacing))
-    }
-  } else {
-    // Large batch - use spiral pattern
-    const spiralStep = spacing * 0.4
-    for (let i = 0; i < count; i++) {
-      const angle = i * 0.5
-      const radius = spiralStep * (1 + Math.floor(i / 6))
-      const pos = {
-        x: centerPoint.x + Math.cos(angle) * radius,
-        y: centerPoint.y + Math.sin(angle) * radius
-      }
-      positions.push(avoidOverlap(pos, existingNodes, nodeSize, minSpacing))
-    }
-  }
-
-  return positions
-}
-
-// Helper function to get angle for directional placement
-function getDirectionAngle(direction: string): number {
-  switch (direction) {
-    case 'north': return -Math.PI/2
-    case 'south': return Math.PI/2
-    case 'east': return 0
-    case 'west': return Math.PI
-    case 'northeast': return -Math.PI/4
-    case 'northwest': return -3*Math.PI/4
-    case 'southeast': return Math.PI/4
-    case 'southwest': return 3*Math.PI/4
-    default: return 0
-  }
-}
-
-// Helper function to avoid overlap with existing nodes
-function avoidOverlap(
-  position: { x: number; y: number },
-  existingNodes: Array<{ x: number; y: number; id?: string }>,
-  nodeSize: number,
-  minSpacing: number,
-  maxTries: number = 20
-): { x: number; y: number } {
-  let pos = { ...position }
-  let tries = 0
-  
-  while (
-    existingNodes.some(
-      node => Math.abs(node.x - pos.x) < nodeSize && Math.abs(node.y - pos.y) < nodeSize
-    ) && tries < maxTries
-  ) {
-    // Try different offsets
-    const angle = (tries * Math.PI / 6) % (2 * Math.PI)
-    const radius = minSpacing + (tries * 10)
-    pos = {
-      x: position.x + Math.cos(angle) * radius,
-      y: position.y + Math.sin(angle) * radius
-    }
-    tries++
-  }
-  
-  return pos
-}
-
-// Enhanced version of findNonOverlappingPositions that uses intelligent positioning
-export function findIntelligentPositions(
-  count: number,
-  context: {
-    parentNode?: { x: number; y: number; id: string }
-    relatedNodes?: Array<{ x: number; y: number; id: string }>
-    existingNodes: Array<{ x: number; y: number; id?: string }>
-    viewportCenter?: { x: number; y: number }
-    direction?: 'north' | 'south' | 'east' | 'west' | 'northeast' | 'northwest' | 'southeast' | 'southwest'
-    spacing?: number
-    nodeSize?: number
-    minSpacing?: number
-  }
-): { x: number; y: number }[] {
-  return calculateIntelligentPositions(count, context)
-}
-
 // Backward compatibility: Original findNonOverlappingPositions function
 export function findNonOverlappingPositions(
   center: { x: number; y: number },
@@ -357,10 +188,63 @@ export function findNonOverlappingPositions(
   nodeSize = 180,
   minSpacing = 40
 ): { x: number; y: number }[] {
-  return calculateIntelligentPositions(count, {
-    existingNodes,
-    viewportCenter: center,
-    nodeSize,
-    minSpacing
-  })
+  const positions: { x: number; y: number }[] = []
+  
+  // Determine the center point for positioning
+  let centerPoint: { x: number; y: number }
+  
+  if (center) {
+    // Use provided center
+    centerPoint = center
+  } else {
+    // Default center
+    centerPoint = { x: 400, y: 300 }
+  }
+
+  // For multiple nodes, use intelligent spreading
+  if (count === 1) {
+    // Single node - place near center with slight offset
+    const angle = Math.random() * 2 * Math.PI
+    const radius = minSpacing * 0.3
+    const pos = {
+      x: centerPoint.x + Math.cos(angle) * radius,
+      y: centerPoint.y + Math.sin(angle) * radius
+    }
+    positions.push(pos)
+  } else if (count <= 4) {
+    // Small batch - use cross pattern around center
+    const angles = [0, Math.PI/2, Math.PI, 3*Math.PI/2].slice(0, count)
+    for (let i = 0; i < count; i++) {
+      const pos = {
+        x: centerPoint.x + Math.cos(angles[i]) * minSpacing * 0.6,
+        y: centerPoint.y + Math.sin(angles[i]) * minSpacing * 0.6
+      }
+      positions.push(pos)
+    }
+  } else if (count <= 8) {
+    // Medium batch - use circular pattern
+    const angleStep = (2 * Math.PI) / count
+    for (let i = 0; i < count; i++) {
+      const angle = i * angleStep
+      const pos = {
+        x: centerPoint.x + Math.cos(angle) * minSpacing * 0.8,
+        y: centerPoint.y + Math.sin(angle) * minSpacing * 0.8
+      }
+      positions.push(pos)
+    }
+  } else {
+    // Large batch - use spiral pattern
+    const spiralStep = minSpacing * 0.4
+    for (let i = 0; i < count; i++) {
+      const angle = i * 0.5
+      const radius = spiralStep * (1 + Math.floor(i / 6))
+      const pos = {
+        x: centerPoint.x + Math.cos(angle) * radius,
+        y: centerPoint.y + Math.sin(angle) * radius
+      }
+      positions.push(pos)
+    }
+  }
+
+  return positions
 } 

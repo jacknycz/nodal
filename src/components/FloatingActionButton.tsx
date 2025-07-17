@@ -15,6 +15,7 @@ interface FloatingActionButtonProps {
   onAddNode?: () => void
   onOpenAIGenerator?: () => void
   onClearBoard?: () => void
+  onReorganize?: () => void // <-- Add this prop
   hasNodes?: boolean
   className?: string
 }
@@ -23,6 +24,7 @@ export default function FloatingActionButton({
   onAddNode,
   onOpenAIGenerator,
   onClearBoard,
+  onReorganize, // <-- Add this prop
   hasNodes = false,
   className = ''
 }: FloatingActionButtonProps) {
@@ -54,6 +56,17 @@ export default function FloatingActionButton({
         setIsExpanded(false)
       },
       color: 'bg-tertiary-500 hover:bg-tertiary-600',
+    },
+    {
+      id: 'reorganize',
+      icon: <span className="w-5 h-5">🧩</span>,
+      label: 'Reorganize',
+      onClick: () => {
+        onReorganize?.()
+        setIsExpanded(false)
+      },
+      color: 'bg-blue-500 hover:bg-blue-600',
+      disabled: !hasNodes,
     },
     {
       id: 'clear-board',

@@ -12,7 +12,7 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import { useBoard } from './useBoard'
 import { useBoardStore } from './boardSlice'
-import { canCreateConnection, getConnectionType, getNodeById, findNonOverlappingPositions, findIntelligentPositions } from './boardUtils'
+import { canCreateConnection, getConnectionType, getNodeById, findNonOverlappingPositions } from './boardUtils'
 import NodalNode from '../nodes/NodalNode'
 import DocumentNode from '../nodes/DocumentNode'
 import FloatingEdge from './FloatingEdge'
@@ -44,6 +44,7 @@ import { useAI } from '../ai/useAI'
 import AIClient from '../ai/aiClient'
 
 import '@xyflow/react/dist/style.css'
+import type { BoardNode, BoardEdge } from './boardTypes'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -328,13 +329,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     const targetPosition = position || getViewportCenter()
     const currentNodes = useBoardStore.getState().nodes
     // Find intelligent positions for all files
-    const batchPositions = findIntelligentPositions(
+    const batchPositions = findNonOverlappingPositions(
+      targetPosition,
       files.length,
-      {
-        existingNodes: currentNodes.map(n => n.position),
-        viewportCenter: targetPosition,
-        spacing: 200
-      }
+      currentNodes.map(n => n.position),
+      180,
+      40
     )
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
@@ -364,7 +364,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         // Add document node to board - get fresh nodes state to prevent stale closure
         const newNode = { ...documentNode, id: uuidv4() }
         const updatedNodes = useBoardStore.getState().nodes
-        setNodes([...updatedNodes, newNode])
+        const allNodes = [...updatedNodes, newNode]
+        setNodes(layoutMindMap(allNodes, edges))
         console.log(`Document "${file.name}" uploaded successfully!`)
       } catch (error) {
         console.error('Failed to upload document:', error)
@@ -373,7 +374,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
     // Clear error after a delay
     setTimeout(() => setUploadError(''), 5000)
-  }, [addNode, getViewportCenter, currentBoardId])
+  }, [addNode, getViewportCenter, currentBoardId, edges, setNodes])
 
   // Add a manual reset function in case drag state gets stuck
   const resetDragState = useCallback(() => {
@@ -505,7 +506,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       console.log('Edges to set:', board.data.edges)
       
       // Use the board data directly - no need to reload from storage
-      setNodes(board.data.nodes)
+      setNodes(layoutMindMap(board.data.nodes, board.data.edges))
       setEdges(board.data.edges)
       updateViewport(board.data.viewport)
       setCurrentBoardId(board.id)
@@ -668,8 +669,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         reader.onload = (e) => {
           try {
             const data = JSON.parse(e.target?.result as string)
-            // TODO: Implement import logic
-            console.log('Import data:', data)
+            if (data.nodes && data.edges) {
+              setNodes(layoutMindMap(data.nodes, data.edges))
+              setEdges(data.edges)
+            } else {
+              console.log('Import data:', data)
+            }
           } catch (error) {
             console.error('Failed to parse import file:', error)
           }
@@ -720,6 +725,68 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const setEmbeddings = useBoardStore(state => state.setEmbeddings)
   const embeddings = useBoardStore(state => state.embeddings)
 
+  // --- Mind Map Layout Algorithm ---
+  function getNodeChildren(nodeId: string, edges: BoardEdge[]) {
+    return edges.filter(e => e.source === nodeId).map(e => e.target)
+  }
+
+  function getRootNodeId(nodes: BoardNode[], edges: BoardEdge[]): string | null {
+    // Heuristic: node with most outgoing edges, or fallback to first node
+    if (nodes.length === 0) return null
+    const outgoingCounts: Record<string, number> = {}
+    edges.forEach(e => {
+      outgoingCounts[e.source] = (outgoingCounts[e.source] || 0) + 1
+    })
+    let max = -1
+    let rootId = nodes[0].id
+    for (const node of nodes) {
+      const count = outgoingCounts[node.id] || 0
+      if (count > max) {
+        max = count
+        rootId = node.id
+      }
+    }
+    return rootId
+  }
+
+  function layoutMindMap(nodes: BoardNode[], edges: BoardEdge[], center = { x: 400, y: 300 }) {
+    if (nodes.length === 0) return []
+    const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]))
+    const rootId = getRootNodeId(nodes, edges)
+    if (!rootId) return nodes
+    const placed: Record<string, { x: number; y: number }> = {}
+    const maxNodeWidth = 600
+    const nodeHeight = 120
+    const baseRadius = 600 // doubled from 300
+    const levelStep = 440 // doubled from 220
+    function placeNode(id: string, x: number, y: number, depth: number, angleStart: number, angleEnd: number) {
+      placed[id] = { x, y }
+      const children = getNodeChildren(id, edges)
+      if (children.length === 0) return
+      // Fan/arc layout for children
+      const arcSpan = Math.min(Math.PI, Math.PI / 2 + (children.length - 1) * 0.18) // widen arc for more children
+      const arcCenter = (angleStart + angleEnd) / 2
+      const arcStart = arcCenter - arcSpan / 2
+      const arcEnd = arcCenter + arcSpan / 2
+      const r = baseRadius + depth * levelStep
+      for (let i = 0; i < children.length; i++) {
+        const angle = arcStart + (arcSpan * (i + 0.5)) / children.length
+        const childX = x + Math.cos(angle) * r
+        const childY = y + Math.sin(angle) * r
+        placeNode(children[i], childX, childY, depth + 1, angle - 0.4, angle + 0.4)
+      }
+    }
+    placeNode(rootId, center.x, center.y, 0, -Math.PI / 2, Math.PI * 1.5)
+    // Assign new positions
+    return nodes.map(n => ({ ...n, position: placed[n.id] || n.position }))
+  }
+
+  // --- Handler for Reorganize ---
+  const handleReorganize = useCallback(() => {
+    const newNodes = layoutMindMap(nodes, edges)
+    setNodes(newNodes)
+  }, [nodes, edges, setNodes])
+
   return (
     <div className="w-full h-full relative">
       {/* DEBUG: Chat Mode Indicator */}
@@ -732,6 +799,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         onAddNode={handleAddNode}
         onOpenAIGenerator={() => setShowAIGenerator(true)}
         onClearBoard={handleClearBoard}
+        onReorganize={handleReorganize}
         hasNodes={nodes.length > 0}
       />
       
@@ -900,13 +968,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
             }
             
             // Use intelligent positioning for subtopic nodes around the center
-            const subtopicPositions = findIntelligentPositions(
+            const subtopicPositions = findNonOverlappingPositions(
+              centerPosition,
               brainstorm.subtopics.length,
-              {
-                parentNode: { ...centerPosition, id: 'center' },
-                existingNodes: [],
-                spacing: 250
-              }
+              [],
+              180,
+              40
             )
             
             const subtopicNodes = brainstorm.subtopics.map((s: any, i: number) => ({
@@ -925,13 +992,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
             // Create document nodes for uploaded files using intelligent positioning
             const documentNodes: any[] = []
             if (brief.uploadedFiles && brief.uploadedFiles.length > 0) {
-              const documentPositions = findIntelligentPositions(
+              const documentPositions = findNonOverlappingPositions(
+                { x: 400, y: 600 },
                 brief.uploadedFiles.length,
-                {
-                  existingNodes: [centerNode, ...subtopicNodes].map(n => n.position),
-                  viewportCenter: { x: 400, y: 600 }, // Place documents below the brainstorm
-                  spacing: 200
-                }
+                [centerNode, ...subtopicNodes].map(n => n.position),
+                180,
+                40
               )
               
               for (let i = 0; i < brief.uploadedFiles.length; i++) {
@@ -963,7 +1029,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
               }
             }
             
-            setNodes([centerNode, ...subtopicNodes, ...documentNodes])
+            const allNodes = [centerNode, ...subtopicNodes, ...documentNodes]
+            setNodes(layoutMindMap(allNodes, edges))
             setEdges(edges)
           } catch (err) {
             setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed')
