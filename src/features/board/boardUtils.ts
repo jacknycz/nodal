@@ -2,28 +2,37 @@ import { v4 as uuidv4 } from 'uuid'
 import type { BoardNode, BoardEdge } from './boardTypes'
 
 export function createNode(
-  labelOrNode: string | Omit<BoardNode, 'id'>,
+  titleOrNode: string | Omit<BoardNode, 'id'>,
   position?: { x: number; y: number },
   options: Partial<BoardNode['data']> = {}
 ): Omit<BoardNode, 'id'> {
   // If first parameter is a complete node object, return it as-is
-  if (typeof labelOrNode === 'object') {
-    return labelOrNode
+  if (typeof titleOrNode === 'object') {
+    // Migrate label to title if needed
+    const data = titleOrNode.data as any;
+    if (data.label && !data.title) {
+      data.title = data.label;
+      delete data.label;
+    }
+    if (!data.media) data.media = [];
+    return { ...titleOrNode, data };
   }
 
-  // Otherwise, create a new node from label and options
+  // Otherwise, create a new node from title and options
   return {
     type: options.type === 'document' ? 'document' : 'default',
     position: position!,
     dragHandle: '.nodal-drag-handle',
     data: {
-      label: labelOrNode,
+      title: titleOrNode,
+      content: options.content,
+      media: options.media || [],
       type: 'default',
       expanded: false,
       aiGenerated: false,
       ...options,
     },
-  }
+  };
 }
 
 export function createEdge(
@@ -87,7 +96,7 @@ export function validateNode(node: BoardNode): boolean {
   return !!(
     node.id &&
     node.position &&
-    node.data?.label &&
+    node.data?.title &&
     typeof node.position.x === 'number' &&
     typeof node.position.y === 'number'
   )

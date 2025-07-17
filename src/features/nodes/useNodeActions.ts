@@ -7,12 +7,12 @@ export function useNodeActions(nodeId: string) {
   const updateNode = useBoardStore((state) => state.updateNode)
 
   const updateNodeLabel = useCallback(
-    (label: string) => {
+    (title: string) => {
       const nodes = useBoardStore.getState().nodes
       const node = nodes.find(n => n.id === nodeId)
       if (node) {
-        updateNode(nodeId, { 
-          data: { ...node.data, label } 
+        updateNode(nodeId, {
+          data: { ...node.data, title }
         })
       }
     },
@@ -20,22 +20,24 @@ export function useNodeActions(nodeId: string) {
   )
 
   const updateNodeContent = useCallback(
-    (content: string, extractedText?: string) => {
+    (content: string, mediaOrExtractedText?: { url: string; alt?: string }[] | string) => {
       const nodes = useBoardStore.getState().nodes
       const node = nodes.find(n => n.id === nodeId)
       if (node) {
-        let newData = { ...node.data, content }
-        if (node.data.type === 'document') {
+        let newData = { ...node.data, content };
+        if (Array.isArray(mediaOrExtractedText)) {
+          newData.media = mediaOrExtractedText;
+        } else if (node.data.type === 'document') {
           // Update status and extractedText for document nodes
           newData = {
             ...newData,
-            extractedText: extractedText !== undefined ? extractedText : node.data.extractedText || '',
+            extractedText: mediaOrExtractedText !== undefined ? mediaOrExtractedText : node.data.extractedText || '',
             status: content && !content.startsWith('[Error') ? 'ready' : (content.startsWith('[Error') ? 'error' : 'processing'),
-          }
+          };
         }
-        updateNode(nodeId, { 
+        updateNode(nodeId, {
           data: newData
-        })
+        });
       }
     },
     [nodeId, updateNode]

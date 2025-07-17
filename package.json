@@ -12,6 +12,9 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.51.0",
     "@tailwindcss/vite": "^4.1.11",
+    "@tiptap/extension-image": "^3.0.7",
+    "@tiptap/react": "^3.0.7",
+    "@tiptap/starter-kit": "^3.0.7",
     "@types/localforage": "^0.0.33",
     "@types/uuid": "^10.0.0",
     "@xyflow/react": "^12.8.1",

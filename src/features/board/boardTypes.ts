@@ -3,8 +3,10 @@ import type { Node, Edge } from '@xyflow/react'
 export interface BoardNode extends Node {
   dragHandle?: string
   data: {
-    label: string
-    content?: string
+    // New node structure
+    title?: string
+    content?: string // HTML or TipTap JSON (to be determined)
+    media?: { url: string; alt?: string }[]
     type?: 'default' | 'input' | 'output' | 'document'
     expanded?: boolean
     aiGenerated?: boolean

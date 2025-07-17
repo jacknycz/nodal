@@ -4,6 +4,7 @@ import { Heading } from 'pres-start-core'
 import type { NodeProps } from '@xyflow/react'
 import type { BoardNode } from '../board/boardTypes'
 import { useNodeActions } from './useNodeActions'
+import TipTapEditor from '../../components/TipTapEditor';
 
 // Confirmation Modal Component
 function DeleteConfirmationModal({
@@ -61,16 +62,18 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
   const { updateNodeLabel, updateNodeContent, removeNode } = useNodeActions(id)
   const nodeRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Label editing state
   const [isEditingLabel, setIsEditingLabel] = useState(false)
-  const [editLabelValue, setEditLabelValue] = useState(nodeData.label)
+  const [editLabelValue, setEditLabelValue] = useState(nodeData.title || '')
   const labelInputRef = useRef<HTMLInputElement>(null)
 
   // Content editing state
-  const [isEditingContent, setIsEditingContent] = useState(false)
-  const [editContentValue, setEditContentValue] = useState(nodeData.content || '')
-  const contentTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState(nodeData.title);
+  const [editMedia, setEditMedia] = useState<{ url: string; alt?: string }[]>(nodeData.media || []);
+  const [editContentValue, setEditContentValue] = useState(nodeData.content || '');
 
   // Delete confirmation state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -83,116 +86,52 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     }
   }, [isEditingLabel])
 
-  useEffect(() => {
-    if (isEditingContent && contentTextareaRef.current) {
-      contentTextareaRef.current.focus()
-      // Auto-resize textarea
-      autoResizeTextarea()
-    }
-  }, [isEditingContent])
-
   // Reset edit values when nodeData changes
   useEffect(() => {
-    setEditLabelValue(nodeData.label)
-  }, [nodeData.label])
+    setEditLabelValue(nodeData.title || '')
+  }, [nodeData.title])
 
-  useEffect(() => {
-    setEditContentValue(nodeData.content || '')
-  }, [nodeData.content])
+  // 7. Add MAX_IMAGE_SIZE constant
+  const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB
 
-  // Auto-resize textarea function
-  const autoResizeTextarea = () => {
-    if (contentTextareaRef.current) {
-      contentTextareaRef.current.style.height = 'auto'
-      contentTextareaRef.current.style.height = contentTextareaRef.current.scrollHeight + 'px'
-    }
-  }
-
-  // Label editing handlers
-  const handleLabelDoubleClick = () => {
-    if (!isEditingContent) { // Prevent editing both at once
-      setIsEditingLabel(true)
-      setEditLabelValue(nodeData.label)
-    }
-  }
-
-  const handleLabelSave = () => {
-    if (editLabelValue.trim() !== nodeData.label) {
-      updateNodeLabel(editLabelValue.trim())
-    }
-    setIsEditingLabel(false)
-  }
-
-  const handleLabelCancel = () => {
-    setEditLabelValue(nodeData.label)
-    setIsEditingLabel(false)
-  }
-
+  // Restore missing handlers for label and delete logic
   const handleLabelKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      e.preventDefault()
-      handleLabelSave()
+      e.preventDefault();
+      handleLabelSave();
     } else if (e.key === 'Escape') {
-      e.preventDefault()
-      handleLabelCancel()
+      e.preventDefault();
+      handleLabelCancel();
     }
-  }
-
-  // Content editing handlers
-  const handleContentClick = () => {
-    if (!isEditingLabel) { // Prevent editing both at once
-      setIsEditingContent(true)
-      setEditContentValue(nodeData.content || '')
-    }
-  }
-
-  const handleContentSave = () => {
-    const trimmedContent = editContentValue.trim()
-    if (trimmedContent !== (nodeData.content || '')) {
-      updateNodeContent(trimmedContent)
-    }
-    setIsEditingContent(false)
-  }
-
-  const handleContentCancel = () => {
-    setEditContentValue(nodeData.content || '')
-    setIsEditingContent(false)
-  }
-
-  const handleContentKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      e.preventDefault()
-      handleContentSave()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      handleContentCancel()
-    }
-  }
-
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setEditContentValue(e.target.value)
-    autoResizeTextarea()
-  }
-
-  // Delete handlers
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setShowDeleteModal(true)
-  }
-
-  const handleDeleteConfirm = () => {
-    removeNode()
-    setShowDeleteModal(false)
-  }
-
-  const handleDeleteCancel = () => {
-    setShowDeleteModal(false)
-  }
-
-  // Prevent dragging when clicking on inputs
+  };
   const handleInputClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-  }
+    e.stopPropagation();
+  };
+  const handleLabelSave = () => {
+    if (editLabelValue.trim() !== (nodeData.title || '')) {
+      updateNodeLabel(editLabelValue.trim());
+    }
+    setIsEditingLabel(false);
+  };
+  const handleLabelCancel = () => {
+    setEditLabelValue(nodeData.title || '');
+    setIsEditingLabel(false);
+  };
+  const handleLabelDoubleClick = () => {
+    setIsEditingLabel(true);
+    setEditLabelValue(nodeData.title || '');
+  };
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteModal(true);
+  };
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+  };
+  const handleDeleteConfirm = () => {
+    removeNode();
+    setShowDeleteModal(false);
+  };
 
   return (
     <>
@@ -203,7 +142,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
           hover:shadow-xl
           w-80 max-w-md
           group
-          ${(isEditingLabel || isEditingContent) ? 'border border-blue-400 bg-blue-50' : ''}`}
+          ${(isEditingLabel) ? 'border border-blue-400 bg-blue-50' : ''}`}
       >
         {/* Easy Connect Pattern: Simple visible handles */}
         <Handle
@@ -245,8 +184,8 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                 <input
                   ref={labelInputRef}
                   type="text"
-                  value={editLabelValue}
-                  onChange={(e) => setEditLabelValue(e.target.value)}
+                  value={editTitleValue || ''}
+                  onChange={(e) => setEditTitleValue(e.target.value)}
                   onKeyDown={handleLabelKeyDown}
                   onClick={handleInputClick}
                   onBlur={handleLabelSave}
@@ -259,7 +198,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                   className="cursor-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded group w-full"
                 >
                   <div className="flex">
-                    <Heading size="h4" className="font-medium text-lg dark:text-white mb-0" variant="custom">{nodeData.label}</Heading>
+                    <Heading size="h4" className="font-medium text-lg dark:text-white mb-0" variant="custom">{nodeData.title || ''}</Heading>
                   </div>
                 </div>
               )}
@@ -269,46 +208,40 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
           <div className="space-y-3">
             {/* Editable Content Area */}
             <div className="relative px-2">
-              {isEditingContent ? (
-                <div className="space-y-2">
-                  <textarea
-                    ref={contentTextareaRef}
-                    value={editContentValue}
-                    onChange={handleContentChange}
-                    onKeyDown={handleContentKeyDown}
-                    onClick={handleInputClick}
-                    onBlur={handleContentSave}
-                    placeholder="Add content to this node..."
-                    className="w-full px-2 text-black dark:text-white py-2 text-sm border border-blue-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 nodrag min-h-[60px]"
-                    maxLength={1000}
-                  />
-                  <div className="text-xs text-gray-500 dark:text-white px-1">
-                    Press Ctrl+Enter to save, Escape to cancel
+              <div
+                onDoubleClick={() => setShowEditModal(true)}
+                className={`px-1 py-1 cursor-text rounded transition-colors group ${nodeData.content
+                  ? 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                }`}
+              >
+                {nodeData.content ? (
+                  <div className="space-y-1">
+                    <div className={`text-sm text-left whitespace-pre-wrap ${nodeData.aiGenerated ? 'text-primary-900 dark:text-primary-100' : 'text-gray-700 dark:text-white'}`}
+                      dangerouslySetInnerHTML={{ __html: nodeData.content }}
+                    />
                   </div>
-                </div>
-              ) : (
-                <div
-                  onDoubleClick={handleContentClick}
-                  className={`px-1 py-1 cursor-text rounded transition-colors group ${nodeData.content
-                    ? 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                    : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                    }`}
-                >
-                  {nodeData.content ? (
-                    <div className="space-y-1">
-                      <div className={`text-sm text-left whitespace-pre-wrap ${nodeData.aiGenerated ? 'text-primary-900 dark:text-primary-100' : 'text-gray-700 dark:text-white'
-                        }`}>
-                        {nodeData.content}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-0 text-gray-400 dark:text-white group-hover:text-blue-500 transition-colors">
-                      <div className="text-sm">+ Add content</div>
-                    </div>
-                  )}
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-0 text-gray-400 dark:text-white group-hover:text-blue-500 transition-colors">
+                    <div className="text-sm">+ Add content</div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* After the content display, add media preview area */}
+            {nodeData.media && nodeData.media.length > 0 && (
+              <div className="flex flex-row flex-wrap gap-2 mt-2 px-2">
+                {nodeData.media.map((img, idx) => (
+                  <img
+                    key={idx}
+                    src={img.url}
+                    alt={img.alt || `media-${idx}`}
+                    className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow"
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Bottom Row: AI Generated Indicator + Delete Button */}
             <div className="flex items-center justify-between px-2">
@@ -344,8 +277,109 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         isOpen={showDeleteModal}
         onClose={handleDeleteCancel}
         onConfirm={handleDeleteConfirm}
-        nodeLabel={nodeData.label}
+        nodeLabel={nodeData.title || ''}
       />
+
+      {/* 3. Editing modal placeholder (like delete modal) */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 max-w-md mx-4 shadow-xl w-full max-w-lg">
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Node</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label>
+              <input className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 rounded mb-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500" value={editTitleValue} onChange={e => setEditTitleValue(e.target.value)} />
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Content</label>
+              <div className="border rounded p-2 min-h-[80px] bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <TipTapEditor
+                  value={editContentValue}
+                  onChange={setEditContentValue}
+                  onImageAdd={imgUrl => {
+                    setEditMedia(prev => prev.some(img => img.url === imgUrl) ? prev : [...prev, { url: imgUrl }]);
+                  }}
+                  onImageDelete={imgUrl => {
+                    setEditMedia(prev => prev.filter(img => img.url !== imgUrl));
+                  }}
+                />
+              </div>
+              <label className="block text-sm font-medium mt-3 mb-1 text-gray-700 dark:text-gray-200">Media (images, max 1MB each)</label>
+              <div
+                className="border-2 border-dashed rounded p-4 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer mb-2"
+                tabIndex={0}
+                role="button"
+                onClick={() => fileInputRef.current?.click()}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+              >
+                <span className="text-gray-400 dark:text-gray-500">Drag & drop images here or click to upload</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    files.forEach(file => {
+                      if (file.size > MAX_IMAGE_SIZE) {
+                        alert('Image must be less than 1MB');
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === 'string') {
+                          setEditMedia(prev => prev.some(img => img.url === reader.result) ? prev : [...prev, { url: reader.result as string }]);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+              {editMedia.length > 0 && (
+                <div className="flex flex-row flex-wrap gap-2 mt-2">
+                  {editMedia.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      <img src={img.url} alt={img.alt || `edit-media-${idx}`} className="w-16 h-16 object-cover rounded shadow border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
+                      <button
+                        className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 opacity-80 hover:opacity-100 text-xs"
+                        onClick={() => {
+                          setEditMedia(prev => prev.filter((_, i) => i !== idx));
+                          setEditContentValue(content =>
+                            (content || '').replace(
+                              new RegExp(`<img[^>]+src=["']${img.url}["'][^>]*>`, 'g'),
+                              ''
+                            )
+                          );
+                        }}
+                        title="Remove image"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white" onClick={() => setShowEditModal(false)}>Cancel</button>
+              <button className="px-4 py-2 rounded bg-primary-600 text-white" onClick={() => {
+                // Save title if changed
+                if ((editTitleValue || '') !== (nodeData.title || '')) {
+                  updateNodeLabel(editTitleValue || '');
+                }
+                // Save content or media if changed
+                if (
+                  (editContentValue !== (nodeData.content || '')) ||
+                  (JSON.stringify(editMedia) !== JSON.stringify(nodeData.media || []))
+                ) {
+                  updateNodeContent(editContentValue, editMedia);
+                }
+                setShowEditModal(false);
+              }}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 } 
