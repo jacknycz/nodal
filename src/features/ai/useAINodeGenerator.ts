@@ -3,7 +3,6 @@ import { useAI } from './useAI'
 import { useBoard } from '../board/useBoard'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useBoardStore } from '../board/boardSlice'
-import { findIntelligentPositions } from '../board/boardUtils'
 import type { OpenAIModel } from './aiTypes'
 import type { BoardNode } from '../board/boardTypes'
 
@@ -41,21 +40,23 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
       case 'connected':
         if (selectedNode) {
           // Place around the selected node
-          return findIntelligentPositions(count, {
-            parentNode: { x: selectedNode.position.x, y: selectedNode.position.y, id: selectedNode.id },
-            existingNodes: currentNodes.map(n => n.position),
-            spacing: 200
-          })
+          return [
+            { x: selectedNode.position.x - 100, y: selectedNode.position.y },
+            { x: selectedNode.position.x + 100, y: selectedNode.position.y },
+            { x: selectedNode.position.x, y: selectedNode.position.y - 100 },
+            { x: selectedNode.position.x, y: selectedNode.position.y + 100 },
+          ]
         }
         // Fall through to center if no selected node
         
       case 'circular':
         // Use intelligent positioning with viewport center
-        return findIntelligentPositions(count, {
-          existingNodes: currentNodes.map(n => n.position),
-          viewportCenter: center,
-          spacing: 200
-        })
+        return [
+          { x: center.x, y: center.y - 100 },
+          { x: center.x, y: center.y + 100 },
+          { x: center.x - 100, y: center.y },
+          { x: center.x + 100, y: center.y },
+        ]
         
       case 'grid':
         // For grid, we'll use a modified approach with intelligent spacing
@@ -77,11 +78,12 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
         
       default: // 'center'
         // Use intelligent positioning for single node
-        return findIntelligentPositions(count, {
-          existingNodes: currentNodes.map(n => n.position),
-          viewportCenter: center,
-          spacing: 150
-        })
+        return [
+          { x: center.x, y: center.y - 100 },
+          { x: center.x, y: center.y + 100 },
+          { x: center.x - 100, y: center.y },
+          { x: center.x + 100, y: center.y },
+        ]
     }
   }, [getViewportCenter, selectedNode])
 
