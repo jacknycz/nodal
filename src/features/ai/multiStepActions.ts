@@ -626,34 +626,21 @@ export class MultiStepOrchestrator {
 
 // 🎮 COMMAND EXECUTOR
 class CommandExecutor {
-  // Add helper method for positioning
-  private findNextAvailablePosition(context: AIContext): { x: number, y: number } {
+  // Add helper method for intelligent positioning
+  private async findIntelligentPosition(context: AIContext, parentNode?: any): Promise<{ x: number, y: number }> {
     const existingNodes = context.board?.nodes || []
-    const gridSize = 300 // Distance between grid spots
-    const startX = 200
-    const startY = 200
     
-    // Simple grid search - check each spot until we find an empty one
-    for (let row = 0; row < 10; row++) {
-      for (let col = 0; col < 10; col++) {
-        const testX = startX + col * gridSize
-        const testY = startY + row * gridSize
-        
-        // Check if any existing node is too close to this spot
-        const tooClose = existingNodes.some(node => {
-          const dx = Math.abs(node.position.x - testX)
-          const dy = Math.abs(node.position.y - testY)
-          return dx < 250 && dy < 250 // 250px minimum distance
-        })
-        
-        if (!tooClose) {
-          return { x: testX, y: testY }
-        }
-      }
-    }
+    // Import the intelligent positioning function
+    const { findIntelligentPositions } = await import('../board/boardUtils')
     
-    // Fallback if grid is full
-    return { x: startX + Math.random() * 1000, y: startY + Math.random() * 1000 }
+    const positions = findIntelligentPositions(1, {
+      parentNode: parentNode ? { ...parentNode.position, id: parentNode.id } : undefined,
+      existingNodes: existingNodes.map(n => n.position),
+      viewportCenter: { x: 400, y: 300 },
+      spacing: 250
+    })
+    
+    return positions[0]
   }
 
   async execute(execution: ActionExecution, context: AIContext): Promise<ExecutionResult> {
@@ -848,7 +835,7 @@ class CommandExecutor {
     const nodesCreated: string[] = []
     
     for (const idea of ideas) {
-      const position = this.findNextAvailablePosition(context)
+      const position = await this.findIntelligentPosition(context)
       
       const nodeData = {
         type: 'default' as const,
@@ -880,8 +867,8 @@ class CommandExecutor {
   private async executeCreateSingle(detectedAction: DetectedAction, context: AIContext): Promise<ExecutionResult> {
     const { useBoardStore } = await import('../board/boardSlice')
     
-    // Use helper to find available position
-    const position = this.findNextAvailablePosition(context)
+    // Use helper to find intelligent position
+    const position = this.findIntelligentPosition(context)
     
     // Generate contextually appropriate content based on the original prompt
     const content = await this.generateContextualContent(detectedAction, 'single') as { title: string; description: string }
@@ -919,7 +906,7 @@ class CommandExecutor {
     const nodesCreated: string[] = []
     
     for (const nodeConfig of nodeConfigs) {
-      const position = this.findNextAvailablePosition(context)
+      const position = await this.findIntelligentPosition(context)
       
       const nodeData = {
         type: 'default' as const,
@@ -956,7 +943,7 @@ class CommandExecutor {
     const nodesCreated: string[] = []
     
     for (const nodeConfig of projectNodes) {
-      const position = this.findNextAvailablePosition(context)
+      const position = await this.findIntelligentPosition(context)
       
       const nodeData = {
         type: 'default' as const,

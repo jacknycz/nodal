@@ -12,7 +12,7 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import { useBoard } from './useBoard'
 import { useBoardStore } from './boardSlice'
-import { canCreateConnection, getConnectionType, getNodeById } from './boardUtils'
+import { canCreateConnection, getConnectionType, getNodeById, findNonOverlappingPositions, findIntelligentPositions } from './boardUtils'
 import NodalNode from '../nodes/NodalNode'
 import DocumentNode from '../nodes/DocumentNode'
 import FloatingEdge from './FloatingEdge'
@@ -326,10 +326,18 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   // Document upload handlers
   const handleFileUpload = useCallback(async (files: FileList, position?: { x: number; y: number }) => {
     const targetPosition = position || getViewportCenter()
-    
+    const currentNodes = useBoardStore.getState().nodes
+    // Find intelligent positions for all files
+    const batchPositions = findIntelligentPositions(
+      files.length,
+      {
+        existingNodes: currentNodes.map(n => n.position),
+        viewportCenter: targetPosition,
+        spacing: 200
+      }
+    )
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
-      
       try {
         // Validate file
         const validation = validateFile(file)
@@ -337,10 +345,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           setUploadError(validation.error || 'Invalid file')
           continue
         }
-
         // Extract text from file
         const extractedText = await extractTextFromFile(file)
-        
         // Save document to storage
         const documentId = await boardStorage.saveDocument(
           file.name,
@@ -348,30 +354,23 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           extractedText,
           currentBoardId || 'temp',
         )
-
         // Create document node
         const documentNode = createDocumentNode(
           file,
           documentId,
-          { 
-            x: targetPosition.x + (i * 20), // Offset multiple files
-            y: targetPosition.y + (i * 20)
-          },
+          batchPositions[i],
           extractedText
         )
-
         // Add document node to board - get fresh nodes state to prevent stale closure
         const newNode = { ...documentNode, id: uuidv4() }
-        const currentNodes = useBoardStore.getState().nodes
-        setNodes([...currentNodes, newNode])
+        const updatedNodes = useBoardStore.getState().nodes
+        setNodes([...updatedNodes, newNode])
         console.log(`Document "${file.name}" uploaded successfully!`)
-        
       } catch (error) {
         console.error('Failed to upload document:', error)
         setUploadError(`Failed to upload ${file.name}`)
       }
     }
-    
     // Clear error after a delay
     setTimeout(() => setUploadError(''), 5000)
   }, [addNode, getViewportCenter, currentBoardId])
@@ -838,7 +837,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           setVectorizationError(null)
           setBrainstorming(false)
           setBrainstormError(null)
-          let extractedResults = []
+          let extractedResults: { file: File; text: string }[] = []
           let embeddingVectors: number[][] = []
           try {
             // Extract text from all uploaded files
@@ -891,22 +890,29 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
             } catch (e) {
               throw new Error('AI did not return valid JSON. Raw response: ' + response.content)
             }
-            // Create nodes and edges
+            // Create nodes and edges using intelligent positioning
+            const centerPosition = { x: 400, y: 300 }
             const centerNode = {
               id: 'center',
               type: 'default',
-              position: { x: 400, y: 300 },
+              position: centerPosition,
               data: { label: brainstorm.center, content: '', aiGenerated: true }
             }
-            const angleStep = (2 * Math.PI) / Math.max(1, brainstorm.subtopics.length)
-            const radius = 250
+            
+            // Use intelligent positioning for subtopic nodes around the center
+            const subtopicPositions = findIntelligentPositions(
+              brainstorm.subtopics.length,
+              {
+                parentNode: { ...centerPosition, id: 'center' },
+                existingNodes: [],
+                spacing: 250
+              }
+            )
+            
             const subtopicNodes = brainstorm.subtopics.map((s: any, i: number) => ({
               id: `subtopic-${i}`,
               type: 'default',
-              position: {
-                x: 400 + Math.cos(i * angleStep) * radius,
-                y: 300 + Math.sin(i * angleStep) * radius
-              },
+              position: subtopicPositions[i],
               data: { label: s.title, content: s.prompt, group: s.group, aiGenerated: true }
             }))
             const edges = subtopicNodes.map((n: any) => ({
@@ -916,7 +922,48 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
               type: 'floating',
               data: { type: 'ai' }
             }))
-            setNodes([centerNode, ...subtopicNodes])
+            // Create document nodes for uploaded files using intelligent positioning
+            const documentNodes: any[] = []
+            if (brief.uploadedFiles && brief.uploadedFiles.length > 0) {
+              const documentPositions = findIntelligentPositions(
+                brief.uploadedFiles.length,
+                {
+                  existingNodes: [centerNode, ...subtopicNodes].map(n => n.position),
+                  viewportCenter: { x: 400, y: 600 }, // Place documents below the brainstorm
+                  spacing: 200
+                }
+              )
+              
+              for (let i = 0; i < brief.uploadedFiles.length; i++) {
+                const file = brief.uploadedFiles[i]
+                const extractedResult = extractedResults.find(r => r.file === file)
+                if (extractedResult) {
+                  try {
+                    // Save document to storage
+                    const documentId = await boardStorage.saveDocument(
+                      file.name,
+                      file,
+                      extractedResult.text,
+                      currentBoardId || 'temp',
+                    )
+                    
+                    // Create document node
+                    const documentNode = createDocumentNode(
+                      file,
+                      documentId,
+                      documentPositions[i],
+                      extractedResult.text
+                    )
+                    
+                    documentNodes.push({ ...documentNode, id: `doc-${i}` })
+                  } catch (error) {
+                    console.error('Failed to create document node:', error)
+                  }
+                }
+              }
+            }
+            
+            setNodes([centerNode, ...subtopicNodes, ...documentNodes])
             setEdges(edges)
           } catch (err) {
             setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed')

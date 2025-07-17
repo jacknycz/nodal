@@ -3,6 +3,7 @@ import { useAI } from './useAI'
 import { useBoard } from '../board/useBoard'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useBoardStore } from '../board/boardSlice'
+import { findIntelligentPositions } from '../board/boardUtils'
 import type { OpenAIModel } from './aiTypes'
 import type { BoardNode } from '../board/boardTypes'
 
@@ -31,30 +32,39 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Calculate smart positioning for new nodes
+  // Calculate smart positioning for new nodes using intelligent positioning
   const calculatePosition = useCallback((strategy: string, count: number = 1, existingPositions: Array<{x: number, y: number}> = []) => {
     const center = getViewportCenter()
-    const positions: Array<{x: number, y: number}> = []
+    const currentNodes = useBoardStore.getState().nodes
     
     switch (strategy) {
-      case 'circular':
-        const radius = 200
-        const angleStep = (2 * Math.PI) / count
-        for (let i = 0; i < count; i++) {
-          const angle = i * angleStep
-          positions.push({
-            x: center.x + Math.cos(angle) * radius,
-            y: center.y + Math.sin(angle) * radius
+      case 'connected':
+        if (selectedNode) {
+          // Place around the selected node
+          return findIntelligentPositions(count, {
+            parentNode: { x: selectedNode.position.x, y: selectedNode.position.y, id: selectedNode.id },
+            existingNodes: currentNodes.map(n => n.position),
+            spacing: 200
           })
         }
-        break
+        // Fall through to center if no selected node
+        
+      case 'circular':
+        // Use intelligent positioning with viewport center
+        return findIntelligentPositions(count, {
+          existingNodes: currentNodes.map(n => n.position),
+          viewportCenter: center,
+          spacing: 200
+        })
         
       case 'grid':
+        // For grid, we'll use a modified approach with intelligent spacing
         const gridSize = Math.ceil(Math.sqrt(count))
         const spacing = 180
         const startX = center.x - ((gridSize - 1) * spacing) / 2
         const startY = center.y - ((gridSize - 1) * spacing) / 2
         
+        const positions: Array<{x: number, y: number}> = []
         for (let i = 0; i < count; i++) {
           const row = Math.floor(i / gridSize)
           const col = i % gridSize
@@ -63,35 +73,16 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
             y: startY + row * spacing
           })
         }
-        break
-        
-      case 'connected':
-        if (selectedNode) {
-          const spacing = 200
-          for (let i = 0; i < count; i++) {
-            const angle = (i * 2 * Math.PI) / count
-            positions.push({
-              x: selectedNode.position.x + Math.cos(angle) * spacing,
-              y: selectedNode.position.y + Math.sin(angle) * spacing
-            })
-          }
-        } else {
-          // Fallback to center
-          positions.push({ x: center.x, y: center.y })
-        }
-        break
+        return positions
         
       default: // 'center'
-        const offset = count > 1 ? 50 : 0
-        for (let i = 0; i < count; i++) {
-          positions.push({
-            x: center.x + (i - (count - 1) / 2) * offset,
-            y: center.y + (i - (count - 1) / 2) * offset
-          })
-        }
+        // Use intelligent positioning for single node
+        return findIntelligentPositions(count, {
+          existingNodes: currentNodes.map(n => n.position),
+          viewportCenter: center,
+          spacing: 150
+        })
     }
-    
-    return positions
   }, [getViewportCenter, selectedNode])
 
   // Build context for AI generation
