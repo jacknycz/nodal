@@ -283,16 +283,16 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
       {/* 3. Editing modal placeholder (like delete modal) */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 max-w-md mx-4 shadow-xl w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Edit Node</h2>
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-w-md mx-4 shadow-xl w-full max-w-lg text-left flex flex-col items-start">
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label>
               <input className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 rounded mb-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500" value={editTitleValue} onChange={e => setEditTitleValue(e.target.value)} />
               <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Content</label>
-              <div className="border rounded p-2 min-h-[80px] bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <div className="border rounded bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 dark:text-white">
                 <TipTapEditor
                   value={editContentValue}
                   onChange={setEditContentValue}
+                  className="min-h-[80px] w-full"
                   onImageAdd={imgUrl => {
                     setEditMedia(prev => prev.some(img => img.url === imgUrl) ? prev : [...prev, { url: imgUrl }]);
                   }}

@@ -213,6 +213,10 @@
   transition: opacity 0.2s;
 }
 
+.tiptap {
+  min-height: 80px;
+}
+
 /* Animated Gradient Background */
 /* .animated-gradient-bg {
   background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #174a87, #f1f5f9);

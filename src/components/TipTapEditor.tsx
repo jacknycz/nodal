@@ -85,7 +85,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, onImageAdd
         <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={editor?.isActive('bulletList') ? 'text-primary-600' : ''}>• List</button>
         <button type="button" onClick={setImage}>Image</button>
       </div>
-      <EditorContent editor={editor} className="p-2 min-h-[80px]" />
+      <EditorContent editor={editor} className="focus:outline-none" />
     </div>
   );
 };
