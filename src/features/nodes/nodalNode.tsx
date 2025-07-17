@@ -198,8 +198,12 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     <>
       <div
         ref={nodeRef}
-        className={`relative min-w-60 max-w-[600px] p-4 backdrop-blur-sm bg-white/90 dark:bg-gray-950/70 rounded-4xl dark:border-gray-700 transition-all duration-200 ${selected ? 'border shadow-lg border-tertiary-50 shadow-tertiary-100/50 dark:border-secondary-200/30 dark:shadow-lg dark:shadow-secondary-300/30' : 'border border-gray-50 dark:border-gray-950/90'
-          } ${(isEditingLabel || isEditingContent) ? 'border border-blue-400 bg-blue-50' : ''} group`}
+        className={`nodal-drag-handle relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border-2 transition-all duration-200 cursor-move
+          ${selected ? 'border-primary-500 ring-2 ring-primary-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'}
+          hover:shadow-xl
+          w-80 max-w-md
+          group
+          ${(isEditingLabel || isEditingContent) ? 'border border-blue-400 bg-blue-50' : ''}`}
       >
         {/* Easy Connect Pattern: Simple visible handles */}
         <Handle
@@ -223,9 +227,20 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
 
         {/* Content wrapper */}
         <div className="relative z-10">
+          {/* Drag Handle Icon */}
+          <span className="inline-flex items-center cursor-move select-none text-gray-400 hover:text-primary-500 transition-colors mr-2">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="6" cy="7" r="1" fill="currentColor" />
+                  <circle cx="6" cy="13" r="1" fill="currentColor" />
+                  <circle cx="10" cy="7" r="1" fill="currentColor" />
+                  <circle cx="10" cy="13" r="1" fill="currentColor" />
+                  <circle cx="14" cy="7" r="1" fill="currentColor" />
+                  <circle cx="14" cy="13" r="1" fill="currentColor" />
+                </svg>
+              </span>
           {/* Drag Handle for node movement */}
           <div className="flex items-center justify-between">
-            <div className="relative">
+            <div className="relative w-full px-3 flex items-center gap-2">
               {isEditingLabel ? (
                 <input
                   ref={labelInputRef}
@@ -241,27 +256,11 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
               ) : (
                 <div
                   onDoubleClick={handleLabelDoubleClick}
-                  className="py-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded group"
+                  className="cursor-text hover:bg-gray-50 dark:hover:bg-gray-700 rounded group w-full"
                 >
-                  <div className="flex items-center space-x-2 justify-between">
+                  <div className="flex">
                     <Heading size="h4" className="font-medium text-lg dark:text-white mb-0" variant="custom">{nodeData.label}</Heading>
-                    <svg
-                      className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
                   </div>
-                  {/* <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Double-click to edit
-                    </div> */}
                 </div>
               )}
             </div>
@@ -269,7 +268,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
 
           <div className="space-y-3">
             {/* Editable Content Area */}
-            <div className="relative">
+            <div className="relative px-2">
               {isEditingContent ? (
                 <div className="space-y-2">
                   <textarea
@@ -280,7 +279,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                     onClick={handleInputClick}
                     onBlur={handleContentSave}
                     placeholder="Add content to this node..."
-                    className="w-full px-3 text-black dark:text-white py-2 text-sm border border-blue-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 nodrag min-h-[60px]"
+                    className="w-full px-2 text-black dark:text-white py-2 text-sm border border-blue-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 nodrag min-h-[60px]"
                     maxLength={1000}
                   />
                   <div className="text-xs text-gray-500 dark:text-white px-1">
@@ -290,27 +289,21 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
               ) : (
                 <div
                   onDoubleClick={handleContentClick}
-                  className={`px-3 py-2 cursor-pointer rounded border-2 border-dashed transition-colors group ${nodeData.content
-                    ? 'border-transparent hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    : 'border-gray-500/50 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                  className={`px-1 py-1 cursor-text rounded transition-colors group ${nodeData.content
+                    ? 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
                     }`}
                 >
                   {nodeData.content ? (
                     <div className="space-y-1">
-                      <div className={`text-sm whitespace-pre-wrap ${nodeData.aiGenerated ? 'text-primary-900 dark:text-primary-100' : 'text-gray-700 dark:text-white'
+                      <div className={`text-sm text-left whitespace-pre-wrap ${nodeData.aiGenerated ? 'text-primary-900 dark:text-primary-100' : 'text-gray-700 dark:text-white'
                         }`}>
                         {nodeData.content}
                       </div>
-                      <div className="text-xs text-gray-400 dark:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                        Double-click to edit content
-                      </div>
                     </div>
                   ) : (
-                    <div className="text-center py-2 text-gray-400 dark:text-white group-hover:text-blue-500 transition-colors">
+                    <div className="text-center py-0 text-gray-400 dark:text-white group-hover:text-blue-500 transition-colors">
                       <div className="text-sm">+ Add content</div>
-                      <div className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                        Double-click to add details
-                      </div>
                     </div>
                   )}
                 </div>
