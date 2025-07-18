@@ -5,6 +5,8 @@ import type { NodeProps } from '@xyflow/react'
 import type { BoardNode } from '../board/boardTypes'
 import { useNodeActions } from './useNodeActions'
 import TipTapEditor from '../../components/TipTapEditor';
+import { Button } from 'pres-start-core';
+import { PencilIcon, TrashIcon } from 'lucide-react'
 
 // Confirmation Modal Component
 function DeleteConfirmationModal({
@@ -168,15 +170,15 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         <div className="relative z-10">
           {/* Drag Handle Icon */}
           <span className="inline-flex items-center cursor-move select-none text-gray-400 hover:text-primary-500 transition-colors mr-2">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="6" cy="7" r="1" fill="currentColor" />
-                  <circle cx="6" cy="13" r="1" fill="currentColor" />
-                  <circle cx="10" cy="7" r="1" fill="currentColor" />
-                  <circle cx="10" cy="13" r="1" fill="currentColor" />
-                  <circle cx="14" cy="7" r="1" fill="currentColor" />
-                  <circle cx="14" cy="13" r="1" fill="currentColor" />
-                </svg>
-              </span>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="6" cy="7" r="1" fill="currentColor" />
+              <circle cx="6" cy="13" r="1" fill="currentColor" />
+              <circle cx="10" cy="7" r="1" fill="currentColor" />
+              <circle cx="10" cy="13" r="1" fill="currentColor" />
+              <circle cx="14" cy="7" r="1" fill="currentColor" />
+              <circle cx="14" cy="13" r="1" fill="currentColor" />
+            </svg>
+          </span>
           {/* Drag Handle for node movement */}
           <div className="flex items-center justify-between">
             <div className="relative w-full px-3 flex items-center gap-2">
@@ -208,25 +210,23 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
           <div className="space-y-3">
             {/* Editable Content Area */}
             <div className="relative px-2">
-              <div
-                onDoubleClick={() => setShowEditModal(true)}
-                className={`px-1 py-1 cursor-text rounded transition-colors group ${nodeData.content
-                  ? 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                }`}
-              >
-                {nodeData.content ? (
+
+              {nodeData.content && (
+                <div
+                  onDoubleClick={() => setShowEditModal(true)}
+                  className={`px-1 py-1 cursor-text rounded transition-colors group ${nodeData.content
+                    ? 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                    }`}
+                >
                   <div className="space-y-1">
                     <div className={`text-sm text-left whitespace-pre-wrap ${nodeData.aiGenerated ? 'text-primary-900 dark:text-primary-100' : 'text-gray-700 dark:text-white'}`}
                       dangerouslySetInnerHTML={{ __html: nodeData.content }}
                     />
                   </div>
-                ) : (
-                  <div className="text-center py-0 text-gray-400 dark:text-white group-hover:text-blue-500 transition-colors">
-                    <div className="text-sm">+ Add content</div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
+
             </div>
 
             {/* After the content display, add media preview area */}
@@ -256,17 +256,27 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
               {/* Spacer when no AI indicator */}
               {!nodeData.aiGenerated && <div />}
 
-              {/* Delete Button */}
-              <button
-                onClick={handleDeleteClick}
-                className="flex cursor-pointer items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
-                title="Delete node"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>Delete</span>
-              </button>
+              {/* Edit Button */}
+              <div className="flex items-center space-x-1">
+                <Button
+                  onClick={() => setShowEditModal(true)}
+                  className="flex cursor-pointer items-center space-x-1 text-xs text-primary-800 hover:bg-primary-50 dark:hover:bg-primary-500 rounded transition-colors"
+                  title="Edit node"
+                  iconLeft={<PencilIcon className="w-3 h-3" />}
+                >
+                  Edit
+                </Button>
+
+                {/* Delete Button */}
+                <Button
+                  onClick={handleDeleteClick}
+                  className="flex cursor-pointer items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
+                  title="Delete node"
+                  iconLeft={<TrashIcon className="w-3 h-3" />}
+                >
+                  <span>Delete</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -282,17 +292,22 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
 
       {/* 3. Editing modal placeholder (like delete modal) */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-w-md mx-4 shadow-xl w-full max-w-lg text-left flex flex-col items-start">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowEditModal(false)}
+        >
+          <div 
+            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-w-md mx-4 shadow-xl w-full max-w-lg text-left flex flex-col items-start"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label>
+              {/* <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label> */}
               <input className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 rounded mb-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500" value={editTitleValue} onChange={e => setEditTitleValue(e.target.value)} />
-              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Content</label>
+              {/* <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Content</label> */}
               <div className="border rounded bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 dark:text-white">
                 <TipTapEditor
                   value={editContentValue}
                   onChange={setEditContentValue}
-                  className="min-h-[80px] w-full"
                   onImageAdd={imgUrl => {
                     setEditMedia(prev => prev.some(img => img.url === imgUrl) ? prev : [...prev, { url: imgUrl }]);
                   }}
