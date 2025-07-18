@@ -24,7 +24,6 @@ import BoardNameModal from '../../components/BoardNameModal'
 import BoardRoomModal from '../../components/BoardRoomModal'
 import BokehBackground from '../../components/BokehBackground'
 import ChatPanel from '../../components/ChatPanel'
-import NodeAwareChatPanel from '../../components/NodeAwareChatPanel'
 import AskAboutSelectionFAB from '../../components/AskAboutSelectionFAB'
 import TopicModal from '../../components/TopicModal'
 import TopicDisplay from '../../components/TopicDisplay'
@@ -109,7 +108,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const [showBoardRoom, setShowBoardRoom] = useState(false)
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showChat, setShowChat] = useState(true) // Auto-open to show new system
-  const [chatMode, setChatMode] = useState<'superman' | 'node-aware'>('node-aware')
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
   const [localBoardId, setLocalBoardId] = useState<string | undefined>(undefined) // Renamed to avoid conflict
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
@@ -640,16 +638,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       action: () => setShowChat(true),
       description: 'Open Chat'
     },
-    {
-      key: 'n',
-      ctrl: true,
-      shift: true,
-      action: () => {
-        setChatMode(prev => prev === 'superman' ? 'node-aware' : 'superman')
-        console.log(`Switched to ${chatMode === 'superman' ? 'node-aware' : 'superman'} chat mode`)
-      },
-      description: 'Toggle Chat Mode'
-    },
+
     {
       key: 'Escape',
       action: () => {
@@ -714,7 +703,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const handleOpenChatWithSelection = (context: string) => {
     setSelectionContext(context)
     setShowChat(true)
-    setChatMode('node-aware')
   }
   
   const handleSelectionContextUsed = () => {
@@ -815,9 +803,9 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
   return (
     <div className="w-full h-full relative">
-      {/* DEBUG: Chat Mode Indicator */}
+      {/* DEBUG: Chat Indicator */}
       <div className="fixed top-2 left-2 z-50 bg-black text-white px-3 py-1 rounded text-xs font-mono">
-        Chat Mode: {chatMode} | Show: {showChat ? 'true' : 'false'}
+        Chat Show: {showChat ? 'true' : 'false'}
       </div>
       
       {/* Floating Action Button */}
@@ -841,22 +829,13 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         </div>
       )}
 
-      {/* Chat Panels - conditionally render based on mode */}
-      {chatMode === 'superman' ? (
-        <ChatPanel 
-          isOpen={showChat}
-          onClose={() => setShowChat(false)}
-          onToggleMode={() => setChatMode('node-aware')}
-        />
-      ) : (
-        <NodeAwareChatPanel 
-          isOpen={showChat}
-          onClose={() => setShowChat(false)}
-          onToggleMode={() => setChatMode('superman')}
-          selectionContext={selectionContext}
-          onSelectionContextUsed={handleSelectionContextUsed}
-        />
-      )}
+      {/* Chat Panel */}
+      <ChatPanel 
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
+        selectionContext={selectionContext}
+        onSelectionContextUsed={handleSelectionContextUsed}
+      />
 
       {/* Ask About Selection FAB */}
       <AskAboutSelectionFAB 
