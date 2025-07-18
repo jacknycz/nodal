@@ -14,6 +14,7 @@ const initialState: BoardState = {
   topic: null,
   boardBrief: undefined,
   embeddings: [],
+  currentBoardId: undefined,
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -93,6 +94,8 @@ export const useBoardStore = create<BoardState & BoardActions & {
   },
 
   setBoardBrief: (brief: BoardBrief) => set({ boardBrief: brief }),
+
+  setCurrentBoardId: (id: string | undefined) => set({ currentBoardId: id }),
 
   setEmbeddings: (embeddings) => {
     set({ embeddings })

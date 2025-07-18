@@ -7,6 +7,12 @@ import { useNodeActions } from './useNodeActions'
 import TipTapEditor from '../../components/TipTapEditor';
 import { Button } from 'pres-start-core';
 import { PencilIcon, TrashIcon } from 'lucide-react'
+import { createPortal } from 'react-dom';
+import { useBoardStore } from '../board/boardSlice';
+import { boardStorage } from '../storage/storage';
+import { createDocumentNode } from './documentUtils';
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '../auth/supabaseClient'
 
 // Confirmation Modal Component
 function DeleteConfirmationModal({
@@ -22,7 +28,7 @@ function DeleteConfirmationModal({
 }) {
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl">
         <div className="flex items-center space-x-3 mb-4">
@@ -56,7 +62,8 @@ function DeleteConfirmationModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -65,6 +72,9 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   const { updateNodeLabel, updateNodeContent, removeNode } = useNodeActions(id)
   const nodeRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const allNodes = useBoardStore(state => state.nodes);
+  const setNodes = useBoardStore(state => state.setNodes);
+  const nodes = useBoardStore(state => state.nodes);
 
   // Label editing state
   const [isEditingLabel, setIsEditingLabel] = useState(false)
@@ -74,7 +84,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   // Content editing state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState(nodeData.title);
-  const [editMedia, setEditMedia] = useState<{ url: string; alt?: string }[]>(nodeData.media || []);
+  const [editMedia, setEditMedia] = useState<string[]>(nodeData.media || []);
   const [editContentValue, setEditContentValue] = useState(nodeData.content || '');
 
   // Delete confirmation state
@@ -91,6 +101,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   // Reset edit values when nodeData changes
   useEffect(() => {
     setEditLabelValue(nodeData.title || '')
+    setEditTitleValue(nodeData.title || '') // Also reset modal title
   }, [nodeData.title])
 
   // 7. Add MAX_IMAGE_SIZE constant
@@ -110,8 +121,9 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     e.stopPropagation();
   };
   const handleLabelSave = () => {
-    if (editLabelValue.trim() !== (nodeData.title || '')) {
-      updateNodeLabel(editLabelValue.trim());
+    const newLabel = (editLabelValue || '').trim();
+    if (newLabel !== (nodeData.title || '')) {
+      updateNodeLabel(newLabel);
     }
     setIsEditingLabel(false);
   };
@@ -134,6 +146,9 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     removeNode();
     setShowDeleteModal(false);
   };
+
+  // Update the currentBoardId to use the store
+  const currentBoardId = useBoardStore(state => state.currentBoardId);
 
   return (
     <>
@@ -186,8 +201,8 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                 <input
                   ref={labelInputRef}
                   type="text"
-                  value={editTitleValue || ''}
-                  onChange={(e) => setEditTitleValue(e.target.value)}
+                  value={editLabelValue} // Use editLabelValue, not editTitleValue
+                  onChange={(e) => setEditLabelValue(e.target.value)} // Use setEditLabelValue
                   onKeyDown={handleLabelKeyDown}
                   onClick={handleInputClick}
                   onBlur={handleLabelSave}
@@ -207,7 +222,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="">
             {/* Editable Content Area */}
             <div className="relative px-2">
 
@@ -232,19 +247,42 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
             {/* After the content display, add media preview area */}
             {nodeData.media && nodeData.media.length > 0 && (
               <div className="flex flex-row flex-wrap gap-2 mt-2 px-2">
-                {nodeData.media.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img.url}
-                    alt={img.alt || `media-${idx}`}
-                    className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow"
-                  />
-                ))}
+                {nodeData.media.map((mediaId, idx) => {
+                  const docNode = allNodes.find(n => n.id === mediaId && n.data.type === 'document');
+                  if (!docNode) return null;
+                  const { fileType, fileName, documentId } = docNode.data;
+                  
+                  // Check if this node has no content (title is fine)
+                  const hasNoContent = !nodeData.content;
+                  const imageSize = hasNoContent ? 'w-72 h-72' : 'w-12 h-12'; // 300x300 for no content, 48x48 for regular
+                  
+                  // Show image preview if image, otherwise file info
+                  if (fileType && fileType.startsWith('image/')) {
+                    // For now, use previewUrl or fallback to a placeholder
+                    const src = docNode.data.previewUrl || '';
+                    return (
+                      <img
+                        key={mediaId}
+                        src={src}
+                        alt={fileName}
+                        className={`${imageSize} object-cover rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow`}
+                        title={fileName}
+                      />
+                    );
+                  }
+                  // Non-image: show file icon and name
+                  return (
+                    <div key={mediaId} className={`${imageSize} bg-gray-200 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400 p-1`}>
+                      <span className="truncate w-full">{fileName}</span>
+                      <span className="truncate w-full">{fileType}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {/* Bottom Row: AI Generated Indicator + Delete Button */}
-            <div className="flex items-center justify-between px-2">
+            <div className="flex items-center justify-between px-2 pb-1">
               {/* AI Generated Indicator */}
               {nodeData.aiGenerated && (
                 <div className="flex items-center space-x-1 text-xs text-primary-500">
@@ -257,7 +295,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
               {!nodeData.aiGenerated && <div />}
 
               {/* Edit Button */}
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-2">
                 <Button
                   onClick={() => setShowEditModal(true)}
                   className="flex cursor-pointer items-center space-x-1 text-xs text-primary-800 hover:bg-primary-50 dark:hover:bg-primary-500 rounded transition-colors"
@@ -285,13 +323,13 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={showDeleteModal}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        nodeLabel={nodeData.title || ''}
+        onClose={() => handleDeleteCancel()}
+        onConfirm={() => handleDeleteConfirm()}
+        nodeLabel={String(nodeData.title ?? '')}
       />
 
       {/* 3. Editing modal placeholder (like delete modal) */}
-      {showEditModal && (
+      {showEditModal && createPortal(
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => setShowEditModal(false)}
@@ -300,19 +338,20 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
             className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-w-md mx-4 shadow-xl w-full max-w-lg text-left flex flex-col items-start"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4">
-              {/* <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Title</label> */}
+            <div className="w-full">
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200" htmlFor="title">Title</label>
               <input className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 rounded mb-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500" value={editTitleValue} onChange={e => setEditTitleValue(e.target.value)} />
-              {/* <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-200">Content</label> */}
               <div className="border rounded bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 dark:text-white">
                 <TipTapEditor
                   value={editContentValue}
                   onChange={setEditContentValue}
                   onImageAdd={imgUrl => {
-                    setEditMedia(prev => prev.some(img => img.url === imgUrl) ? prev : [...prev, { url: imgUrl }]);
+                    // TODO: Instead of adding a URL, create a DocumentNode and add its ID to editMedia
+                    const fakeId = imgUrl.substring(imgUrl.lastIndexOf('/') + 1); // Extract filename
+                    setEditMedia(prev => prev.includes(fakeId) ? prev : [...prev, fakeId]);
                   }}
                   onImageDelete={imgUrl => {
-                    setEditMedia(prev => prev.filter(img => img.url !== imgUrl));
+                    // This handler is no longer needed as media is string IDs
                   }}
                 />
               </div>
@@ -331,45 +370,96 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                   accept="image/*"
                   multiple
                   className="hidden"
-                  onChange={e => {
+                  onChange={async e => {
                     const files = Array.from(e.target.files || []);
-                    files.forEach(file => {
+                    for (const file of files) {
                       if (file.size > MAX_IMAGE_SIZE) {
                         alert('Image must be less than 1MB');
-                        return;
+                        continue;
                       }
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        if (typeof reader.result === 'string') {
-                          setEditMedia(prev => prev.some(img => img.url === reader.result) ? prev : [...prev, { url: reader.result as string }]);
-                        }
-                      };
-                      reader.readAsDataURL(file);
-                    });
+                      // Save document to storage with real board ID
+                      const extractedText = '';
+                      const documentId = await boardStorage.saveDocument(
+                        file.name,
+                        file,
+                        extractedText,
+                        currentBoardId
+                      );
+                      // Create document node (now async)
+                      const parentNode = nodes.find(n => n.id === id);
+                      const position = parentNode ? parentNode.position : { x: 0, y: 0 };
+                      const documentNode = await createDocumentNode(
+                        file,
+                        documentId,
+                        position,
+                        extractedText
+                      );
+                      const newNode = { ...documentNode, id: uuidv4() };
+                      setNodes([...nodes, newNode]);
+                      setEditMedia(prev => prev.includes(newNode.id) ? prev : [...prev, newNode.id]);
+                    }
                     e.target.value = '';
                   }}
                 />
               </div>
               {editMedia.length > 0 && (
                 <div className="flex flex-row flex-wrap gap-2 mt-2">
-                  {editMedia.map((img, idx) => (
-                    <div key={idx} className="relative group">
-                      <img src={img.url} alt={img.alt || `edit-media-${idx}`} className="w-16 h-16 object-cover rounded shadow border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900" />
-                      <button
-                        className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 opacity-80 hover:opacity-100 text-xs"
-                        onClick={() => {
-                          setEditMedia(prev => prev.filter((_, i) => i !== idx));
-                          setEditContentValue(content =>
-                            (content || '').replace(
-                              new RegExp(`<img[^>]+src=["']${img.url}["'][^>]*>`, 'g'),
-                              ''
-                            )
-                          );
-                        }}
-                        title="Remove image"
-                      >×</button>
-                    </div>
-                  ))}
+                  {editMedia.map((mediaId, idx) => {
+                    const docNode = allNodes.find(n => n.id === mediaId && n.data.type === 'document');
+                    if (!docNode) return null;
+                    const { fileType, fileName, documentId } = docNode.data;
+                    if (fileType && fileType.startsWith('image/')) {
+                      const src = docNode.data.previewUrl;
+                      // Only render image if we have a valid URL
+                      if (src) {
+                        return (
+                          <div key={mediaId} className="relative group">
+                            <img
+                              src={src}
+                              alt={fileName}
+                              className="w-16 h-16 object-cover rounded shadow border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                              title={fileName}
+                            />
+                            <button
+                              className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 opacity-80 hover:opacity-100 text-xs"
+                              onClick={() => {
+                                setEditMedia(prev => prev.filter((id) => id !== mediaId));
+                              }}
+                              title="Remove media"
+                            >×</button>
+                          </div>
+                        );
+                      } else {
+                        // Show placeholder for images without preview URL
+                        return (
+                          <div key={mediaId} className="relative group w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400 p-1">
+                            <span className="truncate w-full">{fileName}</span>
+                            <span className="truncate w-full">Loading...</span>
+                            <button
+                              className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 opacity-80 hover:opacity-100 text-xs"
+                              onClick={() => {
+                                setEditMedia(prev => prev.filter((id) => id !== mediaId));
+                              }}
+                              title="Remove media"
+                            >×</button>
+                          </div>
+                        );
+                      }
+                    }
+                    return (
+                      <div key={mediaId} className="relative group w-16 h-16 bg-gray-200 dark:bg-gray-800 rounded flex flex-col items-center justify-center text-xs text-gray-500 dark:text-gray-400 p-1">
+                        <span className="truncate w-full">{fileName}</span>
+                        <span className="truncate w-full">{fileType}</span>
+                        <button
+                          className="absolute top-0 right-0 bg-red-600 text-white rounded-full p-1 opacity-80 hover:opacity-100 text-xs"
+                          onClick={() => {
+                            setEditMedia(prev => prev.filter((id) => id !== mediaId));
+                          }}
+                          title="Remove media"
+                        >×</button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -393,7 +483,8 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

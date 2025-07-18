@@ -2,6 +2,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardNode } from '../board/boardTypes'
 import { extractTextFromFile as extractTextFromBlob, isTextExtractable } from '../storage/textExtractor'
+import { supabase } from '../auth/supabaseClient'
 
 // Supported file types
 export const SUPPORTED_FILE_TYPES = {
@@ -72,12 +73,12 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
 }
 
 // Create a document node from a file
-export function createDocumentNode(
+export async function createDocumentNode(
   file: File,
   documentId: string,
   position: { x: number; y: number },
   extractedText: string
-): Omit<BoardNode, 'id'> {
+): Promise<Omit<BoardNode, 'id'>> {
   const fileName = file.name
   const baseName = fileName.split('.').slice(0, -1).join('.') || fileName
   
@@ -88,6 +89,37 @@ export function createDocumentNode(
                           !extractedText.startsWith('[Error') &&
                           !extractedText.includes('No extractable text content available') &&
                           !extractedText.includes('[' + file.name + ']')
+  
+  // Generate preview URL for images
+  let previewUrl: string | undefined = undefined
+  if (file.type.startsWith('image/')) {
+    try {
+      // Get the file path from the document ID
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Get document metadata to find the file path
+        const { data: docData } = await supabase
+          .from('documents')
+          .select('file_path')
+          .eq('id', documentId)
+          .eq('user_id', user.id)
+          .single()
+        
+        if (docData?.file_path) {
+          // Generate signed URL for image preview
+          const { data: urlData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(docData.file_path, 3600) // 1 hour expiry
+          
+          if (urlData?.signedUrl) {
+            previewUrl = urlData.signedUrl
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to generate preview URL for image:', error)
+    }
+  }
   
   return {
     type: 'document',
@@ -106,6 +138,7 @@ export function createDocumentNode(
       uploadedAt: Date.now(),
       extractedText: extractedText || '',
       status: hasExtractedText ? 'ready' : (extractedText.startsWith('[Error') ? 'error' : 'processing'),
+      previewUrl, // Add the preview URL
     },
   }
 }

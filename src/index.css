@@ -215,6 +215,7 @@
 
 .tiptap {
   min-height: 80px;
+  @apply p-2;
 }
 
 /* Animated Gradient Background */

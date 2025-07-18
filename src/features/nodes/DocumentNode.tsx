@@ -130,7 +130,7 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   
   // State
   const [isEditingLabel, setIsEditingLabel] = useState(false)
-  const [editLabelValue, setEditLabelValue] = useState(nodeData.label)
+  const [editLabelValue, setEditLabelValue] = useState(nodeData.title)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [documentContent, setDocumentContent] = useState<string>('')
   const [imageUrl, setImageUrl] = useState<string>('')
@@ -225,18 +225,18 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   // Label editing handlers
   const handleLabelDoubleClick = () => {
     setIsEditingLabel(true)
-    setEditLabelValue(nodeData.label)
+    setEditLabelValue(nodeData.title)
   }
 
   const handleLabelSave = () => {
-    if (editLabelValue.trim() !== nodeData.label) {
+    if ((editLabelValue || '').trim() !== (nodeData.title || '')) {
       updateNodeLabel(editLabelValue.trim())
     }
     setIsEditingLabel(false)
   }
 
   const handleLabelCancel = () => {
-    setEditLabelValue(nodeData.label)
+    setEditLabelValue(nodeData.title)
     setIsEditingLabel(false)
   }
 
@@ -424,14 +424,14 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
 
   return (
     <>
-      <div 
+      <div
         ref={nodeRef}
-        className={`
-          nodal-drag-handle relative bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 transition-all duration-200 cursor-move
+        className={`nodal-drag-handle relative bg-white dark:bg-gray-900 rounded-xl shadow-lg border-2 transition-all duration-200 cursor-move
           ${selected ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'}
           hover:shadow-xl
-          ${isMinimized ? 'w-48' : 'w-80 max-w-md'}
-        `}
+          w-80 max-w-md
+          group
+          ${(isEditingLabel) ? 'border border-blue-400 bg-blue-50' : ''}`}
       >
         {/* Minimized View */}
         {isMinimized && (
@@ -465,9 +465,9 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
                   <h3 
                     className="text-sm font-medium text-gray-900 dark:text-white truncate cursor-text"
                     onDoubleClick={handleLabelDoubleClick}
-                    title={nodeData.label}
+                    title={nodeData.title}
                   >
-                    {nodeData.label}
+                    {nodeData.title}
                   </h3>
                 )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate" title={nodeData.fileName}>
@@ -535,7 +535,7 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
                       className="text-lg font-semibold text-gray-900 dark:text-white cursor-text"
                       onDoubleClick={handleLabelDoubleClick}
                     >
-                      {nodeData.label}
+                      {nodeData.title}
                     </h3>
                   )}
                   <p className="text-sm text-gray-500 dark:text-gray-400" title={nodeData.fileName}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -12,6 +12,7 @@ interface TipTapEditorProps {
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, onImageAdd, onImageDelete }) => {
   const lastImagesRef = useRef<string[]>([]);
+  const [editorState, setEditorState] = useState(0); // Force re-renders
 
   const editor = useEditor({
     extensions: [
@@ -54,6 +55,21 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, onImageAdd
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // Listen for editor state changes to update toolbar active states
+  useEffect(() => {
+    if (editor) {
+      const updateToolbar = () => {
+        setEditorState(prev => prev + 1);
+      };
+      
+      editor.on('transaction', updateToolbar);
+      
+      return () => {
+        editor.off('transaction', updateToolbar);
+      };
+    }
+  }, [editor]);
+
   // Toolbar actions
   const setImage = () => {
     const input = document.createElement('input');
@@ -78,12 +94,28 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, onImageAdd
   };
 
   return (
-    <div className="tiptap-editor border rounded bg-white dark:bg-gray-900">
-      <div className="flex gap-2 border-b p-2 bg-gray-50 dark:bg-gray-800">
-        <button type="button" onClick={() => editor?.chain().focus().toggleBold().run()} className={editor?.isActive('bold') ? 'font-bold text-primary-600' : ''}>B</button>
-        <button type="button" onClick={() => editor?.chain().focus().toggleItalic().run()} className={editor?.isActive('italic') ? 'italic text-primary-600' : ''}>I</button>
-        <button type="button" onClick={() => editor?.chain().focus().toggleBulletList().run()} className={editor?.isActive('bulletList') ? 'text-primary-600' : ''}>• List</button>
-        <button type="button" onClick={setImage}>Image</button>
+    <div className="tiptap-editor border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-900">
+      <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-800">
+        <button
+          type="button"
+          className={`flex p-2 text-sm border border-gray-200 dark:border-gray-700 rounded ${editor?.isActive('bold') ? 'font-bold text-primary-600' : ''}`}
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+        >B</button>
+        <button
+          type="button"
+          className={`flex p-2 text-sm border border-gray-200 dark:border-gray-700 rounded ${editor?.isActive('italic') ? 'italic text-primary-600' : ''}`}
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+        >I</button>
+        <button
+          type="button"
+          className={`flex p-2 text-sm border border-gray-200 dark:border-gray-700 rounded ${editor?.isActive('bulletList') ? 'text-primary-600' : ''}`}
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+        >• List</button>
+        <button
+          type="button"
+          className="flex p-2 text-sm border border-gray-200 dark:border-gray-700 rounded"
+          onClick={setImage}
+        >Image</button>
       </div>
       <EditorContent editor={editor} className="focus:outline-none" />
     </div>

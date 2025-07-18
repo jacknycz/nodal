@@ -102,7 +102,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     setEdges,
   } = useBoard()
 
-  const { topic, setTopic, boardBrief, setBoardBrief } = useBoardStore()
+  const { topic, setTopic, boardBrief, setBoardBrief, setCurrentBoardId } = useBoardStore()
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -111,7 +111,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const [showChat, setShowChat] = useState(true) // Auto-open to show new system
   const [chatMode, setChatMode] = useState<'superman' | 'node-aware'>('node-aware')
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
-  const [currentBoardId, setCurrentBoardId] = useState<string | undefined>(undefined)
+  const [localBoardId, setLocalBoardId] = useState<string | undefined>(undefined) // Renamed to avoid conflict
   const [existingBoardNames, setExistingBoardNames] = useState<string[]>([])
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -137,7 +137,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
   // Auto-save function
   const autoSave = useCallback(async () => {
-    if (!currentBoardId || !currentBoardName) return
+    if (!localBoardId || !currentBoardName) return // Use localBoardId
 
     try {
       const currentData = getCurrentDataHash()
@@ -150,7 +150,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         viewport: viewport || { x: 0, y: 0, zoom: 1 }
       }
 
-      await boardStorage.updateBoard(currentBoardId, boardData)
+      await boardStorage.updateBoard(localBoardId, boardData) // Use localBoardId
       lastSavedDataRef.current = currentData
       setHasUnsavedChanges(false)
       setSaveStatus('saved')
@@ -158,7 +158,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       console.error('Auto-save failed:', error)
       setSaveStatus('error')
     }
-  }, [nodes, edges, viewport, currentBoardId, currentBoardName, getCurrentDataHash])
+  }, [nodes, edges, viewport, localBoardId, currentBoardName, getCurrentDataHash]) // Use localBoardId
 
   // Auto-save on changes
   useEffect(() => {
@@ -317,6 +317,28 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     addEdge(connection.source, connection.target, { 
       type: connectionType  // This is our internal type: 'default' | 'ai' | 'focus'
     })
+
+    // --- Attach DocumentNode as media if connected to NodalNode ---
+    // If source is document and target is nodal, or vice versa
+    const isSourceDocument = sourceNode.data.type === 'document';
+    const isTargetDocument = targetNode.data.type === 'document';
+    if (isSourceDocument && !isTargetDocument) {
+      // Add source (document) to target's media
+      const currentMedia = targetNode.data.media || [];
+      if (!currentMedia.includes(sourceNode.id)) {
+        updateNode(targetNode.id, {
+          data: { ...targetNode.data, media: [...currentMedia, sourceNode.id] }
+        });
+      }
+    } else if (!isSourceDocument && isTargetDocument) {
+      // Add target (document) to source's media
+      const currentMedia = sourceNode.data.media || [];
+      if (!currentMedia.includes(targetNode.id)) {
+        updateNode(sourceNode.id, {
+          data: { ...sourceNode.data, media: [...currentMedia, targetNode.id] }
+        });
+      }
+    }
   }
 
   const handleAddNode = useCallback(() => {
@@ -352,10 +374,10 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           file.name,
           file,
           extractedText,
-          currentBoardId || 'temp',
+          localBoardId || 'temp', // Use localBoardId
         )
-        // Create document node
-        const documentNode = createDocumentNode(
+        // Create document node (now async)
+        const documentNode = await createDocumentNode(
           file,
           documentId,
           batchPositions[i],
@@ -374,7 +396,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
     // Clear error after a delay
     setTimeout(() => setUploadError(''), 5000)
-  }, [addNode, getViewportCenter, currentBoardId, edges, setNodes])
+  }, [addNode, getViewportCenter, localBoardId, edges, setNodes]) // Use localBoardId
 
   // Add a manual reset function in case drag state gets stuck
   const resetDragState = useCallback(() => {
@@ -466,19 +488,20 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
       console.log('Save attempt:', {
         boardName,
-        currentBoardId,
+        localBoardId, // Use localBoardId
         currentBoardName,
-        condition: currentBoardId && currentBoardName === boardName
+        condition: localBoardId && currentBoardName === boardName // Use localBoardId
       })
 
-      if (currentBoardId && currentBoardName === boardName) {
+      if (localBoardId && currentBoardName === boardName) { // Use localBoardId
         // Update existing board
-        await boardStorage.updateBoard(currentBoardId, boardData)
+        await boardStorage.updateBoard(localBoardId, boardData) // Use localBoardId
         console.log('Board updated successfully!')
       } else {
         // Save new board
         const boardId = await boardStorage.saveBoard(boardName, boardData)
-        setCurrentBoardId(boardId)
+        setLocalBoardId(boardId) // Use localBoardId
+        setCurrentBoardId(boardId) // Set in store
         setCurrentBoardName(boardName)
         console.log('Board saved successfully! New ID:', boardId)
       }
@@ -509,7 +532,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       setNodes(layoutMindMap(board.data.nodes, board.data.edges))
       setEdges(board.data.edges)
       updateViewport(board.data.viewport)
-      setCurrentBoardId(board.id)
+      setLocalBoardId(board.id) // Use localBoardId
+      setCurrentBoardId(board.id) // Set in store
       setCurrentBoardName(board.name)
       lastSavedDataRef.current = getCurrentDataHash() // Use the same format as getCurrentDataHash
       setHasUnsavedChanges(false)
@@ -526,7 +550,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       await boardStorage.renameBoard(boardId, newName)
       
       // If we renamed the current board, update the current board name
-      if (boardId === currentBoardId) {
+      if (boardId === localBoardId) { // Use localBoardId
         setCurrentBoardName(newName)
       }
       
@@ -546,8 +570,9 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       await boardStorage.deleteBoard(boardId)
       
       // If we deleted the current board, clear the current board tracking
-      if (boardId === currentBoardId) {
-        setCurrentBoardId(undefined)
+      if (boardId === localBoardId) { // Use localBoardId
+        setLocalBoardId(undefined) // Use localBoardId
+        setCurrentBoardId(undefined) // Clear from store
         setCurrentBoardName(undefined)
         setHasUnsavedChanges(false)
         setSaveStatus('saved')
@@ -640,7 +665,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const handleClearBoard = () => {
     clearBoard()
     setCurrentBoardName(undefined)
-    setCurrentBoardId(undefined)
+    setLocalBoardId(undefined) // Use localBoardId
+    setCurrentBoardId(undefined) // Clear from store
     setHasUnsavedChanges(false)
     setSaveStatus('saved')
     lastSavedDataRef.current = ''
@@ -722,7 +748,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   }
   const aiClient = new AIClient(aiConfig)
 
-  const setEmbeddings = useBoardStore(state => state.setEmbeddings)
+  const updateNode = useBoardStore(state => state.updateNode);
   const embeddings = useBoardStore(state => state.embeddings)
 
   // --- Mind Map Layout Algorithm ---
@@ -1010,7 +1036,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
                       file.name,
                       file,
                       extractedResult.text,
-                      currentBoardId || 'temp',
+                      localBoardId || 'temp', // Use localBoardId
                     )
                     
                     // Create document node

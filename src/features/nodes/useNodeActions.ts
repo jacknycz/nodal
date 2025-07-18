@@ -20,7 +20,7 @@ export function useNodeActions(nodeId: string) {
   )
 
   const updateNodeContent = useCallback(
-    (content: string, mediaOrExtractedText?: { url: string; alt?: string }[] | string) => {
+    (content: string, mediaOrExtractedText?: string[] | string) => {
       const nodes = useBoardStore.getState().nodes
       const node = nodes.find(n => n.id === nodeId)
       if (node) {

@@ -6,7 +6,7 @@ export interface BoardNode extends Node {
     // New node structure
     title?: string
     content?: string // HTML or TipTap JSON (to be determined)
-    media?: { url: string; alt?: string }[]
+    media?: string[] // Array of DocumentNode IDs
     type?: 'default' | 'input' | 'output' | 'document'
     expanded?: boolean
     aiGenerated?: boolean
@@ -62,6 +62,7 @@ export interface BoardState {
   topic: string | null
   boardBrief?: BoardBrief
   embeddings?: DocumentEmbedding[]
+  currentBoardId?: string // Add this field
 }
 
 export interface BoardActions {
@@ -77,4 +78,5 @@ export interface BoardActions {
   clearBoard: () => void
   setTopic: (topic: string | null) => void
   setBoardBrief: (brief: BoardBrief) => void
+  setCurrentBoardId: (id: string | undefined) => void // Add this action
 } 
