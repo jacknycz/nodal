@@ -1,10 +1,180 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import type { NodeProps } from '@xyflow/react'
+import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/AnnotationLayer.css'
+import 'react-pdf/dist/Page/TextLayer.css'
 import type { BoardNode } from '../board/boardTypes'
 import { useNodeActions } from './useNodeActions'
 import { boardStorage } from '../storage/storage'
 import { useBoardStore } from '../board/boardSlice'
+import TestPDF from '../../TestPDF';
+
+// Set up PDF.js worker - use working CDN
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+
+// PDF Viewer Component
+function PDFViewer({ 
+  fileUrl, 
+  fileName 
+}: { 
+  fileUrl: string
+  fileName: string 
+}) {
+  const [numPages, setNumPages] = useState<number | null>(null)
+  const [pageNumber, setPageNumber] = useState(1)
+  const [scale, setScale] = useState(1.0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 PDFViewer mounted with URL:', fileUrl)
+    console.log('🔍 PDFViewer fileName:', fileName)
+    
+    // Test if blob URL is accessible
+    if (fileUrl.startsWith('blob:')) {
+      fetch(fileUrl)
+        .then(response => {
+          console.log('✅ Blob URL is accessible:', response.status, response.statusText)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+          return response.blob()
+        })
+        .then(blob => {
+          console.log('✅ Blob content type:', blob.type)
+          console.log('✅ Blob size:', blob.size)
+        })
+        .catch(error => {
+          console.error('❌ Blob URL test failed:', error)
+          setError(`Blob URL error: ${error.message}`)
+          setLoading(false)
+        })
+    }
+    
+    // Add timeout to detect if loading is stuck
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('⚠️ PDF loading timeout after 10 seconds')
+        setError('PDF loading timeout - please try again')
+        setLoading(false)
+      }
+    }, 10000)
+    
+    return () => clearTimeout(timeout)
+  }, [fileUrl, fileName, loading])
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    console.log('✅ PDF loaded successfully with', numPages, 'pages')
+    setNumPages(numPages)
+    setLoading(false)
+  }
+
+  const onDocumentLoadError = (error: Error) => {
+    console.error('❌ PDF load error:', error)
+    setError(error.message)
+    setLoading(false)
+  }
+
+  const changePage = (offset: number) => {
+    setPageNumber(prevPageNumber => {
+      const newPage = prevPageNumber + offset
+      return Math.min(Math.max(1, newPage), numPages || 1)
+    })
+  }
+
+  const changeScale = (newScale: number) => {
+    setScale(Math.max(0.5, Math.min(2.0, newScale)))
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-sm text-gray-500">Loading PDF...</span>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-6">
+        <div className="w-16 h-16 mx-auto mb-3 text-red-500">
+          <svg fill="currentColor" viewBox="0 0 24 24">
+            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+          </svg>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">PDF Viewer Error</p>
+        <p className="text-xs text-gray-500 mt-1">{error}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+      {/* PDF Controls */}
+      <div className="flex items-center justify-between mb-3 p-2 bg-white dark:bg-gray-800 rounded border">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => changePage(-1)}
+            disabled={pageNumber <= 1}
+            className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded disabled:opacity-50"
+          >
+            ←
+          </button>
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            Page {pageNumber} of {numPages}
+          </span>
+          <button
+            onClick={() => changePage(1)}
+            disabled={pageNumber >= (numPages || 1)}
+            className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded disabled:opacity-50"
+          >
+            →
+          </button>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => changeScale(scale - 0.1)}
+            className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded"
+          >
+            -
+          </button>
+          <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[3rem] text-center">
+            {Math.round(scale * 100)}%
+          </span>
+          <button
+            onClick={() => changeScale(scale + 0.1)}
+            className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      {/* PDF Content */}
+      <div className="flex justify-center">
+        <div className="border border-gray-300 dark:border-gray-600 bg-white">
+          <Document
+            file={fileUrl}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading="Loading PDF..."
+            error="Failed to load PDF"
+          >
+            <Page 
+              pageNumber={pageNumber} 
+              scale={scale}
+              className="max-w-full"
+            />
+          </Document>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // Document type icons
 const getDocumentIcon = (fileType: string) => {
@@ -130,12 +300,14 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   
   // State
   const [isEditingLabel, setIsEditingLabel] = useState(false)
-  const [editLabelValue, setEditLabelValue] = useState(nodeData.title)
+  const [editLabelValue, setEditLabelValue] = useState(nodeData.title || '')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [documentContent, setDocumentContent] = useState<string>('')
   const [imageUrl, setImageUrl] = useState<string>('')
   const [isLoadingContent, setIsLoadingContent] = useState(false)
   const [contentType, setContentType] = useState<'text' | 'image' | 'pdf' | 'unsupported'>('unsupported')
+  const [pdfViewMode, setPdfViewMode] = useState<'text' | 'pdf'>('text') // New state for PDF view toggle
+  const [pdfUrl, setPdfUrl] = useState<string>('')
   
   // Refs
   const labelInputRef = useRef<HTMLInputElement>(null)
@@ -179,7 +351,13 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
         setDocumentContent(extractedText)
         
         if (fileType.includes('pdf')) {
+          // Create blob URL for PDF viewer
+          const pdfUrl = URL.createObjectURL(document.content)
+          setPdfUrl(pdfUrl)
           setContentType('pdf')
+          console.log('📄 PDF blob URL created:', pdfUrl)
+          console.log('📄 PDF content type:', document.content.type)
+          console.log('📄 PDF content size:', document.content.size)
           console.log('📄 PDF with extracted text loaded:', extractedText.length, 'characters')
         } else if (fileType.includes('word') || fileType.includes('document') || document.fileName.endsWith('.docx')) {
           setContentType('text') // Show Word docs as text since we have extracted content
@@ -211,8 +389,11 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
       if (imageUrl) {
         URL.revokeObjectURL(imageUrl)
       }
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl)
+      }
     }
-  }, [imageUrl])
+  }, [imageUrl, pdfUrl])
 
   // Focus input when editing
   useEffect(() => {
@@ -225,7 +406,7 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   // Label editing handlers
   const handleLabelDoubleClick = () => {
     setIsEditingLabel(true)
-    setEditLabelValue(nodeData.title)
+    setEditLabelValue(nodeData.title || '')
   }
 
   const handleLabelSave = () => {
@@ -236,7 +417,7 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
   }
 
   const handleLabelCancel = () => {
-    setEditLabelValue(nodeData.title)
+    setEditLabelValue(nodeData.title || '')
     setIsEditingLabel(false)
   }
 
@@ -338,37 +519,70 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
           </div>
         )
         
-      case 'pdf':
-        return (
-          <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
-            {documentContent && documentContent.length > 0 ? (
-              <div className="max-h-48 overflow-y-auto text-sm text-gray-700 dark:text-gray-300">
-                <div className="flex items-center mb-2 text-xs text-red-600 dark:text-red-400">
+              case 'pdf':
+          return (
+            <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+              {/* PDF View Toggle */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center text-xs text-red-600 dark:text-red-400">
                   <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
                   </svg>
-                  PDF Content Extracted
+                  PDF Document
                 </div>
-                <pre className="whitespace-pre-wrap font-sans">{documentContent.slice(0, 1000)}</pre>
-                {documentContent.length > 1000 && (
-                  <p className="text-gray-500 dark:text-gray-400 mt-2 italic">
-                    ... and {documentContent.length - 1000} more characters
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <div className="w-16 h-16 mx-auto mb-3 text-red-500">
-                  <svg fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
-                  </svg>
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => setPdfViewMode('text')}
+                    className={`px-2 py-1 text-xs rounded ${
+                      pdfViewMode === 'text' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Text
+                  </button>
+                  <button
+                    onClick={() => setPdfViewMode('pdf')}
+                    className={`px-2 py-1 text-xs rounded ${
+                      pdfViewMode === 'pdf' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    PDF
+                  </button>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">PDF Preview</p>
-                <p className="text-xs text-gray-500 mt-1">No text content extracted</p>
               </div>
-            )}
-          </div>
-        )
+
+              {/* PDF Content based on view mode */}
+              {pdfViewMode === 'text' ? (
+                // Show extracted text
+                documentContent && documentContent.length > 0 ? (
+                  <div className="max-h-48 overflow-y-auto text-sm text-gray-700 dark:text-gray-300">
+                    <pre className="whitespace-pre-wrap font-sans">{documentContent.slice(0, 1000)}</pre>
+                    {documentContent.length > 1000 && (
+                      <p className="text-gray-500 dark:text-gray-400 mt-2 italic">
+                        ... and {documentContent.length - 1000} more characters
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="w-16 h-16 mx-auto mb-3 text-red-500">
+                      <svg fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">PDF Preview</p>
+                    <p className="text-xs text-gray-500 mt-1">No text content extracted</p>
+                  </div>
+                )
+              ) : (
+                // Show PDF viewer
+                <TestPDF file={pdfUrl} />
+              )}
+            </div>
+          )
         
       default:
         return (

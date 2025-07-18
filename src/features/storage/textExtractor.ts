@@ -1,7 +1,6 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import mammoth from 'mammoth'
 
-// Set PDF.js worker to local file - bulletproof for dev and production!
 pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 /**

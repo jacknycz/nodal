@@ -290,5 +290,52 @@ graph TD;
 
 ---
 
+## PDF.js, react-pdf, and Vite Integration: Lessons Learned
+
+### Why this section?
+If you are adding or maintaining PDF viewing or text extraction in Nodal, read this first! The PDF.js/react-pdf/Vite ecosystem is full of versioning and worker pitfalls. Here’s what we learned (the hard way):
+
+### Key Lessons
+- **PDF.js main and worker versions must match exactly.**
+  - If you see errors like `The API version "X" does not match the Worker version "Y"`, your worker file and `pdfjs-dist` version are mismatched.
+- **The public worker approach is the most robust for Vite.**
+  - Place the correct `pdf.worker.min.js` in your `public/` directory.
+  - Set: `pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'` in both your viewer and extraction code.
+- **react-pdf and pdfjs-dist versions must be compatible.**
+  - As of 2024, `react-pdf@7.x` + `pdfjs-dist@3.x` + React 18 is stable.
+  - React 19 is not yet officially supported by react-pdf 7.x/8.x.
+- **Blob URLs work, but don’t revoke them until the viewer is done.**
+- **If the viewer works in isolation but not in your app, check for prop/lifecycle issues.**
+- **If you see a timeout with no errors, it’s almost always a version or worker mismatch.**
+
+### Troubleshooting Checklist
+- [ ] Is the worker file in `public/pdf.worker.min.js` the exact same version as your installed `pdfjs-dist`?
+- [ ] Are you using `pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'` everywhere?
+- [ ] Are you on React 18, not 19+?
+- [ ] Is your `react-pdf` version compatible with your `pdfjs-dist` version?
+- [ ] Does a minimal viewer (see `TestPDF.tsx`) work with a static file?
+- [ ] Are you passing a valid, non-revoked blob URL to the viewer?
+- [ ] Are there any errors in the browser console?
+
+### Final Working Setup (2025)
+- React 18.3.x
+- react-pdf 7.7.x
+- pdfjs-dist 3.11.x
+- `/public/pdf.worker.min.js` (from the same version as installed pdfjs-dist)
+- `pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'`
+- Minimal viewer for debugging: see `src/TestPDF.tsx`
+
+### If you get stuck
+- Check the version of `pdfjs-dist` in `node_modules` and download the matching worker from unpkg.
+- Try a minimal viewer with a static file to isolate the problem.
+- If you see a timeout and everything else looks right, it’s almost always a version mismatch.
+- If you upgrade React or react-pdf, re-check all of the above.
+
+---
+
+*This section was added after a multi-day debugging marathon. If you’re reading this, you’re already smarter than we were!*
+
+---
+
 
 *This file is here to help AI agents, copilots, or teammates get aligned before contributing to Nodal. When in doubt, ask Jack.*

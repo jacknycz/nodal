@@ -18,7 +18,6 @@ type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
 function LoadingScreen() {
   const { isDark } = useTheme()
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
       <div className="text-center">
@@ -50,22 +49,15 @@ export default function App() {
   const previousUserRef = useRef<any>(null)
 
   const handleLoadBoard = (board: any) => {
-    console.log('handleLoadBoard called with:', board)
     setCurrentBoard(board)
     setCurrentView('board')
     setCurrentBoardName(board.name)
-    
-    // Save board state for persistence
-    console.log('Saving board to localStorage:', { id: board.id, name: board.name })
     localStorage.setItem('nodal_current_board_id', board.id)
     localStorage.setItem('nodal_current_board_name', board.name)
   }
 
-  // Track user state changes to detect actual logout vs loading
   useEffect(() => {
-    // Only clear saved board if we had a user before and now we don't (actual logout)
     if (previousUserRef.current && !user) {
-      console.log('User logged out, clearing saved board state')
       localStorage.removeItem('nodal_current_board_id')
       localStorage.removeItem('nodal_current_board_name')
       setCurrentView('boardroom')
@@ -73,39 +65,26 @@ export default function App() {
       setCurrentBoardName(undefined)
       setHasCheckedSavedBoard(false)
     }
-    
-    // Update the previous user reference
     previousUserRef.current = user
   }, [user])
 
-  // Restore board state from localStorage on app load (only for page refreshes)
   useEffect(() => {
     if (user && currentView === 'boardroom' && !hasCheckedSavedBoard) {
       const savedBoardId = localStorage.getItem('nodal_current_board_id')
       const savedBoardName = localStorage.getItem('nodal_current_board_name')
-      
-      console.log('Checking for saved board:', { savedBoardId, savedBoardName })
-      
       if (savedBoardId && savedBoardName) {
-        // Set loading state to prevent flash
         setIsRestoringBoard(true)
-        
-        // Load the saved board
         const loadSavedBoard = async () => {
           try {
             const { boardStorage } = await import('./features/storage/storage')
             const savedBoard = await boardStorage.loadBoard(savedBoardId)
-            console.log('Loaded saved board:', savedBoard)
             if (savedBoard) {
               handleLoadBoard(savedBoard)
             } else {
-              // Board no longer exists, clear saved state
               localStorage.removeItem('nodal_current_board_id')
               localStorage.removeItem('nodal_current_board_name')
             }
           } catch (error) {
-            console.error('Failed to load saved board:', error)
-            // Clear saved state on error
             localStorage.removeItem('nodal_current_board_id')
             localStorage.removeItem('nodal_current_board_name')
           } finally {
@@ -113,7 +92,6 @@ export default function App() {
             setHasCheckedSavedBoard(true)
           }
         }
-        
         loadSavedBoard()
       } else {
         setHasCheckedSavedBoard(true)
@@ -137,7 +115,6 @@ export default function App() {
 
   const handleOpenBoardRoom = () => {
     setCurrentView('boardroom')
-    // Clear saved board state when going back to Board Room
     localStorage.removeItem('nodal_current_board_id')
     localStorage.removeItem('nodal_current_board_name')
   }
@@ -154,7 +131,6 @@ export default function App() {
     alert('Settings modal coming soon!')
   }
 
-  // Show loading state while checking authentication
   if (user === undefined) {
     return (
       <ThemeProvider>
@@ -163,7 +139,6 @@ export default function App() {
     )
   }
 
-  // Show login screen if not authenticated
   if (!user) {
     return (
       <ThemeProvider>
@@ -172,7 +147,6 @@ export default function App() {
     )
   }
 
-  // Show loading screen while restoring board
   if (isRestoringBoard) {
     return (
       <ThemeProvider>
@@ -181,7 +155,6 @@ export default function App() {
     )
   }
 
-  // Show main app if authenticated
   return (
     <ThemeProvider>
       {isTestMode ? (
