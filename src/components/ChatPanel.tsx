@@ -27,8 +27,8 @@ interface ChatPanelProps {
   onSelectionContextUsed?: () => void
 }
 
-export default function ChatPanel({ 
-  isOpen = false, 
+export default function ChatPanel({
+  isOpen = false,
   onClose,
   className = '',
   selectionContext,
@@ -38,25 +38,26 @@ export default function ChatPanel({
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
-  const [position, setPosition] = useState({ x: 20, y: 100 })
-  const [size, setSize] = useState({ width: 450, height: 600 })
+  const [position, setPosition] = useState({ x: 10, y: 80 })
+  const [size, setSize] = useState({ width: 320, height: 500 })
   const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  
+
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
   const [apiKeyInput, setApiKeyInput] = useState('')
   const [setupLoading, setSetupLoading] = useState(false)
   const [setupError, setSetupError] = useState('')
-  
+
   const chatRef = useRef<HTMLDivElement>(null)
   const messagesRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const apiKeyInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Handle selection context
   const [hasProcessedSelection, setHasProcessedSelection] = useState(false)
-  
+
   // Process selection context when provided
   useEffect(() => {
     if (selectionContext && isOpen && !hasProcessedSelection && !showAPIKeySetup) {
@@ -64,7 +65,7 @@ export default function ChatPanel({
       setHasProcessedSelection(true)
     }
   }, [selectionContext, isOpen, hasProcessedSelection, showAPIKeySetup])
-  
+
   // Reset selection processing when panel closes
   useEffect(() => {
     if (!isOpen) {
@@ -117,14 +118,21 @@ export default function ChatPanel({
         y: e.clientY - dragOffset.y
       })
     }
-  }, [isDragging, dragOffset])
+    if (isResizing) {
+      setSize({
+        width: Math.max(300, e.clientX - dragOffset.x),
+        height: Math.max(400, e.clientY - dragOffset.y)
+      })
+    }
+  }, [isDragging, isResizing, dragOffset])
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false)
+    setIsResizing(false)
   }, [])
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
       return () => {
@@ -132,7 +140,7 @@ export default function ChatPanel({
         document.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isDragging, handleMouseMove, handleMouseUp])
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp])
 
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
@@ -146,7 +154,7 @@ export default function ChatPanel({
 
     try {
       const success = await setAPIKey(apiKeyInput.trim())
-      
+
       if (success) {
         setApiKeyInput('')
         setShowAPIKeySetup(false)
@@ -262,11 +270,11 @@ export default function ChatPanel({
             </span>
           )}
         </div>
-        
+
         <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
           {nodeResponse.content}
         </div>
-        
+
         {nodeResponse.metadata?.tags && nodeResponse.metadata.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {nodeResponse.metadata.tags.map((tag: string, index: number) => (
@@ -308,24 +316,23 @@ export default function ChatPanel({
       }}
     >
       {/* Header */}
-      <div 
-        className="drag-handle flex items-center justify-between p-3 bg-primary-500 text-white rounded-t-lg cursor-move"
-        onMouseDown={handleMouseDown} 
+      <div
+        className="drag-handle flex items-center justify-between px-2 py-1 bg-primary-500 text-white rounded-t-lg cursor-move"
+        onMouseDown={handleMouseDown}
       >
-        <div className="flex items-center gap-2">
-          <MessageCircle size={18} />
-          <span className="font-medium">🧠 AI Assistant</span>
-        </div>
         <div className="flex items-center gap-1">
-          <Button
-            variant="custom"
-            onClick={() => setIsExpanded(false)}
-            className="text-white hover:bg-white/20"
-            title="Close chat"
-          >
-            <Minimize2 size={14} />
-          </Button>
+          <MessageCircle size={18} />
+          <span className="font-medium">nodal</span>
         </div>
+
+        <button
+          variant="custom"
+          onClick={() => setIsExpanded(false)}
+          className="text-white hover:bg-white/20 p-1"
+          title="Close chat"
+        >
+          <Minimize2 size={14} />
+        </button>
       </div>
 
       {isExpanded && (
@@ -338,23 +345,22 @@ export default function ChatPanel({
           >
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] ${
-                  message.role === 'user' 
+                <div className={`max-w-[85%] ${message.role === 'user'
                     ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
-                }`}>
-                  <div 
+                  }`}>
+                  <div
                     className="text-sm"
                     dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
                   />
-                  
+
                   {/* Render structured node responses */}
                   {message.nodeResponses && message.nodeResponses.length > 0 && (
                     <div className="mt-3 space-y-2">
-                      {message.nodeResponses.map((nodeResponse) => 
+                      {message.nodeResponses.map((nodeResponse) =>
                         renderNodeResponse(nodeResponse, message.id)
                       )}
-                      
+
                       {/* Apply all button */}
                       {message.nodeResponses.length > 1 && !message.allApplied && (
                         <Button
@@ -369,14 +375,14 @@ export default function ChatPanel({
                       )}
                     </div>
                   )}
-                  
+
                   <div className="text-xs opacity-70 mt-2">
                     {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
@@ -387,7 +393,7 @@ export default function ChatPanel({
                 </div>
               </div>
             )}
-            
+
             {error && (
               <div className="flex justify-start">
                 <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
@@ -419,7 +425,7 @@ export default function ChatPanel({
                   Enter to send
                 </div>
               </div>
-              
+
               <Button
                 onClick={handleSendMessage}
                 disabled={!currentMessage.trim() || isLoading}
@@ -429,6 +435,19 @@ export default function ChatPanel({
               </Button>
             </div>
           </div>
+
+          {/* Resize Handle */}
+          <div
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gray-400 dark:bg-gray-600 opacity-50 hover:opacity-100 transition-opacity"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setIsResizing(true)
+              setDragOffset({
+                x: e.clientX - size.width,
+                y: e.clientY - size.height
+              })
+            }}
+          />
         </>
       )}
 
@@ -443,7 +462,7 @@ export default function ChatPanel({
               To use the AI assistant, you need to configure your OpenAI API key. Your key is stored locally and never shared.
             </p>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -487,9 +506,9 @@ export default function ChatPanel({
               <p className="mb-2">🔒 Your API key is stored securely in your browser and never sent to our servers.</p>
               <p>
                 Need an API key? Get one from{' '}
-                <a 
-                  href="https://platform.openai.com/api-keys" 
-                  target="_blank" 
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-500 hover:text-blue-600 underline"
                 >

@@ -302,7 +302,7 @@ If you are adding or maintaining PDF viewing or text extraction in Nodal, read t
   - Place the correct `pdf.worker.min.js` in your `public/` directory.
   - Set: `pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'` in both your viewer and extraction code.
 - **react-pdf and pdfjs-dist versions must be compatible.**
-  - As of 2024, `react-pdf@7.x` + `pdfjs-dist@3.x` + React 18 is stable.
+  - As of 2025, `react-pdf@7.x` + `pdfjs-dist@3.x` + React 18 is stable.
   - React 19 is not yet officially supported by react-pdf 7.x/8.x.
 - **Blob URLs work, but don’t revoke them until the viewer is done.**
 - **If the viewer works in isolation but not in your app, check for prop/lifecycle issues.**
