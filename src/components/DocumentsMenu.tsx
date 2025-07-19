@@ -18,6 +18,7 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
   const [previewDocId, setPreviewDocId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const nodes = useBoardStore(state => state.nodes)
   const deleteNode = useBoardStore(state => state.deleteNode)
   const updateNode = useBoardStore(state => state.updateNode)
@@ -29,7 +30,7 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
   const filteredDocs = documents.filter(doc => {
     const q = search.toLowerCase()
     return (
-      doc.data.label?.toLowerCase().includes(q) ||
+      doc.data.title?.toLowerCase().includes(q) ||
       doc.data.fileName?.toLowerCase().includes(q) ||
       doc.data.fileType?.toLowerCase().includes(q) ||
       doc.data.extractedText?.toLowerCase().includes(q)
@@ -63,13 +64,36 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
     setPreviewDocId(null)
   }
 
+  // Replace click logic with hover logic:
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    setIsOpen(true)
+  }
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false)
+    }, 200)
+  }
+
   return (
-    <div ref={menuRef} className={`relative ${className}`}>
+    <div
+      ref={menuRef}
+      className={`relative ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Documents Button */}
       <Button
         className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="Documents"
-        onClick={() => setIsOpen(v => !v)}
+        tabIndex={0}
+        onFocus={handleMouseEnter}
+        onBlur={handleMouseLeave}
+        // REMOVE onClick
       >
         <FileText className="w-6 h-6 text-gray-600 dark:text-gray-300" />
       </Button>
@@ -107,10 +131,10 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
                     <div className="flex items-center gap-2">
                       <button
                         className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline truncate"
-                        title={doc.data.label}
+                        title={doc.data.title}
                         onClick={() => handleFocusNode(doc.id)}
                       >
-                        {doc.data.label}
+                        {doc.data.title}
                       </button>
                       <span className="text-xs text-gray-400">{doc.data.fileType}</span>
                       <span className="text-xs text-gray-400">{formatFileSize(doc.data.fileSize || 0)}</span>
@@ -138,7 +162,7 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
                     </button>
                     {confirmDeleteId === doc.id && (
                       <div className="absolute right-0 mt-8 bg-white dark:bg-gray-900 border border-red-200 dark:border-red-700 rounded shadow p-3 z-50">
-                        <div className="text-sm mb-2">Delete <strong>{doc.data.label}</strong>?</div>
+                        <div className="text-sm mb-2">Delete <strong>{doc.data.title}</strong>?</div>
                         <div className="flex gap-2">
                           <button className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded" onClick={() => setConfirmDeleteId(null)}>Cancel</button>
                           <button className="px-2 py-1 text-xs bg-red-600 text-white rounded" onClick={() => handleDelete(doc.id)}>Delete</button>

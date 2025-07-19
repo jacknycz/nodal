@@ -45,6 +45,7 @@ export default function AvatarMenu({
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const [showRecentBoards, setShowRecentBoards] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -174,12 +175,35 @@ export default function AvatarMenu({
     return null
   }
 
+  // Replace click logic with hover logic:
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+    setIsOpen(true)
+  }
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false)
+    }, 200)
+  }
+
   return (
-    <div ref={menuRef} className={`relative ${className}`}>
+    <div
+      ref={menuRef}
+      className={`relative ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Avatar Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        tabIndex={0}
+        aria-label="User menu"
+        onFocus={handleMouseEnter}
+        onBlur={handleMouseLeave}
       >
         {getUserAvatar() ? (
           <img 
@@ -192,9 +216,8 @@ export default function AvatarMenu({
             <User className="w-5 h-5 text-white" />
           </div>
         )}
-        <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        {/* ChevronDown icon removed */}
       </button>
-
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">

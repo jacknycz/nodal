@@ -18,10 +18,8 @@ import DocumentNode from '../nodes/DocumentNode'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
-import AddNodeButton from '../../components/AddNodeButton'
 import AINodeGenerator from '../../components/AINodeGenerator'
 import BoardNameModal from '../../components/BoardNameModal'
-import BoardRoomModal from '../../components/BoardRoomModal'
 import BokehBackground from '../../components/BokehBackground'
 import ChatPanel from '../../components/ChatPanel'
 import AskAboutSelectionFAB from '../../components/AskAboutSelectionFAB'
@@ -33,8 +31,7 @@ import { boardStorage, type SavedBoard } from '../storage/storage'
 import { 
   extractTextFromFile, 
   validateFile, 
-  createDocumentNode,
-  SUPPORTED_FILE_TYPES 
+  createDocumentNode
 } from '../nodes/documentUtils'
 import BoardSetupModal from '../../components/BoardSetupModal'
 import PreSessionChat from '../../components/PreSessionChat'
@@ -105,7 +102,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
-  const [showBoardRoom, setShowBoardRoom] = useState(false)
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showChat, setShowChat] = useState(true) // Auto-open to show new system
   const [currentBoardName, setCurrentBoardName] = useState<string | undefined>(undefined)
@@ -838,9 +834,9 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       />
 
       {/* Ask About Selection FAB */}
-      <AskAboutSelectionFAB 
+      {/* <AskAboutSelectionFAB 
         onOpenChatWithSelection={handleOpenChatWithSelection}
-      />
+      /> */}
 
       {/* Topic Display */}
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
@@ -869,13 +865,13 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           className="bg-gray-50 dark:bg-gray-900"
         >
         <BokehBackground />
-        <MiniMap />
+        {/* <MiniMap /> */}
         <Controls />
         <Background />
         </ReactFlow>
       </div>
       
-      <AddNodeButton onAddNode={handleAddNode} />
+      {/* <AddNodeButton onAddNode={handleAddNode} /> */}
       
       <AINodeGenerator 
         isOpen={showAIGenerator}

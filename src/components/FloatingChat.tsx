@@ -8,15 +8,7 @@ export default function FloatingChat() {
   const { messages, sendMessage, isLoading, error } = useChat()
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
-  const [isExpanded, setIsExpanded] = useState(false) // Start minimized
-  const [position, setPosition] = useState({ 
-    x: 20, // Top-left corner
-    y: 100 // Below the topbar/logo
-  })
-  const [size, setSize] = useState({ width: 400, height: 600 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const [isExpanded, setIsExpanded] = useState(true)
   
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
@@ -51,27 +43,20 @@ export default function FloatingChat() {
 
   // Focus input when panel opens
   useEffect(() => {
-    if (isExpanded) {
-      if (showAPIKeySetup && apiKeyInputRef.current) {
-        apiKeyInputRef.current.focus()
-      } else if (inputRef.current) {
-        inputRef.current.focus()
-      }
+    if (isExpanded && !showAPIKeySetup && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [isExpanded, showAPIKeySetup])
 
   // Handle window resize to keep chat in bounds
   useEffect(() => {
     const handleResize = () => {
-      setPosition(prev => ({
-        x: Math.min(prev.x, window.innerWidth - size.width),
-        y: Math.min(prev.y, window.innerHeight - (isExpanded ? size.height : 80))
-      }))
+      // No drag/resize logic, so this is effectively a no-op
     }
 
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [size, isExpanded])
+  }, [])
 
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
@@ -108,48 +93,6 @@ export default function FloatingChat() {
     }
   }, [handleAPIKeySubmit])
 
-  // Handle dragging
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('drag-handle')) {
-      setIsDragging(true)
-      setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      })
-    }
-  }, [position])
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y
-      })
-    }
-    if (isResizing) {
-      setSize({
-        width: Math.max(300, e.clientX - dragOffset.x),
-        height: Math.max(400, e.clientY - dragOffset.y)
-      })
-    }
-  }, [isDragging, isResizing, dragOffset])
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-    setIsResizing(false)
-  }, [])
-
-  useEffect(() => {
-    if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-      }
-    }
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp])
-
   // Handle sending messages
   const handleSendMessage = useCallback(async () => {
     if (!currentMessage.trim() || isLoading) return
@@ -182,18 +125,11 @@ export default function FloatingChat() {
   return (
     <div
       ref={chatRef}
-      className="fixed z-50 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 transition-all duration-200 ease-in-out"
-      style={{
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: isExpanded ? size.height : 'auto'
-      }}
+      className="fixed bottom-4 right-4 z-40 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-200 ease-in-out"
     >
       {/* Header */}
       <div
-        className="drag-handle flex items-center justify-between p-3 bg-primary-500 text-white rounded-t-lg cursor-move"
-        onMouseDown={handleMouseDown}
+        className="flex items-center justify-between p-3 bg-primary-500 text-white rounded-t-lg"
       >
         <div className="flex items-center space-x-2">
           <MessageCircle size={20} />
@@ -218,8 +154,9 @@ export default function FloatingChat() {
       </div>
 
       {/* Content */}
-      {isExpanded && (
-        <div className="flex flex-col relative" style={{ height: size.height - 60 }}>
+      <div className={`flex flex-col relative transition-all duration-300 ease-in-out ${
+        isExpanded ? 'h-80 opacity-100' : 'h-0 opacity-0 overflow-hidden'
+      }`}>
           {showAPIKeySetup ? (
             /* API Key Setup */
             <div className="p-6 space-y-4 overflow-y-auto">
@@ -374,21 +311,7 @@ export default function FloatingChat() {
               </div>
             </>
           )}
-
-          {/* Resize handle */}
-          <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gray-400 dark:bg-gray-600 opacity-50 hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              setIsResizing(true)
-              setDragOffset({
-                x: e.clientX - size.width,
-                y: e.clientY - size.height
-              })
-            }}
-          />
         </div>
-      )}
     </div>
   )
 } 

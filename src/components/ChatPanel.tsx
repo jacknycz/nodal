@@ -38,11 +38,6 @@ export default function ChatPanel({
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
-  const [position, setPosition] = useState({ x: 10, y: 80 })
-  const [size, setSize] = useState({ width: 320, height: 500 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
 
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
@@ -99,48 +94,6 @@ export default function ChatPanel({
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [isOpen, isExpanded, showAPIKeySetup, selectionContext])
-
-  // Handle dragging
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('drag-handle')) {
-      setIsDragging(true)
-      setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      })
-    }
-  }, [position])
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y
-      })
-    }
-    if (isResizing) {
-      setSize({
-        width: Math.max(300, e.clientX - dragOffset.x),
-        height: Math.max(400, e.clientY - dragOffset.y)
-      })
-    }
-  }, [isDragging, isResizing, dragOffset])
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-    setIsResizing(false)
-  }, [])
-
-  useEffect(() => {
-    if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-      }
-    }
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp])
 
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
@@ -290,58 +243,49 @@ export default function ChatPanel({
 
   if (!isOpen) return null
 
-  // Minimized state: show only chat icon button
-  if (!isExpanded) {
-    return (
+  return (
+    <div className="fixed top-24 right-4 z-40">
+      {/* Minimized button with smooth transition */}
       <button
-        className="fixed z-50 bg-primary-500 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3  transition-colors"
-        style={{ left: position.x, top: position.y }}
+        className={`absolute cursor-pointer top-0 right-0 bg-primary-500 dark:bg-primary-500/80 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out ${
+          isExpanded 
+            ? 'opacity-0 scale-75 pointer-events-none' 
+            : 'opacity-100 scale-100 hover:scale-110'
+        }`}
         aria-label="Open chat"
         onClick={() => setIsExpanded(true)}
       >
         <MessageCircle size={28} className="text-white" />
       </button>
-    )
-  }
 
-  return (
-    <div
-      ref={chatRef}
-      className={`fixed z-50 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 ${className}`}
-      style={{
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: isExpanded ? size.height : 'auto'
-      }}
-    >
-      {/* Header */}
+      {/* Expanded panel with smooth transition */}
       <div
-        className="drag-handle flex items-center justify-between px-2 py-1 bg-primary-500 text-white rounded-t-lg cursor-move"
-        onMouseDown={handleMouseDown}
+        ref={chatRef}
+        className={`bg-white dark:bg-gray-900 rounded-4xl shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-300 ease-in-out ${
+          isExpanded 
+            ? 'opacity-100 scale-100' 
+            : 'opacity-0 scale-95 pointer-events-none'
+        } ${className}`}
+      >
+      {/* Header */}
+      <button
+        onClick={() => setIsExpanded(false)}
+        className="flex w-full items-center justify-between pl-4 pr-4 py-3 bg-primary-500/50 dark:bg-primary-500/50 text-white rounded-t-4xl"
       >
         <div className="flex items-center gap-1">
           <MessageCircle size={18} />
           <span className="font-medium">nodal</span>
         </div>
 
-        <button
-          variant="custom"
-          onClick={() => setIsExpanded(false)}
-          className="text-white hover:bg-white/20 p-1"
-          title="Close chat"
-        >
-          <Minimize2 size={14} />
-        </button>
-      </div>
+        <Minimize2 size={14} className='text-white' />
+      </button>
 
       {isExpanded && (
         <>
           {/* Messages */}
           <div
             ref={messagesRef}
-            className="flex-1 overflow-y-auto p-4 space-y-3"
-            style={{ height: size.height - 140 }}
+            className="flex-1 overflow-y-auto p-4 space-y-3 h-64"
           >
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -414,40 +358,24 @@ export default function ChatPanel({
                   ref={inputRef}
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
                   placeholder="Hey! Ask me anything..."
-                  className="w-full placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  className="w-full placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   rows={1}
                   // style={{ minHeight: '40px', maxHeight: '120px' }}
                   disabled={isLoading}
                 />
-                <div className="absolute bottom-1 right-3 text-xs text-gray-400">
-                  Enter to send
-                </div>
               </div>
 
               <Button
                 onClick={handleSendMessage}
                 disabled={!currentMessage.trim() || isLoading}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                variant="custom"
+                className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
               >
                 <Send size={16} />
               </Button>
             </div>
           </div>
-
-          {/* Resize Handle */}
-          <div
-            className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gray-400 dark:bg-gray-600 opacity-50 hover:opacity-100 transition-opacity"
-            onMouseDown={(e) => {
-              e.preventDefault()
-              setIsResizing(true)
-              setDragOffset({
-                x: e.clientX - size.width,
-                y: e.clientY - size.height
-              })
-            }}
-          />
         </>
       )}
 
@@ -519,6 +447,7 @@ export default function ChatPanel({
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 } 

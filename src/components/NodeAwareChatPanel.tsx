@@ -40,10 +40,6 @@ export default function NodeAwareChatPanel({
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
-  const [position, setPosition] = useState({ x: 20, y: 100 })
-  const [size, setSize] = useState({ width: 450, height: 600 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
@@ -100,41 +96,6 @@ export default function NodeAwareChatPanel({
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [isOpen, isExpanded, showAPIKeySetup, selectionContext])
-
-  // Handle dragging
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget || (e.target as HTMLElement).classList.contains('drag-handle')) {
-      setIsDragging(true)
-      setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y
-      })
-    }
-  }, [position])
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y
-      })
-    }
-  }, [isDragging, dragOffset])
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-  }, [])
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-      }
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp])
 
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
@@ -287,13 +248,7 @@ export default function NodeAwareChatPanel({
   if (showAPIKeySetup) {
     return (
       <div
-        className={`fixed z-50 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 ${className}`}
-        style={{
-          left: position.x,
-          top: position.y,
-          width: size.width,
-          height: 400
-        }}
+        className={`fixed bottom-4 right-4 z-40 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 ${className}`}
       >
         <div className="p-6 h-full flex flex-col">
           <div className="flex items-center justify-between mb-4">
@@ -355,20 +310,32 @@ export default function NodeAwareChatPanel({
     : []
 
   return (
-    <div
-      ref={chatRef}
-      className={`fixed z-50 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 ${className}`}
-      style={{
-        left: position.x,
-        top: position.y,
-        width: size.width,
-        height: isExpanded ? size.height : 'auto'
-      }}
-    >
+    <div className="fixed bottom-4 right-4 z-40">
+      {/* Minimized button with smooth transition */}
+      <button
+        className={`absolute bottom-0 right-0 bg-gradient-to-r from-green-500 to-blue-600 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out ${
+          isExpanded 
+            ? 'opacity-0 scale-75 pointer-events-none' 
+            : 'opacity-100 scale-100 hover:scale-110'
+        }`}
+        aria-label="Open AI chat"
+        onClick={() => setIsExpanded(true)}
+      >
+        <MessageCircle size={28} className="text-white" />
+      </button>
+
+      {/* Expanded panel with smooth transition */}
+      <div
+        ref={chatRef}
+        className={`bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-300 ease-in-out ${
+          isExpanded 
+            ? 'opacity-100 scale-100' 
+            : 'opacity-0 scale-95 pointer-events-none'
+        } ${className}`}
+      >
       {/* Header */}
-      <div 
-        className="drag-handle flex items-center justify-between p-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-t-lg cursor-move"
-        onMouseDown={handleMouseDown}
+      <div
+        className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-t-lg"
       >
         <div className="flex items-center gap-2">
           <MessageCircle size={18} />
@@ -413,7 +380,7 @@ export default function NodeAwareChatPanel({
           <div
             ref={messagesRef}
             className="flex-1 overflow-y-auto p-4 space-y-3"
-            style={{ height: size.height - 140 }}
+            style={{ height: 'calc(100% - 140px)' }}
           >
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -591,6 +558,7 @@ export default function NodeAwareChatPanel({
           </div>
         </>
       )}
+      </div>
     </div>
   )
 } 

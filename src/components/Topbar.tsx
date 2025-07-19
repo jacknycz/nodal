@@ -40,7 +40,7 @@ export default function Topbar({
   const { isDark } = useTheme()
 
   return (
-    <header className="absolute top-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+    <header className="absolute top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between px-6 py-3">
         {/* Logo */}
         <div className="flex items-center gap-3">
@@ -95,13 +95,13 @@ export default function Topbar({
 
         {/* Right - Controls */}
         <div className="flex items-center gap-3">
+        <ThemeToggle />
+
           <AISettingsMenu 
             isTestMode={isTestMode}
             onToggleTestMode={onToggleTestMode}
           />
           <DocumentsMenu />
-          <ThemeToggle />
-          
           <AvatarMenu
             currentBoardName={currentBoardName}
             saveStatus={saveStatus}

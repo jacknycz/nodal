@@ -245,7 +245,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
             </div>
 
             {/* After the content display, add media preview area */}
-            {nodeData.media && nodeData.media.length > 0 && (
+            {/* {nodeData.media && nodeData.media.length > 0 && (
               <div className="flex flex-row flex-wrap gap-2 mt-2 px-2">
                 {nodeData.media.map((mediaId, idx) => {
                   const docNode = allNodes.find(n => n.id === mediaId && n.data.type === 'document');
@@ -279,7 +279,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                   );
                 })}
               </div>
-            )}
+            )} */}
 
             {/* Bottom Row: AI Generated Indicator + Delete Button */}
             <div className="flex items-center justify-between px-2 pb-1">
@@ -355,7 +355,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                   }}
                 />
               </div>
-              <label className="block text-sm font-medium mt-3 mb-1 text-gray-700 dark:text-gray-200">Media (images, max 1MB each)</label>
+              {/* <label className="block text-sm font-medium mt-3 mb-1 text-gray-700 dark:text-gray-200">Media (images, max 1MB each)</label>
               <div
                 className="border-2 border-dashed rounded p-4 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer mb-2"
                 tabIndex={0}
@@ -461,7 +461,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                     );
                   })}
                 </div>
-              )}
+              )} */}
             </div>
             <div className="flex justify-end gap-2 mt-4">
               <button className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white" onClick={() => setShowEditModal(false)}>Cancel</button>

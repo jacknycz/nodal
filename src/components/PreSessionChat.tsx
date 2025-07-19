@@ -54,7 +54,7 @@ export default function PreSessionChat({ boardBrief, onReady }: PreSessionChatPr
         </div>
         <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
           <input
-            className="flex-1 px-3 py-2 border rounded-lg"
+            className="flex-1 px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
             placeholder="Type a message..."
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -62,12 +62,12 @@ export default function PreSessionChat({ boardBrief, onReady }: PreSessionChatPr
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300"
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg disabled:bg-gray-300"
             disabled={!input.trim() || isReady}
           >Send</button>
         </form>
         <button
-          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium mt-auto disabled:bg-gray-300"
+          className="w-full px-4 py-2 bg-secondary-500 text-black rounded-lg font-medium mt-auto disabled:bg-gray-300"
           onClick={() => { setIsReady(true); onReady(messages) }}
           disabled={isReady}
         >
