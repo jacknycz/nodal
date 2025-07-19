@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from 'pres-start-core'
-import { MessageCircle, Minimize2, Maximize2, Send, Loader2, Command, Key, AlertCircle } from 'lucide-react'
+import { MessageCircle, Minimize2, Send, Loader2, Command, Key, AlertCircle } from 'lucide-react'
 import { useChat } from '../hooks/useChat'
 import { useAIConfig } from '../features/ai/aiContext'
 
@@ -123,40 +123,52 @@ export default function FloatingChat() {
   }, [])
 
   return (
-    <div
-      ref={chatRef}
-      className="fixed bottom-4 right-4 z-40 bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-200 ease-in-out"
-    >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between p-3 bg-primary-500 text-white rounded-t-lg"
-      >
-        <div className="flex items-center space-x-2">
-          <MessageCircle size={20} />
-          <span className="font-semibold">
-            {showAPIKeySetup ? '🔑 Setup Required' : '🦸‍♂️ Superman AI'}
-          </span>
-          {!isExpanded && messages.length > 0 && (
-            <span className="ml-2 bg-white/20 text-xs px-2 py-1 rounded-full">
+    <div className="fixed bottom-4 right-4 z-40">
+      {/* Minimized button - only show when not expanded */}
+      {!isExpanded && (
+        <button
+          className="absolute bottom-0 right-0 bg-primary-500 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out opacity-100 scale-100 hover:scale-110"
+          aria-label="Open Superman AI chat"
+          onClick={() => setIsExpanded(true)}
+        >
+          <MessageCircle size={28} className="text-white" />
+          {messages.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-white/20 text-xs px-2 py-1 rounded-full text-white">
               {messages.length}
             </span>
           )}
-        </div>
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 hover:bg-white/20 rounded transition-colors"
-            title={isExpanded ? 'Minimize' : 'Maximize'}
-          >
-            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-          </button>
-        </div>
-      </div>
+        </button>
+      )}
 
-      {/* Content */}
-      <div className={`flex flex-col relative transition-all duration-300 ease-in-out ${
-        isExpanded ? 'h-80 opacity-100' : 'h-0 opacity-0 overflow-hidden'
-      }`}>
+      {/* Expanded panel - only render when expanded */}
+      {isExpanded && (
+        <div
+          ref={chatRef}
+          className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-200 ease-in-out"
+        >
+          {/* Header */}
+          <div
+            className="flex items-center justify-between p-3 bg-primary-500 text-white rounded-t-lg"
+          >
+            <div className="flex items-center space-x-2">
+              <MessageCircle size={20} />
+              <span className="font-semibold">
+                {showAPIKeySetup ? '🔑 Setup Required' : '🦸‍♂️ Superman AI'}
+              </span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="p-1 hover:bg-white/20 rounded transition-colors"
+                title="Minimize"
+              >
+                <Minimize2 size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex flex-col relative h-80">
           {showAPIKeySetup ? (
             /* API Key Setup */
             <div className="p-6 space-y-4 overflow-y-auto">
@@ -311,7 +323,9 @@ export default function FloatingChat() {
               </div>
             </>
           )}
-        </div>
+            </div>
+          </div>
+        )}
     </div>
   )
 } 

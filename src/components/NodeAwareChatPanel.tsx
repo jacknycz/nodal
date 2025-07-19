@@ -3,21 +3,10 @@ import { Button } from 'pres-start-core'
 import { MessageCircle, X, Minimize2, Maximize2, Send, Loader2, Plus, Sparkles, AlertCircle } from 'lucide-react'
 import { useNodeAwareChat } from '../hooks/useNodeAwareChat'
 import { useAIConfig } from '../features/ai/aiContext'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { NodeResponse, ConnectionSuggestion } from '../types'
 
-interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  timestamp: Date
-  nodeResponses?: NodeResponse[]
-  connectionSuggestions?: ConnectionSuggestion[]
-  allApplied?: boolean
-  metadata?: {
-    tokens?: number
-    processingTime?: number
-  }
-}
+
 
 interface NodeAwareChatPanelProps {
   isOpen?: boolean
@@ -311,28 +300,23 @@ export default function NodeAwareChatPanel({
 
   return (
     <div className="fixed bottom-4 right-4 z-40">
-      {/* Minimized button with smooth transition */}
-      <button
-        className={`absolute bottom-0 right-0 bg-gradient-to-r from-green-500 to-blue-600 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out ${
-          isExpanded 
-            ? 'opacity-0 scale-75 pointer-events-none' 
-            : 'opacity-100 scale-100 hover:scale-110'
-        }`}
-        aria-label="Open AI chat"
-        onClick={() => setIsExpanded(true)}
-      >
-        <MessageCircle size={28} className="text-white" />
-      </button>
+      {/* Minimized button - only show when not expanded */}
+      {!isExpanded && (
+        <button
+          className="absolute bottom-0 right-0 bg-gradient-to-r from-green-500 to-blue-600 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out opacity-100 scale-100 hover:scale-110"
+          aria-label="Open AI chat"
+          onClick={() => setIsExpanded(true)}
+        >
+          <MessageCircle size={28} className="text-white" />
+        </button>
+      )}
 
-      {/* Expanded panel with smooth transition */}
-      <div
-        ref={chatRef}
-        className={`bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-300 ease-in-out ${
-          isExpanded 
-            ? 'opacity-100 scale-100' 
-            : 'opacity-0 scale-95 pointer-events-none'
-        } ${className}`}
-      >
+      {/* Expanded panel - only render when expanded */}
+      {isExpanded && (
+        <div
+          ref={chatRef}
+          className={`bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
+        >
       {/* Header */}
       <div
         className="flex items-center justify-between p-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-t-lg"
@@ -558,7 +542,8 @@ export default function NodeAwareChatPanel({
           </div>
         </>
       )}
-      </div>
+        </div>
+      )}
     </div>
   )
 } 

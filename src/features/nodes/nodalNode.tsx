@@ -6,13 +6,15 @@ import type { BoardNode } from '../board/boardTypes'
 import { useNodeActions } from './useNodeActions'
 import TipTapEditor from '../../components/TipTapEditor';
 import { Button } from 'pres-start-core';
-import { PencilIcon, TrashIcon } from 'lucide-react'
+import { PencilIcon, TrashIcon, Star } from 'lucide-react'
 import { createPortal } from 'react-dom';
 import { useBoardStore } from '../board/boardSlice';
 import { boardStorage } from '../storage/storage';
 import { createDocumentNode } from './documentUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../auth/supabaseClient'
+import { useFocusStore } from '../focus/focusSlice';
+import { useFocusTree } from '../focus/useFocusTree';
 
 // Confirmation Modal Component
 function DeleteConfirmationModal({
@@ -75,6 +77,11 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   const allNodes = useBoardStore(state => state.nodes);
   const setNodes = useBoardStore(state => state.setNodes);
   const nodes = useBoardStore(state => state.nodes);
+  const { isFocusMode, focusedNodeId, enterFocusMode, exitFocusMode, setFocusTree } = useFocusStore();
+  const { isNodeInFocusTree, buildFocusTree } = useFocusTree();
+  const isFocused = isFocusMode && isNodeInFocusTree(id);
+  const isRootFocus = isFocusMode && focusedNodeId === id;
+  const isFaded = isFocusMode && !isFocused;
 
   // Label editing state
   const [isEditingLabel, setIsEditingLabel] = useState(false)
@@ -150,6 +157,16 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   // Update the currentBoardId to use the store
   const currentBoardId = useBoardStore(state => state.currentBoardId);
 
+  const handleFocusToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (isRootFocus) {
+      exitFocusMode();
+    } else {
+      enterFocusMode(id);
+      setFocusTree(buildFocusTree(id));
+    }
+  };
+
   return (
     <>
       <div
@@ -159,8 +176,22 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
           hover:shadow-xl
           w-80 max-w-md
           group
-          ${(isEditingLabel) ? 'border border-blue-400 bg-blue-50' : ''}`}
+          ${(isEditingLabel) ? 'border border-blue-400 bg-blue-50' : ''}
+          ${isFocused ? 'shadow-[0_0_0_4px_rgba(250,204,21,0.5)]' : ''}
+          ${isFaded ? 'opacity-40 blur-[2px] pointer-events-none' : ''}
+        `}
       >
+        {/* Focus Star Button */}
+        {/* eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-unused-vars */}
+        <button
+          className={`absolute top-2 right-2 z-20 p-1 rounded-full border-2 transition-colors
+            ${isRootFocus ? 'bg-yellow-400 border-yellow-500 text-white shadow-lg' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-400 hover:text-yellow-400 hover:border-yellow-400'}
+          `}
+          title={isRootFocus ? 'Unfocus' : 'Focus on this node and its children'}
+          onClick={handleFocusToggle}
+        >
+          <Star size={20} fill={isRootFocus ? '#facc15' : 'none'} />
+        </button>
         {/* Easy Connect Pattern: Simple visible handles */}
         <Handle
           type="source"

@@ -146,6 +146,30 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 
 ---
 
+## UI Component Patterns & Recent Updates
+
+### Chat Panel System
+- **Three Chat Components:** `ChatPanel.tsx`, `NodeAwareChatPanel.tsx`, `FloatingChat.tsx`
+- **Consistent Behavior:** All chat panels use hover-based dropdowns, smooth animations, and fixed positioning
+- **Animation Patterns:** 300ms transitions with `ease-in-out` timing for minimize/expand
+- **Z-Index Hierarchy:** Topbar (`z-[60]`) > Chat panels (`z-40`) > Other modals (`z-50`)
+- **Height Adjustment:** Chat panels support dynamic height resizing via drag handles
+- **Minimized State:** When minimized, panels are completely removed from DOM to prevent interference with board interactions
+
+### Topbar Menu Consistency
+- **Hover-Based Dropdowns:** All topbar menus (AI Settings, Avatar, Documents) use consistent hover behavior
+- **No Click Triggers:** Dropdowns open on hover, close on mouse leave with 200ms delay
+- **Avatar Menu:** Uses avatar image as trigger (no chevron icon), matches other menu behaviors
+- **Documents Menu:** FileText icon trigger with hover behavior, consistent with AI Settings
+
+### Animation & Interaction Patterns
+- **Smooth Transitions:** 300ms duration for most UI state changes
+- **Scale + Opacity:** Common pattern for show/hide animations
+- **Pointer Events:** Disabled during transitions to prevent interaction issues
+- **Conditional Rendering:** Components completely removed from DOM when not needed (not just hidden)
+
+---
+
 ## Current Implementation Notes
 - **Board Room** — Landing page with board management, user welcome, create/open actions
 - **Authentication** — Google OAuth with email/password fallback
@@ -177,6 +201,11 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 ---
 
 ## Common Gotchas
+- **Z-Index Conflicts:** Ensure Topbar (`z-[60]`) is always above chat panels (`z-40`)
+- **Chat Panel Interference:** Minimized chat panels must be completely removed from DOM, not just hidden
+- **Menu Consistency:** All topbar menus should use hover behavior, not click triggers
+- **Animation Performance:** Use `transform` and `opacity` for animations, avoid layout-triggering properties
+- **Pointer Events:** Disable pointer events during transitions to prevent interaction conflicts
 - **XYFlow Integration** — Node/edge management patterns and event handling
 - **Canvas Animations** — Performance considerations for background effects
 - **Supabase Queries** — Proper error handling and loading states
@@ -188,6 +217,10 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 ---
 
 ## When You're Helping Me:
+- **UI Consistency:** Maintain consistent hover behaviors and animation patterns across similar components
+- **Z-Index Management:** Always consider layering hierarchy when adding new floating elements
+- **Performance:** Use conditional rendering instead of CSS hiding for elements that shouldn't interfere with interactions
+- **Animation Timing:** Stick to 300ms duration with `ease-in-out` for most UI transitions
 - Write idiomatic, modern React + TypeScript code
 - Keep code readable, maintainable, and clearly organized by feature/slice
 - Favor functional, atomic components over monoliths

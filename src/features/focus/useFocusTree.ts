@@ -8,29 +8,30 @@ export function useFocusTree() {
   const { focusedNodeId, focusTree, setFocusTree } = useFocusStore()
 
   const buildFocusTree = useCallback(
-    (startNodeId: string, maxDepth: number = 3): string[] => {
-      const visited = new Set<string>()
-      const tree: string[] = []
-      
-      function traverse(nodeId: string, depth: number) {
-        if (depth > maxDepth || visited.has(nodeId)) return
-        
-        visited.add(nodeId)
-        tree.push(nodeId)
-        
-        // Find all connected nodes
-        const connectedEdges = edges.filter(
-          edge => edge.source === nodeId || edge.target === nodeId
-        )
-        
-        for (const edge of connectedEdges) {
-          const nextNodeId = edge.source === nodeId ? edge.target : edge.source
-          traverse(nextNodeId, depth + 1)
+    (startNodeId: string, maxDepth: number = 2): string[] => {
+      const visited = new Set<string>();
+      const tree: string[] = [];
+      const queue: Array<{ nodeId: string; depth: number }> = [{ nodeId: startNodeId, depth: 0 }];
+
+      while (queue.length > 0) {
+        const { nodeId, depth } = queue.shift()!;
+        if (visited.has(nodeId) || depth > maxDepth) continue;
+        visited.add(nodeId);
+        tree.push(nodeId);
+
+        // Find all directly connected nodes (either direction)
+        const connected = edges
+          .filter(edge => edge.source === nodeId || edge.target === nodeId)
+          .map(edge => (edge.source === nodeId ? edge.target : edge.source));
+
+        for (const neighbor of connected) {
+          if (!visited.has(neighbor)) {
+            queue.push({ nodeId: neighbor, depth: depth + 1 });
+          }
         }
       }
-      
-      traverse(startNodeId, 0)
-      return tree
+
+      return tree;
     },
     [edges]
   )

@@ -38,6 +38,8 @@ import PreSessionChat from '../../components/PreSessionChat'
 import { useAINodeGenerator } from '../ai/useAINodeGenerator'
 import { useAI } from '../ai/useAI'
 import AIClient from '../ai/aiClient'
+import { useFocusStore } from '../focus/focusSlice';
+import { useFocusTree } from '../focus/useFocusTree';
 
 import '@xyflow/react/dist/style.css'
 import type { BoardNode, BoardEdge } from './boardTypes'
@@ -796,6 +798,18 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     const newNodes = layoutMindMap(nodes, edges)
     setNodes(newNodes)
   }, [nodes, edges, setNodes])
+
+  const { enterFocusMode, focusedNodeId, setFocusTree } = useFocusStore();
+  const { buildFocusTree } = useFocusTree();
+
+  // Auto-focus the first node on a new board
+  React.useEffect(() => {
+    if (nodes.length === 1 && !focusedNodeId) {
+      const node = nodes[0];
+      enterFocusMode(node.id);
+      setFocusTree(buildFocusTree(node.id));
+    }
+  }, [nodes, focusedNodeId, enterFocusMode, setFocusTree, buildFocusTree]);
 
   return (
     <div className="w-full h-full relative">
