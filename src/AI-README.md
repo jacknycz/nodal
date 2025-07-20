@@ -149,7 +149,7 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 ## UI Component Patterns & Recent Updates
 
 ### Chat Panel System
-- **Three Chat Components:** `ChatPanel.tsx`, `NodeAwareChatPanel.tsx`, `FloatingChat.tsx`
+- **Two Chat Components:** `ChatPanel.tsx`, `NodeAwareChatPanel.tsx`
 - **Consistent Behavior:** All chat panels use hover-based dropdowns, smooth animations, and fixed positioning
 - **Animation Patterns:** 300ms transitions with `ease-in-out` timing for minimize/expand
 - **Z-Index Hierarchy:** Topbar (`z-[60]`) > Chat panels (`z-40`) > Other modals (`z-50`)

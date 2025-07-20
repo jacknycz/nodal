@@ -990,7 +990,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         </ReactFlow>
       </div>
       
-      {/* <AddNodeButton onAddNode={handleAddNode} /> */}
+
       
       <AINodeGenerator 
         isOpen={showAIGenerator}
@@ -1005,7 +1005,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         existingNames={existingBoardNames.filter(name => name !== currentBoardName)}
       />
 
-      {/* Removed BoardRoomModal and related state/logic */}
+
 
       <TopicModal
         isOpen={showTopicModal}

@@ -283,7 +283,7 @@ export default function ChatPanel({
               <div
                 ref={messagesRef}
                 className="flex-1 overflow-y-auto p-4 space-y-3"
-                style={{ height: `${panelHeight - 140}px` }} // Subtract header + input + resize handle height
+                style={{ height: `${panelHeight - 160}px` }} // Subtract header + input + resize handle height
               >
                 {messages.map((message) => (
                   <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -357,8 +357,8 @@ export default function ChatPanel({
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
                       placeholder="Hey! Ask me anything..."
-                      className="w-full text-xs placeholder:text-gray-500 min-h-16 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      rows={4}
+                      className="w-full text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      rows={3}
                       disabled={isLoading}
                     />
                   </div>
