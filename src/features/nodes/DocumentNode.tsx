@@ -21,71 +21,24 @@ function PDFViewer({
   fileUrl: string
   fileName: string 
 }) {
-  const [numPages, setNumPages] = useState<number | null>(null)
-  const [pageNumber, setPageNumber] = useState(1)
+  const [numPages, setNumPages] = useState<number>(0)
   const [scale, setScale] = useState(1.0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Debug logging
   useEffect(() => {
-    console.log('🔍 PDFViewer mounted with URL:', fileUrl)
-    console.log('🔍 PDFViewer fileName:', fileName)
-    
-    // Test if blob URL is accessible
-    if (fileUrl.startsWith('blob:')) {
-      fetch(fileUrl)
-        .then(response => {
-          console.log('✅ Blob URL is accessible:', response.status, response.statusText)
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-          }
-          return response.blob()
-        })
-        .then(blob => {
-          console.log('✅ Blob content type:', blob.type)
-          console.log('✅ Blob size:', blob.size)
-        })
-        .catch(error => {
-          console.error('❌ Blob URL test failed:', error)
-          setError(`Blob URL error: ${error.message}`)
-          setLoading(false)
-        })
-    }
-    
-    // Add timeout to detect if loading is stuck
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn('⚠️ PDF loading timeout after 10 seconds')
-        setError('PDF loading timeout - please try again')
-        setLoading(false)
-      }
-    }, 10000)
-    
-    return () => clearTimeout(timeout)
-  }, [fileUrl, fileName, loading])
+    setLoading(true)
+    setError(null)
+  }, [fileUrl])
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    console.log('✅ PDF loaded successfully with', numPages, 'pages')
     setNumPages(numPages)
     setLoading(false)
   }
 
   const onDocumentLoadError = (error: Error) => {
-    console.error('❌ PDF load error:', error)
     setError(error.message)
     setLoading(false)
-  }
-
-  const changePage = (offset: number) => {
-    setPageNumber(prevPageNumber => {
-      const newPage = prevPageNumber + offset
-      return Math.min(Math.max(1, newPage), numPages || 1)
-    })
-  }
-
-  const changeScale = (newScale: number) => {
-    setScale(Math.max(0.5, Math.min(2.0, newScale)))
   }
 
   if (loading) {
@@ -112,32 +65,12 @@ function PDFViewer({
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+    <div className="bg-gray-50 dark:bg-gray-700 rounded p-3 max-h-[70vh] overflow-y-auto">
       {/* PDF Controls */}
-      <div className="flex items-center justify-between mb-3 p-2 bg-white dark:bg-gray-800 rounded border">
+      <div className="flex items-center justify-end mb-3 p-2 bg-white dark:bg-gray-800 rounded border">
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => changePage(-1)}
-            disabled={pageNumber <= 1}
-            className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded disabled:opacity-50"
-          >
-            ←
-          </button>
-          <span className="text-sm text-gray-600 dark:text-gray-400">
-            Page {pageNumber} of {numPages}
-          </span>
-          <button
-            onClick={() => changePage(1)}
-            disabled={pageNumber >= (numPages || 1)}
-            className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded disabled:opacity-50"
-          >
-            →
-          </button>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => changeScale(scale - 0.1)}
+            onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
             className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded"
           >
             -
@@ -146,31 +79,33 @@ function PDFViewer({
             {Math.round(scale * 100)}%
           </span>
           <button
-            onClick={() => changeScale(scale + 0.1)}
+            onClick={() => setScale(s => Math.min(2.0, s + 0.1))}
             className="px-2 py-1 text-sm bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded"
           >
             +
           </button>
         </div>
       </div>
-
       {/* PDF Content */}
-      <div className="flex justify-center">
-        <div className="border border-gray-300 dark:border-gray-600 bg-white">
-          <Document
-            file={fileUrl}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading="Loading PDF..."
-            error="Failed to load PDF"
-          >
-            <Page 
-              pageNumber={pageNumber} 
+      <div className="flex flex-col items-center">
+        <Document
+          file={fileUrl}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading="Loading PDF..."
+          error="Failed to load PDF"
+        >
+          {Array.from({ length: numPages }, (_, i) => (
+            <Page
+              key={`page_${i + 1}`}
+              pageNumber={i + 1}
               scale={scale}
-              className="max-w-full"
+              className="max-w-full mb-4 shadow"
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
             />
-          </Document>
-        </div>
+          ))}
+        </Document>
       </div>
     </div>
   )
