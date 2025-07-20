@@ -114,6 +114,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showSetup, setShowSetup] = React.useState(false); // was: !boardBrief
   const [showPreSession, setShowPreSession] = React.useState(false)
+  const [isLoadingBoard, setIsLoadingBoard] = useState(false) // Add this flag
   
   // Refs for autosave
   const autosaveTimeoutRef = useRef<number | null>(null)
@@ -144,18 +145,21 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       const boardData = {
         nodes,
         edges,
-        viewport: viewport || { x: 0, y: 0, zoom: 1 }
+        viewport: viewport || { x: 0, y: 0, zoom: 1 },
+        topic // Add topic to saved data
       }
 
+      console.log('🔄 Auto-saving board with topic:', topic) // Add console log
       await boardStorage.updateBoard(localBoardId, boardData) // Use localBoardId
       lastSavedDataRef.current = currentData
       setHasUnsavedChanges(false)
       setSaveStatus('saved')
+      console.log('✅ Auto-save completed with topic:', topic) // Add console log
     } catch (error) {
       console.error('Auto-save failed:', error)
       setSaveStatus('error')
     }
-  }, [nodes, edges, viewport, localBoardId, currentBoardName, getCurrentDataHash]) // Use localBoardId
+  }, [nodes, edges, viewport, topic, localBoardId, currentBoardName, getCurrentDataHash]) // Add topic to dependencies
 
   // Auto-save on changes
   useEffect(() => {
@@ -480,9 +484,11 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       const boardData = {
         nodes,
         edges,
-        viewport: viewport || { x: 0, y: 0, zoom: 1 }
+        viewport: viewport || { x: 0, y: 0, zoom: 1 },
+        topic // Add topic to saved data
       }
 
+      console.log('💾 Manual save - saving board with topic:', topic) // Add console log
       console.log('Save attempt:', {
         boardName,
         localBoardId, // Use localBoardId
@@ -493,14 +499,14 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       if (localBoardId && currentBoardName === boardName) { // Use localBoardId
         // Update existing board
         await boardStorage.updateBoard(localBoardId, boardData) // Use localBoardId
-        console.log('Board updated successfully!')
+        console.log('✅ Board updated successfully with topic:', topic) // Add console log
       } else {
         // Save new board
         const boardId = await boardStorage.saveBoard(boardName, boardData)
         setLocalBoardId(boardId) // Use localBoardId
         setCurrentBoardId(boardId) // Set in store
         setCurrentBoardName(boardName)
-        console.log('Board saved successfully! New ID:', boardId)
+        console.log('✅ Board saved successfully! New ID:', boardId, 'with topic:', topic) // Add console log
       }
 
       // Update tracking state
@@ -520,25 +526,38 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
   const handleLoadBoard = async (board: SavedBoard) => {
     try {
-      console.log('Loading board:', board)
-      console.log('Board data:', board.data)
-      console.log('Nodes to set:', board.data.nodes)
-      console.log('Edges to set:', board.data.edges)
+      setIsLoadingBoard(true) // Set loading flag
+      console.log('📂 Loading board:', board)
+      console.log('📂 Board data:', board.data)
+      console.log('📂 Saved topic in board data:', board.data.topic) // Add console log
+      console.log('📂 Nodes to set:', board.data.nodes)
+      console.log('📂 Edges to set:', board.data.edges)
       
       // Use the board data directly - no need to reload from storage
       setNodes(layoutMindMap(board.data.nodes, board.data.edges))
       setEdges(board.data.edges)
       updateViewport(board.data.viewport)
+      
+      // Restore topic if it exists in the saved data
+      if (board.data.topic) {
+        console.log('🔄 Restoring topic from saved data:', board.data.topic) // Add console log
+        setTopic(board.data.topic)
+      } else {
+        console.log('⚠️ No topic found in saved board data') // Add console log
+      }
+      
       setLocalBoardId(board.id) // Use localBoardId
       setCurrentBoardId(board.id) // Set in store
       setCurrentBoardName(board.name)
       lastSavedDataRef.current = getCurrentDataHash() // Use the same format as getCurrentDataHash
       setHasUnsavedChanges(false)
       setSaveStatus('saved')
-      console.log('Board loaded successfully!')
+      console.log('✅ Board loaded successfully!') // Add console log
     } catch (error) {
       console.error('Failed to load board:', error)
       // TODO: Show error toast
+    } finally {
+      setIsLoadingBoard(false) // Clear loading flag
     }
   }
 
@@ -708,15 +727,16 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     setSelectionContext(undefined)
   }
 
-  // Show topic modal on new/empty board
+  // Show topic modal on new/empty board (but not during loading or when initialBoard exists)
   useEffect(() => {
-    if (!topic && nodes.length === 0) {
+    if (!isLoadingBoard && !topic && nodes.length === 0 && !initialBoard) {
       setShowTopicModal(true)
     }
-  }, [topic, nodes.length])
+  }, [topic, nodes.length, isLoadingBoard, initialBoard])
 
   // Handler for saving topic
   const handleSaveTopic = (newTopic: string) => {
+    console.log('🎯 Setting topic:', newTopic) // Add console log
     setTopic(newTopic)
   }
 
@@ -941,7 +961,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       /> */}
 
       {/* Topic Display */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
+      <div className="absolute z-40">
         <TopicDisplay topic={topic} onEdit={handleEditTopic} />
       </div>
 

@@ -17,7 +17,9 @@ export default function PdfNode({ file = '/test.pdf' }: { file?: string }) {
   const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages));
 
   return (
-    <div style={{ width: 600, margin: '2rem auto', background: '#fff', padding: 20, borderRadius: 8 }}>
+    <div 
+        className="bg-white p-4 rounded-lg border border-gray-200 dark:border-gray-700"
+    >
       <Document
         file={file}
         onLoadSuccess={onDocumentLoadSuccess}
@@ -27,7 +29,9 @@ export default function PdfNode({ file = '/test.pdf' }: { file?: string }) {
         <Page pageNumber={pageNumber} width={820} />
       </Document>
 
-      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div 
+        className="mt-4 flex justify-between items-center"
+      >
         <button onClick={goToPrevPage} disabled={pageNumber <= 1}>
           ◀ Prev
         </button>

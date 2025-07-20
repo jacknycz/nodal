@@ -87,14 +87,22 @@ export function useBoard() {
   // React Flow change handlers
   const onNodesChange = useCallback(
     (changes: any) => {
-      setNodes(applyNodeChanges(changes, nodes))
+      const newNodes = applyNodeChanges(changes, nodes)
+      // Only update if nodes actually changed
+      if (JSON.stringify(newNodes) !== JSON.stringify(nodes)) {
+        setNodes(newNodes)
+      }
     },
     [nodes, setNodes]
   )
 
   const onEdgesChange = useCallback(
     (changes: any) => {
-      setEdges(applyEdgeChanges(changes, edges))
+      const newEdges = applyEdgeChanges(changes, edges)
+      // Only update if edges actually changed
+      if (JSON.stringify(newEdges) !== JSON.stringify(edges)) {
+        setEdges(newEdges)
+      }
     },
     [edges, setEdges]
   )

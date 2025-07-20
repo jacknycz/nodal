@@ -9,7 +9,7 @@ interface BoardData {
     y: number
     zoom: number
   }
-  lastModified: number
+  topic?: string | null // Add topic to the board data type
 }
 
 interface SavedBoard {

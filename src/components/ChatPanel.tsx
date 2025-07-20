@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from 'pres-start-core'
-import { MessageCircle, Minimize2, Send, Loader2, Plus, Sparkles, AlertCircle } from 'lucide-react'
+import { MessageCircle, Minimize2, Send, Loader2, Plus, Sparkles, AlertCircle, GripVertical } from 'lucide-react'
 import { useNodeAwareChat } from '../hooks/useNodeAwareChat'
 import { useAIConfig } from '../features/ai/aiContext'
 import type { NodeResponse } from '../types'
@@ -23,6 +23,7 @@ export default function ChatPanel({
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
+  const [panelHeight, setPanelHeight] = useState(384) // Default height: 384px (h-96)
 
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
@@ -34,6 +35,7 @@ export default function ChatPanel({
   const messagesRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const apiKeyInputRef = useRef<HTMLInputElement>(null)
+  const resizeRef = useRef<HTMLDivElement>(null)
 
   // Handle selection context
   const [hasProcessedSelection, setHasProcessedSelection] = useState(false)
@@ -80,6 +82,28 @@ export default function ChatPanel({
     }
   }, [isOpen, isExpanded, showAPIKeySetup, selectionContext])
 
+  // Handle resize functionality
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    const startY = e.clientY
+    const startHeight = panelHeight
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - startY // Changed: removed the negative sign
+      const newHeight = Math.max(200, Math.min(600, startHeight + deltaY)) // Min 200px, max 600px
+      setPanelHeight(newHeight)
+    }
+    
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [panelHeight])
+
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
     if (!apiKeyInput.trim()) {
@@ -124,8 +148,6 @@ export default function ChatPanel({
       console.error('Chat error:', error)
     }
   }, [currentMessage, isLoading, sendMessage, sendMessageWithSelection, selectionContext, onSelectionContextUsed])
-
-
 
   // Handle applying a node
   const handleApplyNode = useCallback(async (nodeResponse: NodeResponse, messageId: string) => {
@@ -239,188 +261,198 @@ export default function ChatPanel({
       {isExpanded && (
         <div
           ref={chatRef}
-          className={`bg-white dark:bg-gray-900 rounded-4xl shadow-2xl border border-gray-200 dark:border-gray-700 w-80 h-96 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
+          className={`bg-white overflow-hidden dark:bg-gray-900 rounded-4xl shadow-2xl border border-gray-200 dark:border-gray-700 w-80 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
+          style={{ height: `${panelHeight}px` }}
         >
-      {/* Header */}
-      <button
-        onClick={() => setIsExpanded(false)}
-        className="flex w-full items-center justify-between pl-4 pr-4 py-3 bg-primary-500/50 dark:bg-primary-500/50 text-white rounded-t-4xl"
-      >
-        <div className="flex items-center gap-1">
-          <MessageCircle size={18} />
-          <span className="font-medium">nodal</span>
-        </div>
-
-        <Minimize2 size={14} className='text-white' />
-      </button>
-
-      {isExpanded && (
-        <>
-          {/* Messages */}
-          <div
-            ref={messagesRef}
-            className="flex-1 overflow-y-auto p-4 space-y-3 h-64"
+          {/* Header */}
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="flex w-full items-center justify-between pl-4 pr-4 py-3 bg-primary-500/50 dark:bg-primary-500/50 text-white rounded-t-4xl"
           >
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] ${message.role === 'user'
-                    ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
-                  }`}>
-                  <div
-                    className="text-sm"
-                    dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
-                  />
+            <div className="flex items-center gap-1">
+              <MessageCircle size={18} />
+              <span className="font-medium">nodal</span>
+            </div>
 
-                  {/* Render structured node responses */}
-                  {message.nodeResponses && message.nodeResponses.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {message.nodeResponses.map((nodeResponse) =>
-                        renderNodeResponse(nodeResponse, message.id)
-                      )}
+            <Minimize2 size={14} className='text-white' />
+          </button>
 
-                      {/* Apply all button */}
-                      {message.nodeResponses.length > 1 && !message.allApplied && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleApplyAllNodes(message.id)}
-                          className="mt-2 w-full text-xs"
-                        >
-                          <Plus size={12} className="mr-1" />
-                          Apply All ({message.nodeResponses.length})
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="text-xs opacity-70 mt-2">
-                    {message.timestamp.toLocaleTimeString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
-                  <Loader2 size={16} className="animate-spin" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    AI is thinking...
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <div className="flex justify-start">
-                <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
-                  <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-                  <span className="text-sm text-red-600 dark:text-red-400">
-                    {error}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-end space-x-2">
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  value={currentMessage}
-                  onChange={(e) => setCurrentMessage(e.target.value)}
-                  placeholder="Hey! Ask me anything..."
-                  className="w-full placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  rows={1}
-                  // style={{ minHeight: '40px', maxHeight: '120px' }}
-                  disabled={isLoading}
-                />
-              </div>
-
-              <Button
-                onClick={handleSendMessage}
-                disabled={!currentMessage.trim() || isLoading}
-                variant="custom"
-                className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+          {isExpanded && (
+            <>
+              {/* Messages */}
+              <div
+                ref={messagesRef}
+                className="flex-1 overflow-y-auto p-4 space-y-3"
+                style={{ height: `${panelHeight - 140}px` }} // Subtract header + input + resize handle height
               >
-                <Send size={16} />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+                {messages.map((message) => (
+                  <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] text-sm ${message.role === 'user'
+                        ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
+                      }`}>
+                      <div
+                        className="text-xs"
+                        dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
+                      />
 
-      {/* API Key Setup Modal */}
-      {showAPIKeySetup && (
-        <div className="absolute inset-0 bg-white dark:bg-gray-900 rounded-lg p-6 flex flex-col justify-center">
-          <div className="text-center mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              OpenAI API Key Required
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              To use the AI assistant, you need to configure your OpenAI API key. Your key is stored locally and never shared.
-            </p>
-          </div>
+                      {/* Render structured node responses */}
+                      {message.nodeResponses && message.nodeResponses.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {message.nodeResponses.map((nodeResponse) =>
+                            renderNodeResponse(nodeResponse, message.id)
+                          )}
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                OpenAI API Key
-              </label>
-              <input
-                ref={apiKeyInputRef}
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAPIKeySubmit()}
-                placeholder="sk-..."
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                disabled={setupLoading}
-              />
-            </div>
+                          {/* Apply all button */}
+                          {message.nodeResponses.length > 1 && !message.allApplied && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApplyAllNodes(message.id)}
+                              className="mt-2 w-full text-xs"
+                            >
+                              <Plus size={12} className="mr-1" />
+                              Apply All ({message.nodeResponses.length})
+                            </Button>
+                          )}
+                        </div>
+                      )}
 
-            {setupError && (
-              <div className="flex items-center space-x-2 text-red-600 dark:text-red-400 text-sm">
-                <AlertCircle size={16} />
-                <span>{setupError}</span>
+                      <div className="text-xs opacity-70 mt-2">
+                        {message.timestamp.toLocaleTimeString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        AI is thinking...
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="flex justify-start">
+                    <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
+                      <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
+                      <span className="text-sm text-red-600 dark:text-red-400">
+                        {error}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
 
-            <Button
-              onClick={handleAPIKeySubmit}
-              disabled={!apiKeyInput.trim() || setupLoading}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50"
-            >
-              {setupLoading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Configuring...</span>
+              {/* Input */}
+              <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-end space-x-2 h-auto">
+                  <div className="flex-1 relative">
+                    <textarea
+                      ref={inputRef}
+                      value={currentMessage}
+                      onChange={(e) => setCurrentMessage(e.target.value)}
+                      placeholder="Hey! Ask me anything..."
+                      className="w-full text-xs placeholder:text-gray-500 min-h-16 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      rows={4}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!currentMessage.trim() || isLoading}
+                    variant="custom"
+                    className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
+                  >
+                    <Send size={16} />
+                  </Button>
                 </div>
-              ) : (
-                'Configure API Key'
-              )}
-            </Button>
+              </div>
 
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              <p className="mb-2">🔒 Your API key is stored securely in your browser and never sent to our servers.</p>
-              <p>
-                Need an API key? Get one from{' '}
-                <a
-                  href="https://platform.openai.com/api-keys"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 hover:text-blue-600 underline"
+              {/* Resize Handle */}
+              <div
+                ref={resizeRef}
+                onMouseDown={handleResizeStart}
+                className="h-3 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 cursor-ns-resize flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <GripVertical size={12} className="text-gray-400" />
+              </div>
+            </>
+          )}
+
+          {/* API Key Setup Modal */}
+          {showAPIKeySetup && (
+            <div className="absolute inset-0 bg-white dark:bg-gray-900 rounded-lg p-6 flex flex-col justify-center">
+              <div className="text-center mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  OpenAI API Key Required
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  To use the AI assistant, you need to configure your OpenAI API key. Your key is stored locally and never shared.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    OpenAI API Key
+                  </label>
+                  <input
+                    ref={apiKeyInputRef}
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAPIKeySubmit()}
+                    placeholder="sk-..."
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    disabled={setupLoading}
+                  />
+                </div>
+
+                {setupError && (
+                  <div className="flex items-center space-x-2 text-red-600 dark:text-red-400 text-sm">
+                    <AlertCircle size={16} />
+                    <span>{setupError}</span>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleAPIKeySubmit}
+                  disabled={!apiKeyInput.trim() || setupLoading}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50"
                 >
-                  OpenAI Platform
-                </a>
-              </p>
+                  {setupLoading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Configuring...</span>
+                    </div>
+                  ) : (
+                    'Configure API Key'
+                  )}
+                </Button>
+
+                <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  <p className="mb-2">🔒 Your API key is stored securely in your browser and never sent to our servers.</p>
+                  <p>
+                    Need an API key? Get one from{' '}
+                    <a
+                      href="https://platform.openai.com/api-keys"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600 underline"
+                    >
+                      OpenAI Platform
+                    </a>
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
         </div>
       )}
     </div>
