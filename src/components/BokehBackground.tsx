@@ -18,20 +18,20 @@ export default function BokehBackground() {
 
   // Color palettes for rainy city night theme
   const lightModeColors = [
-    'rgba(0, 207, 245, 0.3)', // Primary 500 - cool teal
-    'rgba(0, 181, 216, 0.25)', // Primary 600 - deeper teal
-    'rgba(255, 231, 56, 0.4)', // Secondary 400 - warm yellow
-    'rgba(230, 199, 0, 0.3)', // Secondary 600 - amber
-    'rgba(255, 0, 168, 0.2)', // Tertiary 500 - subtle pink
-    'rgba(180, 241, 251, 0.4)', // Primary 100 - light blue
+    'rgba(0, 207, 245, 0.2)', // Primary 500 - cool teal
+    'rgba(0, 181, 216, 0.15)', // Primary 600 - deeper teal
+    'rgba(255, 231, 56, 0.2)', // Secondary 400 - warm yellow
+    'rgba(230, 199, 0, 0.1)', // Secondary 600 - amber
+    'rgba(255, 0, 168, 0.1)', // Tertiary 500 - subtle pink
+    'rgba(180, 241, 251, 0.2)', // Primary 100 - light blue
   ]
 
   const darkModeColors = [
-    'rgba(0, 129, 158, 0.4)', // Primary 800 - deep blue
+    'rgba(0, 129, 158, 0.3)', // Primary 800 - deep blue
     'rgba(0, 77, 97, 0.3)', // Primary 950 - darkest blue
-    'rgba(255, 231, 56, 0.3)', // Secondary 400 - streetlight yellow
-    'rgba(204, 176, 0, 0.3)', // Secondary 700 - warm amber
-    'rgba(255, 0, 168, 0.25)', // Tertiary 500 - neon pink
+    'rgba(255, 231, 56, 0.2)', // Secondary 400 - streetlight yellow
+    'rgba(204, 176, 0, 0.1)', // Secondary 700 - warm amber
+    'rgba(255, 0, 168, 0.15)', // Tertiary 500 - neon pink
     'rgba(30, 41, 59, 0.6)', // Deep blue-gray for depth
   ]
 

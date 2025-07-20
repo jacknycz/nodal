@@ -128,19 +128,36 @@
 
 /* Enhanced Connection line preview - Easy Connect style */
 .react-flow__connectionline {
-  stroke: #3b82f6 !important;
+  /* stroke: #fff !important;
   stroke-width: 3px !important;
   stroke-dasharray: 5,5 !important;
   animation: dash 1s linear infinite !important;
   opacity: 0.8 !important;
-  pointer-events: none !important;
+  pointer-events: none !important; */
+  opacity: 1 !important;
 }
 
-.react-flow__connectionline path {
-  stroke: #3b82f6 !important;
+.react-flow__edge-path {
+  stroke: rgba(62, 112, 127, 0.9) !important;
+  stroke-width: 2px !important;
+  filter: drop-shadow(0 0 10px rgba(0, 207, 245, 0.9)) !important;
+  animation: glow-pulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow-pulse {
+  from {
+    filter: drop-shadow(0 0 2px rgba(31, 41, 55, 0.1)) !important;
+  }
+  to {
+    filter: drop-shadow(0 0 8px rgba(31, 41, 55, 0.9));
+  }
+}
+
+/* .react-flow__connectionline path {
+  stroke: #fff !important;
   stroke-width: 3px !important;
   fill: none !important;
-}
+} */
 
 /* Active Node Styles */
 .react-flow__node.selected,

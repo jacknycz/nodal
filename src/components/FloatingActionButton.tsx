@@ -180,27 +180,20 @@ export default function FloatingActionButton({
             onClick={() => setIsExpanded(false)}
           />
         )}
-
+        {/* ICON HERE */}
         {/* Expanded Actions */}
         <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 mb-2">
           <div className="flex flex-col-reverse space-y-reverse space-y-3">
-            {actions.map((action, index) => (
+            {isExpanded && actions.map((action, index) => (
               <div
                 key={action.id}
-                className={`flex items-center space-x-3 ${
-                  isExpanded ? 'fab-action-enter' : 'fab-action-exit'
-                }`}
+                className="flex items-center space-x-3 fab-action-enter"
                 style={{ 
-                  animationDelay: `${index * 80}ms`,
-                  visibility: isExpanded ? 'visible' : 'hidden'
+                  animationDelay: `${index * 80}ms`
                 }}
               >
                 {/* Label with smooth appearance */}
-                <div className={`
-                  bg-black/80 text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg
-                  transition-all duration-300 ease-out
-                  ${isExpanded ? 'opacity-100 transform translate-x-0' : 'opacity-0 transform translate-x-2'}
-                `}>
+                <div className="bg-black/80 text-white text-sm px-3 py-1.5 rounded-lg whitespace-nowrap shadow-lg transition-all duration-300 ease-out">
                   {action.label}
                 </div>
                 

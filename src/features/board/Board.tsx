@@ -67,6 +67,7 @@ const edgeTypes = {
 
 const defaultEdgeOptions = {
   type: 'floating',
+  color: '#fff',
   markerEnd: {
     type: MarkerType.ArrowClosed,
     color: '#6b7280',
@@ -793,23 +794,110 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     return nodes.map(n => ({ ...n, position: placed[n.id] || n.position }))
   }
 
+  // Utility to find all clusters (connected components) in the graph
+  function findClusters(nodes: BoardNode[], edges: BoardEdge[]): string[][] {
+    const nodeIds = nodes.map(n => n.id);
+    const visited = new Set<string>();
+    const clusters: string[][] = [];
+    const adjacency: Record<string, Set<string>> = {};
+    nodeIds.forEach(id => (adjacency[id] = new Set()));
+    edges.forEach(e => {
+      adjacency[e.source]?.add(e.target);
+      adjacency[e.target]?.add(e.source);
+    });
+    for (const id of nodeIds) {
+      if (!visited.has(id)) {
+        const cluster: string[] = [];
+        const queue = [id];
+        visited.add(id);
+        while (queue.length) {
+          const curr = queue.shift()!;
+          cluster.push(curr);
+          for (const neighbor of adjacency[curr]) {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push(neighbor);
+            }
+          }
+        }
+        clusters.push(cluster);
+      }
+    }
+    return clusters;
+  }
+
+  function layoutMindMapAll(nodes: BoardNode[], edges: BoardEdge[], center = { x: 400, y: 300 }) {
+    if (nodes.length === 0) return [];
+    const clusters = findClusters(nodes, edges);
+    const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
+    const layouts: { [id: string]: { x: number; y: number } } = {};
+    const clusterLayouts: BoardNode[][] = [];
+    const loners: BoardNode[] = [];
+
+    // Separate clusters into loners and groups
+    for (const cluster of clusters) {
+      if (cluster.length === 1) {
+        loners.push(nodeMap[cluster[0]]);
+      } else {
+        // Layout this cluster as a mindmap
+        const clusterNodes = cluster.map(id => nodeMap[id]);
+        const clusterEdges = edges.filter(e => cluster.includes(e.source) && cluster.includes(e.target));
+        // Use the existing layoutMindMap for this cluster, centered at (0,0) for now
+        const clusterLayout = layoutMindMap(clusterNodes, clusterEdges, { x: 0, y: 0 });
+        clusterLayouts.push(clusterLayout);
+      }
+    }
+
+    // Arrange clusters in a grid, centered
+    const totalClusters = clusterLayouts.length + (loners.length > 0 ? 1 : 0);
+    const gridCols = Math.ceil(Math.sqrt(totalClusters));
+    const gridRows = Math.ceil(totalClusters / gridCols);
+    const clusterBoxSize = 1200; // space for each cluster
+    let clusterIndex = 0;
+    for (let row = 0; row < gridRows; row++) {
+      for (let col = 0; col < gridCols; col++) {
+        if (clusterIndex >= clusterLayouts.length) break;
+        const offsetX = center.x + (col - (gridCols - 1) / 2) * clusterBoxSize;
+        const offsetY = center.y + (row - (gridRows - 1) / 2) * clusterBoxSize;
+        for (const n of clusterLayouts[clusterIndex]) {
+          layouts[n.id] = {
+            x: n.position.x + offsetX,
+            y: n.position.y + offsetY,
+          };
+        }
+        clusterIndex++;
+      }
+    }
+
+    // Lay out loners in a square grid, centered below clusters
+    if (loners.length > 0) {
+      const lonerGridCols = Math.ceil(Math.sqrt(loners.length));
+      const lonerGridRows = Math.ceil(loners.length / lonerGridCols);
+      const lonerSpacing = 220;
+      const lonerStartX = center.x - ((lonerGridCols - 1) * lonerSpacing) / 2;
+      const lonerStartY = center.y + (gridRows * clusterBoxSize) / 2 + 200;
+      loners.forEach((n, i) => {
+        const col = i % lonerGridCols;
+        const row = Math.floor(i / lonerGridCols);
+        layouts[n.id] = {
+          x: lonerStartX + col * lonerSpacing,
+          y: lonerStartY + row * lonerSpacing,
+        };
+      });
+    }
+
+    // Return all nodes with new positions
+    return nodes.map(n => ({ ...n, position: layouts[n.id] || n.position }));
+  }
+
   // --- Handler for Reorganize ---
   const handleReorganize = useCallback(() => {
-    const newNodes = layoutMindMap(nodes, edges)
-    setNodes(newNodes)
-  }, [nodes, edges, setNodes])
+    const newNodes = layoutMindMapAll(nodes, edges);
+    setNodes(newNodes);
+  }, [nodes, edges, setNodes]);
 
   const { enterFocusMode, focusedNodeId, setFocusTree } = useFocusStore();
   const { buildFocusTree } = useFocusTree();
-
-  // Auto-focus the first node on a new board
-  React.useEffect(() => {
-    if (nodes.length === 1 && !focusedNodeId) {
-      const node = nodes[0];
-      enterFocusMode(node.id);
-      setFocusTree(buildFocusTree(node.id));
-    }
-  }, [nodes, focusedNodeId, enterFocusMode, setFocusTree, buildFocusTree]);
 
   return (
     <div className="w-full h-full relative">
@@ -902,18 +990,19 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
       {/* Removed BoardRoomModal and related state/logic */}
 
-      {/* <TopicModal
+      <TopicModal
         isOpen={showTopicModal}
         onClose={() => setShowTopicModal(false)}
         defaultTopic={topic || ''}
         onSave={handleSaveTopic}
         isFirstTime={!topic && nodes.length === 0}
-      /> */}
+      />
 
       <BoardSetupModal
         isOpen={showSetup}
         onComplete={async brief => {
           setBoardBrief({ ...brief, isReady: false })
+          setTopic(brief.topic) // Set the topic from the setup modal
           setShowSetup(false)
           setNodes([])
           setVectorizing(true)
@@ -1045,7 +1134,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
             }
             
             const allNodes = [centerNode, ...subtopicNodes, ...documentNodes]
-            setNodes(layoutMindMap(allNodes, edges))
+            setNodes(layoutMindMapAll(allNodes, edges))
             setEdges(edges)
           } catch (err) {
             setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed')

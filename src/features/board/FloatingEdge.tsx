@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useStore, getBezierPath, Position, EdgeLabelRenderer } from '@xyflow/react'
 import type { EdgeProps } from '@xyflow/react'
+import { useFocusStore } from '../focus/focusSlice'
 
 // Returns the position (top, right, bottom, left) passed node compared to the other node
 function getNodeIntersection(intersectionNode: any, otherNode: any) {
@@ -98,6 +99,13 @@ export default function FloatingEdge({
   
   const sourceNode = useStore((store) => store.nodeLookup.get(source))
   const targetNode = useStore((store) => store.nodeLookup.get(target))
+  
+  // Focus logic
+  const { isFocusMode, focusTree } = useFocusStore()
+  const isSourceFocused = focusTree.includes(source)
+  const isTargetFocused = focusTree.includes(target)
+  const isEdgeFocused = isSourceFocused && isTargetFocused
+  const isEdgeFaded = isFocusMode && !isEdgeFocused
 
   if (!sourceNode || !targetNode) {
     return null
@@ -129,12 +137,13 @@ export default function FloatingEdge({
         stroke="transparent"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        className={isEdgeFaded ? 'pointer-events-none' : ''}
       />
       
       {/* Visible edge path */}
       <path
         id={id}
-        className="react-flow__edge-path"
+        className={`react-flow__edge-path transition-all duration-200 ${isEdgeFaded ? 'opacity-30 blur-[1px]' : ''}`}
         d={edgePath}
         fill="none"
         markerEnd={markerEnd}
@@ -142,7 +151,7 @@ export default function FloatingEdge({
         pointerEvents="none"
       />
       
-      {isHovered && (
+      {isHovered && !isEdgeFaded && (
         <EdgeLabelRenderer>
           <div
             style={{
