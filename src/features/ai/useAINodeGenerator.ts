@@ -31,7 +31,7 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
   const [error, setError] = useState<string | null>(null)
 
   // Calculate smart positioning for new nodes using intelligent positioning
-  const calculatePosition = useCallback((strategy: string, count: number = 1, existingPositions: Array<{x: number, y: number}> = []) => {
+  const calculatePosition = useCallback((strategy: string, count: number = 1) => {
     const center = getViewportCenter()
     
     switch (strategy) {
@@ -181,7 +181,7 @@ Title:`
       const position = (positions ? positions[0] : undefined)
       
       // Add the node to the board
-      addNode(title, position)
+      addNode(title, position || { x: 0, y: 0 })
       
       // Get the newly created node and update with content and AI flag
       // We need to wait a tick for the node to be added
@@ -274,7 +274,7 @@ Provide only the concept titles, one per line:`
         const content = await generateNodeContent(title, context, model, temperature)
         
         // Add node
-        addNode(title, position)
+        addNode(title, position || { x: 0, y: 0 })
         
         // Update with content and AI flag
         setTimeout(() => {
@@ -520,8 +520,6 @@ Provide only the concept titles, one per line:`
     setError(null)
 
     try {
-      const context = buildContext(false) // Don't include existing context for breakdown
-      
       // First, identify the key components of the concept
       const breakdownPrompt = `Break down the concept "${concept}" into its key components or aspects.
 
@@ -581,7 +579,7 @@ Keep it concise but comprehensive (2-4 sentences):`
         const content = contentResponse.content.trim()
         
         // Add node
-        addNode(title, position)
+        addNode(title, position || { x: 0, y: 0 })
         
         // Update with content and AI flag
         setTimeout(() => {

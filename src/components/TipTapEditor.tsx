@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
@@ -12,7 +12,7 @@ interface TipTapEditorProps {
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, onImageAdd, onImageDelete }) => {
   const lastImagesRef = useRef<string[]>([]);
-  const [editorState, setEditorState] = useState(0); // Force re-renders
+  // Remove: const [editorState, setEditorState] = useState(0); // Force re-renders
 
   const editor = useEditor({
     extensions: [
@@ -59,7 +59,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, onImageAdd
   useEffect(() => {
     if (editor) {
       const updateToolbar = () => {
-        setEditorState(prev => prev + 1);
+        // setEditorState(prev => prev + 1); // This line was removed
       };
       
       editor.on('transaction', updateToolbar);

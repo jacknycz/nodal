@@ -103,7 +103,7 @@ export class OpenAIService {
     return MODEL_INFO[model]
   }
 
-  selectOptimalModel(actionType: AIActionType, context?: AIContext): OpenAIModel {
+  selectOptimalModel(actionType: AIActionType): OpenAIModel {
     // Smart model selection based on action type and context
     switch (actionType) {
       case 'chat':
@@ -123,12 +123,7 @@ export class OpenAIService {
   }
 
   // Context Building
-  buildContext(options: {
-    includeBoard?: boolean
-    includeDocuments?: boolean
-    includeConversation?: boolean
-    focusedOnly?: boolean
-  } = {}): AIContext {
+  buildContext(): AIContext {
     const context: AIContext = {}
 
     // This will be implemented when we have access to board state

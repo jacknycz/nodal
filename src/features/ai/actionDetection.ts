@@ -116,13 +116,13 @@ export class ActionDetectionEngine {
     const actionContext = this.contextAnalyzer.analyze(context)
     
     // 4. Classify intent
-    const intent = await this.intentClassifier.classify(normalizedInput, actionContext)
+    const intent = await this.intentClassifier.classify(normalizedInput)
     
     // 5. Match patterns
-    const patternMatches = this.matchPatterns(normalizedInput, keywords, [])
+    const patternMatches = this.matchPatterns(normalizedInput, keywords)
     
     // 6. Extract parameters
-    const parameters = this.parameterExtractor.extract(normalizedInput, intent)
+    const parameters = this.parameterExtractor.extract(normalizedInput)
     
     // 7. Generate actions
     const actions = await this.generateActions(
@@ -141,8 +141,7 @@ export class ActionDetectionEngine {
   // 🎯 PATTERN MATCHING
   private matchPatterns(
     input: string, 
-    keywords: string[], 
-    entities: string[]
+    keywords: string[]
   ): { pattern: ActionPattern; confidence: number }[] {
     const matches: { pattern: ActionPattern; confidence: number }[] = []
     
@@ -449,7 +448,7 @@ class ContextAnalyzer {
 
 // 🎯 INTENT CLASSIFIER
 class IntentClassifier {
-  async classify(input: string, context: ActionContext): Promise<ActionIntent> {
+  async classify(input: string): Promise<ActionIntent> {
     const urgencyKeywords = {
       high: ['urgent', 'asap', 'immediately', 'now', 'quick'],
       medium: ['soon', 'important', 'needed'],
@@ -519,7 +518,7 @@ class IntentClassifier {
 
 // 📊 PARAMETER EXTRACTOR
 class ParameterExtractor {
-  extract(input: string, intent: ActionIntent): ActionParameters {
+  extract(input: string): ActionParameters {
     const parameters: ActionParameters = {}
     
     // Extract count

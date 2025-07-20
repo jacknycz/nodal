@@ -463,7 +463,7 @@ export class BatchOperationsEngine {
     context: AIContext,
     progress: BatchProgress
   ): Promise<BatchResult[]> {
-    const { strategy = 'chunked', batchSize = 10, concurrency = 2 } = operation.parameters
+    const { strategy = 'chunked', batchSize = 10 } = operation.parameters
     
     switch (strategy) {
       case 'sequential':
@@ -830,44 +830,44 @@ export class BatchOperationsEngine {
 
 // 🎯 SPECIALIZED PROCESSORS
 class NodeProcessor {
-  async createNode(parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would integrate with the existing node creation system
-    return { id: `node_${Date.now()}`, created: true }
+  async createNode(_parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async updateNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would update node properties
-    return { id: node.id, updated: true }
+  async updateNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async enhanceNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would enhance node content using AI
-    return { id: node.id, enhanced: true }
+  async enhanceNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async organizeNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would organize node position and connections
-    return { id: node.id, organized: true }
+  async organizeNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async connectNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would create connections to other nodes
-    return { id: node.id, connected: true }
+  async connectNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async categorizeNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would categorize the node
-    return { id: node.id, categorized: true }
+  async categorizeNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async mergeNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would merge similar nodes
-    return { id: node.id, merged: true }
+  async mergeNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 
-  async validateNode(node: BoardNode, parameters: BatchParameters, context: AIContext): Promise<any> {
-    // Implementation would validate node integrity
-    return { id: node.id, valid: true }
+  async validateNode(_node: BoardNode, _parameters: BatchParameters, _context: AIContext): Promise<any> {
+    // Implementation placeholder
+    return {}
   }
 }
 

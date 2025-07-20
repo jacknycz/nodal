@@ -1,4 +1,3 @@
-import React from 'react'
 import { Button, ButtonGroup, Heading } from 'pres-start-core'
 
 interface ToolbarProps {

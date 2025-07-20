@@ -220,7 +220,10 @@ function TestPageInternal({ onExitTestMode }: TestPageProps) {
 
               {/* Test Environment */}
         <div className="flex-1 relative">
-          <Board onBoardStateChange={() => {}} />
+          <Board 
+            onBoardStateChange={() => {}} 
+            onOpenBoardRoom={() => {}}
+          />
 
           {/* Test Status Overlay */}
           {selectedScenario && (

@@ -12,7 +12,7 @@ import type {
   AIActionType
 } from './aiTypes'
 import { OpenAIService, createOpenAIService } from './aiService'
-import { AIConfigManager, getAIConfigManager } from './aiConfig'
+import { getAIConfigManager } from './aiConfig'
 
 // Context State Interface
 interface AIContextState {

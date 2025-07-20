@@ -384,10 +384,6 @@ export function useBoardAI() {
     setError(null)
 
     try {
-      const nodesSummary = nodes.map(node => 
-        `- ${node.data.title}${node.data.content ? `: ${node.data.content}` : ''}`
-      ).join('\n')
-
       const prompt = PROMPT_TEMPLATES.summarizeBoard(nodes.map(n => ({
         label: n.data.title || '',
         content: n.data.content
