@@ -5,13 +5,11 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import Board from './features/board/Board'
 import Topbar from './components/Topbar'
 import TestPage from './components/TestPage'
-import FloatingChat from './components/FloatingChat'
 import LoginScreen from './components/LoginScreen'
 import { useSupabaseUser } from './features/auth/authUtils'
 import { useTheme } from './contexts/ThemeContext'
 import nodalBlackLogo from './assets/nodal-black.svg'
 import nodalWhiteLogo from './assets/nodal-white.svg'
-import { type SavedBoard } from './features/storage/storage'
 import BoardRoom from './components/BoardRoom'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
@@ -188,7 +186,6 @@ export default function App() {
                 )}
               </div>
             </div>
-            {/* <FloatingChat /> */}
           </ReactFlowProvider>
         </AIProvider>
       )}

@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { useBoard } from './useBoard'
 import { useBoardStore } from './boardSlice'
 import { canCreateConnection, getConnectionType, getNodeById, findNonOverlappingPositions } from './boardUtils'
-import NodalNode from '../nodes/NodalNode'
+import NodalNode from '../nodes/nodalNode'
 import DocumentNode from '../nodes/DocumentNode'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
@@ -22,7 +22,7 @@ import AINodeGenerator from '../../components/AINodeGenerator'
 import BoardNameModal from '../../components/BoardNameModal'
 import BokehBackground from '../../components/BokehBackground'
 import ChatPanel from '../../components/ChatPanel'
-import AskAboutSelectionFAB from '../../components/AskAboutSelectionFAB'
+
 import TopicModal from '../../components/TopicModal'
 import TopicDisplay from '../../components/TopicDisplay'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
@@ -955,10 +955,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         onSelectionContextUsed={handleSelectionContextUsed}
       />
 
-      {/* Ask About Selection FAB */}
-      {/* <AskAboutSelectionFAB 
-        onOpenChatWithSelection={handleOpenChatWithSelection}
-      /> */}
+
 
       {/* Topic Display */}
       <div className="absolute z-40">

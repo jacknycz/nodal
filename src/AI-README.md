@@ -450,5 +450,26 @@ If you are adding or maintaining PDF viewing or text extraction in Nodal, read t
 
 ---
 
+## Recent Bug Fixes & Solutions
+- **Infinite Update Loops:** Added guards in `onNodesChange`/`onEdgesChange` to prevent unnecessary state updates
+- **Topic Modal Timing:** Prevent topic modal from showing during board loading by checking `!initialBoard` condition
+- **Board Loading Flow:** Proper sequencing of board restoration vs. modal display
+
+---
+
+## UI Centering & Layout Patterns
+- **CSS Grid for True Centering:** Use `grid-template-columns: 1fr auto 1fr` for elements that need to be truly centered regardless of left/right content sizes
+- **Topic Display:** Consistent centering with `left-1/2 -translate-x-1/2` for both states
+- **Topbar Layout:** Grid-based centering for board name/topic display
+
+---
+
+## Chat Panel Features
+- **Keyboard Shortcuts:** Cmd/Ctrl + Enter to submit messages
+- **Resizable Height:** Drag handle for dynamic height adjustment (200px-600px range)
+- **Button Styling:** `self-stretch` for buttons to match container height
+- **Fixed Height Textarea:** Remove auto-resize for consistent UI
+
+---
 
 *This file is here to help AI agents, copilots, or teammates get aligned before contributing to Nodal. When in doubt, ask Jack.*
