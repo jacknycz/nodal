@@ -1,10 +1,9 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import type { 
   AIConfig, 
   AIError, 
   UsageStats, 
-  AIServiceState, 
   AIRequest,
   AIResponse,
   StreamingAIResponse,
@@ -12,7 +11,7 @@ import type {
   UserPreferences,
   AIActionType
 } from './aiTypes'
-import { OpenAIService, createOpenAIService, getOpenAIService } from './aiService'
+import { OpenAIService, createOpenAIService } from './aiService'
 import { AIConfigManager, getAIConfigManager } from './aiConfig'
 
 // Context State Interface

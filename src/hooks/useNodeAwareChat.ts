@@ -333,7 +333,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
       
       // Build context-aware prompt
       const selectedNodeContext = selectedNode 
-        ? `Currently focused on: "${selectedNode.data.label}"`
+        ? `Currently focused on: "${selectedNode.data.title || ''}"`
         : ''
       
       // Build document context
@@ -344,7 +344,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
       const documentContext = documentNodes.length > 0
         ? `Documents available:\n` +
           documentNodes.map(node =>
-            `- ${node.data.label}: ${node.data.extractedText?.slice(0, 200) || ''}`
+            `- ${node.data.title || ''}: ${node.data.extractedText?.slice(0, 200) || ''}`
           ).join('\n')
         : ''
       
@@ -415,7 +415,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
       const center = getViewportCenter()
       const currentNodes = useBoardStore.getState().nodes
       // Deduplication: check if node with same label exists
-      const existingNode = currentNodes.find(n => n.data.label.trim().toLowerCase() === nodeResponse.title.trim().toLowerCase())
+      const existingNode = currentNodes.find(n => (n.data.title || '').trim().toLowerCase() === nodeResponse.title.trim().toLowerCase())
       if (existingNode) {
         // Optionally update content or just skip
         console.log(`⚠️ Node "${nodeResponse.title}" already exists, skipping creation.`)
@@ -441,7 +441,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
       setTimeout(() => {
         const currentNodes = useBoardStore.getState().nodes
         const newNode = currentNodes[currentNodes.length - 1]
-        if (newNode && newNode.data.label === nodeResponse.title) {
+        if (newNode && newNode.data.title === nodeResponse.title) {
           // Update node with full content and metadata
           useBoardStore.getState().updateNode(newNode.id, {
             data: {
@@ -481,8 +481,8 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
       
       for (const connection of connections) {
         // Find nodes by title
-        const sourceNode = currentNodes.find(n => n.data.label === connection.source)
-        const targetNode = currentNodes.find(n => n.data.label === connection.target)
+        const sourceNode = currentNodes.find(n => n.data.title === connection.source)
+        const targetNode = currentNodes.find(n => n.data.title === connection.target)
         
         if (sourceNode && targetNode) {
           const success = addEdge(sourceNode.id, targetNode.id, { 
@@ -530,7 +530,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
         const nodeResponse = nodeResponses[i]
         const position = positions[i]
         // Deduplication: check if node with same label exists
-        const existingNode = currentNodes.find(n => n.data.label.trim().toLowerCase() === nodeResponse.title.trim().toLowerCase())
+        const existingNode = currentNodes.find(n => (n.data.title || '').trim().toLowerCase() === nodeResponse.title.trim().toLowerCase())
         if (existingNode) {
           console.log(`⚠️ Node "${nodeResponse.title}" already exists, skipping creation.`)
           appliedNodeTitles.push(nodeResponse.title)
@@ -552,7 +552,7 @@ export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNode
           
           // Find the node by title and approximate position
           const newNode = currentNodes.find(n => 
-            n.data.label === nodeResponse.title && 
+            n.data.title === nodeResponse.title && 
             Math.abs(n.position.x - expectedPosition.x) < 50 &&
             Math.abs(n.position.y - expectedPosition.y) < 50
           )

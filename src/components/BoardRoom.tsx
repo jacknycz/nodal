@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import BoardNameModal from './BoardNameModal'
 import { Button } from 'pres-start-core'
@@ -180,7 +180,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       if (newBoard) {
         setShowNewBoardModal(false)
         await loadBoards() // Refresh the board list
-        onOpenBoard({ ...newBoard, isNew: true }) // Mark as new
+        onOpenBoard(newBoard) // Mark as new
       }
     } catch (error) {
       console.error('Failed to create new board:', error)

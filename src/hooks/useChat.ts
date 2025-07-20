@@ -178,16 +178,16 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
                 Math.max(0, text.toLowerCase().indexOf(query) - 50),
                 text.toLowerCase().indexOf(query) + query.length + 50
               )
-              results.push(`📄 **${node.data.label}:** ...${snippet}...`)
+              results.push(`📄 **${node.data.title || ''}:** ...${snippet}...`)
             }
           }
         })
         
         // Search through node labels and content
         context.boardNodes.forEach(node => {
-          if (node.data.label.toLowerCase().includes(query) || 
+          if ((node.data.title || '').toLowerCase().includes(query) || 
               node.data.content?.toLowerCase().includes(query)) {
-            results.push(`🔍 **${node.data.label}:** ${node.data.content || 'No content'}`)
+            results.push(`🔍 **${node.data.title || ''}:** ${node.data.content || 'No content'}`)
           }
         })
         
@@ -207,7 +207,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
         if (!target) return '❌ Please specify what to focus on'
         
         const matchingNodes = context.boardNodes.filter(node => 
-          node.data.label.toLowerCase().includes(target)
+          (node.data.title || '').toLowerCase().includes(target)
         )
         
         if (matchingNodes.length === 0) {
@@ -215,7 +215,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
         }
         
         return `🎯 **Found ${matchingNodes.length} matching nodes:**\n\n${matchingNodes.map(node => 
-          `• ${node.data.label} (${node.type})`
+          `• ${node.data.title || ''} (${node.type})`
         ).join('\n')}`
       }
     },
@@ -233,7 +233,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
         const docList = docNodes.map(node => {
           const size = node.data.fileSize ? `${Math.round(node.data.fileSize / 1024)}KB` : 'Unknown'
           const extractedLength = node.data.extractedText?.length || 0
-          return `📄 **${node.data.label}**\n   Type: ${node.data.fileType || 'Unknown'}\n   Size: ${size}\n   Extracted: ${extractedLength} characters`
+          return `📄 **${node.data.title || ''}:**\n   Type: ${node.data.fileType || 'Unknown'}\n   Size: ${size}\n   Extracted: ${extractedLength} characters`
         }).join('\n\n')
         
         return `📚 **Document Library (${docNodes.length} documents):**\n\n${docList}`

@@ -1,5 +1,4 @@
 // Document processing utilities
-import { v4 as uuidv4 } from 'uuid'
 import type { BoardNode } from '../board/boardTypes'
 import { extractTextFromFile as extractTextFromBlob, isTextExtractable } from '../storage/textExtractor'
 import { supabase } from '../auth/supabaseClient'
@@ -126,7 +125,7 @@ export async function createDocumentNode(
     position,
     dragHandle: '.nodal-drag-handle',
     data: {
-      label: baseName,
+      title: baseName,
       content: hasExtractedText ? extractedText.slice(0, 500) : `Document: ${fileName}`,
       type: 'document',
       expanded: false,

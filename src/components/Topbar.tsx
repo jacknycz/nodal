@@ -1,4 +1,3 @@
-import React from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import nodalBlackLogo from '../assets/nodal-black.svg'
 import nodalWhiteLogo from '../assets/nodal-white.svg'

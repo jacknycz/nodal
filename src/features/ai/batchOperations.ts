@@ -1,7 +1,5 @@
-import type { AIContext, BoardContext } from './aiTypes'
-import type { BoardNode, BoardEdge } from '../board/boardTypes'
-import type { DetectedAction } from './actionDetection'
-import type { ContextInsights } from './contextAnalysis'
+import type { AIContext } from './aiTypes'
+import type { BoardNode } from '../board/boardTypes'
 
 // 🔄 BATCH OPERATIONS TYPES
 export interface BatchOperation {
@@ -241,17 +239,12 @@ export interface BatchArtifact {
 export class BatchOperationsEngine {
   private activeOperations: Map<string, BatchOperation> = new Map()
   private templates: Map<string, BatchTemplate> = new Map()
-  private schedules: Map<string, BatchSchedule> = new Map()
   private progressCallbacks: Map<string, (progress: BatchProgress) => void> = new Map()
   private nodeProcessor: NodeProcessor
-  private validationEngine: ValidationEngine
-  private transformationEngine: TransformationEngine
   private reportGenerator: ReportGenerator
 
   constructor() {
     this.nodeProcessor = new NodeProcessor()
-    this.validationEngine = new ValidationEngine()
-    this.transformationEngine = new TransformationEngine()
     this.reportGenerator = new ReportGenerator()
     this.initializeTemplates()
   }
@@ -876,14 +869,6 @@ class NodeProcessor {
     // Implementation would validate node integrity
     return { id: node.id, valid: true }
   }
-}
-
-class ValidationEngine {
-  // Validation-specific methods
-}
-
-class TransformationEngine {
-  // Transformation-specific methods
 }
 
 class ReportGenerator {

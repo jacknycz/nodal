@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { useAIContext, useAI as useBaseAI, useAIConfig, useAIStatus } from './aiContext'
+import { useAIContext, useAI as useBaseAI } from './aiContext'
 import { useBoard } from '../board/useBoard'
 import { useNodeActions } from '../nodes/useNodeActions'
 import { PROMPT_TEMPLATES } from './promptTemplates'
@@ -10,8 +10,6 @@ import type {
   UseAIOptions, 
   UseAIResult, 
   UseNodeAIResult,
-  OpenAIModel,
-  AIActionType
 } from './aiTypes'
 import { useBoardStore } from '../board/boardSlice'
 
@@ -138,9 +136,6 @@ export function useNodeAI(nodeId: string): UseNodeAIResult {
 
   const node = nodes.find(n => n.id === nodeId)
 
-  // Clear error function
-  const clearError = useCallback(() => setError(null), [])
-
   // Expand node content
   const expandNode = useCallback(async () => {
     if (!node) {
@@ -152,7 +147,7 @@ export function useNodeAI(nodeId: string): UseNodeAIResult {
     setError(null)
 
     try {
-      const prompt = PROMPT_TEMPLATES.expandNode(node.data.label, node.data.content)
+      const prompt = PROMPT_TEMPLATES.expandNode(node.data.title || '', node.data.content)
       const model = selectOptimalModel('expand_node')
       
       const response = await ai.generate(prompt, {
@@ -182,7 +177,7 @@ export function useNodeAI(nodeId: string): UseNodeAIResult {
     setError(null)
 
     try {
-      const prompt = PROMPT_TEMPLATES.generateRelatedNodes(node.data.label, count)
+      const prompt = PROMPT_TEMPLATES.generateRelatedNodes(node.data.title || '', count)
       const model = selectOptimalModel('generate_related')
       
       const response = await ai.generate(prompt, {
@@ -216,7 +211,7 @@ export function useNodeAI(nodeId: string): UseNodeAIResult {
     setError(null)
 
     try {
-      const prompt = PROMPT_TEMPLATES.improveNode(node.data.label, node.data.content)
+      const prompt = PROMPT_TEMPLATES.improveNode(node.data.title || '', node.data.content)
       const model = selectOptimalModel('improve_content')
       
       const response = await ai.generate(prompt, {
@@ -246,7 +241,7 @@ export function useNodeAI(nodeId: string): UseNodeAIResult {
     setError(null)
 
     try {
-      const prompt = PROMPT_TEMPLATES.generateQuestions(node.data.label, node.data.content)
+      const prompt = PROMPT_TEMPLATES.generateQuestions(node.data.title || '', node.data.content)
       const model = selectOptimalModel('generate_related')
       
       const response = await ai.generate(prompt, {
@@ -282,11 +277,11 @@ export function useNodeAI(nodeId: string): UseNodeAIResult {
     try {
       // Get board context
       const connectedNodes = nodes.filter(n => n.id !== nodeId) // Simplified - would need actual connection logic
-      const contextInfo = connectedNodes.slice(0, 5).map(n => `${n.data.label}: ${n.data.content || 'No content'}`).join('\n')
+      const contextInfo = connectedNodes.slice(0, 5).map(n => `${n.data.title}: ${n.data.content || 'No content'}`).join('\n')
       
       const prompt = `Analyze this node in the context of the knowledge graph:
 
-Target Node: "${node.data.label}"
+Target Node: "${node.data.title || ''}"
 Content: ${node.data.content || 'No content'}
 
 Related nodes in the graph:
@@ -378,7 +373,7 @@ export function useStreamingAI() {
 // Board-level AI operations
 export function useBoardAI() {
   const ai = useAI()
-  const { nodes, edges } = useBoard()
+  const { nodes } = useBoard()
   const { selectOptimalModel } = useAIContext()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -390,11 +385,11 @@ export function useBoardAI() {
 
     try {
       const nodesSummary = nodes.map(node => 
-        `- ${node.data.label}${node.data.content ? `: ${node.data.content}` : ''}`
+        `- ${node.data.title}${node.data.content ? `: ${node.data.content}` : ''}`
       ).join('\n')
 
       const prompt = PROMPT_TEMPLATES.summarizeBoard(nodes.map(n => ({
-        label: n.data.label,
+        label: n.data.title || '',
         content: n.data.content
       })))
       
@@ -429,7 +424,7 @@ export function useBoardAI() {
     try {
       const prompt = PROMPT_TEMPLATES.suggestConnections(nodes.map(node => ({
         id: node.id,
-        label: node.data.label
+        label: node.data.title || ''
       })))
       
       const model = selectOptimalModel('suggest_connections')
@@ -476,7 +471,7 @@ export function useBoardAI() {
     setError(null)
 
     try {
-      const boardContext = nodes.map(n => n.data.label).join(', ')
+      const boardContext = nodes.map(n => n.data.title).join(', ')
       const prompt = `Based on this knowledge graph with nodes: ${boardContext}
 
 Generate ${count} additional concepts that would complement and extend this knowledge graph. Consider:
@@ -520,4 +515,4 @@ Provide only the concept names, one per line.`
 }
 
 // Re-export context hooks for convenience
-export { useAIConfig, useAIStatus } from './aiContext' 
+export { useAIContext } from './aiContext' 

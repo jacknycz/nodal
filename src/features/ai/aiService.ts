@@ -8,7 +8,6 @@ import type {
   AIConfig,
   AIError,
   UsageStats,
-  AIAction,
   AIActionType
 } from './aiTypes'
 import { AIErrorCode } from './aiTypes'
@@ -62,22 +61,11 @@ interface RateLimiter {
   tokens: { timestamp: number; count: number }[]
 }
 
-interface RequestQueue {
-  id: string
-  request: AIRequest
-  resolve: (response: AIResponse) => void
-  reject: (error: AIError) => void
-  attempts: number
-  maxAttempts: number
-}
-
 export class OpenAIService {
   private config: AIConfig
   private rateLimiter: RateLimiter
-  private requestQueue: RequestQueue[] = []
   private activeRequests = new Map<string, AbortController>()
   private usageStats: UsageStats
-  private isProcessingQueue = false
 
   constructor(config: AIConfig) {
     this.config = config

@@ -3,9 +3,7 @@ import { Button } from 'pres-start-core'
 import { MessageCircle, X, Minimize2, Maximize2, Send, Loader2, Plus, Sparkles, AlertCircle } from 'lucide-react'
 import { useNodeAwareChat } from '../hooks/useNodeAwareChat'
 import { useAIConfig } from '../features/ai/aiContext'
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { NodeResponse, ConnectionSuggestion } from '../types'
-
+import type { NodeResponse } from '../types'
 
 
 interface NodeAwareChatPanelProps {

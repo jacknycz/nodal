@@ -4,7 +4,6 @@ import { useBoard } from '../board/useBoard'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useBoardStore } from '../board/boardSlice'
 import type { OpenAIModel } from './aiTypes'
-import type { BoardNode } from '../board/boardTypes'
 
 export interface AINodeGeneratorOptions {
   model?: OpenAIModel
@@ -34,7 +33,6 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
   // Calculate smart positioning for new nodes using intelligent positioning
   const calculatePosition = useCallback((strategy: string, count: number = 1, existingPositions: Array<{x: number, y: number}> = []) => {
     const center = getViewportCenter()
-    const currentNodes = useBoardStore.getState().nodes
     
     switch (strategy) {
       case 'connected':
@@ -48,6 +46,7 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
           ]
         }
         // Fall through to center if no selected node
+        break; // Add a break statement to the 'connected' case in the switch statement to prevent fallthrough.
         
       case 'circular':
         // Use intelligent positioning with viewport center
@@ -93,11 +92,11 @@ export function useAINodeGenerator(): UseAINodeGeneratorResult {
     
     const contextNodes = nodes.slice(0, 10) // Limit context size
     const boardContext = contextNodes.map(node => 
-      `- ${node.data.label}${node.data.content ? `: ${node.data.content.slice(0, 100)}` : ''}`
+      `- ${node.data.title}${node.data.content ? `: ${node.data.content.slice(0, 100)}` : ''}`
     ).join('\n')
     
     const selectedContext = selectedNode 
-      ? `\n\nCurrently selected node: "${selectedNode.data.label}"${selectedNode.data.content ? `\nContent: ${selectedNode.data.content}` : ''}`
+      ? `\n\nCurrently selected node: "${selectedNode.data.title}"${selectedNode.data.content ? `\nContent: ${selectedNode.data.content}` : ''}`
       : ''
     
     return boardContext.length > 0 
@@ -179,7 +178,7 @@ Title:`
       
       // Position and create node
       const positions = calculatePosition(positionStrategy, 1)
-      const position = positions[0]
+      const position = (positions ? positions[0] : undefined)
       
       // Add the node to the board
       addNode(title, position)
@@ -189,7 +188,7 @@ Title:`
       setTimeout(() => {
         const newNodes = useBoardStore.getState().nodes
         const newNode = newNodes[newNodes.length - 1] // Get the last added node
-        if (newNode && newNode.data.label === title) {
+        if (newNode && newNode.data.title === title) {
           useBoardStore.getState().updateNode(newNode.id, {
             data: {
               ...newNode.data,
@@ -269,7 +268,7 @@ Provide only the concept titles, one per line:`
       
       for (let i = 0; i < titles.length; i++) {
         const title = titles[i]
-        const position = positions[i]
+        const position = (positions ? positions[i] : undefined)
         
         // Generate content for this specific title
         const content = await generateNodeContent(title, context, model, temperature)
@@ -280,7 +279,7 @@ Provide only the concept titles, one per line:`
         // Update with content and AI flag
         setTimeout(() => {
           const newNodes = useBoardStore.getState().nodes
-          const newNode = newNodes.find(n => n.data.label === title && n.position.x === position.x)
+          const newNode = newNodes.find(n => n.data.title === title && n.position.x === position?.x)
           if (newNode) {
             useBoardStore.getState().updateNode(newNode.id, {
               data: {
@@ -329,10 +328,10 @@ Provide only the concept titles, one per line:`
 
       const prompt = `Create a bridge concept that connects these two knowledge graph nodes:
 
-Node A: "${sourceNode.data.label}"
+Node A: "${sourceNode.data.title}"
 ${sourceNode.data.content ? `Content: ${sourceNode.data.content}` : ''}
 
-Node B: "${targetNode.data.label}"
+Node B: "${targetNode.data.title}"
 ${targetNode.data.content ? `Content: ${targetNode.data.content}` : ''}
 
 Generate a connecting concept that:
@@ -354,8 +353,8 @@ Bridge concept title:`
       
       // Generate content
       const contentPrompt = `Provide detailed content for the bridge concept "${title}" that connects:
-- ${sourceNode.data.label}
-- ${targetNode.data.label}
+- ${sourceNode.data.title}
+- ${targetNode.data.title}
 
 Explain how this concept relates to both nodes and helps understand their connection.
 
@@ -382,7 +381,7 @@ Content:`
       // Update with content and AI flag
       setTimeout(() => {
         const newNodes = useBoardStore.getState().nodes
-        const newNode = newNodes.find(n => n.data.label === title && Math.abs(n.position.x - position.x) < 10)
+        const newNode = newNodes.find(n => n.data.title === title && Math.abs(n.position.x - position.x) < 10)
         if (newNode) {
           useBoardStore.getState().updateNode(newNode.id, {
             data: {
@@ -426,7 +425,7 @@ Content:`
 
       const prompt = `Generate ${count} related concepts that extend and complement this knowledge graph node:
 
-Center Node: "${centerNode.data.label}"
+Center Node: "${centerNode.data.title}"
 ${centerNode.data.content ? `Content: ${centerNode.data.content}` : ''}
 
 Generate concepts that:
@@ -470,7 +469,7 @@ Provide only the concept titles, one per line:`
         // Generate content
         const content = await generateNodeContent(
           title, 
-          `Related to: ${centerNode.data.label}${centerNode.data.content ? ` - ${centerNode.data.content}` : ''}`,
+          `Related to: ${centerNode.data.title}${centerNode.data.content ? ` - ${centerNode.data.content}` : ''}`,
           model,
           temperature
         )
@@ -481,7 +480,7 @@ Provide only the concept titles, one per line:`
         // Update with content and AI flag
         setTimeout(() => {
           const newNodes = useBoardStore.getState().nodes
-          const newNode = newNodes.find(n => n.data.label === title && Math.abs(n.position.x - position.x) < 10)
+          const newNode = newNodes.find(n => n.data.title === title && Math.abs(n.position.x - position.x) < 10)
           if (newNode) {
             useBoardStore.getState().updateNode(newNode.id, {
               data: {
@@ -559,7 +558,7 @@ Provide only the component titles, one per line, without explanations or numberi
       
       for (let i = 0; i < componentTitles.length; i++) {
         const title = componentTitles[i]
-        const position = positions[i]
+        const position = (positions ? positions[i] : undefined)
         
         // Generate specific content for this component
         const componentContentPrompt = `Generate detailed content for the "${title}" component of ${concept}.
@@ -587,7 +586,7 @@ Keep it concise but comprehensive (2-4 sentences):`
         // Update with content and AI flag
         setTimeout(() => {
           const newNodes = useBoardStore.getState().nodes
-          const newNode = newNodes.find(n => n.data.label === title && Math.abs(n.position.x - position.x) < 10)
+          const newNode = newNodes.find(n => n.data.title === title && n.position.x === position?.x)
           if (newNode) {
             useBoardStore.getState().updateNode(newNode.id, {
               data: {

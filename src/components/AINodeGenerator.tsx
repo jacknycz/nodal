@@ -20,33 +20,6 @@ const Label = ({ children, htmlFor, className = '' }: { children: React.ReactNod
   </label>
 )
 
-const Input = ({ className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
-  <input className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`} {...props} />
-)
-
-const Select = ({ children, className = '', value, onChange, onValueChange, disabled, id }: { 
-  children: React.ReactNode; 
-  className?: string; 
-  value: string; 
-  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void; 
-  onValueChange?: (value: string) => void;
-  disabled?: boolean;
-  id?: string;
-}) => (
-  <select 
-    id={id}
-    value={value} 
-    onChange={(e) => {
-      onChange?.(e)
-      onValueChange?.(e.target.value)
-    }} 
-    disabled={disabled}
-    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
-  >
-    {children}
-  </select>
-)
-
 // Simple icons as text
 const Plus = ({ className = '' }: { className?: string }) => <span className={className}>+</span>
 const Grid = ({ className = '' }: { className?: string }) => <span className={className}>⊞</span>
@@ -70,21 +43,6 @@ const GENERATION_MODES = [
   { value: 'cluster', label: 'Related Cluster', description: 'Generate nodes around a selected center node', icon: Target }
 ] as const
 
-const MODELS: Array<{ value: OpenAIModel; label: string; description: string }> = [
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast and cost-effective' },
-  { value: 'gpt-4o', label: 'GPT-4o', description: 'Latest high-performance model' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', description: 'Advanced reasoning' },
-  { value: 'gpt-4', label: 'GPT-4', description: 'High-quality responses' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', description: 'Quick and efficient' }
-]
-
-const POSITION_STRATEGIES = [
-  { value: 'center', label: 'Center', description: 'Place nodes at viewport center' },
-  { value: 'circular', label: 'Circular', description: 'Arrange nodes in a circle' },
-  { value: 'grid', label: 'Grid', description: 'Organize nodes in a grid pattern' },
-  { value: 'connected', label: 'Connected', description: 'Place around selected node' }
-] as const
-
 export default function AINodeGenerator({ isOpen = true, onClose, className = '' }: AINodeGeneratorProps) {
   const { generateNode, generateContextualNodes, generateBridgeNode, generateRelatedCluster, isGenerating, error } = useAINodeGenerator()
   const { nodes, selectedNode } = useBoard()
@@ -102,7 +60,6 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
   type AllowedStrategy = typeof allowedStrategies[number];
   const [positionStrategy, setPositionStrategy] = useState<AllowedStrategy>('center');
   const [temperature, setTemperature] = useState<number>(aiSettings.temperature)
-  const [nodeCount, setNodeCount] = useState(3)
   const [includeContext, setIncludeContext] = useState(true)
   const [lastResult, setLastResult] = useState<string | string[] | null>(null)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -154,7 +111,7 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
           break
           
         case 'contextual':
-          const contextualResults = await generateContextualNodes(nodeCount, options)
+          const contextualResults = await generateContextualNodes(3, options)
           setLastResult(contextualResults)
           break
           
@@ -175,7 +132,7 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
             alert('Please select a node to generate a cluster around.')
             return
           }
-          const clusterResults = await generateRelatedCluster(selectedNode.id, nodeCount, options)
+          const clusterResults = await generateRelatedCluster(selectedNode.id, 3, options)
           setLastResult(clusterResults)
           break
       }
@@ -214,11 +171,11 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
       case 'single':
         return 'Generate Node'
       case 'contextual':
-        return `Generate ${nodeCount} Contextual Nodes`
+        return `Generate ${3} Contextual Nodes`
       case 'bridge':
         return 'Generate Bridge Node'
       case 'cluster':
-        return `Generate ${nodeCount} Related Nodes`
+        return `Generate ${3} Related Nodes`
       default:
         return 'Generate'
     }
@@ -274,7 +231,7 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
         return (
           <div className="p-3 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-700">
-              Will generate {nodeCount} nodes based on the {nodes.length} existing nodes on your board.
+              Will generate {3} nodes based on the {nodes.length} existing nodes on your board.
               {nodes.length === 0 && ' Add some nodes first to provide context.'}
             </p>
           </div>
@@ -284,7 +241,7 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
           <div className="p-3 bg-green-50 rounded-lg">
             <p className="text-sm text-green-700">
               Will create a connecting concept between {
-                selectedNode ? `"${selectedNode.data.label}"` : 'the first node'
+                selectedNode ? `"${selectedNode.data.title}"` : 'the first node'
               } and another node on your board.
               {nodes.length < 2 && ' You need at least 2 nodes on the board.'}
             </p>
@@ -294,8 +251,8 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
         return (
           <div className="p-3 bg-purple-50 rounded-lg">
             <p className="text-sm text-purple-700">
-              Will generate {nodeCount} related nodes around {
-                selectedNode ? `"${selectedNode.data.label}"` : 'the selected node'
+              Will generate {3} related nodes around {
+                selectedNode ? `"${selectedNode.data.title}"` : 'the selected node'
               }.
               {!selectedNode && ' Please select a node first.'}
             </p>

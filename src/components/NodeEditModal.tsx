@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
 import TipTapEditor from './TipTapEditor';
+import { useState, useRef, useEffect } from 'react';
 
 interface NodeEditModalProps {
   isOpen: boolean;

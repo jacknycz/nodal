@@ -22,7 +22,7 @@ export function useNodeSelection(): SelectedNodesInfo {
   
   const getSelectionSummary = () => {
     if (selectedCount === 0) return 'No nodes selected'
-    if (selectedCount === 1) return `1 node selected: "${selectedNodes[0].data.label}"`
+    if (selectedCount === 1) return `1 node selected: "${selectedNodes[0].data.title}"`
     return `${selectedCount} nodes selected`
   }
   
@@ -30,7 +30,7 @@ export function useNodeSelection(): SelectedNodesInfo {
     if (selectedCount === 0) return ''
     
     const nodeDescriptions = selectedNodes.map(node => {
-      const label = node.data.label || 'Untitled'
+      const label = node.data.title || 'Untitled'
       const content = node.data.content || 'No content'
       const type = node.data.type || 'unknown'
       

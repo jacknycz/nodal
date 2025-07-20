@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 
 export default function AnimatedBackground() {
@@ -22,25 +22,37 @@ export default function AnimatedBackground() {
 
     // Particle class
     class Particle {
-      x: number
-      y: number
-      vx: number
-      vy: number
-      size: number
-      opacity: number
-      color: string
+      x: number = 0;
+      y: number = 0;
+      vx: number = 0;
+      vy: number = 0;
+      size: number = 1;
+      opacity: number = 1;
+      color: string = isDark ? '#6366f1' : '#3b82f6';
 
       constructor() {
-        this.x = Math.random() * canvas.width
-        this.y = Math.random() * canvas.height
-        this.vx = (Math.random() - 0.5) * 0.5
-        this.vy = (Math.random() - 0.5) * 0.5
-        this.size = Math.random() * 5 + 1
-        this.opacity = Math.random() * 0.7 + 0.1
-        this.color = isDark ? '#6366f1' : '#3b82f6' // Indigo/Blue based on theme
+        if (!canvas) {
+          // Assign safe defaults
+          this.x = 0;
+          this.y = 0;
+          this.vx = 0;
+          this.vy = 0;
+          this.size = 1;
+          this.opacity = 1;
+          this.color = isDark ? '#6366f1' : '#3b82f6';
+          return;
+        }
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 5 + 1;
+        this.opacity = Math.random() * 0.7 + 0.1;
+        this.color = isDark ? '#6366f1' : '#3b82f6';
       }
 
       update() {
+        if (!canvas) return
         this.x += this.vx
         this.y += this.vy
 
@@ -56,6 +68,8 @@ export default function AnimatedBackground() {
       }
 
       draw() {
+        if (!canvas) return
+        if (!ctx) return
         ctx.save()
         ctx.globalAlpha = this.opacity
         ctx.fillStyle = this.color
@@ -77,6 +91,8 @@ export default function AnimatedBackground() {
     // Animation loop
     let animationId: number
     const animate = () => {
+      if (!canvas) return
+      if (!ctx) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
       // Draw gradient background

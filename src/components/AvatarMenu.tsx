@@ -1,4 +1,3 @@
-import React, { useState, useRef, useEffect } from 'react'
 import { 
   User, 
   Settings, 
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
+import { useState, useRef, useEffect } from 'react'
 
 interface AvatarMenuProps {
   currentBoardName?: string

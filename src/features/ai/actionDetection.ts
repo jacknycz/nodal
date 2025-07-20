@@ -1,11 +1,7 @@
 import type { 
-  AIActionType, 
   AIContext, 
-  BoardContext, 
-  DocumentContext,
-  OpenAIModel 
+  BoardContext 
 } from './aiTypes'
-import type { BoardNode } from '../board/boardTypes'
 
 // 🧠 ACTION DETECTION TYPES
 export interface DetectedAction {
@@ -114,7 +110,6 @@ export class ActionDetectionEngine {
     const normalizedInput = this.normalizeInput(input)
     
     // 2. Extract entities and keywords
-    const entities = this.extractEntities(normalizedInput)
     const keywords = this.extractKeywords(normalizedInput)
     
     // 3. Analyze context
@@ -124,7 +119,7 @@ export class ActionDetectionEngine {
     const intent = await this.intentClassifier.classify(normalizedInput, actionContext)
     
     // 5. Match patterns
-    const patternMatches = this.matchPatterns(normalizedInput, keywords, entities)
+    const patternMatches = this.matchPatterns(normalizedInput, keywords, [])
     
     // 6. Extract parameters
     const parameters = this.parameterExtractor.extract(normalizedInput, intent)
@@ -135,7 +130,6 @@ export class ActionDetectionEngine {
       intent,
       parameters,
       actionContext,
-      entities,
       keywords,
       normalizedInput
     )
@@ -183,7 +177,6 @@ export class ActionDetectionEngine {
     intent: ActionIntent,
     parameters: ActionParameters,
     actionContext: ActionContext,
-    entities: string[],
     keywords: string[],
     originalText: string
   ): Promise<DetectedAction[]> {
@@ -204,7 +197,7 @@ export class ActionDetectionEngine {
         metadata: {
           originalText,
           keywords,
-          entities,
+          entities: [], // entities is not used in this function
           sentiment: this.analyzeSentiment(originalText)
         }
       }
@@ -238,25 +231,6 @@ export class ActionDetectionEngine {
       .replace(/[^\w\s]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-  }
-  
-  private extractEntities(input: string): string[] {
-    // Simple entity extraction - can be enhanced with NLP libraries
-    const entities: string[] = []
-    
-    // Numbers
-    const numbers = input.match(/\b\d+\b/g)
-    if (numbers) entities.push(...numbers)
-    
-    // Quoted strings
-    const quotes = input.match(/"([^"]*)"/g)
-    if (quotes) entities.push(...quotes.map(q => q.replace(/"/g, '')))
-    
-    // Capitalized words (potential proper nouns)
-    const properNouns = input.match(/\b[A-Z][a-z]+\b/g)
-    if (properNouns) entities.push(...properNouns)
-    
-    return [...new Set(entities)]
   }
   
   private extractKeywords(input: string): string[] {

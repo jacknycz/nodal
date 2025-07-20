@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { FileText, Trash2, Search, X } from 'lucide-react'
 import { Button } from 'pres-start-core'
 import { useBoardStore } from '../features/board/boardSlice'
@@ -21,7 +21,6 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const nodes = useBoardStore(state => state.nodes)
   const deleteNode = useBoardStore(state => state.deleteNode)
-  const updateNode = useBoardStore(state => state.updateNode)
 
   // Filter document nodes
   const documents = nodes.filter(n => n.data.type === 'document')

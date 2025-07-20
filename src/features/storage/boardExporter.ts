@@ -65,7 +65,7 @@ class BoardExporter {
 
   private static exportAsCSV(nodes: BoardNode[], edges: BoardEdge[]): string {
     const nodeRows = nodes.map(node => 
-      `"${node.id}","${node.data.label}","${node.data.content || ''}","${node.data.type || 'default'}"`
+      `"${node.id}","${node.data.title}","${node.data.content || ''}","${node.data.type || 'default'}"`
     )
     
     const edgeRows = edges.map(edge => 
@@ -87,13 +87,13 @@ class BoardExporter {
 
   private static exportAsMarkdown(nodes: BoardNode[], edges: BoardEdge[]): string {
     const nodeList = nodes.map(node => 
-      `- **${node.data.label}**${node.data.content ? `: ${node.data.content}` : ''}`
+      `- **${node.data.title}**${node.data.content ? `: ${node.data.content}` : ''}`
     ).join('\n')
 
     const edgeList = edges.map(edge => {
       const sourceNode = nodes.find(n => n.id === edge.source)
       const targetNode = nodes.find(n => n.id === edge.target)
-      return `- ${sourceNode?.data.label || edge.source} → ${targetNode?.data.label || edge.target}`
+      return `- ${sourceNode?.data.title || edge.source} → ${targetNode?.data.title || edge.target}`
     }).join('\n')
 
     const markdown = [
@@ -113,7 +113,7 @@ class BoardExporter {
 
   private static exportAsMermaid(nodes: BoardNode[], edges: BoardEdge[]): string {
     const nodeDefinitions = nodes.map(node => 
-      `  ${node.id}["${node.data.label}"]`
+      `  ${node.id}["${node.data.title}"]`
     ).join('\n')
 
     const edgeDefinitions = edges.map(edge => 

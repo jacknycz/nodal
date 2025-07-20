@@ -1085,7 +1085,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
               id: 'center',
               type: 'default',
               position: centerPosition,
-              data: { label: brainstorm.center, content: '', aiGenerated: true }
+              data: { title: brainstorm.center, content: '', aiGenerated: true }
             }
             
             // Use intelligent positioning for subtopic nodes around the center
@@ -1101,7 +1101,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
               id: `subtopic-${i}`,
               type: 'default',
               position: subtopicPositions[i],
-              data: { label: s.title, content: s.prompt, group: s.group, aiGenerated: true }
+              data: { title: s.title, content: s.prompt, group: s.group, aiGenerated: true }
             }))
             const edges = subtopicNodes.map((n: any) => ({
               id: `edge-center-${n.id}`,
@@ -1160,7 +1160,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
                 id: 'ai-fail',
                 type: 'default',
                 position: { x: 400, y: 200 },
-                data: { label: 'AI could not generate a brainstorm map. Try again or check your API key.' }
+                data: { title: 'AI could not generate a brainstorm map. Try again or check your API key.' }
               }
             ])
             setEdges([])

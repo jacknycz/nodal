@@ -9,10 +9,6 @@ import { Button } from 'pres-start-core';
 import { PencilIcon, TrashIcon, Star, Sparkles } from 'lucide-react'
 import { createPortal } from 'react-dom';
 import { useBoardStore } from '../board/boardSlice';
-import { boardStorage } from '../storage/storage';
-import { createDocumentNode } from './documentUtils';
-import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '../auth/supabaseClient'
 import { useFocusStore } from '../focus/focusSlice';
 import { useFocusTree } from '../focus/useFocusTree';
 

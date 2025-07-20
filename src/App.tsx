@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from './features/ai/aiContext'
 import { ThemeProvider } from './contexts/ThemeContext'

@@ -1,6 +1,5 @@
 import type { DetectedAction, ActionSequence, ActionType, ActionParameters } from './actionDetection'
 import type { AIContext } from './aiTypes'
-import type { BoardNode } from '../board/boardTypes'
 import type { PlaceResult } from '../places/placesApi'
 import { searchPlacesGoogle } from '../places/placesApi'
 

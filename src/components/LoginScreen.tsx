@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Button, Link, TextInput } from 'pres-start-core'
-import { Chrome, Loader2, Sparkles, Users, Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Button } from 'pres-start-core'
+import { Chrome, Loader2, Sparkles, Users, Zap } from 'lucide-react'
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../features/auth/authUtils'
 import { useTheme } from '../contexts/ThemeContext'
 import nodalBlackLogo from '../assets/nodal-black.svg'
@@ -13,7 +13,6 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<AuthMode>('signin')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const { isDark } = useTheme()
@@ -133,14 +132,15 @@ export default function LoginScreen() {
                   disabled={isLoading}
                   required
                 /> */}
-                <TextInput
+                <input
                   id="email"
                   type="email"
-                  label="Email address"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your email"
-                  iconLeft={<Mail className="w-4 h-4 text-tertiary-400 dark:color-tertiary-500 dark:text-tertiary-500" />}
+                  disabled={isLoading}
+                  required
                 />
               </div>
             </div>
@@ -171,15 +171,16 @@ export default function LoginScreen() {
                 </button>
               </div> */}
 
-              <TextInput
+              <input
                 id="password"
-                placeholder="Enter your password"
                 type="password"
-                label="Password"
-                variant="custom"
-                iconLeft={<Lock className="w-4 h-4 text-tertiary-400 dark:color-tertiary-500 dark:text-tertiary-500" />}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your password"
+                disabled={isLoading}
+                required
+                minLength={6}
               />
             </div>
 
@@ -208,12 +209,12 @@ export default function LoginScreen() {
           <div className="text-center mt-6">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {mode === 'signin' ? "Don't have an account?" : "Already have an account?"}{' '}
-              <Link
+              <button
                 onClick={toggleMode}
                 className="text-tertiary-600 dark:text-tertiary-400 hover:underline font-medium cursor-pointer"
               >
                 {mode === 'signin' ? 'Sign up' : 'Sign in'}
-              </Link>
+              </button>
             </p>
           </div>
 

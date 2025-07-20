@@ -1,6 +1,5 @@
-import type { AIContext, BoardContext, DocumentContext } from './aiTypes'
+import type { AIContext, BoardContext } from './aiTypes'
 import type { BoardNode, BoardEdge } from '../board/boardTypes'
-import type { DetectedAction } from './actionDetection'
 
 // 🔍 CONTEXT ANALYSIS TYPES
 export interface ContextInsights {
@@ -239,8 +238,6 @@ export class ContextAnalysisEngine {
   // 🔍 MAIN ANALYSIS METHOD
   async analyzeContext(context: AIContext): Promise<ContextInsights> {
     const board = context.board
-    const documents = context.documents
-    const conversation = context.conversation
 
     if (!board) {
       throw new Error('Board context is required for analysis')
@@ -259,10 +256,10 @@ export class ContextAnalysisEngine {
     const knowledgeGaps = await this.identifyKnowledgeGaps(board, contentClusters)
 
     // 5. Analyze workflow patterns
-    const workflowPatterns = await this.analyzeWorkflowPatterns(conversation)
+    const workflowPatterns = await this.analyzeWorkflowPatterns()
 
     // 6. Analyze user behavior
-    const userBehavior = await this.analyzeUserBehavior(conversation, board)
+    const userBehavior = await this.analyzeUserBehavior(context.conversation, board)
 
     // 7. Generate recommendations
     const recommendations = await this.generateRecommendations(
@@ -388,10 +385,8 @@ export class ContextAnalysisEngine {
 
   // 🔄 WORKFLOW PATTERN ANALYSIS
   private async analyzeWorkflowPatterns(
-    conversation?: any
+    // conversation?: any
   ): Promise<WorkflowPattern[]> {
-    if (!conversation) return []
-
     const patterns: WorkflowPattern[] = []
     // Analysis implementation would go here
     return patterns
@@ -399,7 +394,7 @@ export class ContextAnalysisEngine {
 
   // 👤 USER BEHAVIOR ANALYSIS
   private async analyzeUserBehavior(
-    conversation: any,
+    // conversation: any,
     board: BoardContext
   ): Promise<UserBehaviorInsights> {
     return {

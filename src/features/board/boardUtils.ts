@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
 import type { BoardNode, BoardEdge } from './boardTypes'
 
 export function createNode(
@@ -179,7 +178,7 @@ export function getDocumentContext(nodes: BoardNode[]) {
     .filter(node => node.data.type === 'document' && node.data.documentId)
     .map(node => ({
       id: node.data.documentId!,
-      label: node.data.label,
+      title: node.data.title,
       fileName: node.data.fileName,
       fileType: node.data.fileType,
       fileSize: node.data.fileSize,
