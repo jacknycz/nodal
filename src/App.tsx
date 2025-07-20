@@ -176,7 +176,7 @@ export default function App() {
                 onOpenSettings={handleOpenSettings}
                 onLoadBoard={handleLoadBoard}
               />
-              <div className="pt-16 w-full min-h-dvh h-full">
+              <div className="w-full min-h-dvh h-full">
                 {currentView === 'boardroom' ? (
                   <BoardRoom onOpenBoard={handleLoadBoard} />
                 ) : (

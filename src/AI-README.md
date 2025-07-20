@@ -170,6 +170,74 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 
 ---
 
+## Focus Feature System
+
+### Focus Tree Logic
+- **Bidirectional Traversal:** Focus extends 2 levels deep in both directions (ancestors and descendants)
+- **BFS Algorithm:** Uses breadth-first search for efficient traversal up to specified depth
+- **Connected Node Detection:** Automatically includes all nodes connected to the focus tree
+- **State Management:** Focus state managed via Zustand slice with `focusSlice.ts`
+
+### Focus UI Patterns
+- **Single Star Button:** Toggles focus on individual nodes with glow effect
+- **Multi-Star Button:** Toggles focus depth (1-2 levels) with visual feedback
+- **Focus Indicators:** Focused nodes have enhanced glow and reduced opacity for non-focused nodes
+- **Edge Fading:** Edges not connected to focused nodes are faded/blurred for visual hierarchy
+
+### Focus State Integration
+- **Board State:** Focus integrates with board state via `useFocusTree` hook
+- **Node Rendering:** Nodes respond to focus state with conditional styling
+- **Edge Rendering:** Edges fade based on focus connectivity in `FloatingEdge.tsx`
+- **Performance:** Focus calculations are memoized to prevent unnecessary re-renders
+
+---
+
+## Enhanced Node Layout & Positioning
+
+### Multi-Cluster Layout (`layoutMindMapAll`)
+- **Cluster Detection:** Automatically detects multiple disconnected clusters in the board
+- **Radial Layout:** Each cluster uses the existing radial mind map layout algorithm
+- **Loner Node Placement:** Disconnected nodes are placed in a centered grid layout
+- **Comprehensive Coverage:** All nodes are positioned, including those previously ignored
+
+### Layout Testing Scenarios
+- **Large Boards:** Test with 20+ nodes to ensure performance
+- **Deep Nesting:** Verify deeply nested/branched mind maps render correctly
+- **Disconnected Nodes:** Ensure loners are properly positioned in grid
+- **Multiple Clusters:** Test boards with several disconnected clusters
+- **Document Uploads:** Verify AI-generated document nodes use proper layout
+- **AI Brainstorm Flows:** Test batch node generation with layout
+
+### Layout Algorithm Details
+- **Root Detection:** Each cluster finds its own root node for radial positioning
+- **Spacing Calculation:** Nodes are spaced based on connection depth and sibling count
+- **Grid Fallback:** Loner nodes use calculated grid positions for even distribution
+- **Viewport Centering:** All layouts are centered within the current viewport
+
+---
+
+## Edge Styling & Visual Effects
+
+### Edge Glow Effects
+- **Tailwind CSS Patterns:** Use `drop-shadow` filters for glow effects
+- **Color Consistency:** Glow colors match Tailwind `gray-800` in rgba format
+- **CSS Implementation:** Applied via `.react-flow__edge-path` selector in `index.css`
+- **Hover States:** Enhanced glow on edge hover for better interaction feedback
+
+### Focus-Based Edge Visibility
+- **Connectivity Detection:** Edges fade when not connected to focused nodes
+- **Opacity Transitions:** Smooth 300ms transitions for edge visibility changes
+- **Visual Hierarchy:** Focused edges remain prominent while others fade to background
+- **Performance:** Edge fading calculations are optimized to prevent layout thrashing
+
+### Edge Rendering Patterns
+- **Double Path Technique:** Intentional double edge paths for hover detection
+- **Z-Index Management:** Edges properly layered behind nodes but above background
+- **Theme Integration:** Edge colors adapt to light/dark theme changes
+- **Animation Performance:** Edge effects use GPU-accelerated properties
+
+---
+
 ## Current Implementation Notes
 - **Board Room** — Landing page with board management, user welcome, create/open actions
 - **Authentication** — Google OAuth with email/password fallback
@@ -213,6 +281,9 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - **Mobile Responsiveness** — Touch interactions and responsive layouts
 - **Modal State Management** — Proper cleanup and state reset
 - **AI Context Dependencies** — Managing async AI operations and loading states
+- **Focus State Loops:** Avoid infinite update loops by not auto-focusing nodes on board creation
+- **Layout Edge Cases:** Test disconnected nodes and multiple clusters thoroughly
+- **PDF Worker Mismatches:** Ensure PDF.js worker version matches installed pdfjs-dist version
 
 ---
 
@@ -229,6 +300,9 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - If unsure, ask for clarification before assuming app behavior
 - Consider performance implications of animations and AI operations
 - Maintain consistent error handling and loading states
+- **Focus Feature Integration:** Consider how new features interact with the focus system
+- **Layout Testing:** Always test node layout changes with various board configurations
+- **PDF Viewer Stability:** Keep working PDF viewers as-is, create new files for experiments
 
 ---
 
@@ -245,7 +319,7 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 
 ## Document AI Flow
 
-Here’s how documents become searchable and useful for AI in Nodal:
+Here's how documents become searchable and useful for AI in Nodal:
 
 1. **Upload**
    - User uploads a document (PDF, text, Word, image, etc.)
@@ -268,7 +342,7 @@ Here’s how documents become searchable and useful for AI in Nodal:
    - Node Aware mode and other AI features can reference document content
 
 6. **Search/Reference**
-   - You can “search” documents by asking the AI in chat
+   - You can "search" documents by asking the AI in chat
    - The AI uses the included snippets to answer, summarize, or connect ideas
 
 ```mermaid
@@ -294,7 +368,7 @@ graph TD;
 
 ### Handle Visibility Pattern
 - **UX Pattern:**
-  - Node connection handles are hidden by default and only appear on node hover, using Tailwind’s `group-hover` utility. See `NodalNode.tsx` for the implementation.
+  - Node connection handles are hidden by default and only appear on node hover, using Tailwind's `group-hover` utility. See `NodalNode.tsx` for the implementation.
 
 ### AI Node Generation
 - **Positioning:**
@@ -319,14 +393,14 @@ graph TD;
   - If node handles are always visible, ensure the `group` class is on the main node container and not duplicated on children. Handles should use `opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto`.
 
 ### AI/Agent Collaboration
-- If you’re an AI agent or copilot, always check for existing layout and UX patterns before introducing new ones. Consistency is key!
+- If you're an AI agent or copilot, always check for existing layout and UX patterns before introducing new ones. Consistency is key!
 
 ---
 
 ## PDF.js, react-pdf, and Vite Integration: Lessons Learned
 
 ### Why this section?
-If you are adding or maintaining PDF viewing or text extraction in Nodal, read this first! The PDF.js/react-pdf/Vite ecosystem is full of versioning and worker pitfalls. Here’s what we learned (the hard way):
+If you are adding or maintaining PDF viewing or text extraction in Nodal, read this first! The PDF.js/react-pdf/Vite ecosystem is full of versioning and worker pitfalls. Here's what we learned (the hard way):
 
 ### Key Lessons
 - **PDF.js main and worker versions must match exactly.**
@@ -337,9 +411,15 @@ If you are adding or maintaining PDF viewing or text extraction in Nodal, read t
 - **react-pdf and pdfjs-dist versions must be compatible.**
   - As of 2025, `react-pdf@7.x` + `pdfjs-dist@3.x` + React 18 is stable.
   - React 19 is not yet officially supported by react-pdf 7.x/8.x.
-- **Blob URLs work, but don’t revoke them until the viewer is done.**
+- **Blob URLs work, but don't revoke them until the viewer is done.**
 - **If the viewer works in isolation but not in your app, check for prop/lifecycle issues.**
-- **If you see a timeout with no errors, it’s almost always a version or worker mismatch.**
+- **If you see a timeout with no errors, it's almost always a version or worker mismatch.**
+
+### Minimal Working Setup
+- **Keep It Simple:** Start with the most basic PDF viewer that works
+- **Create New Files:** When experimenting, create new files (e.g., `TestPDFScroll.tsx`) instead of modifying working code
+- **Isolate Issues:** Use minimal viewers to isolate problems from complex app integration
+- **Version Lock:** Once you have a working setup, document the exact versions used
 
 ### Troubleshooting Checklist
 - [ ] Is the worker file in `public/pdf.worker.min.js` the exact same version as your installed `pdfjs-dist`?
@@ -361,12 +441,12 @@ If you are adding or maintaining PDF viewing or text extraction in Nodal, read t
 ### If you get stuck
 - Check the version of `pdfjs-dist` in `node_modules` and download the matching worker from unpkg.
 - Try a minimal viewer with a static file to isolate the problem.
-- If you see a timeout and everything else looks right, it’s almost always a version mismatch.
+- If you see a timeout and everything else looks right, it's almost always a version mismatch.
 - If you upgrade React or react-pdf, re-check all of the above.
 
 ---
 
-*This section was added after a multi-day debugging marathon. If you’re reading this, you’re already smarter than we were!*
+*This section was added after a multi-day debugging marathon. If you're reading this, you're already smarter than we were!*
 
 ---
 

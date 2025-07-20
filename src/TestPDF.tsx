@@ -24,7 +24,7 @@ export default function PdfNode({ file = '/test.pdf' }: { file?: string }) {
         loading="Loading PDF..."
         error="Failed to load PDF."
       >
-        <Page pageNumber={pageNumber} width={560} />
+        <Page pageNumber={pageNumber} width={820} />
       </Document>
 
       <div style={{ marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
