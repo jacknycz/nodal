@@ -1016,7 +1016,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         <TopicDisplay topic={topic} onEdit={handleEditTopic} />
         {/* Task List Button and Menu */}
         <button
-          className="fixed left-4 top-40 flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full border border-gray-200 dark:border-gray-700 shadow transition-colors mt-2"
+          className="fixed left-4 top-30 flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full border border-gray-200 dark:border-gray-700 shadow transition-colors mt-2"
           title="Show board tasks"
           onClick={() => setShowTaskList(v => !v)}
           style={{ zIndex: 41 }}
