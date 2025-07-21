@@ -343,18 +343,18 @@ export default function AINodeGenerator({ isOpen = true, onClose, className = ''
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 ${className}`}>
-      <Card className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <Card className="w-full max-w-lg mx-4 max-h-[70vh] overflow-y-auto">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between">
             <Heading size="h4">AI Node Generator</Heading>
             {onClose && (
-              <Button
+              <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+                className="text-black hover:text-gray-600 text-xl leading-none"
               >
-                ×
-              </Button>
+                X
+              </button>
             )}
           </div>
 
