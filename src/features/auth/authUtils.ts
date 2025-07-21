@@ -3,7 +3,16 @@ import { useEffect, useState } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 
 export async function signInWithGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' })
+  const redirectUrl = import.meta.env.PROD 
+    ? `${window.location.origin}/auth/callback`
+    : "http://localhost:5173/auth/callback"
+    
+  const { error } = await supabase.auth.signInWithOAuth({ 
+    provider: "google",
+    options: {
+      redirectTo: redirectUrl
+    }
+  })
   if (error) throw error
 }
 
@@ -38,4 +47,4 @@ export function useSupabaseUser() {
   }, [])
 
   return user
-} 
+}
