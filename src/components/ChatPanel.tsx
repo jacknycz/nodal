@@ -24,6 +24,7 @@ export default function ChatPanel({
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
   const [panelHeight, setPanelHeight] = useState(384) // Default height: 384px (h-96)
+  const [panelWidth, setPanelWidth] = useState(320) // Default width: 320px (w-80)
 
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
@@ -103,6 +104,29 @@ export default function ChatPanel({
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }, [panelHeight])
+
+  // Handle diagonal (corner) resize functionality (bottom-left)
+  const handleDiagonalResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startY = e.clientY
+    const startWidth = panelWidth
+    const startHeight = panelHeight
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = startX - e.clientX // Reversed for bottom-left
+      const deltaY = e.clientY - startY
+      const newWidth = Math.max(240, Math.min(600, startWidth + deltaX))
+      const newHeight = Math.max(200, Math.min(600, startHeight + deltaY))
+      setPanelWidth(newWidth)
+      setPanelHeight(newHeight)
+    }
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+  }, [panelWidth, panelHeight])
 
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
@@ -261,8 +285,8 @@ export default function ChatPanel({
       {isExpanded && (
         <div
           ref={chatRef}
-          className={`bg-white overflow-hidden dark:bg-gray-900 rounded-4xl shadow-2xl border border-gray-200 dark:border-gray-700 w-80 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
-          style={{ height: `${panelHeight}px` }}
+          className={`bg-white overflow-hidden dark:bg-gray-900 rounded-4xl rounded-bl shadow-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
+          style={{ height: `${panelHeight}px`, width: `${panelWidth}px` }}
         >
           {/* Header */}
           <button
@@ -283,7 +307,7 @@ export default function ChatPanel({
               <div
                 ref={messagesRef}
                 className="flex-1 overflow-y-auto p-4 space-y-3"
-                style={{ height: `${panelHeight - 160}px` }} // Subtract header + input + resize handle height
+                style={{ height: `${panelHeight - 145}px` }} // Subtract header + input + resize handle height
               >
                 {messages.map((message) => (
                   <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -357,7 +381,7 @@ export default function ChatPanel({
                       value={currentMessage}
                       onChange={(e) => setCurrentMessage(e.target.value)}
                       placeholder="Hey! Ask me anything..."
-                      className="w-full text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full z-20 relative text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                       rows={3}
                       disabled={isLoading}
                     />
@@ -374,13 +398,12 @@ export default function ChatPanel({
                 </div>
               </div>
 
-              {/* Resize Handle */}
+              {/* Single Diagonal Resize Handle (bottom-left) */}
               <div
-                ref={resizeRef}
-                onMouseDown={handleResizeStart}
-                className="h-3 bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 cursor-ns-resize flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                onMouseDown={handleDiagonalResizeStart}
+                className="absolute bottom-0 left-0 h-12 w-12 bg-gray-100 dark:bg-gray-700 border-t border-l border-gray-200 dark:border-gray-700 cursor-nesw-resize flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-0"
               >
-                <GripVertical size={12} className="text-gray-400" />
+                <GripVertical size={12} className="text-gray-400 rotate-45 bottom-0 left-0 absolute" />
               </div>
             </>
           )}
@@ -407,7 +430,6 @@ export default function ChatPanel({
                     type="password"
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAPIKeySubmit()}
                     placeholder="sk-..."
                     className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     disabled={setupLoading}
