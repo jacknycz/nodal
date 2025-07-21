@@ -1,12 +1,12 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useBoard } from '../features/board/useBoard'
 import { useAI } from '../features/ai/useAI'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAINodeGenerator } from '../features/ai/useAINodeGenerator'
 import { useViewportCenter } from './useViewportCenter'
 import { useBoardStore } from '../features/board/boardSlice'
-import type { BoardNode } from '../features/board/boardTypes'
-import type { AIRequest } from '../features/ai/aiTypes'
+import type { BoardNode as _BoardNode } from '../features/board/boardTypes'
+import type { AIRequest as _AIRequest } from '../features/ai/aiTypes'
 import type { NodeResponse, ParsedAIResponse, ConnectionSuggestion } from '../types'
 
 interface ChatMessage {
@@ -184,7 +184,7 @@ const NODE_AWARE_SYSTEM_PROMPT = `You are an expert knowledge architect and coll
 You're an intelligent collaborator who brings expertise, spots issues, and helps build better knowledge structures. Be insightful, be direct when you see problems, and always aim to make the knowledge graph more valuable.`
 
 export function useNodeAwareChat(options: UseNodeAwareChatOptions = {}): UseNodeAwareChatResult {
-  const { autoSave = true, maxHistory = 100 } = options
+  const { autoSave: _autoSave = true, maxHistory = 100 } = options
   
   const [messages, setMessages] = useState<ChatMessage[]>([
     {

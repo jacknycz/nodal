@@ -1,18 +1,18 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useBoard } from '../features/board/useBoard'
 import { useAI } from '../features/ai/useAI'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAINodeGenerator } from '../features/ai/useAINodeGenerator'
 import { useBoardAI } from '../features/ai/useAI'
 import { useViewportCenter } from './useViewportCenter'
-import { boardStorage } from '../features/storage/storage'
+
 import type { BoardNode } from '../features/board/boardTypes'
-import type { AIRequest, AIContext } from '../features/ai/aiTypes'
+
 // 🦸‍♂️ PHASE 2 IMPORTS - Superman's Advanced Intelligence
-import { actionDetectionEngine } from '../features/ai/actionDetection'
-import { multiStepOrchestrator } from '../features/ai/multiStepActions'
-import type { DetectedAction, ActionType } from '../features/ai/actionDetection'
-import type { ExecutionProgress, ExecutionReport } from '../features/ai/multiStepActions'
+import { actionDetectionEngine as _actionDetectionEngine } from '../features/ai/actionDetection'
+import { multiStepOrchestrator as _multiStepOrchestrator } from '../features/ai/multiStepActions'
+import type { DetectedAction, ActionType as _ActionType } from '../features/ai/actionDetection'
+import type { ExecutionProgress as _ExecutionProgress, ExecutionReport } from '../features/ai/multiStepActions'
 import { useBoardStore } from '../features/board/boardSlice'
 import { searchPlacesGoogle } from '../features/places/placesApi'
 
@@ -86,11 +86,11 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
   // --- Intent tracking ---
   const [pendingIntent, setPendingIntent] = useState<null | { type: string; query?: string }>(null)
 
-  const { nodes, edges, selectedNode, selectedNodeId, addNode } = useBoard()
-  const { generateNode } = useAINodeGenerator()
+  const { nodes, edges, selectedNode, selectedNodeId, addNode: _addNode } = useBoard()
+  const { generateNode: _generateNode } = useAINodeGenerator()
   const { summarizeBoard, generateBoardExtensions } = useBoardAI()
   const { generate } = useAI()
-  const { getViewportCenter } = useViewportCenter()
+  const { getViewportCenter: _getViewportCenter } = useViewportCenter()
   const { selectOptimalModel, isInitialized } = useAIContext()
   const { topic } = useBoardStore()
 
@@ -118,7 +118,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       name: 'analyze',
       description: 'Analyze the current board and provide insights',
       aliases: ['analysis', 'insights'],
-      execute: async (args, context) => {
+      execute: async (_args, context) => {
         const analysis = await summarizeBoard()
         return `🧠 **Board Analysis:**\n\n${analysis}\n\n**Stats:**\n- ${context.nodeCount} nodes\n- ${context.connectionCount} connections\n- ${context.documentCount} documents`
       }
@@ -127,12 +127,12 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       name: 'create',
       description: 'Create new nodes from your description',
       aliases: ['node', 'add', 'generate'],
-      execute: async (args, context) => {
+      execute: async (args, _context) => {
         const description = args.join(' ')
         if (!description) return '❌ Please provide a description for the node to create'
         
         try {
-          const result = await generateNode(description)
+          const result = await _generateNode(description)
           return `✅ **Node Created!** Generated new node: "${result}"\n\nThe node has been added to your board with AI-generated content.`
         } catch (error) {
           return `❌ **Error creating node:** ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -143,7 +143,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       name: 'expand',
       description: 'Generate multiple related nodes around a concept',
       aliases: ['cluster', 'related', 'branch'],
-      execute: async (args, context) => {
+      execute: async (args, _context) => {
         const count = parseInt(args[0]) || 3
         const concept = args.slice(1).join(' ')
         
@@ -223,7 +223,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       name: 'docs',
       description: 'List and analyze uploaded documents',
       aliases: ['documents', 'files', 'uploads'],
-      execute: async (args, context) => {
+      execute: async (_args, context) => {
         const docNodes = context.boardNodes.filter(n => n.type === 'document')
         
         if (docNodes.length === 0) {
@@ -243,7 +243,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       name: 'help',
       description: 'Show available commands and usage',
       aliases: ['commands', '?'],
-      execute: async (args, context) => {
+      execute: async (_args, context) => {
         const commandList = commands.map(cmd => 
           `**/${cmd.name}** - ${cmd.description}\n   Aliases: ${cmd.aliases.map(a => `/${a}`).join(', ')}`
         ).join('\n\n')
@@ -255,7 +255,7 @@ export function useChat(options: UseChatOptions = {}): UseChatResult {
       name: 'stats',
       description: 'Show detailed board statistics',
       aliases: ['info', 'status'],
-      execute: async (args, context) => {
+      execute: async (_args, context) => {
         const nodeTypes = context.boardNodes.reduce((acc, node) => {
           const nodeType = node.type || 'default'
           acc[nodeType] = (acc[nodeType] || 0) + 1

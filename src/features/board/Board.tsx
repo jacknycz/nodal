@@ -3,8 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
-  addEdge,
   ConnectionMode,
   MarkerType,
   type Connection,
@@ -86,6 +84,7 @@ declare global {
 }
 
 export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoom }: BoardProps) {
+  const [_showBoardRoom, setShowBoardRoom] = useState(false)
   const {
     nodes,
     edges,
@@ -101,7 +100,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     setEdges,
   } = useBoard()
 
-  const { topic, setTopic, boardBrief, setBoardBrief, setCurrentBoardId } = useBoardStore()
+  const { topic, setTopic, boardBrief, setBoardBrief, setCurrentBoardId, setEmbeddings } = useBoardStore()
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -121,7 +120,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const lastSavedDataRef = useRef<string>('')
   
   // Upload state
-  const [isDragOver, setIsDragOver] = useState(false)
+  const [_isDragOver, setIsDragOver] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
   
   // Selection context state
@@ -233,7 +232,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   useEffect(() => {
     const handleOpenSaveModal = () => setShowSaveModal(true)
     const handleOpenBoardRoom = () => setShowBoardRoom(true)
-    const handleExportBoard = () => {
+    const _handleExportBoard = () => {
       const boardData = { nodes, edges }
       const dataStr = JSON.stringify(boardData, null, 2)
       const dataBlob = new Blob([dataStr], { type: 'application/json' })
@@ -244,7 +243,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       link.click()
       URL.revokeObjectURL(url)
     }
-    const handleImportBoard = () => {
+    const _handleImportBoard = () => {
       const input = document.createElement('input')
       input.type = 'file'
       input.accept = '.json'
@@ -292,7 +291,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     else setShowPreSession(false)
   }, [boardBrief])
 
-  const { generateNode, isGenerating, error: aiError } = useAINodeGenerator()
+  const { generateNode: _generateNode, isGenerating, error: aiError } = useAINodeGenerator()
   const ai = useAI()
 
   const handleConnect = (connection: Connection) => {
@@ -400,7 +399,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   }, [addNode, getViewportCenter, localBoardId, edges, setNodes]) // Use localBoardId
 
   // Add a manual reset function in case drag state gets stuck
-  const resetDragState = useCallback(() => {
+  const _resetDragState = useCallback(() => {
     console.log('Manually resetting drag state')
     setIsDragOver(false)
   }, [])
@@ -427,7 +426,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       }
     }
 
-    const handleWindowDragEnd = (e: DragEvent) => {
+    const handleWindowDragEnd = (_e: DragEvent) => {
       // Drag operation completely ended
       if (isFileBeingDragged) {
         isFileBeingDragged = false
@@ -478,7 +477,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }, [handleFileUpload])
 
-  const handleSaveBoard = async (boardName: string) => {
+  const _handleSaveBoard = async (boardName: string) => {
     try {
       setSaveStatus('saving')
       const boardData = {
@@ -561,7 +560,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }
 
-  const handleRenameBoard = async (boardId: string, newName: string) => {
+  const _handleRenameBoard = async (boardId: string, newName: string) => {
     try {
       await boardStorage.renameBoard(boardId, newName)
       
@@ -581,7 +580,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }
 
-  const handleDeleteBoard = async (boardId: string) => {
+  const _handleDeleteBoard = async (boardId: string) => {
     try {
       await boardStorage.deleteBoard(boardId)
       
@@ -718,7 +717,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     input.click()
   }
 
-  const handleOpenChatWithSelection = (context: string) => {
+  const _handleOpenChatWithSelection = (context: string) => {
     setSelectionContext(context)
     setShowChat(true)
   }
@@ -746,7 +745,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   }
 
   const [vectorizing, setVectorizing] = useState(false)
-  const [vectorizationError, setVectorizationError] = useState<string | null>(null)
+  const [_vectorizationError, setVectorizationError] = useState<string | null>(null)
   const [brainstorming, setBrainstorming] = useState(false)
   const [brainstormError, setBrainstormError] = useState<string | null>(null)
   const aiConfig = {
@@ -784,12 +783,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
   function layoutMindMap(nodes: BoardNode[], edges: BoardEdge[], center = { x: 400, y: 300 }) {
     if (nodes.length === 0) return []
-    const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]))
+    const _nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]))
     const rootId = getRootNodeId(nodes, edges)
     if (!rootId) return nodes
     const placed: Record<string, { x: number; y: number }> = {}
-    const maxNodeWidth = 600
-    const nodeHeight = 120
+    const _maxNodeWidth = 600
+    const _nodeHeight = 120
     const baseRadius = 600 // doubled from 300
     const levelStep = 440 // doubled from 220
     function placeNode(id: string, x: number, y: number, depth: number, angleStart: number, angleEnd: number) {
@@ -800,7 +799,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       const arcSpan = Math.min(Math.PI, Math.PI / 2 + (children.length - 1) * 0.18) // widen arc for more children
       const arcCenter = (angleStart + angleEnd) / 2
       const arcStart = arcCenter - arcSpan / 2
-      const arcEnd = arcCenter + arcSpan / 2
+      const _arcEnd = arcCenter + arcSpan / 2
       const r = baseRadius + depth * levelStep
       for (let i = 0; i < children.length; i++) {
         const angle = arcStart + (arcSpan * (i + 0.5)) / children.length
@@ -849,7 +848,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   function layoutMindMapAll(nodes: BoardNode[], edges: BoardEdge[], center = { x: 400, y: 300 }) {
     if (nodes.length === 0) return [];
     const clusters = findClusters(nodes, edges);
-    const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
+    const _nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
     const layouts: { [id: string]: { x: number; y: number } } = {};
     const clusterLayouts: BoardNode[][] = [];
     const loners: BoardNode[] = [];
@@ -857,10 +856,10 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     // Separate clusters into loners and groups
     for (const cluster of clusters) {
       if (cluster.length === 1) {
-        loners.push(nodeMap[cluster[0]]);
+        loners.push(_nodeMap[cluster[0]]);
       } else {
         // Layout this cluster as a mindmap
-        const clusterNodes = cluster.map(id => nodeMap[id]);
+        const clusterNodes = cluster.map(id => _nodeMap[id]);
         const clusterEdges = edges.filter(e => cluster.includes(e.source) && cluster.includes(e.target));
         // Use the existing layoutMindMap for this cluster, centered at (0,0) for now
         const clusterLayout = layoutMindMap(clusterNodes, clusterEdges, { x: 0, y: 0 });
@@ -892,7 +891,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     // Lay out loners in a square grid, centered below clusters
     if (loners.length > 0) {
       const lonerGridCols = Math.ceil(Math.sqrt(loners.length));
-      const lonerGridRows = Math.ceil(loners.length / lonerGridCols);
+              const _lonerGridRows = Math.ceil(loners.length / lonerGridCols);
       const lonerSpacing = 220;
       const lonerStartX = center.x - ((lonerGridCols - 1) * lonerSpacing) / 2;
       const lonerStartY = center.y + (gridRows * clusterBoxSize) / 2 + 200;
@@ -916,8 +915,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     setNodes(newNodes);
   }, [nodes, edges, setNodes]);
 
-  const { enterFocusMode, focusedNodeId, setFocusTree } = useFocusStore();
-  const { buildFocusTree } = useFocusTree();
+  const { enterFocusMode: _enterFocusMode, focusedNodeId: _focusedNodeId, setFocusTree: _setFocusTree } = useFocusStore();
+  const { buildFocusTree: _buildFocusTree } = useFocusTree();
 
   return (
     <div className="w-full h-full relative">
@@ -1012,7 +1011,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         onClose={() => setShowTopicModal(false)}
         defaultTopic={topic || ''}
         onSave={handleSaveTopic}
-        isFirstTime={!topic && nodes.length === 0}
       />
 
       <BoardSetupModal

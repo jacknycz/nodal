@@ -36,7 +36,7 @@ function getNodeIntersection(intersectionNode: any, otherNode: any) {
 }
 
 // Returns the position of the node handle
-function getNodeHandle(node: any, handlePosition: Position) {
+function __getNodeHandle(node: any, handlePosition: Position) {
   const width = node.measured?.width
   const height = node.measured?.height
   const positionAbsolute = node.internals?.positionAbsolute
@@ -93,7 +93,7 @@ export default function FloatingEdge({
   target,
   markerEnd,
   style,
-  data,
+  data: _data,
 }: EdgeProps) {
   const [isHovered, setIsHovered] = useState(false)
   

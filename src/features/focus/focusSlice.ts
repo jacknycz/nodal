@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { BoardNode, BoardEdge } from '../board/boardTypes'
+
 
 interface FocusState {
   focusedNodeId: string | null
@@ -15,7 +15,7 @@ interface FocusActions {
   exitFocusMode: () => void
 }
 
-export const useFocusStore = create<FocusState & FocusActions>((set, get) => ({
+export const useFocusStore = create<FocusState & FocusActions>((set, _get) => ({
   focusedNodeId: null,
   focusTree: [],
   isFocusMode: false,

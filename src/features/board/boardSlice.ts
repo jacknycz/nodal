@@ -20,7 +20,7 @@ const initialState: BoardState = {
 export const useBoardStore = create<BoardState & BoardActions & {
   setEmbeddings: (embeddings: DocumentEmbedding[]) => void
   clearEmbeddings: () => void
-}>((set, get) => ({
+}>((set, _get) => ({
   ...initialState,
 
   addNode: (node) => {

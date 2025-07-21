@@ -35,7 +35,7 @@ export async function searchPlacesGoogle(query: string, location: string): Promi
     ]
   }
   // Google Places API endpoint (Text Search)
-  const endpoint = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}+in+${encodeURIComponent(location)}&key=${apiKey}`
+  const __endpoint = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}+in+${encodeURIComponent(location)}&key=${apiKey}`
   // Use a proxy server to avoid CORS and keep API key secret
   const proxyUrl = `/api/google-places?query=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`
   const res = await fetch(proxyUrl)

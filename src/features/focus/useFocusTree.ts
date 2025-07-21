@@ -1,7 +1,8 @@
+
 import { useCallback, useMemo } from 'react'
 import { useBoardStore } from '../board/boardSlice'
 import { useFocusStore } from './focusSlice'
-import type { BoardNode, BoardEdge } from '../board/boardTypes'
+
 
 export function useFocusTree() {
   const { nodes, edges } = useBoardStore()

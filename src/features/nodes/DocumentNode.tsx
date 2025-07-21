@@ -14,9 +14,9 @@ import TestPDF from '../../TestPDF';
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
 
 // PDF Viewer Component
-function PDFViewer({
+function __PDFViewer({
   fileUrl,
-  fileName
+  fileName: _fileName
 }: {
   fileUrl: string
   fileName: string
@@ -231,7 +231,7 @@ function DeleteDocumentModal({
 
 export default function DocumentNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
-  const { updateNodeLabel, removeNode, toggleNodeExpanded, updateNodeContent } = useNodeActions(id)
+  const { updateNodeLabel, removeNode, toggleNodeExpanded, updateNodeContent: _updateNodeContent } = useNodeActions(id)
 
   // State
   const [isEditingLabel, setIsEditingLabel] = useState(false)

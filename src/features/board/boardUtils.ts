@@ -192,8 +192,8 @@ export function getDocumentContext(nodes: BoardNode[]) {
 export function findNonOverlappingPositions(
   center: { x: number; y: number },
   count: number,
-  existingNodes: { x: number; y: number }[],
-  nodeSize = 180,
+  _existingNodes: { x: number; y: number }[],
+  _nodeSize = 180,
   minSpacing = 40
 ): { x: number; y: number }[] {
   const positions: { x: number; y: number }[] = []

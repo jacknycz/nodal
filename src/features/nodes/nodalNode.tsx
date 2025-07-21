@@ -69,10 +69,10 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
   const { updateNodeLabel, updateNodeContent, removeNode } = useNodeActions(id)
   const nodeRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const allNodes = useBoardStore(state => state.nodes);
-  const setNodes = useBoardStore(state => state.setNodes);
-  const nodes = useBoardStore(state => state.nodes);
+  const __fileInputRef = useRef<HTMLInputElement>(null);
+  const __allNodes = useBoardStore(state => state.nodes);
+  const __setNodes = useBoardStore(state => state.setNodes);
+  const __nodes = useBoardStore(state => state.nodes);
   const { isFocusMode, focusedNodeId, enterFocusMode, exitFocusMode, setFocusTree } = useFocusStore();
   const { isNodeInFocusTree, buildFocusTree } = useFocusTree();
   const isFocused = isFocusMode && isNodeInFocusTree(id);
@@ -108,7 +108,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   }, [nodeData.title])
 
   // 7. Add MAX_IMAGE_SIZE constant
-  const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB
+  const _MAX_IMAGE_SIZE = 1024 * 1024; // 1MB
 
   // Restore missing handlers for label and delete logic
   const handleLabelKeyDown = (e: React.KeyboardEvent) => {
@@ -151,7 +151,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
   };
 
   // Update the currentBoardId to use the store
-  const currentBoardId = useBoardStore(state => state.currentBoardId);
+  const _currentBoardId = useBoardStore(state => state.currentBoardId);
 
   const handleFocusToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
@@ -356,7 +356,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
 
                 {/* Delete Button */}
                 <Button
-                  onClick={handleDeleteClick}
+                  onClick={() => handleDeleteClick({} as React.MouseEvent)}
                   className="flex cursor-pointer items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
                   title="Delete node"
                   iconLeft={<TrashIcon className="w-3 h-3" />}
@@ -399,7 +399,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                     const fakeId = imgUrl.substring(imgUrl.lastIndexOf('/') + 1); // Extract filename
                     setEditMedia(prev => prev.includes(fakeId) ? prev : [...prev, fakeId]);
                   }}
-                  onImageDelete={imgUrl => {
+                  onImageDelete={() => {
                     // This handler is no longer needed as media is string IDs
                   }}
                 />

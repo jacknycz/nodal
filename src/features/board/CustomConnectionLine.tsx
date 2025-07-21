@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { getBezierPath } from '@xyflow/react'
 import type { ConnectionLineComponentProps } from '@xyflow/react'
 
