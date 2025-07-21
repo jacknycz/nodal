@@ -50,6 +50,12 @@ export interface DocumentEmbedding {
   embedding: number[]
 }
 
+export interface Task {
+  id: string
+  text: string
+  completed: boolean
+}
+
 export interface BoardState {
   nodes: BoardNode[]
   edges: BoardEdge[]
@@ -63,6 +69,7 @@ export interface BoardState {
   boardBrief?: BoardBrief
   embeddings?: DocumentEmbedding[]
   currentBoardId?: string // Add this field
+  tasks?: Task[]
 }
 
 export interface BoardActions {

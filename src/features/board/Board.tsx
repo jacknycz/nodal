@@ -38,6 +38,8 @@ import { useAI } from '../ai/useAI'
 import AIClient from '../ai/aiClient'
 import { useFocusStore } from '../focus/focusSlice';
 import { useFocusTree } from '../focus/useFocusTree';
+import TaskList from '../../components/TaskList';
+import { List } from 'lucide-react';
 
 import '@xyflow/react/dist/style.css'
 import type { BoardNode, BoardEdge } from './boardTypes'
@@ -114,6 +116,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const [showSetup, setShowSetup] = React.useState(false); // was: !boardBrief
   const [showPreSession, setShowPreSession] = React.useState(false)
   const [isLoadingBoard, setIsLoadingBoard] = useState(false) // Add this flag
+  const [showTaskList, setShowTaskList] = useState(false);
   
   // Refs for autosave
   const autosaveTimeoutRef = useRef<number | null>(null)
@@ -1011,8 +1014,21 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       {/* Topic Display */}
       <div className="absolute z-40">
         <TopicDisplay topic={topic} onEdit={handleEditTopic} />
+        {/* Task List Button and Menu */}
+        <button
+          className="fixed left-4 top-40 flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full border border-gray-200 dark:border-gray-700 shadow transition-colors mt-2"
+          title="Show board tasks"
+          onClick={() => setShowTaskList(v => !v)}
+          style={{ zIndex: 41 }}
+        >
+          <List size={20} className="text-gray-600 dark:text-gray-200" />
+        </button>
+        {showTaskList && (
+          <div className="fixed left-4 top-52 z-40">
+            <TaskList />
+          </div>
+        )}
       </div>
-
       
       <ReactFlow
         nodes={nodes}

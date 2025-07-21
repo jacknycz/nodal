@@ -15,11 +15,16 @@ const initialState: BoardState = {
   boardBrief: undefined,
   embeddings: [],
   currentBoardId: undefined,
+  tasks: [],
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
   setEmbeddings: (embeddings: DocumentEmbedding[]) => void
   clearEmbeddings: () => void
+  addTask: (text: string) => void
+  toggleTask: (id: string) => void
+  removeTask: (id: string) => void
+  setTasks: (tasks: { id: string; text: string; completed: boolean }[]) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -102,5 +107,24 @@ export const useBoardStore = create<BoardState & BoardActions & {
   },
   clearEmbeddings: () => {
     set({ embeddings: [] })
+  },
+  addTask: (text) => {
+    const newTask = { id: uuidv4(), text, completed: false }
+    set((state) => ({ tasks: [...(state.tasks || []), newTask] }))
+  },
+  toggleTask: (id) => {
+    set((state) => ({
+      tasks: (state.tasks || []).map(task =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    }))
+  },
+  removeTask: (id) => {
+    set((state) => ({
+      tasks: (state.tasks || []).filter(task => task.id !== id)
+    }))
+  },
+  setTasks: (tasks) => {
+    set({ tasks })
   },
 })) 
