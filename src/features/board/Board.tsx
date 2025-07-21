@@ -126,6 +126,53 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   // Selection context state
   const [selectionContext, setSelectionContext] = useState<string | undefined>(undefined)
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; boardX: number; boardY: number } | null>(null)
+
+  // Helper to convert screen (client) coordinates to board (flow) coordinates
+  const reactFlowWrapper = useRef<HTMLDivElement>(null)
+  const toBoardCoords = (clientX: number, clientY: number) => {
+    if (!reactFlowWrapper.current) return { x: clientX, y: clientY }
+    const bounds = reactFlowWrapper.current.getBoundingClientRect()
+    // Adjust for viewport pan/zoom
+    const px = clientX - bounds.left
+    const py = clientY - bounds.top
+    // Use viewport transform
+    const zoom = viewport?.zoom || 1
+    const x = (px - (viewport?.x || 0)) / zoom
+    const y = (py - (viewport?.y || 0)) / zoom
+    return { x, y }
+  }
+
+  // Update handleContextMenu to accept both event types
+  const handleContextMenu = (event: MouseEvent | React.MouseEvent<Element, MouseEvent>) => {
+    event.preventDefault()
+    // Use clientX/clientY from either event type
+    const clientX = 'clientX' in event ? event.clientX : 0
+    const clientY = 'clientY' in event ? event.clientY : 0
+    const { x, y } = toBoardCoords(clientX, clientY)
+    setContextMenu({ x: clientX, y: clientY, boardX: x, boardY: y })
+  }
+
+  // Add a closeContextMenu function for reuse
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
+  // Add blank node at context menu position
+  const handleAddBlankNode = () => {
+    if (contextMenu) {
+      console.log('Adding blank node at', contextMenu.boardX, contextMenu.boardY)
+      addNode('New Node', { x: contextMenu.boardX, y: contextMenu.boardY })
+      setContextMenu(null)
+    }
+  }
+
+  // Open AI Node Generator (at position if needed)
+  const handleGenerateAINodes = () => {
+    console.log('Generate AI Nodes clicked')
+    setShowAIGenerator(true)
+    setContextMenu(null)
+  }
+
   // Create a hash of the current board state for change detection
   const getCurrentDataHash = useCallback(() => {
     const data = { nodes, edges }
@@ -954,6 +1001,11 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         onSelectionContextUsed={handleSelectionContextUsed}
       />
 
+      {/* AI Node Generator Modal */}
+      <AINodeGenerator 
+        isOpen={showAIGenerator}
+        onClose={() => setShowAIGenerator(false)}
+      />
 
 
       {/* Topic Display */}
@@ -962,250 +1014,42 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       </div>
 
       
-      <div
-        className="w-full h-full"
-        style={{ position: 'relative' }}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={handleConnect}
+        onMove={(_, viewport) => updateViewport(viewport)}
+        connectionMode={ConnectionMode.Loose}
+        connectionLineComponent={CustomConnectionLine}
+        connectionLineStyle={connectionLineStyle}
+        defaultEdgeOptions={defaultEdgeOptions}
+        fitView
+        className="bg-gray-50 dark:bg-gray-900"
+        onPaneContextMenu={handleContextMenu} // <-- use this prop
+        onPaneClick={closeContextMenu}
       >
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={handleConnect}
-          onMove={(_, viewport) => updateViewport(viewport)}
-          connectionMode={ConnectionMode.Loose}
-          connectionLineComponent={CustomConnectionLine}
-          connectionLineStyle={connectionLineStyle}
-          defaultEdgeOptions={defaultEdgeOptions}
-          fitView
-          className="bg-gray-50 dark:bg-gray-900"
-        >
         <BokehBackground />
         {/* <MiniMap /> */}
         <Controls />
         <Background />
-        </ReactFlow>
-      </div>
-      
-
-      
-      <AINodeGenerator 
-        isOpen={showAIGenerator}
-        onClose={() => setShowAIGenerator(false)}
-      />
-
-      <BoardNameModal
-        isOpen={showSaveModal}
-        onClose={() => setShowSaveModal(false)}
-        onSave={handleCreateNewBoard}
-        defaultName={currentBoardName || ''}
-        existingNames={existingBoardNames.filter(name => name !== currentBoardName)}
-      />
-
-
-
-      <TopicModal
-        isOpen={showTopicModal}
-        onClose={() => setShowTopicModal(false)}
-        defaultTopic={topic || ''}
-        onSave={handleSaveTopic}
-      />
-
-      <BoardSetupModal
-        isOpen={showSetup}
-        onComplete={async brief => {
-          setBoardBrief({ ...brief, isReady: false })
-          setTopic(brief.topic) // Set the topic from the setup modal
-          setShowSetup(false)
-          setNodes([])
-          setVectorizing(true)
-          setVectorizationError(null)
-          setBrainstorming(false)
-          setBrainstormError(null)
-          let extractedResults: { file: File; text: string }[] = []
-          let embeddingVectors: number[][] = []
-          try {
-            // Extract text from all uploaded files
-            const files = brief.uploadedFiles || []
-            extractedResults = await Promise.all(
-              files.map(async file => {
-                const text = await extractTextFromFile(file)
-                return { file, text }
-              })
-            )
-            // Batch vectorize all extracted text
-            const texts = extractedResults.map(r => r.text)
-            if (texts.length > 0) {
-              embeddingVectors = await aiClient.getEmbedding(texts) as number[][]
-            }
-            setEmbeddings(extractedResults.map((r, i) => ({
-              documentId: '', // You may want to set this if available
-              fileName: r.file.name,
-              text: r.text,
-              embedding: embeddingVectors[i],
-            })))
-          } catch (err) {
-            setVectorizationError(err instanceof Error ? err.message : 'Vectorization failed')
-          } finally {
-            setVectorizing(false)
-          }
-          // --- AI Brainstorm Map Generation ---
-          setBrainstorming(true)
-          setBrainstormError(null)
-          try {
-            // Build a context string from all onboarding info and extracted doc text
-            const docText = (embeddings || []).map(d => `Document: ${d.fileName}\n${d.text.slice(0, 2000)}`).join('\n\n')
-            const context = `Topic: ${brief.topic}\nRamble: ${brief.ramble || ''}\nGoal: ${brief.goal}\nAudience: ${brief.audience}\nResources: ${brief.resources.join(', ')}\nNotes: ${brief.notes || ''}\n${docText}`
-            // Prompt the AI for a brainstorm map
-            const brainstormPrompt = `Given the following context, generate a brainstorm map for a mindmap app.\n\nContext:\n${context}\n\nInstructions:\n- Suggest the best central node (if not obvious, use the topic)\n- Brainstorm as many relevant subtopics as make sense (not just 4), each as a prompt or question to explore\n- Optionally, group or cluster subtopics if themes emerge\n- Respond in JSON with this structure:\n{\n  \'center\': 'Central Node Title',\n  \'subtopics\': [\n    { \'title\': 'Subtopic', \'prompt\': 'Prompt or question', \'group\': 'Group Name (optional)' },\n    ...\n  ]\n}`
-            const response = await ai.generate(brainstormPrompt, {
-              model: 'gpt-4o',
-              temperature: 0.7,
-              maxTokens: 1200,
-              systemPrompt: 'You are a helpful brainstorming assistant for a mindmap app.'
-            })
-            let brainstorm
-            try {
-              let raw = response.content.trim();
-              // Remove Markdown code block if present
-              if (raw.startsWith('```')) {
-                raw = raw.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
-              }
-              brainstorm = JSON.parse(raw)
-            } catch (e) {
-              throw new Error('AI did not return valid JSON. Raw response: ' + response.content)
-            }
-            // Create nodes and edges using intelligent positioning
-            const centerPosition = { x: 400, y: 300 }
-            const centerNode = {
-              id: 'center',
-              type: 'default',
-              position: centerPosition,
-              data: { title: brainstorm.center, content: '', aiGenerated: true }
-            }
-            
-            // Use intelligent positioning for subtopic nodes around the center
-            const subtopicPositions = findNonOverlappingPositions(
-              centerPosition,
-              brainstorm.subtopics.length,
-              [],
-              180,
-              40
-            )
-            
-            const subtopicNodes = brainstorm.subtopics.map((s: any, i: number) => ({
-              id: `subtopic-${i}`,
-              type: 'default',
-              position: subtopicPositions[i],
-              data: { title: s.title, content: s.prompt, group: s.group, aiGenerated: true }
-            }))
-            const edges = subtopicNodes.map((n: any) => ({
-              id: `edge-center-${n.id}`,
-              source: 'center',
-              target: n.id,
-              type: 'floating',
-              data: { type: 'ai' }
-            }))
-            // Create document nodes for uploaded files using intelligent positioning
-            const documentNodes: any[] = []
-            if (brief.uploadedFiles && brief.uploadedFiles.length > 0) {
-              const documentPositions = findNonOverlappingPositions(
-                { x: 400, y: 600 },
-                brief.uploadedFiles.length,
-                [centerNode, ...subtopicNodes].map(n => n.position),
-                180,
-                40
-              )
-              
-              for (let i = 0; i < brief.uploadedFiles.length; i++) {
-                const file = brief.uploadedFiles[i]
-                const extractedResult = extractedResults.find(r => r.file === file)
-                if (extractedResult) {
-                  try {
-                    // Save document to storage
-                    const documentId = await boardStorage.saveDocument(
-                      file.name,
-                      file,
-                      extractedResult.text,
-                      localBoardId || 'temp', // Use localBoardId
-                    )
-                    
-                    // Create document node
-                    const documentNode = createDocumentNode(
-                      file,
-                      documentId,
-                      documentPositions[i],
-                      extractedResult.text
-                    )
-                    
-                    documentNodes.push({ ...documentNode, id: `doc-${i}` })
-                  } catch (error) {
-                    console.error('Failed to create document node:', error)
-                  }
-                }
-              }
-            }
-            
-            const allNodes = [centerNode, ...subtopicNodes, ...documentNodes]
-            setNodes(layoutMindMapAll(allNodes, edges))
-            setEdges(edges)
-          } catch (err) {
-            setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed')
-            setNodes([
-              {
-                id: 'ai-fail',
-                type: 'default',
-                position: { x: 400, y: 200 },
-                data: { title: 'AI could not generate a brainstorm map. Try again or check your API key.' }
-              }
-            ])
-            setEdges([])
-          } finally {
-            setBrainstorming(false)
-          }
-        }}
-        onClose={() => {
-          setShowSetup(false)
-          onOpenBoardRoom()
-        }}
-      />
-{(isGenerating || vectorizing || brainstorming) && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-lg text-center">
-      <div className="mb-4 text-lg font-semibold">{brainstorming ? 'Brainstorming your map...' : vectorizing ? 'Processing documents...' : 'Generating your board...'}</div>
-      <div className="text-gray-500">{brainstorming ? 'AI is creating a brainstorm map from your context.' : vectorizing ? 'Extracting and vectorizing your uploaded files.' : 'AI is thoughtfully creating your starting nodes.'}</div>
-    </div>
-  </div>
-)}
-{brainstormError && (
-  <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 text-red-800 px-4 py-2 rounded shadow">
-    Brainstorm Error: {brainstormError}
-  </div>
-)}
-      {aiError && (
-        <div className="fixed top-8 left-1/2 transform -translate-x-1/2 z-50 bg-red-100 text-red-800 px-4 py-2 rounded shadow">
-          AI Error: {aiError}
+      </ReactFlow>
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000, background: '#fff', border: '1px solid #ccc', borderRadius: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.15)', minWidth: 160 }}
+          onMouseDown={e => e.stopPropagation()} // Prevent menu from closing when clicking inside
+        >
+          <button style={{ display: 'block', width: '100%', padding: 8, border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }} onClick={() => { handleAddBlankNode(); closeContextMenu(); }}>
+            Add Blank Node
+          </button>
+          <button style={{ display: 'block', width: '100%', padding: 8, border: 'none', background: 'none', textAlign: 'left', cursor: 'pointer' }} onClick={() => { handleGenerateAINodes(); closeContextMenu(); }}>
+            Generate AI Nodes
+          </button>
         </div>
-      )}
-      {boardBrief && showPreSession && (
-        <PreSessionChat
-          boardBrief={boardBrief}
-          onReady={chat => {
-            setBoardBrief({ ...boardBrief, isReady: true, preSessionChat: chat })
-            setShowPreSession(false)
-          }}
-        />
-      )}
-      {boardBrief && boardBrief.isReady && !showSetup && !showPreSession && (
-        <>
-          {/* Topic display, board UI, etc. */}
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-40">
-            <TopicDisplay topic={topic} onEdit={() => {}} />
-          </div>
-          {/* ...rest of board UI... */}
-        </>
       )}
     </div>
   )

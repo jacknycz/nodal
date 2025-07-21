@@ -144,6 +144,12 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - **Animated Backgrounds** — Canvas-based particle animations for visual appeal
 - **Glassmorphism Effects** — Semi-transparent cards with backdrop blur
 
+### Board Context Menu (2025)
+- **Right-Click Anywhere:** Right-clicking anywhere on the Board now opens a custom context menu.
+- **Add Blank Node:** Instantly adds a new node at the exact location of the right-click.
+- **Generate AI Nodes:** Opens the AI Node Generator modal for contextual brainstorming.
+- **Consistent UX:** Menu closes on outside click or after an action, matching modern mindmapping/whiteboard standards.
+
 ---
 
 ## UI Component Patterns & Recent Updates

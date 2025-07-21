@@ -138,8 +138,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
     setIsEditingLabel(true);
     setEditLabelValue(nodeData.title || '');
   };
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteClick = () => {
     setShowDeleteModal(true);
   };
   const handleDeleteCancel = () => {
@@ -356,7 +355,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
 
                 {/* Delete Button */}
                 <Button
-                  onClick={() => handleDeleteClick({} as React.MouseEvent)}
+                  onClick={handleDeleteClick}
                   className="flex cursor-pointer items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
                   title="Delete node"
                   iconLeft={<TrashIcon className="w-3 h-3" />}
