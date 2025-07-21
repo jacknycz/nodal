@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
-import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
-import BoardSetupModal from './BoardSetupModal'
-import PreSessionChat from './PreSessionChat'
 import { Button } from 'pres-start-core'
 
 interface BoardRoomProps {
@@ -102,19 +99,21 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
           className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           title="Rename board"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
         </button>
         <button
           onClick={e => {
             e.stopPropagation()
-            onDelete()
+            if (confirm(`Are you sure you want to delete "${board.name}"?`)) {
+              onDelete()
+            }
           }}
-          className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          className="p-1 rounded bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 transition-colors"
           title="Delete board"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
@@ -125,23 +124,18 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [boards, setBoards] = useState<SavedBoard[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [error, setError] = useState('')
   const [showNewBoardModal, setShowNewBoardModal] = useState(false)
-  
-  // New board flow states
-  const [showBoardSetup, setShowBoardSetup] = useState(false)
-  const [showPreSessionChat, setShowPreSessionChat] = useState(false)
-  const [boardBrief, setBoardBrief] = useState<BoardBrief | null>(null)
-  const [preSessionChat, setPreSessionChat] = useState<{ role: 'user' | 'ai', content: string }[]>([])
 
   const loadBoards = async () => {
+    setLoading(true)
+    setError('')
     try {
-      setLoading(true)
       const { boardStorage } = await import('../features/storage/storage')
-      const loadedBoards = await boardStorage.getAllBoards()
-      setBoards(loadedBoards)
+      const allBoards = await boardStorage.getAllBoards()
+      setBoards(allBoards)
     } catch (err) {
       setError('Failed to load boards')
     } finally {
@@ -194,51 +188,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }
 
-  // Handle board setup completion
-  const handleBoardSetupComplete = (brief: BoardBrief & { uploadedFiles?: File[] }) => {
-    setBoardBrief(brief)
-    setShowBoardSetup(false)
-    setShowPreSessionChat(true)
-  }
-
-  // Handle pre-session chat completion
-  const handlePreSessionChatComplete = async (chat: { role: 'user' | 'ai', content: string }[]) => {
-    setPreSessionChat(chat)
-    setShowPreSessionChat(false)
-    
-    // Create the board with the brief and chat data
-    try {
-      const { boardStorage } = await import('../features/storage/storage')
-      
-      // Generate a board name from the topic
-      const boardName = boardBrief?.topic || 'New Board'
-      
-      // Create initial board data with the brief
-      const initialBoardData = {
-        nodes: [],
-        edges: [],
-        viewport: { x: 0, y: 0, zoom: 1 },
-        boardBrief: {
-          ...boardBrief!,
-          preSessionChat: chat
-        }
-      }
-      
-      const boardId = await boardStorage.saveBoard(boardName, initialBoardData)
-      const newBoard = await boardStorage.loadBoard(boardId)
-      
-      if (newBoard) {
-        await loadBoards() // Refresh the board list
-        onOpenBoard(newBoard) // Open the new board
-      }
-    } catch (error) {
-      console.error('Failed to create board with setup:', error)
-      setError('Failed to create board with setup')
-    }
-  }
-
   const handleNewBoardClick = () => {
-    setShowBoardSetup(true)
+    setShowNewBoardModal(true)
   }
 
   const filteredBoards = boards.filter(board =>
@@ -295,7 +246,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         )}
       </div>
 
-      {/* Simple board name modal (fallback) */}
       <BoardNameModal
         isOpen={showNewBoardModal}
         onClose={() => setShowNewBoardModal(false)}
@@ -303,23 +253,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         defaultName=""
         existingNames={boards.map(board => board.name)}
       />
-
-      {/* Sophisticated board setup modal */}
-      <BoardSetupModal
-        isOpen={showBoardSetup}
-        onComplete={handleBoardSetupComplete}
-        onClose={() => setShowBoardSetup(false)}
-      />
-
-      {/* Pre-session chat modal */}
-      {boardBrief && (
-        <PreSessionChat
-          boardBrief={boardBrief}
-          onReady={handlePreSessionChatComplete}
-        />
-      )}
     </div>
   )
 }
 
-export default BoardRoom
+export default BoardRoom 
