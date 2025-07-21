@@ -348,6 +348,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                   onClick={() => setShowEditModal(true)}
                   className="flex cursor-pointer items-center space-x-1 text-xs text-primary-800 hover:bg-primary-50 dark:hover:bg-primary-500 rounded transition-colors"
                   title="Edit node"
+                  variant="custom"
                   iconLeft={<PencilIcon className="w-3 h-3" />}
                 >
                   Edit
@@ -358,6 +359,7 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
                   onClick={handleDeleteClick}
                   className="flex cursor-pointer items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
                   title="Delete node"
+                  variant="custom"
                   iconLeft={<TrashIcon className="w-3 h-3" />}
                 >
                   <span>Delete</span>
