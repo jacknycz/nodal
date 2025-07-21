@@ -1055,8 +1055,49 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   };
 
+  // Fullscreen logic
+  const boardRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const enterFullscreen = () => {
+    const el = boardRef.current
+    if (el && el.requestFullscreen) {
+      el.requestFullscreen()
+    } else if (el && (el as any).webkitRequestFullscreen) {
+      (el as any).webkitRequestFullscreen()
+    } else if (el && (el as any).msRequestFullscreen) {
+      (el as any).msRequestFullscreen()
+    }
+  }
+
+  const exitFullscreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+    } else if ((document as any).webkitExitFullscreen) {
+      (document as any).webkitExitFullscreen()
+    } else if ((document as any).msExitFullscreen) {
+      (document as any).msExitFullscreen()
+    }
+  }
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
   return (
-    <div className="w-full h-full relative">
+    <div ref={boardRef} className="w-full h-full relative">
+      {/* Fullscreen Button */}
+      <button
+        className="fixed top-4 right-80 z-[100] px-4 py-2 bg-gray-900 text-white rounded shadow hover:bg-gray-800 transition-colors text-xs"
+        onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+        style={{ minWidth: 90 }}
+      >
+        {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+      </button>
       {/* DEBUG: Chat Indicator */}
       <div className="fixed top-2 left-2 z-50 bg-black text-white px-3 py-1 rounded text-xs font-mono">
         Chat Show: {showChat ? 'true' : 'false'}
