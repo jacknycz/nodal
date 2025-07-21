@@ -54,6 +54,8 @@ interface BoardProps {
   ) => void
   initialBoard?: any
   onOpenBoardRoom: () => void
+  pendingBoardBrief?: BoardBrief | null
+  clearPendingBoardBrief?: () => void
 }
 
 const nodeTypes = {
@@ -85,7 +87,7 @@ declare global {
   }
 }
 
-export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoom }: BoardProps) {
+export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoom, pendingBoardBrief, clearPendingBoardBrief }: BoardProps) {
   const [_showBoardRoom, setShowBoardRoom] = useState(false)
   const {
     nodes,
@@ -103,6 +105,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   } = useBoard()
 
   const { topic, setTopic, boardBrief, setBoardBrief, setCurrentBoardId, setEmbeddings } = useBoardStore()
+  const embeddings = useBoardStore(state => state.embeddings)
   const { getViewportCenter } = useViewportCenter()
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -251,14 +254,100 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }, [initialBoard])
 
-  // Detect if initialBoard has isNew property set to true, and if so, show the setup modal (setShowSetup(true)) and remove the isNew property so it doesn't trigger again. Do this in a useEffect that runs when initialBoard changes.
+  // Add effect to handle AI-assisted board creation
   useEffect(() => {
-    if (initialBoard && initialBoard.isNew) {
-      setShowSetup(true)
-      // Remove the isNew flag so it doesn't trigger again
-      initialBoard.isNew = false
+    if (pendingBoardBrief) {
+      (async () => {
+        setBrainstorming(true);
+        setBrainstormError(null);
+        try {
+          // Build context string
+          const docText = (embeddings || []).map(d => `Document: ${d.fileName}\n${d.text.slice(0, 2000)}`).join('\n\n');
+          const context = `Topic: ${pendingBoardBrief.topic}\nRamble: ${pendingBoardBrief.ramble || ''}\nGoal: ${pendingBoardBrief.goal}\nAudience: ${pendingBoardBrief.audience}\nResources: ${pendingBoardBrief.resources.join(', ')}\nNotes: ${pendingBoardBrief.notes || ''}\n${docText}`;
+          const brainstormPrompt = `Given the following context, generate a brainstorm map for a mindmap app.\n\nContext:\n${context}\n\nInstructions:\n- Suggest the best central node (if not obvious, use the topic)\n- Brainstorm as many relevant subtopics as make sense (not just 4), each as a prompt or question to explore\n- Optionally, group or cluster subtopics if themes emerge\n- Respond in JSON with this structure:\n{\n  'center': 'Central Node Title',\n  'subtopics': [\n    { 'title': 'Subtopic', 'prompt': 'Prompt or question', 'group': 'Group Name (optional)' },\n    ...\n  ]\n}`;
+          const response = await ai.generate(brainstormPrompt, {
+            model: 'gpt-4o',
+            temperature: 0.7,
+            maxTokens: 1200,
+            systemPrompt: 'You are a helpful brainstorming assistant for a mindmap app.'
+          });
+          let brainstorm;
+          try {
+            let raw = response.content.trim();
+            if (raw.startsWith('```')) {
+              raw = raw.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+            }
+            brainstorm = JSON.parse(raw);
+          } catch (e) {
+            throw new Error('AI did not return valid JSON. Raw response: ' + response.content);
+          }
+          // Create nodes and edges
+          const centerPosition = { x: 400, y: 300 };
+          const centerNode = {
+            id: 'center',
+            type: 'default',
+            position: centerPosition,
+            data: { title: brainstorm.center, content: '', aiGenerated: true }
+          };
+          const subtopicPositions = findNonOverlappingPositions(
+            centerPosition,
+            brainstorm.subtopics.length,
+            [],
+            180,
+            40
+          );
+          const subtopicNodes = brainstorm.subtopics.map((s: any, i: number) => ({
+            id: `subtopic-${i}`,
+            type: 'default',
+            position: subtopicPositions[i],
+            data: { title: s.title, content: s.prompt, group: s.group, aiGenerated: true }
+          }));
+          const edges = subtopicNodes.map((n: any) => ({
+            id: `edge-center-${n.id}`,
+            source: 'center',
+            target: n.id,
+            type: 'floating',
+            data: { type: 'ai' }
+          }));
+          // Save the new board
+          const boardName = pendingBoardBrief.topic || 'New Board';
+          const initialBoardData = {
+            nodes: [centerNode, ...subtopicNodes],
+            edges,
+            viewport: { x: 0, y: 0, zoom: 1 },
+            boardBrief: { ...pendingBoardBrief },
+            topic: pendingBoardBrief.topic
+          };
+          const boardId = await boardStorage.saveBoard(boardName, initialBoardData);
+          const newBoard = await boardStorage.loadBoard(boardId);
+          if (newBoard) {
+            setNodes(layoutMindMap([centerNode, ...subtopicNodes], edges));
+            setEdges(edges);
+            setTopic(pendingBoardBrief.topic);
+            setBoardBrief(pendingBoardBrief);
+            setLocalBoardId(boardId);
+            setCurrentBoardId(boardId);
+            setCurrentBoardName(boardName);
+            if (clearPendingBoardBrief) clearPendingBoardBrief();
+          }
+        } catch (err) {
+          setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed');
+          setNodes([
+            {
+              id: 'ai-fail',
+              type: 'default',
+              position: { x: 400, y: 200 },
+              data: { title: 'AI could not generate a brainstorm map. Try again or check your API key.' }
+            }
+          ]);
+          setEdges([]);
+          if (clearPendingBoardBrief) clearPendingBoardBrief();
+        } finally {
+          setBrainstorming(false);
+        }
+      })();
     }
-  }, [initialBoard])
+  }, [pendingBoardBrief, clearPendingBoardBrief, embeddings]);
 
   // Load existing board names for validation
   useEffect(() => {
@@ -811,7 +900,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const aiClient = new AIClient(aiConfig)
 
   const updateNode = useBoardStore(state => state.updateNode);
-  const embeddings = useBoardStore(state => state.embeddings)
 
   // --- Mind Map Layout Algorithm ---
   function getNodeChildren(nodeId: string, edges: BoardEdge[]) {

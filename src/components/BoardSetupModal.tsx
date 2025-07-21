@@ -339,7 +339,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
               className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${steps[step].canContinue ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
               disabled={!steps[step].canContinue}
             >
-              {step === steps.length - 1 ? 'Start Pre-Session Chat' : 'Next'}
+              {step === steps.length - 1 ? 'Create Board' : 'Next'}
             </button>
           </div>
         </form>

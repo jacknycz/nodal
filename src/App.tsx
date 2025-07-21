@@ -11,6 +11,8 @@ import { useTheme } from './contexts/ThemeContext'
 import nodalBlackLogo from './assets/nodal-black.svg'
 import nodalWhiteLogo from './assets/nodal-white.svg'
 import BoardRoom from './components/BoardRoom'
+import type { SavedBoard } from './features/storage/storage';
+import type { BoardBrief } from './features/board/boardTypes';
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -44,15 +46,23 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'boardroom' | 'board'>('boardroom')
   const [isRestoringBoard, setIsRestoringBoard] = useState(false)
   const [hasCheckedSavedBoard, setHasCheckedSavedBoard] = useState(false)
+  const [pendingBoardBrief, setPendingBoardBrief] = useState<BoardBrief | null>(null);
   const previousUserRef = useRef<any>(null)
 
-  const handleLoadBoard = (board: any) => {
-    setCurrentBoard(board)
-    setCurrentView('board')
-    setCurrentBoardName(board.name)
-    localStorage.setItem('nodal_current_board_id', board.id)
-    localStorage.setItem('nodal_current_board_name', board.name)
-  }
+  const handleLoadBoard = (board: SavedBoard | null, brief?: BoardBrief | null) => {
+    if (brief) setPendingBoardBrief(brief);
+    if (board) {
+      setCurrentBoard(board);
+      setCurrentView('board');
+      setCurrentBoardName(board.name);
+      localStorage.setItem('nodal_current_board_id', board.id);
+      localStorage.setItem('nodal_current_board_name', board.name);
+    } else if (brief) {
+      setCurrentBoard(null);
+      setCurrentView('board');
+      setCurrentBoardName(undefined);
+    }
+  };
 
   useEffect(() => {
     if (previousUserRef.current && !user) {
@@ -178,10 +188,12 @@ export default function App() {
                 {currentView === 'boardroom' ? (
                   <BoardRoom onOpenBoard={handleLoadBoard} />
                 ) : (
-                  <Board 
-                    onBoardStateChange={handleBoardStateChange} 
+                  <Board
+                    onBoardStateChange={handleBoardStateChange}
                     initialBoard={currentBoard}
                     onOpenBoardRoom={handleOpenBoardRoom}
+                    pendingBoardBrief={pendingBoardBrief}
+                    clearPendingBoardBrief={() => setPendingBoardBrief(null)}
                   />
                 )}
               </div>

@@ -6,7 +6,7 @@ import BoardSetupModal from './BoardSetupModal'
 import { Button } from 'pres-start-core'
 
 interface BoardRoomProps {
-  onOpenBoard: (board: SavedBoard) => void
+  onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
 }
 
 function BoardCard({ board, onLoad, onRename, onDelete }: {
@@ -183,7 +183,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       if (newBoard) {
         setShowNewBoardModal(false)
         await loadBoards() // Refresh the board list
-        onOpenBoard({ ...newBoard, isNew: true } as typeof newBoard & { isNew?: boolean }) // Mark as new
+        onOpenBoard(newBoard, undefined) // Mark as new
       }
     } catch (error) {
       console.error('Failed to create new board:', error)
@@ -192,33 +192,10 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   // Handle board setup completion (now creates the board directly)
-  const handleBoardSetupComplete = async (brief: BoardBrief & { uploadedFiles?: File[] }) => {
+  const handleBoardSetupComplete = (brief: BoardBrief & { uploadedFiles?: File[] }) => {
     setBoardBrief(brief)
     setShowBoardSetup(false)
-    try {
-      const { boardStorage } = await import('../features/storage/storage')
-      const boardName = brief.topic || 'New Board'
-      const initialBoardData = {
-        nodes: [],
-        edges: [],
-        viewport: { x: 0, y: 0, zoom: 1 },
-        boardBrief: {
-          ...brief,
-        }
-      }
-      const boardId = await boardStorage.saveBoard(boardName, initialBoardData)
-      const newBoard = await boardStorage.loadBoard(boardId)
-      if (newBoard) {
-        await loadBoards()
-        setBoardBrief(null)
-        onOpenBoard({ ...newBoard, isNew: true } as typeof newBoard & { isNew?: boolean })
-      }
-    } catch (error) {
-      console.error('Failed to create board with setup:', error)
-      setError('Failed to create board with setup')
-      setShowBoardSetup(false)
-      setBoardBrief(null)
-    }
+    onOpenBoard(null, brief) // Pass brief to App/Board
   }
 
   // Handle cancellation of any modal in the flow
@@ -275,7 +252,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                 <BoardCard
                   key={board.id}
                   board={board}
-                  onLoad={() => onOpenBoard(board)}
+                  onLoad={() => onOpenBoard(board, undefined)}
                   onRename={newName => handleRename(board.id, newName)}
                   onDelete={() => handleDelete(board.id)}
                 />
