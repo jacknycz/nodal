@@ -3,7 +3,6 @@ import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
-import PreSessionChat from './PreSessionChat'
 import { Button } from 'pres-start-core'
 
 interface BoardRoomProps {
@@ -132,9 +131,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
-  const [showPreSessionChat, setShowPreSessionChat] = useState(false)
   const [boardBrief, setBoardBrief] = useState<BoardBrief | null>(null)
-  const [preSessionChat, setPreSessionChat] = useState<{ role: 'user' | 'ai', content: string }[]>([])
 
   const loadBoards = async () => {
     try {
@@ -194,47 +191,40 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }
 
-  // Handle board setup completion
-  const handleBoardSetupComplete = (brief: BoardBrief & { uploadedFiles?: File[] }) => {
+  // Handle board setup completion (now creates the board directly)
+  const handleBoardSetupComplete = async (brief: BoardBrief & { uploadedFiles?: File[] }) => {
     setBoardBrief(brief)
     setShowBoardSetup(false)
-    setShowPreSessionChat(true)
-  }
-
-  // Handle pre-session chat completion
-  const handlePreSessionChatComplete = async (chat: { role: 'user' | 'ai', content: string }[]) => {
-    setPreSessionChat(chat)
-    setShowPreSessionChat(false)
-    
-    // Create the board with the brief and chat data
     try {
       const { boardStorage } = await import('../features/storage/storage')
-      
-      // Generate a board name from the topic
-      const boardName = boardBrief?.topic || 'New Board'
-      
-      // Create initial board data with the brief
+      const boardName = brief.topic || 'New Board'
       const initialBoardData = {
         nodes: [],
         edges: [],
         viewport: { x: 0, y: 0, zoom: 1 },
         boardBrief: {
-          ...boardBrief!,
-          preSessionChat: chat
+          ...brief,
         }
       }
-      
       const boardId = await boardStorage.saveBoard(boardName, initialBoardData)
       const newBoard = await boardStorage.loadBoard(boardId)
-      
       if (newBoard) {
-        await loadBoards() // Refresh the board list
-        onOpenBoard({ ...newBoard, isNew: true } as typeof newBoard & { isNew?: boolean }) // Always mark as new for onboarding
+        await loadBoards()
+        setBoardBrief(null)
+        onOpenBoard({ ...newBoard, isNew: true } as typeof newBoard & { isNew?: boolean })
       }
     } catch (error) {
       console.error('Failed to create board with setup:', error)
       setError('Failed to create board with setup')
+      setShowBoardSetup(false)
+      setBoardBrief(null)
     }
+  }
+
+  // Handle cancellation of any modal in the flow
+  const handleCancelSetup = () => {
+    setShowBoardSetup(false)
+    setBoardBrief(null)
   }
 
   const handleNewBoardClick = () => {
@@ -308,16 +298,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       <BoardSetupModal
         isOpen={showBoardSetup}
         onComplete={handleBoardSetupComplete}
-        onClose={() => setShowBoardSetup(false)}
+        onClose={handleCancelSetup}
       />
-
-      {/* Pre-session chat modal */}
-      {boardBrief && (
-        <PreSessionChat
-          boardBrief={boardBrief}
-          onReady={handlePreSessionChatComplete}
-        />
-      )}
     </div>
   )
 }

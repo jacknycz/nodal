@@ -4,9 +4,10 @@ import type { BoardBrief } from '../features/board/boardTypes'
 interface PreSessionChatProps {
   boardBrief: BoardBrief
   onReady: (chat: { role: 'user' | 'ai', content: string }[]) => void
+  onCancel?: () => void
 }
 
-export default function PreSessionChat({ boardBrief, onReady }: PreSessionChatProps) {
+export default function PreSessionChat({ boardBrief, onReady, onCancel }: PreSessionChatProps) {
   const [messages, setMessages] = useState<{ role: 'user' | 'ai', content: string }[]>([])
   const [input, setInput] = useState('')
   const [isReady, setIsReady] = useState(false)
@@ -66,13 +67,24 @@ export default function PreSessionChat({ boardBrief, onReady }: PreSessionChatPr
             disabled={!input.trim() || isReady}
           >Send</button>
         </form>
-        <button
-          className="w-full px-4 py-2 bg-secondary-500 text-black rounded-lg font-medium mt-auto disabled:bg-gray-300"
-          onClick={() => { setIsReady(true); onReady(messages) }}
-          disabled={isReady}
-        >
-          Start Board
-        </button>
+        <div className="flex gap-2 mt-auto">
+          <button
+            className="flex-1 px-4 py-2 bg-secondary-500 text-black rounded-lg font-medium disabled:bg-gray-300"
+            onClick={() => { setIsReady(true); onReady(messages) }}
+            disabled={isReady}
+          >
+            Start Board
+          </button>
+          {onCancel && (
+            <button
+              className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium"
+              onClick={onCancel}
+              disabled={isReady}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
