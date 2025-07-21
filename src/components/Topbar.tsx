@@ -46,11 +46,18 @@ export default function Topbar({
         <div className="grid grid-cols-3 items-center px-6 py-3">
           {/* Left - Logo */}
           <div className="flex items-center gap-3">
-            <img
-              src={isDark ? nodalWhiteLogo : nodalBlackLogo}
-              alt="Nodal Logo"
-              className="h-8 w-auto"
-            />
+            <button
+              onClick={onOpenBoardRoom}
+              className="focus:outline-none cursor-pointer"
+              aria-label="Go to Board Room"
+              style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+            >
+              <img
+                src={isDark ? nodalWhiteLogo : nodalBlackLogo}
+                alt="Nodal Logo"
+                className="h-8 w-auto"
+              />
+            </button>
 
             <button className="text-sm rounded text-gray-600 dark:text-white border border-red-500 p-2" onClick={() => setShowFeedback(true)}>
               FEEDBACK

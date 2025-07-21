@@ -42,7 +42,7 @@ import TaskList from '../../components/TaskList';
 import { List } from 'lucide-react';
 
 import '@xyflow/react/dist/style.css'
-import type { BoardNode, BoardEdge } from './boardTypes'
+import type { BoardNode, BoardEdge, BoardBrief } from './boardTypes'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -210,8 +210,11 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }, [nodes, edges, viewport, topic, localBoardId, currentBoardName, getCurrentDataHash]) // Add topic to dependencies
 
-  // Auto-save on changes
+  // Robust debounced auto-save
   useEffect(() => {
+    const debounceMs = 2500
+    let cancelled = false
+
     if (autosaveTimeoutRef.current) {
       clearTimeout(autosaveTimeoutRef.current)
     }
@@ -220,12 +223,15 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     if (currentData !== lastSavedDataRef.current) {
       setHasUnsavedChanges(true)
       setSaveStatus('unsaved')
-      
-      // Auto-save after 2 seconds of inactivity
-      autosaveTimeoutRef.current = window.setTimeout(autoSave, 2000)
+      autosaveTimeoutRef.current = window.setTimeout(async () => {
+        if (!cancelled) {
+          await autoSave()
+        }
+      }, debounceMs)
     }
 
     return () => {
+      cancelled = true
       if (autosaveTimeoutRef.current) {
         clearTimeout(autosaveTimeoutRef.current)
       }
@@ -968,6 +974,87 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const { enterFocusMode: _enterFocusMode, focusedNodeId: _focusedNodeId, setFocusTree: _setFocusTree } = useFocusStore();
   const { buildFocusTree: _buildFocusTree } = useFocusTree();
 
+  // Handler for AI-assisted board setup completion
+  const handleBoardSetupComplete = async (brief: BoardBrief) => {
+    setBoardBrief(brief);
+    setTopic(brief.topic);
+    setShowSetup(false);
+    // --- AI Brainstorm Node Generation ---
+    setBrainstorming(true);
+    setBrainstormError(null);
+    try {
+      // Build a context string from all onboarding info and extracted doc text
+      const docText = (embeddings || []).map(d => `Document: ${d.fileName}\n${d.text.slice(0, 2000)}`).join('\n\n');
+      const context = `Topic: ${brief.topic}\nRamble: ${brief.ramble || ''}\nGoal: ${brief.goal}\nAudience: ${brief.audience}\nResources: ${brief.resources.join(', ')}\nNotes: ${brief.notes || ''}\n${docText}`;
+      const brainstormPrompt = `Given the following context, generate a brainstorm map for a mindmap app.\n\nContext:\n${context}\n\nInstructions:\n- Suggest the best central node (if not obvious, use the topic)\n- Brainstorm as many relevant subtopics as make sense (not just 4), each as a prompt or question to explore\n- Optionally, group or cluster subtopics if themes emerge\n- Respond in JSON with this structure:\n{\n  'center': 'Central Node Title',\n  'subtopics': [\n    { 'title': 'Subtopic', 'prompt': 'Prompt or question', 'group': 'Group Name (optional)' },\n    ...\n  ]\n}`;
+      console.log('AI Brainstorm Prompt:', brainstormPrompt);
+      const response = await ai.generate(brainstormPrompt, {
+        model: 'gpt-4o',
+        temperature: 0.7,
+        maxTokens: 1200,
+        systemPrompt: 'You are a helpful brainstorming assistant for a mindmap app.'
+      });
+      console.log('AI Raw Response:', response.content);
+      let brainstorm;
+      try {
+        let raw = response.content.trim();
+        if (raw.startsWith('```')) {
+          raw = raw.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+        }
+        brainstorm = JSON.parse(raw);
+        console.log('Parsed brainstorm:', brainstorm);
+      } catch (e) {
+        console.error('AI brainstorm JSON parse error:', e);
+        console.error('Raw response:', response.content);
+        throw new Error('AI did not return valid JSON. Raw response: ' + response.content);
+      }
+      // Create nodes and edges using intelligent positioning
+      const centerPosition = { x: 400, y: 300 };
+      const centerNode = {
+        id: 'center',
+        type: 'default',
+        position: centerPosition,
+        data: { title: brainstorm.center, content: '', aiGenerated: true }
+      };
+      const subtopicPositions = findNonOverlappingPositions(
+        centerPosition,
+        brainstorm.subtopics.length,
+        [],
+        180,
+        40
+      );
+      const subtopicNodes = brainstorm.subtopics.map((s: any, i: number) => ({
+        id: `subtopic-${i}`,
+        type: 'default',
+        position: subtopicPositions[i],
+        data: { title: s.title, content: s.prompt, group: s.group, aiGenerated: true }
+      }));
+      const edges = subtopicNodes.map((n: any) => ({
+        id: `edge-center-${n.id}`,
+        source: 'center',
+        target: n.id,
+        type: 'floating',
+        data: { type: 'ai' }
+      }));
+      setNodes(layoutMindMap([centerNode, ...subtopicNodes], edges));
+      setEdges(edges);
+    } catch (err) {
+      console.error('AI brainstorm error:', err);
+      setBrainstormError(err instanceof Error ? err.message : 'Brainstorming failed');
+      setNodes([
+        {
+          id: 'ai-fail',
+          type: 'default',
+          position: { x: 400, y: 200 },
+          data: { title: 'AI could not generate a brainstorm map. Try again or check your API key.' }
+        }
+      ]);
+      setEdges([]);
+    } finally {
+      setBrainstorming(false);
+    }
+  };
+
   return (
     <div className="w-full h-full relative">
       {/* DEBUG: Chat Indicator */}
@@ -1008,6 +1095,21 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       <AINodeGenerator 
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
+      />
+
+      {/* Board Setup Modal (AI Assisted New Board) */}
+      <BoardSetupModal
+        isOpen={showSetup}
+        onComplete={handleBoardSetupComplete}
+        onClose={() => setShowSetup(false)}
+      />
+
+      {/* Edit Topic Modal */}
+      <TopicModal
+        isOpen={showTopicModal}
+        onClose={() => setShowTopicModal(false)}
+        onSave={handleSaveTopic}
+        defaultTopic={topic || ''}
       />
 
 

@@ -186,7 +186,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       if (newBoard) {
         setShowNewBoardModal(false)
         await loadBoards() // Refresh the board list
-        onOpenBoard(newBoard) // Mark as new
+        onOpenBoard({ ...newBoard, isNew: true } as typeof newBoard & { isNew?: boolean }) // Mark as new
       }
     } catch (error) {
       console.error('Failed to create new board:', error)
@@ -229,7 +229,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       
       if (newBoard) {
         await loadBoards() // Refresh the board list
-        onOpenBoard(newBoard) // Open the new board
+        onOpenBoard({ ...newBoard, isNew: true } as typeof newBoard & { isNew?: boolean }) // Always mark as new for onboarding
       }
     } catch (error) {
       console.error('Failed to create board with setup:', error)
