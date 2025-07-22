@@ -232,7 +232,7 @@ function DeleteDocumentModal({
 
 export default function DocumentNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
-  const { updateNodeLabel, removeNode, toggleNodeExpanded, updateNodeContent: _updateNodeContent } = useNodeActions(id)
+  const { updateNodeLabel, removeNode, toggleNodeExpanded, updateNodeContent: _updateNodeContent, selectThisNode } = useNodeActions(id)
 
   // State
   const [isEditingLabel, setIsEditingLabel] = useState(false)

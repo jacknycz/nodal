@@ -67,7 +67,7 @@ function DeleteConfirmationModal({
 
 export default function NodalNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
-  const { updateNodeLabel, updateNodeContent, removeNode } = useNodeActions(id)
+  const { updateNodeLabel, updateNodeContent, removeNode, selectThisNode } = useNodeActions(id)
   const nodeRef = useRef<HTMLDivElement>(null)
   const __fileInputRef = useRef<HTMLInputElement>(null);
   const __allNodes = useBoardStore(state => state.nodes);

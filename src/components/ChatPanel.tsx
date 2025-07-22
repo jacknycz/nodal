@@ -81,7 +81,7 @@ export default function ChatPanel({
     if (isOpen && isExpanded && !showAPIKeySetup && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [isOpen, isExpanded, showAPIKeySetup, selectionContext])
+  }, [isOpen, isExpanded, showAPIKeySetup])
 
   // Handle resize functionality
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
@@ -266,6 +266,11 @@ export default function ChatPanel({
     )
   }, [handleApplyNode])
 
+  // Extract node titles from selectionContext for display
+  const selectionTitles = selectionContext
+    ? Array.from(selectionContext.matchAll(/\*\*(.*?)\*\*/g)).map(m => m[1])
+    : [];
+
   if (!isOpen) return null
 
   return (
@@ -374,6 +379,36 @@ export default function ChatPanel({
 
               {/* Input */}
               <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                {/* Selection notification area */}
+                {selectionTitles.length > 0 && isOpen && (
+                  <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
+                    <div className="flex items-center gap-2">
+                      {selectionTitles.length === 1 ? (
+                        <>
+                          <span>Selected:</span>
+                          <span className="font-semibold">{selectionTitles[0]}</span>
+                        </>
+                      ) : selectionTitles.length === 2 ? (
+                        <>
+                          <span>Selected:</span>
+                          <span className="font-semibold">{selectionTitles[0]}</span>
+                          <span>and</span>
+                          <span className="font-semibold">{selectionTitles[1]}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{selectionTitles.length} nodes selected</span>
+                          <span
+                            className="font-mono cursor-pointer underline decoration-dotted"
+                            title={selectionTitles.join(', ')}
+                          >
+                            (hover to see titles)
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-end space-x-2 h-auto">
                   <div className="flex-1 relative">
                     <textarea

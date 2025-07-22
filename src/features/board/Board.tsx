@@ -900,6 +900,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const aiClient = new AIClient(aiConfig)
 
   const updateNode = useBoardStore(state => state.updateNode);
+  const setSelectedNode = useBoardStore(state => state.setSelectedNode);
 
   // --- Mind Map Layout Algorithm ---
   function getNodeChildren(nodeId: string, edges: BoardEdge[]) {
@@ -1060,7 +1061,26 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   }, [nodes, edges, setNodes]);
 
   const { enterFocusMode: _enterFocusMode, focusedNodeId: _focusedNodeId, setFocusTree: _setFocusTree } = useFocusStore();
-  const { buildFocusTree: _buildFocusTree } = useFocusTree();
+  const { focusTreeNodes } = useFocusTree();
+  const { selectedNode, selectedNodeId } = useBoard();
+
+  // Compute selection context for chat
+  let chatSelectionContext: string | undefined = undefined;
+  // Collect unique nodes: focusTreeNodes + selectedNode (if not already included)
+  let contextNodes = [...focusTreeNodes];
+  if (selectedNode && !focusTreeNodes.some(n => n.id === selectedNode.id)) {
+    contextNodes.push(selectedNode);
+  }
+  if (contextNodes.length > 0) {
+    const titles = contextNodes.map(n => n.data.title || 'Untitled').filter(Boolean);
+    if (titles.length === 1) {
+      chatSelectionContext = `**${titles[0]}**`;
+    } else if (titles.length === 2) {
+      chatSelectionContext = `**${titles[0]}**, **${titles[1]}**`;
+    } else if (titles.length > 2) {
+      chatSelectionContext = titles.map(t => `**${t}**`).join(', ');
+    }
+  }
 
   // Handler for AI-assisted board setup completion
   const handleBoardSetupComplete = async (brief: BoardBrief) => {
@@ -1216,7 +1236,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       <ChatPanel 
         isOpen={showChat}
         onClose={() => setShowChat(false)}
-        selectionContext={selectionContext}
+        selectionContext={chatSelectionContext}
         onSelectionContextUsed={handleSelectionContextUsed}
       />
 
@@ -1278,6 +1298,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         className="bg-gray-50 dark:bg-gray-900"
         onPaneContextMenu={handleContextMenu} // <-- use this prop
         onPaneClick={closeContextMenu}
+        onNodeClick={(_, node) => setSelectedNode(node.id)}
       >
         <BokehBackground />
         {/* <MiniMap /> */}
