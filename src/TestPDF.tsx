@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 export default function PdfNode({ file = '/test.pdf' }: { file?: string }) {
   const [numPages, setNumPages] = useState<number>(0);

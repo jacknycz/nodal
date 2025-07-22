@@ -9,9 +9,10 @@ import { useNodeActions } from './useNodeActions'
 import { boardStorage } from '../storage/storage'
 import { useBoardStore } from '../board/boardSlice'
 import TestPDF from '../../TestPDF';
+import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js?url';
 
 // Set up PDF.js worker - use working CDN
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // PDF Viewer Component
 function __PDFViewer({
