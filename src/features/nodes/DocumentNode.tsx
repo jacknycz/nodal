@@ -10,6 +10,8 @@ import { boardStorage } from '../storage/storage'
 import { useBoardStore } from '../board/boardSlice'
 import TestPDF from '../../TestPDF';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.js?url';
+import { useFocusStore } from '../focus/focusSlice';
+import { useFocusTree } from '../focus/useFocusTree';
 
 // Set up PDF.js worker - use working CDN
 pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -233,6 +235,10 @@ function DeleteDocumentModal({
 export default function DocumentNode({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as BoardNode['data']
   const { updateNodeLabel, removeNode, toggleNodeExpanded, updateNodeContent: _updateNodeContent, selectThisNode } = useNodeActions(id)
+  const { isFocusMode, focusedNodeId } = useFocusStore();
+  const { isNodeInFocusTree } = useFocusTree();
+  const isFocused = isFocusMode && isNodeInFocusTree(id);
+  const isFaded = isFocusMode && !isFocused;
 
   // State
   const [isEditingLabel, setIsEditingLabel] = useState(false)
@@ -578,7 +584,8 @@ export default function DocumentNode({ id, data, selected }: NodeProps) {
           ${selected ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-gray-200 dark:border-gray-700'}
           hover:shadow-xl
           group
-          ${(isEditingLabel) ? 'border border-blue-400 bg-blue-50' : ''}`}
+          ${(isEditingLabel) ? 'border border-blue-400 bg-blue-50' : ''}
+          ${isFaded ? 'opacity-40 blur-[2px] pointer-events-none' : ''}`}
       >
         {/* Minimized View */}
         {isMinimized && (
