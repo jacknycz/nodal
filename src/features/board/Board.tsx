@@ -1234,8 +1234,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
       {/* Chat Panel */}
       <ChatPanel 
-        isOpen={showChat}
-        onClose={() => setShowChat(false)}
         selectionContext={chatSelectionContext}
         onSelectionContextUsed={handleSelectionContextUsed}
       />
