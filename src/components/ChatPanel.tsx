@@ -290,7 +290,7 @@ export default function ChatPanel({
       {isExpanded && (
         <div
           ref={chatRef}
-          className={`bg-white overflow-hidden dark:bg-gray-900 rounded-4xl rounded-bl shadow-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
+          className={`flex flex-col bg-white overflow-hidden dark:bg-gray-900 rounded-4xl rounded-bl shadow-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
           style={{ height: `${panelHeight}px`, width: `${panelWidth}px` }}
         >
           {/* Header */}
@@ -306,142 +306,141 @@ export default function ChatPanel({
             <Minimize2 size={14} className='text-white' />
           </button>
 
-          {isExpanded && (
-            <>
-              {/* Messages */}
-              <div
-                ref={messagesRef}
-                className="flex-1 overflow-y-auto p-4 space-y-3"
-                style={{ height: `${panelHeight - 145}px` }} // Subtract header + input + resize handle height
-              >
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] text-sm ${message.role === 'user'
-                        ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
-                      }`}>
-                      <div
-                        className="text-xs"
-                        dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
-                      />
-
-                      {/* Render structured node responses */}
-                      {message.nodeResponses && message.nodeResponses.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {message.nodeResponses.map((nodeResponse) =>
-                            renderNodeResponse(nodeResponse, message.id)
-                          )}
-
-                          {/* Apply all button */}
-                          {message.nodeResponses.length > 1 && !message.allApplied && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleApplyAllNodes(message.id)}
-                              className="mt-2 w-full text-xs"
-                            >
-                              <Plus size={12} className="mr-1" />
-                              Apply All ({message.nodeResponses.length})
-                            </Button>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="text-xs opacity-70 mt-2">
-                        {message.timestamp.toLocaleTimeString()}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
-                      <Loader2 size={16} className="animate-spin" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        AI is thinking...
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="flex justify-start">
-                    <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
-                      <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-                      <span className="text-sm text-red-600 dark:text-red-400">
-                        {error}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Input */}
-              <div className="p-3 border-t border-gray-200 dark:border-gray-700">
-                {/* Selection notification area */}
-                {selectionTitles.length > 0 && isOpen && (
-                  <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
-                    <div className="flex items-center gap-2">
-                      {selectionTitles.length === 1 ? (
-                        <>
-                          <span>Selected:</span>
-                          <span className="font-semibold">{selectionTitles[0]}</span>
-                        </>
-                      ) : selectionTitles.length === 2 ? (
-                        <>
-                          <span>Selected:</span>
-                          <span className="font-semibold">{selectionTitles[0]}</span>
-                          <span>and</span>
-                          <span className="font-semibold">{selectionTitles[1]}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>{selectionTitles.length} nodes selected</span>
-                          <span
-                            className="font-mono cursor-pointer underline decoration-dotted"
-                            title={selectionTitles.join(', ')}
-                          >
-                            (hover to see titles)
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-end space-x-2 h-auto">
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={inputRef}
-                      value={currentMessage}
-                      onChange={(e) => setCurrentMessage(e.target.value)}
-                      placeholder="Hey! Ask me anything..."
-                      className="w-full z-20 relative text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      rows={3}
-                      disabled={isLoading}
+          {/* Main content area: messages + input */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Messages */}
+            <div
+              ref={messagesRef}
+              className="flex-1 overflow-y-auto p-4 space-y-3"
+            >
+              {messages.map((message) => (
+                <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] text-sm ${message.role === 'user'
+                      ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
+                    }`}>
+                    <div
+                      className="text-xs"
+                      dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
                     />
+
+                    {/* Render structured node responses */}
+                    {message.nodeResponses && message.nodeResponses.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {message.nodeResponses.map((nodeResponse) =>
+                          renderNodeResponse(nodeResponse, message.id)
+                        )}
+
+                        {/* Apply all button */}
+                        {message.nodeResponses.length > 1 && !message.allApplied && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApplyAllNodes(message.id)}
+                            className="mt-2 w-full text-xs"
+                          >
+                            <Plus size={12} className="mr-1" />
+                            Apply All ({message.nodeResponses.length})
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="text-xs opacity-70 mt-2">
+                      {message.timestamp.toLocaleTimeString()}
+                    </div>
                   </div>
-
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!currentMessage.trim() || isLoading}
-                    variant="custom"
-                    className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
-                  >
-                    <Send size={16} />
-                  </Button>
                 </div>
-              </div>
+              ))}
 
-              {/* Single Diagonal Resize Handle (bottom-left) */}
-              <div
-                onMouseDown={handleDiagonalResizeStart}
-                className="absolute bottom-0 left-0 h-12 w-12 bg-gray-100 dark:bg-gray-700 border-t border-l border-gray-200 dark:border-gray-700 cursor-nesw-resize flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-0"
-              >
-                <GripVertical size={12} className="text-gray-400 rotate-45 bottom-0 left-0 absolute" />
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      AI is thinking...
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="flex justify-start">
+                  <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
+                    <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
+                    <span className="text-sm text-red-600 dark:text-red-400">
+                      {error}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="border-t border-gray-200 dark:border-gray-700 p-3">
+              {/* Selection notification area */}
+              {selectionTitles.length > 0 && isOpen && (
+                <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
+                  <div className="flex items-center gap-2">
+                    {selectionTitles.length === 1 ? (
+                      <>
+                        <span>Selected:</span>
+                        <span className="font-semibold">{selectionTitles[0]}</span>
+                      </>
+                    ) : selectionTitles.length === 2 ? (
+                      <>
+                        <span>Selected:</span>
+                        <span className="font-semibold">{selectionTitles[0]}</span>
+                        <span>and</span>
+                        <span className="font-semibold">{selectionTitles[1]}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{selectionTitles.length} nodes selected</span>
+                        <span
+                          className="font-mono cursor-pointer underline decoration-dotted"
+                          title={selectionTitles.join(', ')}
+                        >
+                          (hover to see titles)
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div className="flex items-end space-x-2 h-auto">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={inputRef}
+                    value={currentMessage}
+                    onChange={(e) => setCurrentMessage(e.target.value)}
+                    placeholder="Hey! Ask me anything..."
+                    className="w-full z-20 relative text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    rows={3}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!currentMessage.trim() || isLoading}
+                  variant="custom"
+                  className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
+                >
+                  <Send size={16} />
+                </Button>
               </div>
-            </>
-          )}
+            </div>
+
+            {/* Single Diagonal Resize Handle (bottom-left) */}
+            <div
+              onMouseDown={handleDiagonalResizeStart}
+              className="h-12 w-12 bg-gray-100 dark:bg-gray-700 border-t border-l border-gray-200 dark:border-gray-700 cursor-nesw-resize flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-0"
+              style={{ alignSelf: 'flex-start' }}
+            >
+              <GripVertical size={12} className="text-gray-400 rotate-45 bottom-0 left-0 absolute" />
+            </div>
+          </div>
 
           {/* API Key Setup Modal */}
           {showAPIKeySetup && (
