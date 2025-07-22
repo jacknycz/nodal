@@ -4,17 +4,15 @@ import { MessageCircle, Minimize2, Send, Loader2, Plus, Sparkles, AlertCircle, G
 import { useNodeAwareChat } from '../hooks/useNodeAwareChat'
 import { useAIConfig } from '../features/ai/aiContext'
 import type { NodeResponse } from '../types'
+import nodalBlackLogo from '../assets/nodal-black.svg'
 
 interface ChatPanelProps {
-  isOpen?: boolean
-  onClose?: () => void
   className?: string
   selectionContext?: string
   onSelectionContextUsed?: () => void
 }
 
 export default function ChatPanel({
-  isOpen = false,
   className = '',
   selectionContext,
   onSelectionContextUsed
@@ -24,7 +22,14 @@ export default function ChatPanel({
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
   const [panelHeight, setPanelHeight] = useState(384) // Default height: 384px (h-96)
-  const [panelWidth, setPanelWidth] = useState(320) // Default width: 320px (w-80)
+  // For docked panel: top bar height (px)
+  const TOPBAR_HEIGHT =73;
+  // Panel width constraints
+  const PANEL_MIN_WIDTH = 260;
+  const PANEL_MAX_WIDTH = 800;
+  const PANEL_DEFAULT_WIDTH = Math.min(window.innerWidth * 0.25, PANEL_MAX_WIDTH);
+  const [panelWidth, setPanelWidth] = useState(Math.max(PANEL_MIN_WIDTH, Math.min(PANEL_DEFAULT_WIDTH, PANEL_MAX_WIDTH)));
+  const [isOpen, setIsOpen] = useState(true); // manage open/minimized state internally
 
   // API Key setup state
   const [showAPIKeySetup, setShowAPIKeySetup] = useState(false)
@@ -104,29 +109,6 @@ export default function ChatPanel({
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }, [panelHeight])
-
-  // Handle diagonal (corner) resize functionality (bottom-left)
-  const handleDiagonalResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startY = e.clientY
-    const startWidth = panelWidth
-    const startHeight = panelHeight
-    const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = startX - e.clientX // Reversed for bottom-left
-      const deltaY = e.clientY - startY
-      const newWidth = Math.max(240, Math.min(600, startWidth + deltaX))
-      const newHeight = Math.max(200, Math.min(600, startHeight + deltaY))
-      setPanelWidth(newWidth)
-      setPanelHeight(newHeight)
-    }
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [panelWidth, panelHeight])
 
   // Handle API key setup
   const handleAPIKeySubmit = useCallback(async () => {
@@ -271,244 +253,247 @@ export default function ChatPanel({
     ? Array.from(selectionContext.matchAll(/\*\*(.*?)\*\*/g)).map(m => m[1])
     : [];
 
-  if (!isOpen) return null
+  // Horizontal resize handle
+  const handleHorizontalResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = panelWidth;
+    function onMouseMove(moveEvent: MouseEvent) {
+      const deltaX = startX - moveEvent.clientX;
+      let newWidth = startWidth + deltaX;
+      newWidth = Math.max(PANEL_MIN_WIDTH, Math.min(newWidth, PANEL_MAX_WIDTH));
+      setPanelWidth(newWidth);
+    }
+    function onMouseUp() {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, [panelWidth]);
+
+  if (!isOpen) {
+    // Minimized: show floating button
+    return (
+      <button
+        className="fixed z-50 right-4 bg-primary-500 dark:bg-primary-500/80 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out opacity-100 scale-100 hover:scale-110"
+        style={{ top: `${TOPBAR_HEIGHT + 8}px` }}
+        aria-label="Open chat"
+        onClick={() => setIsOpen(true)}
+      >
+        <img src={nodalBlackLogo} alt="Nodal Logo" className="h-7 w-auto" />
+      </button>
+    );
+  }
 
   return (
-    <div className="fixed top-24 right-4 z-40">
-      {/* Minimized button - only show when not expanded */}
-      {!isExpanded && (
-        <button
-          className="absolute cursor-pointer top-0 right-0 bg-primary-500 dark:bg-primary-500/80 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out opacity-100 scale-100 hover:scale-110"
-          aria-label="Open chat"
-          onClick={() => setIsExpanded(true)}
-        >
-          <MessageCircle size={28} className="text-white" />
-        </button>
-      )}
-
-      {/* Expanded panel - only render when expanded */}
-      {isExpanded && (
-        <div
-          ref={chatRef}
-          className={`flex flex-col bg-white overflow-hidden dark:bg-gray-900 rounded-4xl rounded-bl shadow-2xl border border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out opacity-100 scale-100 ${className}`}
-          style={{ height: `${panelHeight}px`, width: `${panelWidth}px` }}
-        >
-          {/* Header */}
+    <div
+      className={`fixed right-0 z-40 flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl transition-all duration-300 ease-in-out ${className}`}
+      style={{
+        top: `${TOPBAR_HEIGHT}px`,
+        height: `calc(100vh - ${TOPBAR_HEIGHT}px)`,
+        width: `${panelWidth}px`,
+      }}
+    >
+      {/* Horizontal resize handle on the left edge */}
+      <div
+        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize z-50 bg-primary-500 dark:bg-primary-500/20 flex items-center justify-center"
+        onMouseDown={handleHorizontalResizeStart}
+        style={{ transform: 'translateX(-100%)' }}
+        aria-label="Resize chat panel"
+      >
+        <GripVertical className="text-primary-900 dark:text-primary-200 h-5 w-5" />
+      </div>
+      {/* Main flex column: messages area (flex-1) + input (flex-none) */}
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Messages area with floating minimize button */}
+        <div className="relative flex-1 min-h-0 overflow-y-auto">
           <button
-            onClick={() => setIsExpanded(false)}
-            className="flex w-full items-center justify-between pl-4 pr-4 py-3 bg-primary-500/50 dark:bg-primary-500/50 text-white rounded-t-4xl"
+            className="absolute top-2 right-2 bg-gray-200 dark:bg-gray-700 rounded-full p-1 hover:bg-gray-300 dark:hover:bg-gray-600 z-50"
+            aria-label="Minimize chat"
+            onClick={() => setIsOpen(false)}
           >
-            <div className="flex items-center gap-1">
-              <MessageCircle size={18} />
-              <span className="font-medium">nodal</span>
-            </div>
-
-            <Minimize2 size={14} className='text-white' />
+            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           </button>
-
-          {/* Main content area: messages + input */}
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Messages */}
-            <div
-              ref={messagesRef}
-              className="flex-1 overflow-y-auto p-4 space-y-3"
-            >
-              {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] text-sm ${message.role === 'user'
-                      ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
-                    }`}>
-                    <div
-                      className="text-xs"
-                      dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
-                    />
-
-                    {/* Render structured node responses */}
-                    {message.nodeResponses && message.nodeResponses.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {message.nodeResponses.map((nodeResponse) =>
-                          renderNodeResponse(nodeResponse, message.id)
-                        )}
-
-                        {/* Apply all button */}
-                        {message.nodeResponses.length > 1 && !message.allApplied && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleApplyAllNodes(message.id)}
-                            className="mt-2 w-full text-xs"
-                          >
-                            <Plus size={12} className="mr-1" />
-                            Apply All ({message.nodeResponses.length})
-                          </Button>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="text-xs opacity-70 mt-2">
-                      {message.timestamp.toLocaleTimeString()}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
-                    <Loader2 size={16} className="animate-spin" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      AI is thinking...
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="flex justify-start">
-                  <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
-                    <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
-                    <span className="text-sm text-red-600 dark:text-red-400">
-                      {error}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input */}
-            <div className="border-t border-gray-200 dark:border-gray-700 p-3">
-              {/* Selection notification area */}
-              {selectionTitles.length > 0 && isOpen && (
-                <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
-                  <div className="flex items-center gap-2">
-                    {selectionTitles.length === 1 ? (
-                      <>
-                        <span>Selected:</span>
-                        <span className="font-semibold">{selectionTitles[0]}</span>
-                      </>
-                    ) : selectionTitles.length === 2 ? (
-                      <>
-                        <span>Selected:</span>
-                        <span className="font-semibold">{selectionTitles[0]}</span>
-                        <span>and</span>
-                        <span className="font-semibold">{selectionTitles[1]}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{selectionTitles.length} nodes selected</span>
-                        <span
-                          className="font-mono cursor-pointer underline decoration-dotted"
-                          title={selectionTitles.join(', ')}
+          {/* Messages */}
+          <div
+            ref={messagesRef}
+            className="p-4 space-y-3"
+          >
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] text-sm ${message.role === 'user'
+                    ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
+                  }`}>
+                  <div
+                    className="text-xs"
+                    dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
+                  />
+                  {/* Render structured node responses */}
+                  {message.nodeResponses && message.nodeResponses.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.nodeResponses.map((nodeResponse) =>
+                        renderNodeResponse(nodeResponse, message.id)
+                      )}
+                      {/* Apply all button */}
+                      {message.nodeResponses.length > 1 && !message.allApplied && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleApplyAllNodes(message.id)}
+                          className="mt-2 w-full text-xs"
                         >
-                          (hover to see titles)
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-              <div className="flex items-end space-x-2 h-auto">
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={inputRef}
-                    value={currentMessage}
-                    onChange={(e) => setCurrentMessage(e.target.value)}
-                    placeholder="Hey! Ask me anything..."
-                    className="w-full z-20 relative text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    rows={3}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!currentMessage.trim() || isLoading}
-                  variant="custom"
-                  className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
-                >
-                  <Send size={16} />
-                </Button>
-              </div>
-            </div>
-
-            {/* Single Diagonal Resize Handle (bottom-left) */}
-            <div
-              onMouseDown={handleDiagonalResizeStart}
-              className="h-12 w-12 bg-gray-100 dark:bg-gray-700 border-t border-l border-gray-200 dark:border-gray-700 cursor-nesw-resize flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors z-0"
-              style={{ alignSelf: 'flex-start' }}
-            >
-              <GripVertical size={12} className="text-gray-400 rotate-45 bottom-0 left-0 absolute" />
-            </div>
-          </div>
-
-          {/* API Key Setup Modal */}
-          {showAPIKeySetup && (
-            <div className="absolute inset-0 bg-white dark:bg-gray-900 rounded-lg p-6 flex flex-col justify-center">
-              <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  OpenAI API Key Required
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  To use the AI assistant, you need to configure your OpenAI API key. Your key is stored locally and never shared.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    OpenAI API Key
-                  </label>
-                  <input
-                    ref={apiKeyInputRef}
-                    type="password"
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    disabled={setupLoading}
-                  />
-                </div>
-
-                {setupError && (
-                  <div className="flex items-center space-x-2 text-red-600 dark:text-red-400 text-sm">
-                    <AlertCircle size={16} />
-                    <span>{setupError}</span>
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleAPIKeySubmit}
-                  disabled={!apiKeyInput.trim() || setupLoading}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50"
-                >
-                  {setupLoading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Configuring...</span>
+                          <Plus size={12} className="mr-1" />
+                          Apply All ({message.nodeResponses.length})
+                        </Button>
+                      )}
                     </div>
-                  ) : (
-                    'Configure API Key'
                   )}
-                </Button>
-
-                <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  <p className="mb-2">🔒 Your API key is stored securely in your browser and never sent to our servers.</p>
-                  <p>
-                    Need an API key? Get one from{' '}
-                    <a
-                      href="https://platform.openai.com/api-keys"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-600 underline"
-                    >
-                      OpenAI Platform
-                    </a>
-                  </p>
+                  <div className="text-xs opacity-70 mt-2">
+                    {message.timestamp.toLocaleTimeString()}
+                  </div>
                 </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg flex items-center space-x-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    AI is thinking...
+                  </span>
+                </div>
+              </div>
+            )}
+            {error && (
+              <div className="flex justify-start">
+                <div className="bg-red-100 dark:bg-red-900 border border-red-400 p-3 rounded-lg flex items-center space-x-2">
+                  <AlertCircle size={16} className="text-red-600 dark:text-red-400" />
+                  <span className="text-sm text-red-600 dark:text-red-400">
+                    {error}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Input area always at the bottom */}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex-none">
+          {/* Selection notification area */}
+          {selectionTitles.length > 0 && isOpen && (
+            <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
+              <div className="flex items-center gap-2">
+                {selectionTitles.length === 1 ? (
+                  <>
+                    <span>Selected:</span>
+                    <span className="font-semibold">{selectionTitles[0]}</span>
+                  </>
+                ) : selectionTitles.length === 2 ? (
+                  <>
+                    <span>Selected:</span>
+                    <span className="font-semibold">{selectionTitles[0]}</span>
+                    <span>and</span>
+                    <span className="font-semibold">{selectionTitles[1]}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{selectionTitles.length} nodes selected</span>
+                    <span
+                      className="font-mono cursor-pointer underline decoration-dotted"
+                      title={selectionTitles.join(', ')}
+                    >
+                      (hover to see titles)
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           )}
+          <div className="flex items-end space-x-2 h-auto">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={currentMessage}
+                onChange={(e) => setCurrentMessage(e.target.value)}
+                placeholder="Hey! Ask me anything..."
+                className="w-full z-20 relative text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                rows={3}
+                disabled={isLoading}
+              />
+            </div>
+            <Button
+              onClick={handleSendMessage}
+              disabled={!currentMessage.trim() || isLoading}
+              variant="custom"
+              className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
+            >
+              <Send size={16} />
+            </Button>
+          </div>
+        </div>
+      </div>
+      {/* API Key Setup Modal */}
+      {showAPIKeySetup && (
+        <div className="absolute inset-0 bg-white dark:bg-gray-900 rounded-lg p-6 flex flex-col justify-center">
+          <div className="text-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              OpenAI API Key Required
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To use the AI assistant, you need to configure your OpenAI API key. Your key is stored locally and never shared.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                OpenAI API Key
+              </label>
+              <input
+                ref={apiKeyInputRef}
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                placeholder="sk-..."
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                disabled={setupLoading}
+              />
+            </div>
+            {setupError && (
+              <div className="flex items-center space-x-2 text-red-600 dark:text-red-400 text-sm">
+                <AlertCircle size={16} />
+                <span>{setupError}</span>
+              </div>
+            )}
+            <Button
+              onClick={handleAPIKeySubmit}
+              disabled={!apiKeyInput.trim() || setupLoading}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50"
+            >
+              {setupLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Configuring...</span>
+                </div>
+              ) : (
+                'Configure API Key'
+              )}
+            </Button>
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+              <p className="mb-2">🔒 Your API key is stored securely in your browser and never sent to our servers.</p>
+              <p>
+                Need an API key? Get one from{' '}
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-600 underline"
+                >
+                  OpenAI Platform
+                </a>
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
