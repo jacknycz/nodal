@@ -71,6 +71,7 @@ export interface BoardState {
   currentBoardId?: string // Add this field
   tasks?: Task[]
   freeChatMode?: boolean // Add per-board free chat mode toggle
+  topbarHeight: number // Add topbar height for global layout
 }
 
 export interface BoardActions {

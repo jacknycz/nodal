@@ -26,9 +26,9 @@ import TopicDisplay from '../../components/TopicDisplay'
 import { useViewportCenter } from '../../hooks/useViewportCenter'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { boardStorage, type SavedBoard } from '../storage/storage'
-import { 
-  extractTextFromFile, 
-  validateFile, 
+import {
+  extractTextFromFile,
+  validateFile,
   createDocumentNode
 } from '../nodes/documentUtils'
 import BoardSetupModal from '../../components/BoardSetupModal'
@@ -39,7 +39,9 @@ import AIClient from '../ai/aiClient'
 import { useFocusStore } from '../focus/focusSlice';
 import { useFocusTree } from '../focus/useFocusTree';
 import TaskList from '../../components/TaskList';
-import { List } from 'lucide-react';
+import { List, X } from 'lucide-react';
+import TipsBubble from '../../components/TipsBubble';
+import LearnModal from '../../components/LearnModal';
 
 import '@xyflow/react/dist/style.css'
 import type { BoardNode, BoardEdge, BoardBrief } from './boardTypes'
@@ -120,15 +122,16 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const [showPreSession, setShowPreSession] = React.useState(false)
   const [isLoadingBoard, setIsLoadingBoard] = useState(false) // Add this flag
   const [showTaskList, setShowTaskList] = useState(false);
-  
+  const [showTips, setShowTips] = useState(true);
+
   // Refs for autosave
   const autosaveTimeoutRef = useRef<number | null>(null)
   const lastSavedDataRef = useRef<string>('')
-  
+
   // Upload state
   const [_isDragOver, setIsDragOver] = useState(false)
   const [uploadError, setUploadError] = useState<string>('')
-  
+
   // Selection context state
   const [selectionContext, setSelectionContext] = useState<string | undefined>(undefined)
 
@@ -441,12 +444,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
   const handleConnect = (connection: Connection) => {
     if (!connection.source || !connection.target) return
-    
+
     const sourceNode = getNodeById(nodes, connection.source)
     const targetNode = getNodeById(nodes, connection.target)
-    
+
     if (!sourceNode || !targetNode) return
-    
+
     // Validate connection
     const validation = canCreateConnection(edges, connection.source, connection.target)
     if (!validation.valid) {
@@ -454,12 +457,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       // TODO: Show user feedback/toast notification
       return
     }
-    
+
     // Determine connection type for our data model
     const connectionType = getConnectionType(sourceNode, targetNode)
-    
+
     // Create enhanced edge - use connectionType for data, floating type for rendering
-    addEdge(connection.source, connection.target, { 
+    addEdge(connection.source, connection.target, {
       type: connectionType  // This is our internal type: 'default' | 'ai' | 'focus'
     })
 
@@ -582,18 +585,18 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
     const handleWindowDrop = (e: DragEvent) => {
       if (!isFileBeingDragged) return
-      
+
       // Check if we're dropping on the board
       const boardElement = document.querySelector(".react-flow") as HTMLElement
       if (boardElement) {
         const rect = boardElement.getBoundingClientRect()
-        const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right && 
-                         e.clientY >= rect.top && e.clientY <= rect.bottom
-        
+        const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right &&
+          e.clientY >= rect.top && e.clientY <= rect.bottom
+
         if (isOnBoard && e.dataTransfer?.files) {
           e.preventDefault()
           e.stopPropagation()
-          
+
           console.log("🎯 Files dropped on board!")
           const position = {
             x: e.clientX - rect.left,
@@ -602,7 +605,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           handleFileUpload(e.dataTransfer.files, position)
         }
       }
-      
+
       // Always end drag state on any drop
       isFileBeingDragged = false
       setIsDragOver(false)
@@ -676,12 +679,12 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       console.log('📂 Saved topic in board data:', board.data.topic) // Add console log
       console.log('📂 Nodes to set:', board.data.nodes)
       console.log('📂 Edges to set:', board.data.edges)
-      
+
       // Use the board data directly - no need to reload from storage
       setNodes(layoutMindMap(board.data.nodes, board.data.edges))
       setEdges(board.data.edges)
       updateViewport(board.data.viewport)
-      
+
       // Restore topic if it exists in the saved data
       if (board.data.topic) {
         console.log('🔄 Restoring topic from saved data:', board.data.topic) // Add console log
@@ -689,7 +692,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       } else {
         console.log('⚠️ No topic found in saved board data') // Add console log
       }
-      
+
       setLocalBoardId(board.id) // Use localBoardId
       setCurrentBoardId(board.id) // Set in store
       setCurrentBoardName(board.name)
@@ -708,16 +711,16 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const _handleRenameBoard = async (boardId: string, newName: string) => {
     try {
       await boardStorage.renameBoard(boardId, newName)
-      
+
       // If we renamed the current board, update the current board name
       if (boardId === localBoardId) { // Use localBoardId
         setCurrentBoardName(newName)
       }
-      
+
       // Refresh board names list
       const names = await boardStorage.getBoardNames()
       setExistingBoardNames(names)
-      
+
       console.log('Board renamed successfully!')
     } catch (error) {
       console.error('Failed to rename board:', error)
@@ -728,7 +731,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const _handleDeleteBoard = async (boardId: string) => {
     try {
       await boardStorage.deleteBoard(boardId)
-      
+
       // If we deleted the current board, clear the current board tracking
       if (boardId === localBoardId) { // Use localBoardId
         setLocalBoardId(undefined) // Use localBoardId
@@ -737,11 +740,11 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         setHasUnsavedChanges(false)
         setSaveStatus('saved')
       }
-      
+
       // Refresh board names list
       const names = await boardStorage.getBoardNames()
       setExistingBoardNames(names)
-      
+
       console.log('Board deleted successfully!')
     } catch (error) {
       console.error('Failed to delete board:', error)
@@ -866,7 +869,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     setSelectionContext(context)
     setShowChat(true)
   }
-  
+
   const handleSelectionContextUsed = () => {
     setSelectionContext(undefined)
   }
@@ -1036,7 +1039,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     // Lay out loners in a square grid, centered below clusters
     if (loners.length > 0) {
       const lonerGridCols = Math.ceil(Math.sqrt(loners.length));
-              const _lonerGridRows = Math.ceil(loners.length / lonerGridCols);
+      const _lonerGridRows = Math.ceil(loners.length / lonerGridCols);
       const lonerSpacing = 220;
       const lonerStartX = center.x - ((lonerGridCols - 1) * lonerSpacing) / 2;
       const lonerStartY = center.y + (gridRows * clusterBoxSize) / 2 + 200;
@@ -1196,8 +1199,53 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
+  // Tips and Learn modal state
+  const [showLearn, setShowLearn] = useState(false);
+  const tips = [
+    'Double-click to add a node',
+    'Drag to pan the board',
+    'Right-click for context menu',
+    'Use AI to brainstorm',
+    'Press Ctrl+F to search nodes',
+    'Click a node to edit',
+    'Use Free Chat Mode for open conversation',
+    'Connect nodes to build your map',
+    'Try uploading a PDF',
+    'Use the Learn button for more help',
+  ];
+
   return (
     <div ref={boardRef} className="w-full h-full relative">
+      {/* Tips Bubble and Learn Button (bottom left) */}
+      {showTips && (
+        <div className="fixed bottom-4 left-36 z-50 flex items-center gap-3">
+          <div className="flex items-center">
+            <button
+              className="p-1 rounded-full -mr-2 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-400 hover:text-red-500 transition"
+              style={{ fontSize: '14px' }}
+              aria-label="Close tips and learn"
+              onClick={() => setShowTips(false)}
+              type="button"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-full pl-2 pr-4 py-1 -mr-2 ">
+              Tips:
+            </span>
+            <TipsBubble tips={tips} />
+          </div>
+          <div className="flex items-center">
+            <button
+              className="px-3 py-1.5 rounded-full bg-primary-600 text-white text-xs font-semibold shadow hover:bg-primary-700 transition"
+              onClick={() => setShowLearn(true)}
+              type="button"
+            >
+              Learn
+            </button>
+          </div>
+        </div>
+      )}
+      <LearnModal isOpen={showLearn} onClose={() => setShowLearn(false)} />
       {/* Fullscreen Button */}
       <button
         className="fixed top-4 right-80 z-[100] px-4 py-2 bg-gray-900 text-white rounded shadow hover:bg-gray-800 transition-colors text-xs"
@@ -1210,7 +1258,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       <div className="fixed top-2 left-2 z-50 bg-black text-white px-3 py-1 rounded text-xs font-mono">
         Chat Show: {showChat ? 'true' : 'false'}
       </div>
-      
+
       {/* Floating Action Button */}
       <FloatingActionButton
         onAddNode={handleAddNode}
@@ -1219,7 +1267,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         onReorganize={handleReorganize}
         hasNodes={nodes.length > 0}
       />
-      
+
       {/* Upload error notification */}
       {uploadError && (
         <div className="absolute top-20 left-4 z-20 bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded shadow-lg">
@@ -1233,13 +1281,13 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       )}
 
       {/* Chat Panel */}
-      <ChatPanel 
+      <ChatPanel
         selectionContext={chatSelectionContext}
         onSelectionContextUsed={handleSelectionContextUsed}
       />
 
       {/* AI Node Generator Modal */}
-      <AINodeGenerator 
+      <AINodeGenerator
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
       />
@@ -1278,7 +1326,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           </div>
         )}
       </div>
-      
+
       <ReactFlow
         nodes={nodes}
         edges={edges}

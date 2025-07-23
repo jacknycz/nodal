@@ -17,6 +17,7 @@ const initialState: BoardState = {
   currentBoardId: undefined,
   tasks: [],
   freeChatMode: false, // Add default value
+  topbarHeight: 49, // Default, can be updated dynamically
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -27,6 +28,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   removeTask: (id: string) => void
   setTasks: (tasks: { id: string; text: string; completed: boolean }[]) => void
   setFreeChatMode: (free: boolean) => void
+  setTopbarHeight: (height: number) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -130,4 +132,5 @@ export const useBoardStore = create<BoardState & BoardActions & {
     set({ tasks })
   },
   setFreeChatMode: (free) => set({ freeChatMode: free }),
+  setTopbarHeight: (height) => set({ topbarHeight: height }),
 })) 

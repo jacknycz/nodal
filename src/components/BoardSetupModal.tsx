@@ -301,20 +301,20 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           <p className="mb-6 text-gray-600 dark:text-gray-300">Let AI help you brainstorm, or start with a blank board.</p>
           <div className="flex flex-col gap-4">
             <button
-              className="px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition"
+              className="cursor-pointer px-6 py-3 rounded-lg bg-primary-600 text-white font-semibold text-lg hover:bg-primary-700 transition"
               onClick={() => setMode('ai')}
             >
-              <span role="img" aria-label="AI">🤖</span> AI Assisted (Recommended)
+              AI Assisted (Recommended)
             </button>
             <button
-              className="px-6 py-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-semibold text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
+              className="cursor-pointer px-6 py-3 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-semibold text-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition"
               onClick={() => setMode('blank')}
             >
-              <span role="img" aria-label="Blank">📝</span> Start Blank
+              Start Blank
             </button>
           </div>
           <button
-            className="mt-8 text-gray-500 hover:underline"
+            className="mt-8 text-gray-500 hover:underline cursor-pointer"
             onClick={onClose}
             type="button"
           >

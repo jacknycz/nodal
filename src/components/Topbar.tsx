@@ -6,7 +6,8 @@ import AvatarMenu from './AvatarMenu'
 import ThemeToggle from './ThemeToggle'
 import AISettingsMenu from './AISettingsMenu'
 import DocumentsMenu from './DocumentsMenu'
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { useBoardStore } from '../features/board/boardSlice';
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -39,11 +40,20 @@ export default function Topbar({
 }: TopbarProps) {
   const { isDark } = useTheme()
   const [showFeedback, setShowFeedback] = useState(false)
+  const setTopbarHeight = useBoardStore(state => state.setTopbarHeight);
+  const headerRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    if (headerRef.current) {
+      const height = headerRef.current.getBoundingClientRect().height;
+      setTopbarHeight(height);
+    }
+  }, [setTopbarHeight]);
 
   return (
     <>
-      <header className="absolute top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-3 items-center px-6 py-3">
+      <header ref={headerRef} className="absolute top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+        <div className="grid grid-cols-3 items-center px-6 py-0">
           {/* Left - Logo */}
           <div className="flex items-center gap-3">
             <button
@@ -55,11 +65,11 @@ export default function Topbar({
               <img
                 src={isDark ? nodalWhiteLogo : nodalBlackLogo}
                 alt="Nodal Logo"
-                className="h-8 w-auto"
+                className="h-6 w-auto"
               />
             </button>
 
-            <button className="text-sm rounded text-gray-600 dark:text-white border border-red-500 p-2" onClick={() => setShowFeedback(true)}>
+            <button className="text-sm rounded text-gray-600 dark:text-white border border-red-500 p-1" onClick={() => setShowFeedback(true)}>
               FEEDBACK
             </button>
           </div>

@@ -26,7 +26,7 @@ export default function ChatPanel({
   const [isExpanded, setIsExpanded] = useState(true)
   const [panelHeight, setPanelHeight] = useState(384) // Default height: 384px (h-96)
   // For docked panel: top bar height (px)
-  const TOPBAR_HEIGHT = 73;
+  const topbarHeight = useBoardStore(state => state.topbarHeight || 49);
   // Panel width constraints
   const PANEL_MIN_WIDTH = 260;
   const PANEL_MAX_WIDTH = 800;
@@ -298,7 +298,7 @@ export default function ChatPanel({
     return (
       <button
         className="fixed z-50 right-4 bg-primary-500 dark:bg-primary-500/80 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center justify-center p-3 transition-all duration-300 ease-in-out opacity-100 scale-100 hover:scale-110"
-        style={{ top: `${TOPBAR_HEIGHT + 8}px` }}
+        style={{ top: `${topbarHeight + 8}px` }}
         aria-label="Open chat"
         onClick={() => setIsOpen(true)}
       >
@@ -312,8 +312,8 @@ export default function ChatPanel({
     <div
       className={`fixed right-0 z-40 flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl transition-all duration-300 ease-in-out ${className}`}
       style={{
-        top: `${TOPBAR_HEIGHT}px`,
-        height: `calc(100vh - ${TOPBAR_HEIGHT}px)`,
+        top: `${topbarHeight}px`,
+        height: `calc(100vh - ${topbarHeight}px)`,
         width: `${panelWidth}px`,
       }}
     >
