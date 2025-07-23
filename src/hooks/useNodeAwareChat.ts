@@ -33,8 +33,8 @@ interface UseNodeAwareChatResult {
   messages: ChatMessage[]
   sendMessage: (message: string) => Promise<void>
   sendMessageWithSelection: (message: string, selectionContext: string) => Promise<void>
-  applyNode: (nodeResponse: NodeResponse, messageId: string) => Promise<void>
-  applyAllNodes: (messageId: string) => Promise<void>
+  applyNode: (nodeResponse: NodeResponse, messageId: string, referencedNodeTitles?: string[]) => Promise<void>
+  applyAllNodes: (messageId: string, referencedNodeTitles?: string[]) => Promise<void>
   applyConnections: (connections: ConnectionSuggestion[]) => Promise<void>
   clearMessages: () => void
   isLoading: boolean

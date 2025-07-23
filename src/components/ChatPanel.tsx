@@ -185,7 +185,7 @@ export default function ChatPanel({
   }, [currentMessage, isLoading, sendMessage, sendMessageWithSelection, selectionContext, onSelectionContextUsed])
 
   // Handle applying a node
-  const handleApplyNode = useCallback(async (nodeResponse: NodeResponse, messageId: string, referencedNodeTitles?: string[]) => {
+  const handleApplyNode: (nodeResponse: NodeResponse, messageId: string, referencedNodeTitles?: string[]) => Promise<void> = useCallback(async (nodeResponse, messageId, referencedNodeTitles) => {
     try {
       await applyNode(nodeResponse, messageId, referencedNodeTitles)
     } catch (error) {
@@ -194,7 +194,7 @@ export default function ChatPanel({
   }, [applyNode])
 
   // Handle applying all nodes
-  const handleApplyAllNodes = useCallback(async (messageId: string, referencedNodeTitles?: string[]) => {
+  const handleApplyAllNodes: (messageId: string, referencedNodeTitles?: string[]) => Promise<void> = useCallback(async (messageId, referencedNodeTitles) => {
     try {
       await applyAllNodes(messageId, referencedNodeTitles)
     } catch (error) {
