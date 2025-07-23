@@ -42,6 +42,7 @@ import TaskList from '../../components/TaskList';
 import { List, X } from 'lucide-react';
 import TipsBubble from '../../components/TipsBubble';
 import LearnModal from '../../components/LearnModal';
+import { useReactFlow } from '@xyflow/react'
 
 import '@xyflow/react/dist/style.css'
 import type { BoardNode, BoardEdge, BoardBrief } from './boardTypes'
@@ -123,6 +124,8 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const [isLoadingBoard, setIsLoadingBoard] = useState(false) // Add this flag
   const [showTaskList, setShowTaskList] = useState(false);
   const [showTips, setShowTips] = useState(true);
+  const reactFlowInstance = useReactFlow();
+  const [hasFitView, setHasFitView] = useState(false);
 
   // Refs for autosave
   const autosaveTimeoutRef = useRef<number | null>(null)
@@ -138,29 +141,17 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; boardX: number; boardY: number } | null>(null)
 
-  // Helper to convert screen (client) coordinates to board (flow) coordinates
-  const reactFlowWrapper = useRef<HTMLDivElement>(null)
-  const toBoardCoords = (clientX: number, clientY: number) => {
-    if (!reactFlowWrapper.current) return { x: clientX, y: clientY }
-    const bounds = reactFlowWrapper.current.getBoundingClientRect()
-    // Adjust for viewport pan/zoom
-    const px = clientX - bounds.left
-    const py = clientY - bounds.top
-    // Use viewport transform
-    const zoom = viewport?.zoom || 1
-    const x = (px - (viewport?.x || 0)) / zoom
-    const y = (py - (viewport?.y || 0)) / zoom
-    return { x, y }
-  }
-
-  // Update handleContextMenu to accept both event types
+  // Update handleContextMenu to use reactFlowInstance.project
   const handleContextMenu = (event: MouseEvent | React.MouseEvent<Element, MouseEvent>) => {
     event.preventDefault()
     // Use clientX/clientY from either event type
     const clientX = 'clientX' in event ? event.clientX : 0
     const clientY = 'clientY' in event ? event.clientY : 0
-    const { x, y } = toBoardCoords(clientX, clientY)
-    setContextMenu({ x: clientX, y: clientY, boardX: x, boardY: y })
+    let boardCoords = { x: clientX, y: clientY }
+    if (reactFlowInstance && typeof (reactFlowInstance as any).project === 'function') {
+      boardCoords = (reactFlowInstance as any).project({ x: clientX, y: clientY })
+    }
+    setContextMenu({ x: clientX, y: clientY, boardX: boardCoords.x, boardY: boardCoords.y })
   }
 
   // Add a closeContextMenu function for reuse
@@ -1213,6 +1204,24 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     'Try uploading a PDF',
     'Use the Learn button for more help',
   ];
+
+  useEffect(() => {
+    if (
+      reactFlowInstance &&
+      nodes.length > 0 &&
+      !hasFitView
+    ) {
+      reactFlowInstance.fitView({ padding: 0.3 });
+      const { zoom } = reactFlowInstance.getViewport();
+      if (zoom < 0.75) {
+        reactFlowInstance.zoomTo(0.75);
+      }
+      if (zoom > 1) {
+        reactFlowInstance.zoomTo(1);
+      }
+      setHasFitView(true);
+    }
+  }, [reactFlowInstance, nodes.length, hasFitView]);
 
   return (
     <div ref={boardRef} className="w-full h-full relative">

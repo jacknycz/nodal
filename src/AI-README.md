@@ -87,6 +87,11 @@ Built as a React app with a strong design system foundation, Nodal emphasizes sp
 - **Themeable** — Pres Start theming via Tailwind presets
 - **Glassmorphism** — Semi-transparent elements with backdrop blur for modern look (in dark mode mostly)
 
+## Accessibility
+- All interactive elements are keyboard-accessible and use proper ARIA roles.
+- Menus and dropdowns support keyboard navigation and focus management.
+- Color contrast and focus indicators are checked for usability in both light and dark mode.
+
 ---
 
 ## Known Constraints / Decisions
@@ -400,6 +405,7 @@ graph TD;
 
 ### AI/Agent Collaboration
 - If you're an AI agent or copilot, always check for existing layout and UX patterns before introducing new ones. Consistency is key!
+- When in doubt, prefer consistency with existing patterns over introducing new interaction paradigms.
 
 ---
 
