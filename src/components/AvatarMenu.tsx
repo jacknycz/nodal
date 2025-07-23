@@ -42,30 +42,30 @@ export default function AvatarMenu({
 }: AvatarMenuProps) {
   const user = useSupabaseUser()
   const [isOpen, setIsOpen] = useState(false)
+  const [submenu, setSubmenu] = useState<null | 'recentBoards'>(null);
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
-  const [showRecentBoards, setShowRecentBoards] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-        setShowRecentBoards(false)
+        setIsOpen(false);
+        setSubmenu(null);
       }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Load recent boards when menu opens
-  useEffect(() => {
+    };
     if (isOpen) {
-      loadRecentBoards()
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen])
+  }, [isOpen]);
+
+  // Load recent boards when submenu opens
+  useEffect(() => {
+    if (submenu === 'recentBoards') {
+      loadRecentBoards();
+    }
+  }, [submenu]);
 
   const loadRecentBoards = async () => {
     try {
@@ -109,7 +109,7 @@ export default function AvatarMenu({
   const handleLoadBoard = (board: SavedBoard) => {
     onLoadBoard?.(board)
     setIsOpen(false)
-    setShowRecentBoards(false)
+    setSubmenu(null)
   }
 
   const getSaveStatusIcon = () => {
@@ -175,20 +175,21 @@ export default function AvatarMenu({
     return null
   }
 
-  // Replace click logic with hover logic:
+  // Clean hover/focus logic, no timeouts
   const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-    setIsOpen(true)
-  }
-
+    setIsOpen(true);
+  };
   const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(false)
-    }, 200)
-  }
+    setIsOpen(false);
+    setSubmenu(null);
+  };
+  const handleFocus = () => setIsOpen(true);
+  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsOpen(false);
+      setSubmenu(null);
+    }
+  };
 
   return (
     <div
@@ -196,31 +197,32 @@ export default function AvatarMenu({
       className={`relative ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      tabIndex={0}
     >
       {/* Avatar Button */}
       <button
-        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        tabIndex={0}
+        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
         aria-label="User menu"
-        onFocus={handleMouseEnter}
-        onBlur={handleMouseLeave}
+        tabIndex={-1}
+        style={{ minWidth: '40px', minHeight: '40px' }}
       >
         {getUserAvatar() ? (
           <img 
             src={getUserAvatar()} 
             alt={getUserDisplayName()}
-            className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+            className="w-6 h-6 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
           />
         ) : (
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
+          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <User className="w-4 h-4 text-white" />
           </div>
         )}
-        {/* ChevronDown icon removed */}
       </button>
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+        <div className="absolute right-0 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
           {/* User Info */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -276,18 +278,18 @@ export default function AvatarMenu({
           {/* Board Room with Recent Boards */}
           <div className="relative">
             <button
-              onClick={() => setShowRecentBoards(!showRecentBoards)}
+              onClick={() => setSubmenu(submenu === 'recentBoards' ? null : 'recentBoards')}
               className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
+              type="button"
             >
               <div className="flex items-center space-x-3">
                 <Building className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm text-gray-900 dark:text-white">Board Room</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Board Room</span>
               </div>
-              <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${showRecentBoards ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${submenu === 'recentBoards' ? 'rotate-180' : ''}`} />
             </button>
-
             {/* Recent Boards Submenu */}
-            {showRecentBoards && (
+            {submenu === 'recentBoards' && (
               <div className="absolute right-64 top-0 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2">
                 <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center space-x-2">
@@ -295,7 +297,6 @@ export default function AvatarMenu({
                     <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Recent Boards</span>
                   </div>
                 </div>
-
                 {recentBoards.length > 0 ? (
                   <>
                     {recentBoards.map((board) => (

@@ -29,34 +29,34 @@ export default function AISettingsMenu({
 }: AISettingsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const { model, setModel, positionStrategy, setPositionStrategy, temperature, setTemperature } = useAISettingsStore()
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
+  }, [isOpen]);
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
+  // Clean hover/focus logic, no timeouts
   const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current)
-      timeoutRef.current = null
-    }
-    setIsOpen(true)
-  }
-
+    setIsOpen(true);
+  };
   const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(false)
-    }, 200)
-  }
+    setIsOpen(false);
+  };
+  const handleFocus = () => setIsOpen(true);
+  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsOpen(false);
+    }
+  };
 
   const handleToggleTestMode = () => {
     onToggleTestMode?.()
@@ -69,21 +69,24 @@ export default function AISettingsMenu({
       className={`relative ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      tabIndex={0}
     >
       {/* Settings Button */}
       <button
-        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
         aria-label="AI Settings"
+        tabIndex={-1}
+        style={{ minWidth: '40px', minHeight: '40px' }}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6 text-gray-600 dark:text-gray-300">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-600 dark:text-gray-300">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
         </svg>
-
       </button>
-
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
+        <div className="absolute right-0 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
           <div className="mb-3 font-semibold text-gray-800 dark:text-gray-100 text-sm">AI Settings</div>
 
           <div className="mb-3">

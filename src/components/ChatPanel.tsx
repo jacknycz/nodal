@@ -26,7 +26,7 @@ export default function ChatPanel({
   const [isExpanded, setIsExpanded] = useState(true)
   const [panelHeight, setPanelHeight] = useState(384) // Default height: 384px (h-96)
   // For docked panel: top bar height (px)
-  const topbarHeight = useBoardStore(state => state.topbarHeight || 49);
+  const topbarHeight = useBoardStore(state => state.topbarHeight || 48);
   // Panel width constraints
   const PANEL_MIN_WIDTH = 260;
   const PANEL_MAX_WIDTH = 800;

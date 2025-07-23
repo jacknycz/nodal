@@ -1254,10 +1254,6 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       >
         {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
       </button>
-      {/* DEBUG: Chat Indicator */}
-      <div className="fixed top-2 left-2 z-50 bg-black text-white px-3 py-1 rounded text-xs font-mono">
-        Chat Show: {showChat ? 'true' : 'false'}
-      </div>
 
       {/* Floating Action Button */}
       <FloatingActionButton

@@ -189,25 +189,25 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         {/* Focus Star Button */}
         {/* eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-unused-vars */}
         <button
-          className={`absolute top-2 right-2 z-20 p-1 rounded-full border-2 transition-colors
+          className={`absolute top-2 right-2 z-20 p-1 rounded-full border-1 transition-colors cursor-pointer
             ${isRootFocus ? 'bg-yellow-400 border-yellow-500 text-white shadow-lg' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-400 hover:text-yellow-400 hover:border-yellow-400'}
           `}
           title={isRootFocus ? 'Unfocus' : 'Focus on this node and its children (1 level)'}
           onClick={handleFocusToggle}
         >
-          <Star size={20} fill={isRootFocus ? '#facc15' : 'none'} />
+          <Star size={12} fill={isRootFocus ? '#facc15' : 'none'} />
         </button>
 
         {/* Multi-Focus Star Button */}
         {/* eslint-disable-next-line @typescript-eslint/no-misused-promises, @typescript-eslint/no-unused-vars */}
         <button
-          className={`absolute top-2 right-12 z-20 p-1 rounded-full border-2 transition-colors
+          className={`absolute top-2 right-9 z-20 p-1 rounded-full border-1 transition-colors cursor-pointer
             ${isRootFocus ? 'bg-yellow-400 border-yellow-500 text-white shadow-lg' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-400 hover:text-yellow-400 hover:border-yellow-400'}
           `}
           title={isRootFocus ? 'Unfocus' : 'Focus on this node and its children (2 levels)'}
           onClick={handleMultiFocusToggle}
         >
-          <Sparkles size={20} fill={isRootFocus ? '#facc15' : 'none'} />
+          <Sparkles size={12} fill={isRootFocus ? '#facc15' : 'none'} />
         </button>
         {/* Easy Connect Pattern: Simple visible handles */}
         <Handle

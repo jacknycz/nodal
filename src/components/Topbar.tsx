@@ -8,6 +8,7 @@ import AISettingsMenu from './AISettingsMenu'
 import DocumentsMenu from './DocumentsMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
+import { House } from 'lucide-react';
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -53,14 +54,21 @@ export default function Topbar({
   return (
     <>
       <header ref={headerRef} className="absolute top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-3 items-center px-6 py-0">
+        <div className="grid grid-cols-3 items-center px-4 py-0">
           {/* Left - Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onOpenBoardRoom}
-              className="focus:outline-none cursor-pointer"
+              className="focus:outline-none flex text-white cursor-pointer flex items-center gap-2 bg-primary-500 rounded-full p-1"
               aria-label="Go to Board Room"
-              style={{ background: 'none', border: 'none', padding: 0, margin: 0 }}
+            >
+              <House size={16} />
+            </button>
+
+            <button
+              onClick={onOpenBoardRoom}
+              className="focus:outline-none cursor-pointer flex items-center gap-2"
+              aria-label="Go to Board Room"
             >
               <img
                 src={isDark ? nodalWhiteLogo : nodalBlackLogo}
@@ -69,7 +77,7 @@ export default function Topbar({
               />
             </button>
 
-            <button className="text-sm rounded text-gray-600 dark:text-white border border-red-500 p-1" onClick={() => setShowFeedback(true)}>
+            <button className="text-sm rounded text-gray-600 dark:text-white border border-red-500 p-1 ml-4" onClick={() => setShowFeedback(true)}>
               FEEDBACK
             </button>
           </div>
