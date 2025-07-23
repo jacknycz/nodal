@@ -310,7 +310,7 @@ export default function ChatPanel({
 
   return (
     <div
-      className={`fixed right-0 z-40 flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-2xl transition-all duration-300 ease-in-out ${className}`}
+      className={`fixed right-0 z-40 flex flex-col bg-white/90 dark:bg-gray-950/95 border-l border-gray-200 dark:border-gray-700 shadow-2xl transition-all duration-300 ease-in-out ${className}`}
       style={{
         top: `${topbarHeight}px`,
         height: `calc(100vh - ${topbarHeight}px)`,
@@ -346,8 +346,8 @@ export default function ChatPanel({
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] text-sm ${message.role === 'user'
-                  ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
+                  ? 'bg-primary-600 dark:bg-primary-800 text-white rounded-lg px-3 py-2'
+                  : 'bg-gray-100 dark:bg-gray-900/80 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
                   }`}>
                   <div
                     className="text-xs"
@@ -418,7 +418,7 @@ export default function ChatPanel({
          
           {/* Selection notification area */}
           {selectionTitles.length > 0 && isOpen && (
-            <div className="mb-2 relative flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
+            <div className="mb-2 relative flex justify-between items-center bg-secondary-50 dark:bg-primary-900/20 border border-secondary-200 dark:border-primary-900 rounded px-3 py-1 text-xs text-secondary-800 dark:text-primary-200">
               <div className="flex items-center gap-2 w-full">
                 {selectionTitles.length === 1 ? (
                   <div className="flex items-center gap-2 w-full">
@@ -426,7 +426,7 @@ export default function ChatPanel({
                     <span className="font-semibold relative w-full">
                       {selectionTitles[0]}
                       <button
-                        className="ml-1 absolute -top-2 -right-4 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                        className="ml-1 absolute -top-2 -right-4 w-4 h-4 flex items-center justify-center text-xs text-secondary-800 hover:text-red-500 bg-white dark:bg-primary-900/40 rounded-full border border-secondary-600 dark:border-primary-700 shadow"
                         style={{ fontSize: '10px', lineHeight: 1 }}
                         aria-label={`Remove ${selectionTitles[0]}`}
                         onClick={() => removeSelectionTitle(selectionTitles[0])}
@@ -441,7 +441,7 @@ export default function ChatPanel({
                     <span className="font-semibold relative w-full">
                       {selectionTitles[0]}
                       <button
-                        className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                        className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-primary-400 hover:text-red-500 bg-white dark:bg-primary-900/40 rounded-full border border-primary-200 dark:border-primary-700 shadow"
                         style={{ fontSize: '10px', lineHeight: 1 }}
                         aria-label={`Remove ${selectionTitles[0]}`}
                         onClick={() => removeSelectionTitle(selectionTitles[0])}
@@ -453,7 +453,7 @@ export default function ChatPanel({
                     <span className="font-semibold relative w-full">
                       {selectionTitles[1]}
                       <button
-                        className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                        className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-primary-400 hover:text-red-500 bg-white dark:bg-primary-900/40 rounded-full border border-primary-200 dark:border-primary-700 shadow"
                         style={{ fontSize: '10px', lineHeight: 1 }}
                         aria-label={`Remove ${selectionTitles[1]}`}
                         onClick={() => removeSelectionTitle(selectionTitles[1])}
@@ -475,7 +475,7 @@ export default function ChatPanel({
                       <span key={title} className="font-semibold relative ml-2">
                         {title}
                         <button
-                          className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                          className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-primary-400 hover:text-red-500 bg-white dark:bg-primary-900/40 rounded-full border border-primary-200 dark:border-primary-700 shadow"
                           style={{ fontSize: '10px', lineHeight: 1 }}
                           aria-label={`Remove ${title}`}
                           onClick={() => removeSelectionTitle(title)}
@@ -536,7 +536,7 @@ export default function ChatPanel({
               onClick={handleSendMessage}
               disabled={!currentMessage.trim() || isLoading}
               variant="custom"
-              className="bg-blue-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
+              className="bg-primary-500 dark:bg-primary-600 text-white px-4 py-2 mb-1.5 rounded-lg disabled:opacity-50 self-stretch"
             >
               <Send size={16} />
             </Button>
@@ -565,7 +565,7 @@ export default function ChatPanel({
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 placeholder="sk-..."
-                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 disabled={setupLoading}
               />
             </div>
@@ -578,7 +578,7 @@ export default function ChatPanel({
             <Button
               onClick={handleAPIKeySubmit}
               disabled={!apiKeyInput.trim() || setupLoading}
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-50"
+              className="w-full bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50"
             >
               {setupLoading ? (
                 <div className="flex items-center justify-center space-x-2">
