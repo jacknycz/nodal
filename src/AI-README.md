@@ -479,3 +479,4 @@ If you are adding or maintaining PDF viewing or text extraction in Nodal, read t
 ---
 
 *This file is here to help AI agents, copilots, or teammates get aligned before contributing to Nodal. When in doubt, ask Jack.*
+*This line above me was written by AI and I'm not entirely sure where it got my name and at this point I'm too afraid to ask*

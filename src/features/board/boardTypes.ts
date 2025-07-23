@@ -70,6 +70,7 @@ export interface BoardState {
   embeddings?: DocumentEmbedding[]
   currentBoardId?: string // Add this field
   tasks?: Task[]
+  freeChatMode?: boolean // Add per-board free chat mode toggle
 }
 
 export interface BoardActions {

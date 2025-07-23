@@ -34,7 +34,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [step, setStep] = useState(0)
   const [topic, setTopic] = useState('')
   const [ramble, setRamble] = useState('') // New state for ramble content
-  const [goal, setGoal] = useState('')
+  const [goal, setGoal] = useState<string[]>([])
   const [goalOther, setGoalOther] = useState('')
   const [audience, setAudience] = useState('')
   const [audienceOther, setAudienceOther] = useState('')
@@ -109,15 +109,23 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       label: 'What’s your goal?',
       content: (
         <div>
-          <select
-            className="w-full px-3 py-2 border rounded-lg mb-2 text-gray-900 dark:text-white"
-            value={goal}
-            onChange={e => setGoal(e.target.value)}
-          >
-            <option value="">Select a goal...</option>
-            {GOAL_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-          </select>
-          {goal === 'Other' && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {GOAL_OPTIONS.map(opt => (
+              <label key={opt} className={`px-3 py-2 rounded-lg border cursor-pointer flex items-center gap-2 ${goal.includes(opt) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white border-gray-300 text-gray-900 dark:text-white'}`}>
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={goal.includes(opt)}
+                  onChange={e => {
+                    if (e.target.checked) setGoal([...goal, opt])
+                    else setGoal(goal.filter(g => g !== opt))
+                  }}
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+          {goal.includes('Other') && (
             <input
               type="text"
               className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white"
@@ -128,7 +136,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           )}
         </div>
       ),
-      canContinue: goal && (goal !== 'Other' || !!goalOther.trim()),
+      canContinue: goal.length > 0 && (!goal.includes('Other') || !!goalOther.trim()),
     },
     {
       label: 'Who’s this for?',
@@ -271,8 +279,8 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const handleFinish = () => {
     onComplete({
       topic: topic.trim(),
-      ramble: ramble.trim(), // Add ramble content to the output
-      goal: goal === 'Other' ? goalOther.trim() : goal,
+      ramble: ramble.trim(),
+      goal: goal.includes('Other') ? goalOther.trim() : goal.join(', '),
       audience: audience === 'Other' ? audienceOther.trim() : audience,
       resources,
       aiHelpPreferences,

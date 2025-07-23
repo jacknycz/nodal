@@ -16,6 +16,7 @@ const initialState: BoardState = {
   embeddings: [],
   currentBoardId: undefined,
   tasks: [],
+  freeChatMode: false, // Add default value
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -25,6 +26,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   toggleTask: (id: string) => void
   removeTask: (id: string) => void
   setTasks: (tasks: { id: string; text: string; completed: boolean }[]) => void
+  setFreeChatMode: (free: boolean) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -127,4 +129,5 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setTasks: (tasks) => {
     set({ tasks })
   },
+  setFreeChatMode: (free) => set({ freeChatMode: free }),
 })) 

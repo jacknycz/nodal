@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from 'pres-start-core'
-import { MessageCircle, Minimize2, Send, Loader2, Plus, Sparkles, AlertCircle, GripVertical } from 'lucide-react'
+import { MessageCircle, Minimize2, Send, Loader2, Plus, Sparkles, AlertCircle, GripVertical, StickyNote, HelpCircle, CheckCircle2, Zap, Code2, Lightbulb, X } from 'lucide-react'
 import { useNodeAwareChat } from '../hooks/useNodeAwareChat'
 import { useAIConfig } from '../features/ai/aiContext'
 import type { NodeResponse } from '../types'
 import nodalBlackLogo from '../assets/nodal-black.svg'
+import { useBoardStore } from '../features/board/boardSlice';
 
 interface ChatPanelProps {
   className?: string
@@ -17,13 +18,15 @@ export default function ChatPanel({
   selectionContext,
   onSelectionContextUsed
 }: ChatPanelProps) {
-  const { messages, sendMessage, sendMessageWithSelection, applyNode, applyAllNodes, isLoading, error } = useNodeAwareChat()
+  const freeChatMode = useBoardStore(state => state.freeChatMode);
+  const setFreeChatMode = useBoardStore(state => state.setFreeChatMode);
+  const { messages, sendMessage, sendMessageWithSelection, applyNode, applyAllNodes, isLoading, error } = useNodeAwareChat({ freeChatMode });
   const { getConfigurationStatus, setAPIKey } = useAIConfig()
   const [currentMessage, setCurrentMessage] = useState('')
   const [isExpanded, setIsExpanded] = useState(true)
   const [panelHeight, setPanelHeight] = useState(384) // Default height: 384px (h-96)
   // For docked panel: top bar height (px)
-  const TOPBAR_HEIGHT =73;
+  const TOPBAR_HEIGHT = 73;
   // Panel width constraints
   const PANEL_MIN_WIDTH = 260;
   const PANEL_MAX_WIDTH = 800;
@@ -46,10 +49,36 @@ export default function ChatPanel({
   // Handle selection context
   const [hasProcessedSelection, setHasProcessedSelection] = useState(false)
 
+  // Add local state to manage selection context if needed
+  const [localSelectionContext, setLocalSelectionContext] = useState(selectionContext);
+  useEffect(() => {
+    setLocalSelectionContext(selectionContext);
+  }, [selectionContext]);
+
+  // Helper to remove a node from selection context
+  const removeSelectionTitle = (title: string) => {
+    if (!localSelectionContext) return;
+    // Remove the node title from the markdown context string
+    const regex = new RegExp(`\\*\\*${title.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\*\\*`, 'g');
+    const updated = localSelectionContext.replace(regex, '').replace(/,\s*,/g, ',').replace(/^,|,$/g, '').replace(/\s+,/g, ',').replace(/,\s+/g, ',').replace(/\s{2,}/g, ' ').trim();
+    if (updated.replace(/,/g, '').trim() === '') {
+      // If no nodes left, clear selection
+      onSelectionContextUsed?.();
+      setLocalSelectionContext(undefined);
+    } else {
+      setLocalSelectionContext(updated);
+    }
+  };
+
+  // Extract node titles from selectionContext for display and for apply logic
+  const selectionTitles = localSelectionContext
+    ? Array.from(localSelectionContext.matchAll(/\*\*(.*?)\*\*/g)).map(m => m[1])
+    : [];
+
   // Process selection context when provided
   useEffect(() => {
     if (selectionContext && isOpen && !hasProcessedSelection && !showAPIKeySetup) {
-      setCurrentMessage('Tell me about these selected nodes and suggest ways to enhance or connect them.')
+      // setCurrentMessage('Tell me about these selected nodes and suggest ways to enhance or connect them.')
       setHasProcessedSelection(true)
     }
   }, [selectionContext, isOpen, hasProcessedSelection, showAPIKeySetup])
@@ -91,21 +120,21 @@ export default function ChatPanel({
   // Handle resize functionality
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
-    
+
     const startY = e.clientY
     const startHeight = panelHeight
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       const deltaY = e.clientY - startY // Changed: removed the negative sign
       const newHeight = Math.max(200, Math.min(600, startHeight + deltaY)) // Min 200px, max 600px
       setPanelHeight(newHeight)
     }
-    
+
     const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
     }
-    
+
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
   }, [panelHeight])
@@ -156,18 +185,18 @@ export default function ChatPanel({
   }, [currentMessage, isLoading, sendMessage, sendMessageWithSelection, selectionContext, onSelectionContextUsed])
 
   // Handle applying a node
-  const handleApplyNode = useCallback(async (nodeResponse: NodeResponse, messageId: string) => {
+  const handleApplyNode = useCallback(async (nodeResponse: NodeResponse, messageId: string, referencedNodeTitles?: string[]) => {
     try {
-      await applyNode(nodeResponse, messageId)
+      await applyNode(nodeResponse, messageId, referencedNodeTitles)
     } catch (error) {
       console.error('Failed to apply node:', error)
     }
   }, [applyNode])
 
   // Handle applying all nodes
-  const handleApplyAllNodes = useCallback(async (messageId: string) => {
+  const handleApplyAllNodes = useCallback(async (messageId: string, referencedNodeTitles?: string[]) => {
     try {
-      await applyAllNodes(messageId)
+      await applyAllNodes(messageId, referencedNodeTitles)
     } catch (error) {
       console.error('Failed to apply all nodes:', error)
     }
@@ -194,29 +223,26 @@ export default function ChatPanel({
     }
 
     const typeIcons = {
-      note: '📝',
-      question: '❓',
-      task: '✅',
-      action: '⚡',
-      code: '💻',
-      concept: '💡'
-    }
+      note: <span title="Note"><StickyNote className="w-4 h-4" /></span>,
+      question: <span title="Question"><HelpCircle className="w-4 h-4" /></span>,
+      task: <span title="Task"><CheckCircle2 className="w-4 h-4" /></span>,
+      action: <span title="Action"><Zap className="w-4 h-4" /></span>,
+      code: <span title="Code"><Code2 className="w-4 h-4" /></span>,
+      concept: <span title="Concept"><Lightbulb className="w-4 h-4" /></span>,
+    };
 
     return (
-      <div key={`${messageId}-${nodeResponse.title}`} className={`mt-3 p-3 rounded-lg border ${typeColors[nodeResponse.type]}`}>
+      <div key={`${messageId}-${nodeResponse.title}`} className={`mt-3 p-2 rounded-lg border ${typeColors[nodeResponse.type]}`}>
         <div className="flex items-start justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{typeIcons[nodeResponse.type]}</span>
-            <h4 className="font-semibold text-sm">{nodeResponse.title}</h4>
-            <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-              {nodeResponse.type}
-            </span>
+          <div className="flex items-center gap-1">
+            <span>{typeIcons[nodeResponse.type]}</span>
+            <h4 className="font-semibold text-xs">{nodeResponse.title}</h4>
           </div>
           {!nodeResponse.apply && (
             <Button
               variant="default"
               size="sm"
-              onClick={() => handleApplyNode(nodeResponse, messageId)}
+              onClick={() => handleApplyNode(nodeResponse, messageId, selectionTitles)}
               className="flex items-center gap-1 text-xs"
             >
               <Plus size={12} />
@@ -231,7 +257,7 @@ export default function ChatPanel({
           )}
         </div>
 
-        <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+        <div className="text-xs text-gray-700 dark:text-gray-300">
           {nodeResponse.content}
         </div>
 
@@ -246,12 +272,7 @@ export default function ChatPanel({
         )}
       </div>
     )
-  }, [handleApplyNode])
-
-  // Extract node titles from selectionContext for display
-  const selectionTitles = selectionContext
-    ? Array.from(selectionContext.matchAll(/\*\*(.*?)\*\*/g)).map(m => m[1])
-    : [];
+  }, [handleApplyNode, selectionTitles])
 
   // Horizontal resize handle
   const handleHorizontalResizeStart = useCallback((e: React.MouseEvent) => {
@@ -281,7 +302,8 @@ export default function ChatPanel({
         aria-label="Open chat"
         onClick={() => setIsOpen(true)}
       >
-        <img src={nodalBlackLogo} alt="Nodal Logo" className="h-7 w-auto" />
+        {/* <img src={nodalBlackLogo} alt="Nodal Logo" className="h-7 w-auto" /> */}
+        <MessageCircle className="h-6 w-auto text-white" />
       </button>
     );
   }
@@ -306,6 +328,7 @@ export default function ChatPanel({
       </div>
       {/* Main flex column: messages area (flex-1) + input (flex-none) */}
       <div className="flex flex-col flex-1 min-h-0">
+
         {/* Messages area with floating minimize button */}
         <div className="relative flex-1 min-h-0 overflow-y-auto">
           <button
@@ -313,7 +336,7 @@ export default function ChatPanel({
             aria-label="Minimize chat"
             onClick={() => setIsOpen(false)}
           >
-            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
           </button>
           {/* Messages */}
           <div
@@ -323,8 +346,8 @@ export default function ChatPanel({
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] text-sm ${message.role === 'user'
-                    ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
+                  ? 'bg-blue-500 text-white rounded-lg px-3 py-2'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2'
                   }`}>
                   <div
                     className="text-xs"
@@ -333,6 +356,18 @@ export default function ChatPanel({
                   {/* Render structured node responses */}
                   {message.nodeResponses && message.nodeResponses.length > 0 && (
                     <div className="mt-3 space-y-2">
+                      {/* Apply all button */}
+                      {message.nodeResponses.length > 1 && !message.allApplied && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleApplyAllNodes(message.id, selectionTitles)}
+                          className="mt-2 w-full text-xs"
+                        >
+                          <Plus size={12} className="mr-1" />
+                          Apply All ({message.nodeResponses.length})
+                        </Button>
+                      )}
                       {message.nodeResponses.map((nodeResponse) =>
                         renderNodeResponse(nodeResponse, message.id)
                       )}
@@ -341,7 +376,7 @@ export default function ChatPanel({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleApplyAllNodes(message.id)}
+                          onClick={() => handleApplyAllNodes(message.id, selectionTitles)}
                           className="mt-2 w-full text-xs"
                         >
                           <Plus size={12} className="mr-1" />
@@ -380,24 +415,55 @@ export default function ChatPanel({
         </div>
         {/* Input area always at the bottom */}
         <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex-none">
+         
           {/* Selection notification area */}
           {selectionTitles.length > 0 && isOpen && (
-            <div className="mb-2 flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
-              <div className="flex items-center gap-2">
+            <div className="mb-2 relative flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded px-3 py-1 text-xs text-blue-800 dark:text-blue-200">
+              <div className="flex items-center gap-2 w-full">
                 {selectionTitles.length === 1 ? (
-                  <>
+                  <div className="flex items-center gap-2 w-full">
                     <span>Selected:</span>
-                    <span className="font-semibold">{selectionTitles[0]}</span>
-                  </>
+                    <span className="font-semibold relative w-full">
+                      {selectionTitles[0]}
+                      <button
+                        className="ml-1 absolute -top-2 -right-4 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                        style={{ fontSize: '10px', lineHeight: 1 }}
+                        aria-label={`Remove ${selectionTitles[0]}`}
+                        onClick={() => removeSelectionTitle(selectionTitles[0])}
+                      >
+                        <X className="w-2 h-2" />
+                      </button>
+                    </span>
+                  </div>
                 ) : selectionTitles.length === 2 ? (
-                  <>
+                  <div className="flex items-center gap-2 w-full">
                     <span>Selected:</span>
-                    <span className="font-semibold">{selectionTitles[0]}</span>
+                    <span className="font-semibold relative w-full">
+                      {selectionTitles[0]}
+                      <button
+                        className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                        style={{ fontSize: '10px', lineHeight: 1 }}
+                        aria-label={`Remove ${selectionTitles[0]}`}
+                        onClick={() => removeSelectionTitle(selectionTitles[0])}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
                     <span>and</span>
-                    <span className="font-semibold">{selectionTitles[1]}</span>
-                  </>
+                    <span className="font-semibold relative w-full">
+                      {selectionTitles[1]}
+                      <button
+                        className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                        style={{ fontSize: '10px', lineHeight: 1 }}
+                        aria-label={`Remove ${selectionTitles[1]}`}
+                        onClick={() => removeSelectionTitle(selectionTitles[1])}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex items-center gap-2 w-full">
                     <span>{selectionTitles.length} nodes selected</span>
                     <span
                       className="font-mono cursor-pointer underline decoration-dotted"
@@ -405,11 +471,49 @@ export default function ChatPanel({
                     >
                       (hover to see titles)
                     </span>
-                  </>
+                    {selectionTitles.map((title, idx) => (
+                      <span key={title} className="font-semibold relative ml-2">
+                        {title}
+                        <button
+                          className="ml-1 absolute -top-2 -right-2 w-4 h-4 flex items-center justify-center text-xs text-blue-400 hover:text-red-500 bg-white dark:bg-blue-900/40 rounded-full border border-blue-200 dark:border-blue-700 shadow"
+                          style={{ fontSize: '10px', lineHeight: 1 }}
+                          aria-label={`Remove ${title}`}
+                          onClick={() => removeSelectionTitle(title)}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           )}
+
+          {/* Free Chat Mode Toggle */}
+           <div className="flex items-center gap-2 pb-2 justify-end group relative">
+             <span className="text-xs font-medium text-gray-500 dark:text-primary-100 cursor-pointer">Free Chat Mode</span>
+             <button
+               onClick={() => setFreeChatMode(!freeChatMode)}
+               className={`relative cursor-pointer inline-flex h-4 w-6 items-center rounded-full transition-all duration-300 focus:outline-none ${freeChatMode
+                   ? 'bg-primary-700 hover:bg-primary-500'
+                   : 'bg-gray-300 hover:bg-gray-200'
+                 }`}
+               aria-label={`Free Chat Mode is ${freeChatMode ? 'on' : 'off'}. Click to toggle.`}
+               type="button"
+             >
+               <span
+                 className={`inline-block h-2 w-2 transform rounded-full bg-white dark:bg-black transition-all duration-300 ease-in-out ${freeChatMode ? 'translate-x-3' : 'translate-x-1'
+                   }`}
+               />
+             </button>
+             {/* Tooltip */}
+             <span className="absolute bottom-full right-0 mb-2 w-64 bg-gray-900 text-white text-xs rounded px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 shadow-lg">
+               Free chat mode is just that - chat about the board without a focus on creating nodes.
+             </span>
+           </div>
+
+          {/* Input area always at the bottom */}
           <div className="flex items-end space-x-2 h-auto">
             <div className="flex-1 relative">
               <textarea
@@ -420,6 +524,12 @@ export default function ChatPanel({
                 className="w-full z-20 relative text-xs placeholder:text-gray-500 min-h-12 dark:placeholder:text-gray-500 text-gray-900 dark:text-gray-100 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                 rows={3}
                 disabled={isLoading}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
               />
             </div>
             <Button
