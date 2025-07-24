@@ -616,6 +616,19 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }, [handleFileUpload])
 
+  async function triggerThumbnailGeneration(boardId: string) {
+    try {
+      await fetch('https://thumbs.vercel.app/api/generate-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boardId })
+      });
+      // Optionally, handle response or errors
+    } catch (err) {
+      console.error('Failed to trigger thumbnail generation:', err);
+    }
+  }
+
   const _handleSaveBoard = async (boardName: string) => {
     try {
       setSaveStatus('saving')
@@ -634,13 +647,14 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
         condition: localBoardId && currentBoardName === boardName // Use localBoardId
       })
 
+      let boardId = localBoardId;
       if (localBoardId && currentBoardName === boardName) { // Use localBoardId
         // Update existing board
         await boardStorage.updateBoard(localBoardId, boardData) // Use localBoardId
         console.log('✅ Board updated successfully with topic:', topic) // Add console log
       } else {
         // Save new board
-        const boardId = await boardStorage.saveBoard(boardName, boardData)
+        boardId = await boardStorage.saveBoard(boardName, boardData)
         setLocalBoardId(boardId) // Use localBoardId
         setCurrentBoardId(boardId) // Set in store
         setCurrentBoardName(boardName)
@@ -655,6 +669,11 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       // Refresh board names list
       const names = await boardStorage.getBoardNames()
       setExistingBoardNames(names)
+
+      // Trigger thumbnail generation on Vercel after save
+      if (boardId) {
+        triggerThumbnailGeneration(boardId);
+      }
     } catch (error) {
       console.error('Failed to save board:', error)
       setSaveStatus('error')
@@ -1223,10 +1242,18 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
     }
   }, [reactFlowInstance, nodes.length, hasFitView]);
 
+  // Screenshot mode detection
+  const isScreenshotMode = (() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('screenshot') === 'true';
+    }
+    return false;
+  })();
+
   return (
-    <div ref={boardRef} className="w-full h-full relative">
+    <div ref={boardRef} className={`w-full h-full relative${isScreenshotMode ? ' screenshot-mode' : ''}`}>
       {/* Tips Bubble and Learn Button (bottom left) */}
-      {showTips && (
+      {!isScreenshotMode && showTips && (
         <div className="fixed bottom-4 left-36 z-50 flex items-center gap-3">
           <div className="flex items-center">
             <button
@@ -1254,27 +1281,31 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
           </div>
         </div>
       )}
-      <LearnModal isOpen={showLearn} onClose={() => setShowLearn(false)} />
+      {!isScreenshotMode && <LearnModal isOpen={showLearn} onClose={() => setShowLearn(false)} />}
       {/* Fullscreen Button */}
-      <button
-        className="fixed top-4 right-80 z-[100] px-4 py-2 bg-gray-900 text-white rounded shadow hover:bg-gray-800 transition-colors text-xs"
-        onClick={isFullscreen ? exitFullscreen : enterFullscreen}
-        style={{ minWidth: 90 }}
-      >
-        {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-      </button>
+      {!isScreenshotMode && (
+        <button
+          className="fixed top-4 right-80 z-[100] px-4 py-2 bg-gray-900 text-white rounded shadow hover:bg-gray-800 transition-colors text-xs"
+          onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+          style={{ minWidth: 90 }}
+        >
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+        </button>
+      )}
 
       {/* Floating Action Button */}
-      <FloatingActionButton
-        onAddNode={handleAddNode}
-        onOpenAIGenerator={() => setShowAIGenerator(true)}
-        onClearBoard={handleClearBoard}
-        onReorganize={handleReorganize}
-        hasNodes={nodes.length > 0}
-      />
+      {!isScreenshotMode && (
+        <FloatingActionButton
+          onAddNode={handleAddNode}
+          onOpenAIGenerator={() => setShowAIGenerator(true)}
+          onClearBoard={handleClearBoard}
+          onReorganize={handleReorganize}
+          hasNodes={nodes.length > 0}
+        />
+      )}
 
       {/* Upload error notification */}
-      {uploadError && (
+      {!isScreenshotMode && uploadError && (
         <div className="absolute top-20 left-4 z-20 bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-200 px-4 py-3 rounded shadow-lg">
           <div className="flex items-center">
             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -1286,51 +1317,61 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       )}
 
       {/* Chat Panel */}
-      <ChatPanel
-        selectionContext={chatSelectionContext}
-        onSelectionContextUsed={handleSelectionContextUsed}
-      />
+      {!isScreenshotMode && (
+        <ChatPanel
+          selectionContext={chatSelectionContext}
+          onSelectionContextUsed={handleSelectionContextUsed}
+        />
+      )}
 
       {/* AI Node Generator Modal */}
-      <AINodeGenerator
-        isOpen={showAIGenerator}
-        onClose={() => setShowAIGenerator(false)}
-      />
+      {!isScreenshotMode && (
+        <AINodeGenerator
+          isOpen={showAIGenerator}
+          onClose={() => setShowAIGenerator(false)}
+        />
+      )}
 
       {/* Board Setup Modal (AI Assisted New Board) */}
-      <BoardSetupModal
-        isOpen={showSetup}
-        onComplete={handleBoardSetupComplete}
-        onClose={() => setShowSetup(false)}
-      />
+      {!isScreenshotMode && (
+        <BoardSetupModal
+          isOpen={showSetup}
+          onComplete={handleBoardSetupComplete}
+          onClose={() => setShowSetup(false)}
+        />
+      )}
 
       {/* Edit Topic Modal */}
-      <TopicModal
-        isOpen={showTopicModal}
-        onClose={() => setShowTopicModal(false)}
-        onSave={handleSaveTopic}
-        defaultTopic={topic || ''}
-      />
+      {!isScreenshotMode && (
+        <TopicModal
+          isOpen={showTopicModal}
+          onClose={() => setShowTopicModal(false)}
+          onSave={handleSaveTopic}
+          defaultTopic={topic || ''}
+        />
+      )}
 
 
       {/* Topic Display */}
-      <div className="absolute z-40">
-        <TopicDisplay topic={topic} onEdit={handleEditTopic} />
-        {/* Task List Button and Menu */}
-        <button
-          className="fixed left-4 top-30 flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full border border-gray-200 dark:border-gray-700 shadow transition-colors mt-2"
-          title="Show board tasks"
-          onClick={() => setShowTaskList(v => !v)}
-          style={{ zIndex: 41 }}
-        >
-          <List size={20} className="text-gray-600 dark:text-gray-200" />
-        </button>
-        {showTaskList && (
-          <div className="fixed left-4 top-52 z-40">
-            <TaskList />
-          </div>
-        )}
-      </div>
+      {!isScreenshotMode && (
+        <div className="absolute z-40">
+          <TopicDisplay topic={topic} onEdit={handleEditTopic} />
+          {/* Task List Button and Menu */}
+          <button
+            className="fixed left-4 top-30 flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full border border-gray-200 dark:border-gray-700 shadow transition-colors mt-2"
+            title="Show board tasks"
+            onClick={() => setShowTaskList(v => !v)}
+            style={{ zIndex: 41 }}
+          >
+            <List size={20} className="text-gray-600 dark:text-gray-200" />
+          </button>
+          {showTaskList && (
+            <div className="fixed left-4 top-52 z-40">
+              <TaskList />
+            </div>
+          )}
+        </div>
+      )}
 
       <ReactFlow
         nodes={nodes}

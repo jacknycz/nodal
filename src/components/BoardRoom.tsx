@@ -17,6 +17,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
 }) {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
+  const [imgError, setImgError] = useState(false)
 
   const handleRename = () => {
     if (newName.trim() && newName.trim() !== board.name) {
@@ -54,11 +55,29 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     }
   }
 
+  const thumbnailUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/board-thumbnails/${board.id}.jpg`;
+
   return (
     <div
       className="relative group p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
       onClick={onLoad}
     >
+      {/* Board Thumbnail */}
+      <div className="mb-2 w-full flex justify-center items-center">
+        {!imgError ? (
+          <img
+            src={thumbnailUrl}
+            alt="Board thumbnail"
+            className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
+            style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded text-gray-400 text-xs">
+            No Thumbnail
+          </div>
+        )}
+      </div>
       {/* Board Name */}
       <div className="mb-2">
         {isRenaming ? (
