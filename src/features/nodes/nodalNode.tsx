@@ -213,17 +213,16 @@ export default function NodalNode({ id, data, selected }: NodeProps) {
         <Handle
           type="source"
           position={Position.Right}
-          className="!w-4 !h-4 !bg-gray-500 !border-2 !border-white !right-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors"
+          className="!w-6 !h-6 !bg-gray-500 !border-2 !border-white !right-[-16px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors cursor-crosshair"
           style={{
-            zIndex: 10,
-            cursor: 'crosshair'
+            zIndex: 10
           }}
         />
 
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-4 !h-4 !bg-gray-500 !border-2 !border-white !left-[-8px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors"
+          className="!w-6 !h-6 !bg-gray-500 !border-2 !border-white !left-[-16px] !top-1/2 !transform !-translate-y-1/2 hover:!bg-primary-600 transition-colors cursor-crosshair"
           style={{
             zIndex: 10
           }}

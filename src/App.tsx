@@ -183,6 +183,7 @@ export default function App() {
                 onImportBoard={handleImportBoard}
                 onOpenSettings={handleOpenSettings}
                 onLoadBoard={handleLoadBoard}
+                isBoardView={currentView === 'board'}
               />
               <div className="w-full min-h-dvh h-full">
                 {currentView === 'boardroom' ? (

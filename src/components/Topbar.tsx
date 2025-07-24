@@ -24,6 +24,7 @@ interface TopbarProps {
   onImportBoard?: () => void
   onOpenSettings?: () => void
   onLoadBoard?: (board: SavedBoard) => void
+  isBoardView?: boolean;
 }
 
 export default function Topbar({ 
@@ -37,7 +38,8 @@ export default function Topbar({
   onExportBoard,
   onImportBoard,
   onOpenSettings,
-  onLoadBoard
+  onLoadBoard,
+  isBoardView = false
 }: TopbarProps) {
   const { isDark } = useTheme()
   const [showFeedback, setShowFeedback] = useState(false)
@@ -84,7 +86,7 @@ export default function Topbar({
 
           {/* Center - Board Info (truly centered) */}
           <div className="flex justify-center">
-            {currentBoardName && (
+            {isBoardView && currentBoardName && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
