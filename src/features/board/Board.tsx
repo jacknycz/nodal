@@ -618,7 +618,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
 
   async function triggerThumbnailGeneration(boardId: string) {
     try {
-      await fetch('https://thumbs.vercel.app/api/generate-thumbnail', {
+      await fetch('https://nodal-steel.vercel.app/api/generate-thumbnail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ boardId })
@@ -684,11 +684,11 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
   const handleLoadBoard = async (board: SavedBoard) => {
     try {
       setIsLoadingBoard(true) // Set loading flag
-      console.log('📂 Loading board:', board)
-      console.log('📂 Board data:', board.data)
-      console.log('📂 Saved topic in board data:', board.data.topic) // Add console log
-      console.log('📂 Nodes to set:', board.data.nodes)
-      console.log('📂 Edges to set:', board.data.edges)
+      // console.log('📂 Loading board:', board)
+      // console.log('📂 Board data:', board.data)
+      // console.log('📂 Saved topic in board data:', board.data.topic) // Add console log
+      // console.log('📂 Nodes to set:', board.data.nodes)
+      // console.log('📂 Edges to set:', board.data.edges)
 
       // Use the board data directly - no need to reload from storage
       setNodes(layoutMindMap(board.data.nodes, board.data.edges))
