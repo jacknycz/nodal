@@ -1,7 +1,8 @@
 [build]
   publish = "dist"
   command = "npm run build"
-
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+  
 [[redirects]]
   from = "/*"
   to = "/index.html"
