@@ -79,7 +79,7 @@ export default function Topbar({
               />
             </button>
 
-            <button className="text-sm rounded text-gray-600 dark:text-white border border-red-500 p-1 ml-4" onClick={() => setShowFeedback(true)}>
+            <button className="text-xs rounded text-gray-600 dark:text-white border border-red-500 p-1 ml-4" onClick={() => setShowFeedback(true)}>
               FEEDBACK
             </button>
           </div>

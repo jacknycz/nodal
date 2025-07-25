@@ -1285,7 +1285,7 @@ export default function Board({ onBoardStateChange, initialBoard, onOpenBoardRoo
       {/* Fullscreen Button */}
       {!isScreenshotMode && (
         <button
-          className="fixed top-4 right-80 z-[100] px-4 py-2 bg-gray-900 text-white rounded shadow hover:bg-gray-800 transition-colors text-xs"
+          className="fixed top-50 left-2 z-[10] px-4 py-2 bg-gray-900 text-white rounded shadow hover:bg-gray-800 transition-colors text-xs"
           onClick={isFullscreen ? exitFullscreen : enterFullscreen}
           style={{ minWidth: 90 }}
         >
