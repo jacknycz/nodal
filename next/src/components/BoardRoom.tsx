@@ -4,7 +4,6 @@ import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
-// import { Button } from 'pres-start-core' // Remove, use native button
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -212,7 +211,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   // Handle board setup completion (now creates the board directly)
-  const handleBoardSetupComplete = (brief: BoardBrief & { uploadedFiles?: File[] }) => {
+  const handleBoardSetupComplete = (brief: BoardBrief) => {
     setBoardBrief(brief)
     setShowBoardSetup(false)
     onOpenBoard(null, brief) // Pass brief to App/Board
