@@ -45,7 +45,9 @@ export default function FloatingEdge({
             pointerEvents: 'all',
           }}
           className="nodrag nopan"
-        />
+        >
+          {data?.label}
+        </div>
       </EdgeLabelRenderer>
     </>
   )

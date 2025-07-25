@@ -1,37 +1,26 @@
 'use client'
 
 import React from 'react'
-import { getBezierPath } from '@xyflow/react'
+import { ConnectionLineComponent } from '@xyflow/react'
 
-interface CustomConnectionLineProps {
-  fromX: number
-  fromY: number
-  toX: number
-  toY: number
-}
-
-export default function CustomConnectionLine({
+const CustomConnectionLine: ConnectionLineComponent = ({
   fromX,
   fromY,
   toX,
   toY,
-}: CustomConnectionLineProps) {
-  const [edgePath] = getBezierPath({
-    sourceX: fromX,
-    sourceY: fromY,
-    sourcePosition: undefined,
-    targetX: toX,
-    targetY: toY,
-    targetPosition: undefined,
-  })
-
+}) => {
   return (
-    <path
-      d={edgePath}
-      stroke="#3b82f6"
-      strokeWidth={3}
-      fill="none"
-      className="react-flow__connection-line"
-    />
+    <g>
+      <path
+        fill="none"
+        stroke="#222"
+        strokeWidth={2}
+        className="animated"
+        d={`M ${fromX} ${fromY} L ${toX} ${toY}`}
+      />
+      <circle cx={toX} cy={toY} fill="#fff" r={3} stroke="#222" strokeWidth={1.5} />
+    </g>
   )
-} 
+}
+
+export default CustomConnectionLine 
