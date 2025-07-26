@@ -7,21 +7,11 @@ import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key } from 'lucide-reac
 import type { BoardNode, BoardEdge } from '../features/board/boardTypes'
 
 interface ChatPanelProps {
-  selectionContext?: string
-  onSelectionContextUsed: () => void
-  nodes?: BoardNode[]
-  edges?: BoardEdge[]
-  onNodesGenerated?: (nodes: BoardNode[]) => void
-  onAISetupRequested?: () => void
+  onGenerateNode?: (nodeData: { label: string; content?: string }) => void
 }
 
 export default function ChatPanel({ 
-  selectionContext, 
-  onSelectionContextUsed, 
-  nodes = [], 
-  edges = [],
-  onNodesGenerated,
-  onAISetupRequested
+  onGenerateNode
 }: ChatPanelProps) {
   const [isOpen, setIsOpen] = useState(true)
   const [inputValue, setInputValue] = useState('')
@@ -40,24 +30,10 @@ export default function ChatPanel({
     isLoading,
     isGeneratingNodes,
     error,
-    clearError,
-    updateContext
+    clearError
   } = useUnifiedAI()
 
   const aiContext = useAIContext()
-
-  // Update AI context when board state changes
-  useEffect(() => {
-    updateContext({
-      board: {
-        nodes,
-        edges,
-        selectedNodeId: null,
-        focusedNodeIds: [],
-        boardSummary: `Board with ${nodes.length} nodes and ${edges.length} connections`
-      }
-    })
-  }, [nodes, edges, updateContext])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -71,23 +47,7 @@ export default function ChatPanel({
     const message = inputValue.trim()
     setInputValue('')
     
-    // Include selection context if available
-    const context = selectionContext ? { 
-      board: { 
-        nodes, 
-        edges, 
-        selectedNodeId: null, 
-        focusedNodeIds: [],
-        boardSummary: `Board with ${nodes.length} nodes. Selected context: ${selectionContext}`
-      }
-    } : undefined
-
-    await sendMessage(message, context)
-    
-    // Clear selection context after using it
-    if (selectionContext) {
-      onSelectionContextUsed()
-    }
+    await sendMessage(message)
   }
 
   // Handle node generation
@@ -97,22 +57,23 @@ export default function ChatPanel({
     try {
       const result = await generateNodes({
         prompt: nodePrompt,
-        count: nodeCount,
-        context: {
-          existingNodes: nodes,
-          topic: `Generating ${nodeCount} nodes for: ${nodePrompt}`
-        }
+        count: nodeCount
       })
 
-      if (onNodesGenerated && result.nodes.length > 0) {
-        onNodesGenerated(result.nodes)
+      if (onGenerateNode && result.nodes.length > 0) {
+        // Generate a simple node from the first result
+        const firstNode = result.nodes[0]
+        onGenerateNode({
+          label: firstNode.data.title || 'Generated Node',
+          content: firstNode.data.content
+        })
       }
 
       setNodePrompt('')
       setShowNodeGenerator(false)
       
       // Add a system message about the generation
-      await sendMessage(`Generated ${result.nodes.length} nodes: ${result.nodes.map(n => n.data.title).join(', ')}`)
+      await sendMessage(`Generated ${result.nodes.length} nodes`)
     } catch (err) {
       console.error('Failed to generate nodes:', err)
     }
@@ -224,14 +185,6 @@ export default function ChatPanel({
             <Key className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm font-medium mb-2">AI Not Configured</p>
             <p className="text-xs mb-4">Set up your OpenAI API key to start using AI features</p>
-            {onAISetupRequested && (
-              <button
-                onClick={onAISetupRequested}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Configure AI
-              </button>
-            )}
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
@@ -285,23 +238,6 @@ export default function ChatPanel({
             <button
               onClick={clearError}
               className="text-red-400 hover:text-red-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Selection Context */}
-      {selectionContext && (
-        <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-600 dark:text-blue-400">
-              Context: {selectionContext}
-            </span>
-            <button
-              onClick={onSelectionContextUsed}
-              className="text-blue-400 hover:text-blue-600"
             >
               <X className="w-4 h-4" />
             </button>

@@ -88,9 +88,42 @@ function BoardContent({
   
   // Handle connections
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => {
+      const newEdge: Edge = {
+        id: `edge-${Date.now()}`,
+        source: params.source!,
+        target: params.target!,
+        type: 'floating',
+      }
+      setEdges((eds) => {
+        const currentEdges = Array.isArray(eds) ? eds : []
+        return [...currentEdges, newEdge]
+      })
+    },
     [setEdges]
   )
+  
+  // Handle adding nodes
+  const handleAddNode = useCallback((title: string, position: { x: number; y: number }) => {
+    const newNode: Node = {
+      id: `node-${Date.now()}`,
+      type: 'default',
+      position,
+      data: { label: title },
+    }
+    setNodes((nds) => {
+      const currentNodes = Array.isArray(nds) ? nds : []
+      return [...currentNodes, newNode]
+    })
+  }, [setNodes])
+  
+  // Handle adding nodes to store (for AI generation)
+  const handleAddNodeToStore = useCallback((node: Node) => {
+    setNodes((nds) => {
+      const currentNodes = Array.isArray(nds) ? nds : []
+      return [...currentNodes, node]
+    })
+  }, [setNodes])
   
   // Save board function
   const saveBoard = useCallback(async (name?: string) => {
@@ -135,8 +168,8 @@ function BoardContent({
         type: 'document',
       },
     }
-    addNodeToStore(newNode)
-  }, [getViewportCenter, addNodeToStore])
+    handleAddNodeToStore(newNode)
+  }, [getViewportCenter, handleAddNodeToStore])
   
   // Keyboard shortcuts
   useEffect(() => {
@@ -189,7 +222,7 @@ function BoardContent({
             <FloatingActionButton
               onAddNode={() => {
                 const position = getViewportCenter()
-                addNode('New Node', position)
+                handleAddNode('New Node', position)
               }}
               onAIGenerate={() => setShowAINodeGenerator(true)}
               onUploadDocument={() => {
@@ -215,7 +248,7 @@ function BoardContent({
                     position,
                     data: { ...nodeData },
                   }
-                  addNodeToStore(newNode)
+                  handleAddNodeToStore(newNode)
                 }}
               />
             )}
@@ -248,7 +281,7 @@ function BoardContent({
               position,
               data: { ...nodeData },
             }
-            addNodeToStore(newNode)
+            handleAddNodeToStore(newNode)
             setShowAINodeGenerator(false)
           }}
         />
