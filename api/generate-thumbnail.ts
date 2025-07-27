@@ -21,13 +21,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const browser = await puppeteer.launch({
       args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
+      defaultViewport: { width: 1200, height: 800 },
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: true,
     })
 
     const page = await browser.newPage()
-    await page.goto(`https://nodalapp.com/board/${boardId}?screenshot=true`, { waitUntil: 'networkidle0' })
+    await page.goto(`https://nodal-steel.vercel.app/board/${boardId}?screenshot=true`, { waitUntil: 'networkidle0' })
     await page.setViewport({ width: 1200, height: 800 })
     const buffer = await page.screenshot({ type: 'jpeg', quality: 80 })
     await browser.close()

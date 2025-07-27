@@ -173,10 +173,123 @@ function BoardContent({
         label: file.name,
         file,
         type: 'document',
+        fileName: file.name,
+        fileType: file.type || 'unknown',
+        fileSize: file.size,
+        status: 'ready' as const,
+        extractedText: '', // This would be populated by text extraction
       },
     }
     handleAddNodeToStore(newNode)
   }, [getViewportCenter, handleAddNodeToStore])
+
+  // Drag and drop handlers
+  const [isDragOver, setIsDragOver] = useState(false)
+
+  // Global drag event listener to handle files dragged from outside
+  useEffect(() => {
+    let isFileBeingDragged = false
+
+    const handleGlobalDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+
+    const handleGlobalDrop = (e: DragEvent) => {
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+
+    const handleWindowDragEnter = (e: DragEvent) => {
+      // Only activate if we have files and haven't already activated
+      if (!isFileBeingDragged && e.dataTransfer?.types.includes("Files")) {
+        isFileBeingDragged = true
+        setIsDragOver(true)
+        console.log("🔄 File drag detected - overlay ON")
+      }
+    }
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      // Prevent browser from opening files
+      if (isFileBeingDragged && e.dataTransfer) {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = "copy"
+      }
+    }
+
+    const handleWindowDragEnd = (_e: DragEvent) => {
+      // Drag operation completely ended
+      if (isFileBeingDragged) {
+        isFileBeingDragged = false
+        setIsDragOver(false)
+        console.log("🏁 File drag ended - overlay OFF")
+      }
+    }
+
+    const handleWindowDrop = (e: DragEvent) => {
+      if (!isFileBeingDragged) return
+
+      // Check if we're dropping on the board
+      const boardElement = document.querySelector(".react-flow") as HTMLElement
+      if (boardElement) {
+        const rect = boardElement.getBoundingClientRect()
+        const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right &&
+          e.clientY >= rect.top && e.clientY <= rect.bottom
+
+        if (isOnBoard && e.dataTransfer?.files) {
+          e.preventDefault()
+          e.stopPropagation()
+
+          console.log("🎯 Files dropped on board!")
+          const position = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+          }
+          
+          // Convert FileList to Array and process each file
+          const files = Array.from(e.dataTransfer.files)
+          const validFiles = files.filter(file => {
+            const validTypes = [
+              'application/pdf',
+              'application/msword',
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              'text/plain',
+              'text/markdown',
+              'text/csv'
+            ]
+            return validTypes.includes(file.type) || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx') || file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv')
+          })
+
+          if (validFiles.length > 0) {
+            validFiles.forEach(file => {
+              handleDocumentUpload(file)
+            })
+          }
+        }
+      }
+
+      // Always end drag state on any drop
+      isFileBeingDragged = false
+      setIsDragOver(false)
+    }
+
+    // Window-level events - no React Flow interference!
+    window.addEventListener("dragenter", handleWindowDragEnter)
+    window.addEventListener("dragover", handleWindowDragOver)
+    window.addEventListener("dragend", handleWindowDragEnd)
+    window.addEventListener("drop", handleWindowDrop)
+
+    return () => {
+      window.removeEventListener("dragenter", handleWindowDragEnter)
+      window.removeEventListener("dragover", handleWindowDragOver)
+      window.removeEventListener("dragend", handleWindowDragEnd)
+      window.removeEventListener("drop", handleWindowDrop)
+    }
+  }, [handleDocumentUpload])
   
   // Keyboard shortcuts
   useEffect(() => {
@@ -192,7 +305,25 @@ function BoardContent({
   }, [saveBoard])
   
   return (
-    <div className="w-full h-full relative" ref={reactFlowWrapper}>
+    <div 
+      className="w-full h-full relative" 
+      ref={reactFlowWrapper}
+    >
+      {/* Drag and drop overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 bg-blue-500/20 border-4 border-dashed border-blue-500 rounded-lg flex items-center justify-center pointer-events-none">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center">
+            <div className="text-4xl mb-4">📄</div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Drop your documents here
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Supported formats: PDF, Word, Text, Markdown, CSV
+            </p>
+          </div>
+        </div>
+      )}
+      
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -221,6 +352,14 @@ function BoardContent({
             >
               {saveStatus === 'saving' ? 'Saving...' : 'Save'}
             </button>
+          </div>
+        </Panel>
+        
+        <Panel position="bottom-right" className="z-10">
+          <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              💡 Tip: Drag & drop documents here
+            </p>
           </div>
         </Panel>
         
