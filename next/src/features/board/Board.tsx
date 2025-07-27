@@ -75,10 +75,13 @@ function BoardContent({
   
   // Initialize board
   useEffect(() => {
-    if (initialBoard) {
+    if (initialBoard && initialBoard.nodes) {
       setNodes(initialBoard.nodes)
+    }
+    if (initialBoard && initialBoard.edges) {
       setEdges(initialBoard.edges)
-    } else if (pendingBoardBrief) {
+    }
+    if (pendingBoardBrief) {
       setCurrentBoardName(pendingBoardBrief.topic)
       if (clearPendingBoardBrief) {
         clearPendingBoardBrief()
@@ -96,8 +99,8 @@ function BoardContent({
         type: 'floating',
       }
       setEdges((eds) => {
-        const currentEdges = Array.isArray(eds) ? eds : []
-        return [...currentEdges, newEdge]
+        if (!Array.isArray(eds)) return [newEdge]
+        return [...eds, newEdge]
       })
     },
     [setEdges]
@@ -111,17 +114,21 @@ function BoardContent({
       position,
       data: { label: title },
     }
-    setNodes((nds) => {
-      const currentNodes = Array.isArray(nds) ? nds : []
-      return [...currentNodes, newNode]
-    })
+    // Use React Flow's addNode utility
+    const addNode = (node: Node) => {
+      setNodes((nds) => {
+        if (!Array.isArray(nds)) return [node]
+        return [...nds, node]
+      })
+    }
+    addNode(newNode)
   }, [setNodes])
   
   // Handle adding nodes to store (for AI generation)
   const handleAddNodeToStore = useCallback((node: Node) => {
     setNodes((nds) => {
-      const currentNodes = Array.isArray(nds) ? nds : []
-      return [...currentNodes, node]
+      if (!Array.isArray(nds)) return [node]
+      return [...nds, node]
     })
   }, [setNodes])
   
