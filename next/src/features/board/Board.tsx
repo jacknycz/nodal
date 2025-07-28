@@ -70,6 +70,26 @@ function BoardContent({
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   
+  // Helper function to check if a file type supports text extraction
+  const isTextExtractable = (fileType: string, fileName: string): boolean => {
+    const normalizedType = fileType.toLowerCase()
+    const normalizedName = fileName.toLowerCase()
+    
+    return (
+      normalizedType.includes('pdf') ||
+      normalizedType.includes('word') ||
+      normalizedType.includes('document') ||
+      normalizedType.includes('text/') ||
+      normalizedType.includes('json') ||
+      normalizedType.includes('markdown') ||
+      normalizedName.endsWith('.docx') ||
+      normalizedName.endsWith('.doc') ||
+      normalizedName.endsWith('.txt') ||
+      normalizedName.endsWith('.md') ||
+      normalizedName.endsWith('.json')
+    )
+  }
+  
   // Board utilities
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
   
@@ -163,8 +183,10 @@ function BoardContent({
   }, [nodes, edges, localBoardId, currentBoardName, reactFlowInstance, onBoardStateChange])
   
   // Handle document upload
-  const handleDocumentUpload = useCallback((file: File) => {
+  const handleDocumentUpload = useCallback(async (file: File) => {
     const position = getViewportCenter()
+    
+    // Create the node first with empty extracted text
     const newNode = {
       id: `document-${Date.now()}`,
       type: 'document' as const,
@@ -176,12 +198,81 @@ function BoardContent({
         fileName: file.name,
         fileType: file.type || 'unknown',
         fileSize: file.size,
-        status: 'ready' as const,
-        extractedText: '', // This would be populated by text extraction
+        status: 'processing' as const,
+        extractedText: '',
       },
     }
     handleAddNodeToStore(newNode)
-  }, [getViewportCenter, handleAddNodeToStore])
+    
+    // Extract text if the file type supports it
+    if (isTextExtractable(file.type, file.name)) {
+      try {
+        console.log('🔍 Starting server-side text extraction for:', file.name)
+        
+        // Convert file to base64
+        const arrayBuffer = await file.arrayBuffer()
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        
+        // Call server-side API
+        const response = await fetch('https://nodal-steel.vercel.app/api/extract-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            file: base64,
+            fileName: file.name,
+            fileType: file.type
+          })
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
+          
+          // Update the node with extracted text
+          setNodes((nds) => {
+            const currentNodes = Array.isArray(nds) ? nds : []
+            return currentNodes.map(node => 
+              node.id === newNode.id 
+                ? { ...node, data: { ...node.data, extractedText: result.extractedText, status: 'ready' } }
+                : node
+            )
+          })
+        } else {
+          console.error('❌ Server-side text extraction failed:', response.statusText)
+          // Update the node with error status
+          setNodes((nds) => {
+            const currentNodes = Array.isArray(nds) ? nds : []
+            return currentNodes.map(node => 
+              node.id === newNode.id 
+                ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
+                : node
+            )
+          })
+        }
+      } catch (error) {
+        console.error('❌ Text extraction failed:', error)
+        // Update the node with error status
+        setNodes((nds) => {
+          const currentNodes = Array.isArray(nds) ? nds : []
+          return currentNodes.map(node => 
+            node.id === newNode.id 
+              ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
+              : node
+          )
+        })
+      }
+    } else {
+      // For non-extractable files, mark as ready
+      setNodes((nds) => {
+        const currentNodes = Array.isArray(nds) ? nds : []
+        return currentNodes.map(node => 
+          node.id === newNode.id 
+            ? { ...node, data: { ...node.data, status: 'ready' } }
+            : node
+        )
+      })
+    }
+  }, [getViewportCenter, handleAddNodeToStore, setNodes])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -259,9 +350,25 @@ function BoardContent({
               'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
               'text/plain',
               'text/markdown',
-              'text/csv'
+              'text/csv',
+              'image/png',
+              'image/jpeg',
+              'image/jpg',
+              'image/gif',
+              'image/webp'
             ]
-            return validTypes.includes(file.type) || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx') || file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv')
+            return validTypes.includes(file.type) || 
+              file.name.endsWith('.pdf') || 
+              file.name.endsWith('.doc') || 
+              file.name.endsWith('.docx') || 
+              file.name.endsWith('.txt') || 
+              file.name.endsWith('.md') || 
+              file.name.endsWith('.csv') ||
+              file.name.endsWith('.png') ||
+              file.name.endsWith('.jpg') ||
+              file.name.endsWith('.jpeg') ||
+              file.name.endsWith('.gif') ||
+              file.name.endsWith('.webp')
           })
 
           if (validFiles.length > 0) {
@@ -358,7 +465,7 @@ function BoardContent({
         <Panel position="bottom-right" className="z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              💡 Tip: Drag & drop documents here
+              💡 Tip: Drag & drop documents and images here
             </p>
           </div>
         </Panel>
@@ -374,7 +481,7 @@ function BoardContent({
               onUploadDocument={() => {
                 const input = document.createElement('input')
                 input.type = 'file'
-                input.accept = '.pdf,.doc,.docx,.txt'
+                input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
                 input.onchange = (e) => {
                   const file = (e.target as HTMLInputElement).files?.[0]
                   if (file) handleDocumentUpload(file)

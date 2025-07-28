@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { FileText, Download, Eye, Trash2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 
@@ -22,6 +22,37 @@ interface DocumentNodeProps {
 export default function DocumentNode({ data }: DocumentNodeProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  // Create object URL for image preview
+  useEffect(() => {
+    if (data.file && data.fileType?.startsWith('image/')) {
+      const url = URL.createObjectURL(data.file)
+      setImageUrl(url)
+      return () => URL.revokeObjectURL(url)
+    }
+  }, [data.file, data.fileType])
+
+  const isImage = data.fileType?.startsWith('image/') || 
+    data.fileName?.match(/\.(png|jpg|jpeg|gif|webp)$/i)
+
+  const isTextExtractable = data.fileType && (
+    data.fileType.includes('pdf') ||
+    data.fileType.includes('word') ||
+    data.fileType.includes('document') ||
+    data.fileType.includes('text/') ||
+    data.fileName?.match(/\.(doc|docx|txt|md|csv|json)$/i)
+  )
+
+  const hasExtractedText = data.extractedText && data.extractedText.length > 0 && !data.extractedText.includes('Text extraction failed')
+
+  const getFileIcon = () => {
+    if (isImage) return '🖼️'
+    if (data.fileType?.includes('pdf')) return '📄'
+    if (data.fileType?.includes('word') || data.fileName?.match(/\.(doc|docx)$/i)) return '📝'
+    if (data.fileType?.includes('text') || data.fileName?.match(/\.(txt|md|csv)$/i)) return '📄'
+    return '📄'
+  }
 
   const getStatusIcon = () => {
     switch (data.status) {
@@ -98,7 +129,7 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">📄</span>
+            <span className="text-2xl">{getFileIcon()}</span>
             <div>
               <h3 className="font-medium text-blue-900 dark:text-blue-100 text-sm leading-tight">
                 {data.label}
@@ -116,6 +147,17 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
           </div>
         </div>
 
+        {/* Image Preview (if it's an image) */}
+        {isImage && imageUrl && (
+          <div className="mb-3">
+            <img
+              src={imageUrl}
+              alt={data.label}
+              className="w-full h-32 object-cover rounded border border-gray-200 dark:border-gray-600"
+            />
+          </div>
+        )}
+
         {/* File Info */}
         <div className="space-y-1 mb-3">
           {data.fileSize && (
@@ -132,14 +174,16 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handlePreview}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 rounded transition-colors"
-            title="Preview document"
-          >
-            <Eye className="w-3 h-3" />
-            Preview
-          </button>
+          {(isTextExtractable || isImage) && (
+            <button
+              onClick={handlePreview}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 rounded transition-colors"
+              title={isImage ? "View image" : "Preview document"}
+            >
+              <Eye className="w-3 h-3" />
+              {isImage ? "View" : "Preview"}
+            </button>
+          )}
           
           {data.file && (
             <button
@@ -167,18 +211,51 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
           </button>
         </div>
 
+        {/* Text Extraction Status */}
+        {isTextExtractable && (
+          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
+            {hasExtractedText ? (
+              <div className="text-green-600 dark:text-green-400">
+                ✅ Text extracted ({data.extractedText?.length} characters)
+              </div>
+            ) : data.extractedText?.includes('Text extraction failed') ? (
+              <div className="text-red-600 dark:text-red-400">
+                ❌ Text extraction failed
+              </div>
+            ) : (
+              <div className="text-gray-600 dark:text-gray-400">
+                ⏳ Processing text...
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Preview */}
-        {showPreview && data.extractedText && (
+        {showPreview && hasExtractedText && !isImage && (
           <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
             <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
               Document Preview
             </h4>
             <div className="text-xs text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto">
-              {data.extractedText.length > 300 
+              {data.extractedText && data.extractedText.length > 300 
                 ? `${data.extractedText.substring(0, 300)}...` 
                 : data.extractedText
               }
             </div>
+          </div>
+        )}
+
+        {/* Image Preview Modal */}
+        {showPreview && isImage && imageUrl && (
+          <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
+            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Image Preview
+            </h4>
+            <img
+              src={imageUrl}
+              alt={data.label}
+              className="w-full max-h-48 object-contain rounded"
+            />
           </div>
         )}
       </div>
