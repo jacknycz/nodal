@@ -122,6 +122,10 @@ class BoardStorage {
     return supabaseStorage.renameBoard(boardId, newName)
   }
 
+  async saveBoardWithId(id: string, name: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
+    return supabaseStorage.saveBoardWithId(id, name, data)
+  }
+
   // Legacy methods for backward compatibility
   async saveBoard_legacy(data: Omit<BoardData, 'lastModified'>): Promise<void> {
     // Create a new board with legacy data

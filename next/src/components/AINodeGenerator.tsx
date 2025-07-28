@@ -6,14 +6,28 @@ interface AINodeGeneratorProps {
   isOpen: boolean
   onClose: () => void
   onGenerate: (nodeData: { label: string; content?: string }) => void
+  initialContext?: { topic?: string; description?: string }
 }
 
 export default function AINodeGenerator({
   isOpen,
   onClose,
   onGenerate,
+  initialContext,
 }: AINodeGeneratorProps) {
   const [prompt, setPrompt] = useState('')
+
+  // Pre-populate prompt with context when modal opens
+  React.useEffect(() => {
+    if (isOpen && initialContext) {
+      const contextPrompt = [
+        initialContext.topic && `Topic: ${initialContext.topic}`,
+        initialContext.description && `Description: ${initialContext.description}`,
+        'Generate starter nodes for this board:'
+      ].filter(Boolean).join('\n\n')
+      setPrompt(contextPrompt)
+    }
+  }, [isOpen, initialContext])
 
   if (!isOpen) return null
 

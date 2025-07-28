@@ -31,15 +31,11 @@ export interface BoardEdge extends Edge {
 }
 
 export interface BoardBrief {
-  topic: string
-  ramble: string // Add the new ramble field
-  goal: string
-  audience: string
-  resources: string[]
-  aiHelpPreferences: string[]
-  notes?: string
-  isReady?: boolean
-  preSessionChat?: { role: 'user' | 'ai', content: string }[]
+  id: string // Unique board ID
+  boardName: string
+  boardTopic: string
+  description: string
+  startWithAI: boolean
 }
 
 // Embedding info for a document

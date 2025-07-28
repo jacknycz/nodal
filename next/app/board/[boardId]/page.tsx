@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Board from '../../../src/features/board/Board';
+import BoardComponent from '../../../src/features/board/BoardComponent';
 import { boardStorage } from '../../../src/features/storage/storage';
 import type { SavedBoard } from '../../../src/features/storage/storage';
 
@@ -54,7 +54,7 @@ export default function BoardPage() {
 
   return (
     <div className="h-screen">
-      <Board 
+      <BoardComponent 
         initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
         onBoardStateChange={(name, status, hasChanges) => console.log('Board state:', { name, status, hasChanges })}
       />

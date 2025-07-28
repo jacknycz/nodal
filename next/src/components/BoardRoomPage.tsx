@@ -4,9 +4,10 @@ import { ThemeProvider } from '../contexts/ThemeContext'
 import { AIProvider } from '../features/ai/aiContext'
 import Topbar from './Topbar'
 import BoardRoom from './BoardRoom'
-import Board from '../features/board/Board'
+import BoardComponent from '../features/board/BoardComponent'
 import LoginScreen from './LoginScreen'
 import { useSupabaseUser } from '../features/auth/authUtils'
+import { boardStorage } from '../features/storage/storage'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 
@@ -23,12 +24,14 @@ export default function BoardRoomPage() {
 
   console.log('[BoardRoomPage] user:', user)
 
-  const handleOpenBoard = (board: SavedBoard | null, brief?: BoardBrief | null) => {
+  const handleOpenBoard = async (board: SavedBoard | null, brief?: BoardBrief | null) => {
     console.log('Open board:', board, brief)
     if (board) {
+      // Existing board - just open it
       setCurrentBoard(board)
       setCurrentView('board')
     } else if (brief) {
+      // New board - just set the brief and switch to board view
       setPendingBoardBrief(brief)
       setCurrentView('board')
     }
@@ -40,8 +43,12 @@ export default function BoardRoomPage() {
     setPendingBoardBrief(null)
   }
 
-  const handleBoardStateChange = (boardName: string | undefined, saveStatus: 'saved' | 'saving' | 'unsaved' | 'error', hasUnsavedChanges: boolean) => {
-    setBoardState({ boardName, saveStatus, hasUnsavedChanges })
+  const handleBoardStateChange = (boardName: string, saveStatus: string, hasUnsavedChanges: boolean) => {
+    setBoardState({ 
+      boardName, 
+      saveStatus: saveStatus as 'saved' | 'saving' | 'unsaved' | 'error', 
+      hasUnsavedChanges 
+    })
   }
 
   const clearPendingBoardBrief = () => {
@@ -61,11 +68,10 @@ export default function BoardRoomPage() {
             {currentView === 'boardroom' ? (
               <BoardRoom onOpenBoard={handleOpenBoard} />
             ) : (
-              <Board 
+              <BoardComponent 
                 onBoardStateChange={handleBoardStateChange}
-                initialBoard={currentBoard}
-                onOpenBoardRoom={handleOpenBoardRoom}
-                pendingBoardBrief={pendingBoardBrief}
+                initialBoard={currentBoard ? { nodes: currentBoard.data.nodes, edges: currentBoard.data.edges } : undefined}
+                pendingBoardBrief={pendingBoardBrief || undefined}
                 clearPendingBoardBrief={clearPendingBoardBrief}
               />
             )}
@@ -76,4 +82,4 @@ export default function BoardRoomPage() {
       </AIProvider>
     </ThemeProvider>
   )
-} 
+}

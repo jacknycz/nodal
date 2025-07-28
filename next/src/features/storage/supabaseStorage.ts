@@ -1,16 +1,5 @@
 import { supabase } from '../auth/supabaseClient'
-import type { BoardNode, BoardEdge } from '../board/boardTypes'
-
-interface BoardData {
-  nodes: BoardNode[]
-  edges: BoardEdge[]
-  viewport: {
-    x: number
-    y: number
-    zoom: number
-  }
-  lastModified: number
-}
+import type { BoardData } from './storage'
 
 interface SavedBoard {
   id: string
@@ -44,8 +33,7 @@ class SupabaseStorage {
       if (!user) throw new Error('User not authenticated')
 
       const boardData: BoardData = {
-        ...data,
-        lastModified: Date.now(),
+        ...data
       }
 
       const savedBoard = {
@@ -74,6 +62,39 @@ class SupabaseStorage {
     }
   }
 
+  // Save a board to Supabase with a specific ID (upsert)
+  async saveBoardWithId(id: string, name: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      const boardData: BoardData = {
+        ...data
+      }
+
+      const savedBoard = {
+        id,
+        name,
+        data: boardData,
+        created_at: Date.now(),
+        last_modified: Date.now(),
+        node_count: data.nodes.length,
+        edge_count: data.edges.length,
+        user_id: user.id,
+      }
+
+      const { error } = await supabase
+        .from('boards')
+        .upsert([savedBoard], { onConflict: 'id' })
+
+      if (error) throw error
+      console.log(`Board "${name}" upserted to Supabase with ID: ${id}`)
+    } catch (error) {
+      console.error('Failed to upsert board to Supabase:', error)
+      throw error
+    }
+  }
+
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
     try {
@@ -81,8 +102,7 @@ class SupabaseStorage {
       if (!user) throw new Error('User not authenticated')
 
       const boardData: BoardData = {
-        ...data,
-        lastModified: Date.now(),
+        ...data
       }
 
       const { error } = await supabase

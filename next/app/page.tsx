@@ -1,5 +1,5 @@
 import BoardRoomPage from '../src/components/BoardRoomPage'
-import Board from '../src/features/board/Board'
+import BoardComponent from '../src/features/board/BoardComponent'
 
 export default function HomePage() {
   return (

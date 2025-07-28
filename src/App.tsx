@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from './features/ai/aiContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import Board from './features/board/Board'
+import BoardComponent from './features/board/BoardComponent'
 import Topbar from './components/Topbar'
 import TestPage from './components/TestPage'
 import LoginScreen from './components/LoginScreen'
@@ -189,7 +189,7 @@ export default function App() {
                 {currentView === 'boardroom' ? (
                   <BoardRoom onOpenBoard={handleLoadBoard} />
                 ) : (
-                  <Board
+                  <BoardComponent
                     onBoardStateChange={handleBoardStateChange}
                     initialBoard={currentBoard}
                     onOpenBoardRoom={handleOpenBoardRoom}

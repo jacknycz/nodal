@@ -27,10 +27,12 @@ import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
 import AINodeGenerator from '../../components/AINodeGenerator'
 import { useAIContext } from '../ai/aiContext'
+import { getOpenAIService } from '../ai/aiService'
 import BokehBackground from '../../components/BokehBackground'
 import ChatPanel from '../../components/ChatPanel'
 import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
+import type { BoardBrief } from './boardTypes'
 
 const nodeTypes = {
   document: DocumentNode,
@@ -42,7 +44,7 @@ const edgeTypes = {
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
-  pendingBoardBrief?: { topic: string; description?: string }
+  pendingBoardBrief?: BoardBrief // Now includes id
   onBoardStateChange?: (name: string, status: string, hasChanges: boolean) => void
   clearPendingBoardBrief?: () => void
   isBoardView?: boolean
@@ -62,7 +64,7 @@ function BoardContent({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
-  const [localBoardId, setLocalBoardId] = useState<string | null>(null)
+  const localBoardIdRef = useRef<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
@@ -91,6 +93,64 @@ function BoardContent({
   }
   
   // Board utilities
+  // Generate starter nodes using AI
+  const generateStarterNodes = async (brief: BoardBrief, boardId: string) => {
+    console.log('🚀 generateStarterNodes called with boardId:', boardId, 'for brief:', brief.boardName)
+    try {
+      const aiService = getOpenAIService()
+      if (!aiService) {
+        console.error('AI service not available')
+        return
+      }
+
+      const prompt = `Create 3-5 starter nodes for a board about "${brief.boardTopic}" with description: "${brief.description}". Return them as a JSON array of objects with this structure: [{ "label": "Node title", "content": "Brief description" }]. Make the nodes diverse and actionable. Return ONLY the JSON array, no markdown formatting.`
+
+      const response = await aiService.generate({
+        prompt,
+        systemPrompt: 'You are a helpful AI assistant that creates structured, actionable nodes for mind mapping and project planning. Always return clean JSON without markdown formatting.',
+        temperature: 0.7,
+        model: 'gpt-4o-mini'
+      })
+
+      try {
+        let jsonContent = response.content.trim()
+        if (jsonContent.startsWith('```json')) {
+          jsonContent = jsonContent.replace(/^```json\s*/, ').replace(/\s*```$/, ')
+        } else if (jsonContent.startsWith('```')) {
+          jsonContent = jsonContent.replace(/^```\s*/, ').replace(/\s*```$/, ')
+        }
+        
+        const nodes = JSON.parse(jsonContent)
+        if (Array.isArray(nodes)) {
+          nodes.forEach((nodeData, index) => {
+            const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
+            const newNode = {
+              id: `starter-node-${Date.now()}-${index}`,
+              type: 'default',
+              position,
+              data: { label: nodeData.label, content: nodeData.content },
+            }
+            handleAddNodeToStore(newNode)
+          })
+          
+          // Don't auto-save here - the board is already saved when created
+          // The AI nodes will be saved when the user makes changes or manually saves
+        }
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError)
+        console.log('Raw response content:', response.content)
+        const newNode = {
+          id: `starter-node-${Date.now()}`,
+          type: 'default',
+          position: { x: 200, y: 200 },
+          data: { label: `Getting Started with ${brief.boardTopic}`, content: response.content },
+        }
+        handleAddNodeToStore(newNode)
+      }
+    } catch (error) {
+      console.error('Failed to generate starter nodes:', error)
+    }
+  }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
   
   // Initialize board
@@ -101,8 +161,46 @@ function BoardContent({
     if (initialBoard && initialBoard.edges) {
       setEdges(initialBoard.edges)
     }
-    if (pendingBoardBrief) {
-      setCurrentBoardName(pendingBoardBrief.topic)
+    if (pendingBoardBrief && !localBoardIdRef.current) { // Only run if we don't already have a localBoardId
+      console.log('🔄 useEffect triggered for pendingBoardBrief:', pendingBoardBrief.boardName)
+      setCurrentBoardName(pendingBoardBrief.boardName)
+      if (onBoardStateChange) {
+        onBoardStateChange(pendingBoardBrief.boardName, 'saved', false)
+      }
+      console.log('pendingBoardBrief:', pendingBoardBrief, 'typeof id:', typeof pendingBoardBrief.id)
+      localBoardIdRef.current = pendingBoardBrief.id;
+      console.log('AFTER ASSIGNMENT:', localBoardIdRef.current, typeof localBoardIdRef.current);
+      // ALWAYS create the blank board first to get the localBoardId
+      (async () => {
+        const boardId = pendingBoardBrief.id
+        const boardName = pendingBoardBrief.boardName
+        const boardData = {
+          nodes: [],
+          edges: [],
+          viewport: reactFlowInstance.getViewport(),
+        }
+        try {
+          await boardStorage.saveBoardWithId(boardId, boardName, boardData)
+          console.log('🔵 CREATING BLANK BOARD with ID:', boardId, 'for name:', boardName)
+          setCurrentBoardName(boardName)
+          setSaveStatus('saved')
+          if (onBoardStateChange) {
+            onBoardStateChange(boardName, 'saved', false)
+          }
+          console.log('✅ Blank board created and saved:', boardName)
+          // If startWithAI is true, now generate AI nodes to update the same board
+          if (pendingBoardBrief.startWithAI) {
+            console.log('🤖 Starting AI generation for board ID:', boardId)
+            generateStarterNodes(pendingBoardBrief, boardId)
+          }
+        } catch (error) {
+          console.error('Failed to create blank board:', error)
+          setSaveStatus('error')
+          if (onBoardStateChange) {
+            onBoardStateChange(boardName, 'error', false)
+          }
+        }
+      })()
       if (clearPendingBoardBrief) {
         clearPendingBoardBrief()
       }
@@ -154,6 +252,7 @@ function BoardContent({
   
   // Save board function
   const saveBoard = useCallback(async (name?: string) => {
+    console.log('💾 saveBoard called with name:', name, 'localBoardId:', localBoardIdRef.current)
     try {
       setSaveStatus('saving')
       
@@ -163,12 +262,14 @@ function BoardContent({
         viewport: reactFlowInstance.getViewport(),
       }
       
-      if (localBoardId && !name) {
-        await boardStorage.updateBoard(localBoardId, boardData)
+      if (localBoardIdRef.current && !name) {
+        await boardStorage.updateBoard(localBoardIdRef.current, boardData)
+        console.log('✅ Updated existing board:', localBoardIdRef.current)
       } else {
         const boardName = name || `Board ${new Date().toLocaleDateString()}`
         const boardId = await boardStorage.saveBoard(boardName, boardData)
-        setLocalBoardId(boardId)
+        console.log('🆕 Created new board:', boardId, 'with name:', boardName)
+        localBoardIdRef.current = boardId
         setCurrentBoardName(boardName)
       }
       
@@ -180,7 +281,7 @@ function BoardContent({
       console.error('Failed to save board:', error)
       setSaveStatus('error')
     }
-  }, [nodes, edges, localBoardId, currentBoardName, reactFlowInstance, onBoardStateChange])
+  }, [nodes, edges, localBoardIdRef.current, currentBoardName, reactFlowInstance, onBoardStateChange])
   
   // Handle document upload
   const handleDocumentUpload = useCallback(async (file: File) => {
@@ -476,7 +577,10 @@ function BoardContent({
                 const position = getViewportCenter()
                 handleAddNode('New Node', position)
               }}
-              onAIGenerate={() => setShowAINodeGenerator(true)}
+              onAIGenerate={() => {
+                // Manual AI generation - open the AI node generator modal
+                setShowAINodeGenerator(true)
+              }}
               onUploadDocument={() => {
                 const input = document.createElement('input')
                 input.type = 'file'
@@ -536,6 +640,10 @@ function BoardContent({
             handleAddNodeToStore(newNode)
             setShowAINodeGenerator(false)
           }}
+          initialContext={pendingBoardBrief ? {
+            topic: pendingBoardBrief.boardTopic,
+            description: pendingBoardBrief.description
+          } : undefined}
         />
       )}
     </div>
