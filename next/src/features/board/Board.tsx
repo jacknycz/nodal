@@ -185,10 +185,11 @@ function BoardContent({
   // Handle document upload
   const handleDocumentUpload = useCallback(async (file: File) => {
     const position = getViewportCenter()
+    const nodeId = `document-${Date.now()}`
     
     // Create the node first with empty extracted text
     const newNode = {
-      id: `document-${Date.now()}`,
+      id: nodeId,
       type: 'document' as const,
       position,
       data: {
@@ -214,7 +215,7 @@ function BoardContent({
         const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
         
         // Call server-side API
-        const response = await fetch('https://nodal-steel.vercel.app/api/extract-text', {
+        const response = await fetch('/api/extract-text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -228,22 +229,21 @@ function BoardContent({
           const result = await response.json()
           console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
           
-          // Update the node with extracted text
-          setNodes((nds) => {
-            const currentNodes = Array.isArray(nds) ? nds : []
+          // Update the specific node
+          setNodes((currentNodes) => {
+            if (!Array.isArray(currentNodes)) return currentNodes
             return currentNodes.map(node => 
-              node.id === newNode.id 
+              node.id === nodeId 
                 ? { ...node, data: { ...node.data, extractedText: result.extractedText, status: 'ready' } }
                 : node
             )
           })
         } else {
           console.error('❌ Server-side text extraction failed:', response.statusText)
-          // Update the node with error status
-          setNodes((nds) => {
-            const currentNodes = Array.isArray(nds) ? nds : []
+          setNodes((currentNodes) => {
+            if (!Array.isArray(currentNodes)) return currentNodes
             return currentNodes.map(node => 
-              node.id === newNode.id 
+              node.id === nodeId 
                 ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
                 : node
             )
@@ -251,11 +251,10 @@ function BoardContent({
         }
       } catch (error) {
         console.error('❌ Text extraction failed:', error)
-        // Update the node with error status
-        setNodes((nds) => {
-          const currentNodes = Array.isArray(nds) ? nds : []
+        setNodes((currentNodes) => {
+          if (!Array.isArray(currentNodes)) return currentNodes
           return currentNodes.map(node => 
-            node.id === newNode.id 
+            node.id === nodeId 
               ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
               : node
           )
@@ -263,10 +262,10 @@ function BoardContent({
       }
     } else {
       // For non-extractable files, mark as ready
-      setNodes((nds) => {
-        const currentNodes = Array.isArray(nds) ? nds : []
+      setNodes((currentNodes) => {
+        if (!Array.isArray(currentNodes)) return currentNodes
         return currentNodes.map(node => 
-          node.id === newNode.id 
+          node.id === nodeId 
             ? { ...node, data: { ...node.data, status: 'ready' } }
             : node
         )

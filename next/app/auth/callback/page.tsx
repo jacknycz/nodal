@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { supabase } from '../../../features/auth/supabaseClient';
+import { supabase } from '../../../src/features/auth/supabaseClient';
 
 export default function AuthCallbackPage() {
   useEffect(() => {
