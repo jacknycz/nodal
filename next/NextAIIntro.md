@@ -15,6 +15,8 @@
 - 🧑‍💻 Prioritize maintainable, scalable, and idiomatic Next.js + React code
 - ☁️ Use Supabase for authentication, board storage, and document uploads
 - 🎨 Ensure delightful, accessible, and themeable UI/UX
+- 🔄 Real-time collaboration and cloud synchronization
+- 📱 Responsive design that works across all devices
 
 ---
 
@@ -28,6 +30,8 @@
 - **Supabase** (auth, database, file storage)
 - **Framer Motion** (UI animation)
 - **OpenAI API** (AI features, user-provided keys)
+- **Lucide React** (icon library)
+- **Date-fns** (date manipulation)
 
 ---
 
@@ -38,6 +42,8 @@
 - **Board Room**: The dashboard for managing boards.
 - **Board Brief**: The object describing a new board's intent, topic, and AI setup.
 - **Single Source of Truth**: All board data and logic now live in `next/src/features/board/`.
+- **Focus Tree**: Hierarchical organization system for nodes and ideas.
+- **AI Context**: Persistent memory system for AI conversations and suggestions.
 
 ---
 
@@ -47,6 +53,7 @@
 - **No Double-Save Bugs**: The board ID is passed through all creation and save logic, and all updates use this ID. No more duplicate boards or race conditions.
 - **Robust State Handling**: Board ID is managed via `useRef` to avoid React state setter issues and module cache bugs.
 - **AI-Assisted or Blank**: Users can start with a blank board or let AI generate starter nodes, but the board ID and storage logic are unified.
+- **Pre-Session Chat**: Users can refine their board intent through AI conversation before creation.
 
 ---
 
@@ -57,6 +64,27 @@
 - **Document Processing**: Uploaded files are processed for text extraction and vectorization for AI context.
 - **Pre-Session Chat**: Users can interact with AI before board creation to refine their goals.
 - **Multi-Turn Memory**: AI maintains context across conversation turns using a message buffer.
+- **Context-Aware Suggestions**: AI provides relevant suggestions based on current board state and user history.
+- **Batch Operations**: AI can perform multiple operations across nodes simultaneously.
+
+---
+
+## State Management Architecture
+
+- **Zustand Slices**: Atomic, composable state management with clear separation of concerns
+- **Board Store**: Centralized board state with optimistic updates and conflict resolution
+- **AI Store**: Manages AI context, settings, and conversation state
+- **Focus Store**: Handles hierarchical focus tree and navigation state
+- **Theme Store**: Manages dark/light mode and UI preferences
+
+---
+
+## File Structure & Organization
+
+```
+next/src/
+├── app/      
+```
 
 ---
 
