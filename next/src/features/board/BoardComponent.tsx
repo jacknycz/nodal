@@ -219,108 +219,85 @@ function BoardContent({
   // Add screenshot capture function
   const captureBoardScreenshot = async (boardId: string) => {
     try {
-      // Find the ReactFlow container
-      const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
-      if (!reactFlowElement) {
-        console.log('ReactFlow element not found');
-        return;
-      }
+      // Create a simple canvas representation instead of using html2canvas
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      
+      // Set canvas size
+      canvas.width = 1200;
+      canvas.height = 800;
+      
+      // Fill background based on theme
+      ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw board title
+      ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
+      ctx.font = 'bold 24px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(currentBoardName || 'Untitled Board', canvas.width / 2, 40);
+      
+      // Draw node count
+      ctx.font = '16px system-ui';
+      ctx.fillText(`${nodes.length} nodes, ${edges.length} connections`, canvas.width / 2, 70);
+      
+      // Draw a simple representation of nodes
+      const nodeRadius = 8;
+      const spacing = 100;
+      const startX = 100;
+      const startY = 150;
+      
+      nodes.forEach((node, index) => {
+        const x = startX + (index % 8) * spacing;
+        const y = startY + Math.floor(index / 8) * spacing;
+        
+        // Draw node circle
+        ctx.fillStyle = theme === 'dark' ? '#3b82f6' : '#2563eb';
+        ctx.beginPath();
+        ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Draw node label
+        ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
+        ctx.font = '12px system-ui';
+        ctx.textAlign = 'center';
+        const label = (node.data?.title || node.data?.label || `Node ${index + 1}`) as string;
+        ctx.fillText(label.substring(0, 15), x, y + 25);
+      });
+      
+      // Convert to blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          resolve(blob!);
+        }, 'image/jpeg', 0.8);
+      });
 
-      // Create a clone to avoid modifying the original
-      const clone = reactFlowElement.cloneNode(true) as HTMLElement;
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      clone.style.top = '-9999px';
-      document.body.appendChild(clone);
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        const base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
 
-      try {
-        // Capture the screenshot with minimal options to avoid CSS parsing issues
-        const canvas = await html2canvas(clone, {
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
+        // Send to API
+        const response = await fetch('/api/board/thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            boardId,
+            thumbnail: base64 
+          }),
         });
 
-        // Convert to blob
-        const blob = await new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => {
-            resolve(blob!);
-          }, 'image/jpeg', 0.8);
-        });
-
-        // Convert blob to base64
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64data = reader.result as string;
-          const base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
-
-          // Send to API
-          const response = await fetch('/api/board/thumbnail', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              boardId,
-              thumbnail: base64 
-            }),
-          });
-
-          if (response.ok) {
-            console.log('Thumbnail saved successfully');
-          } else {
-            console.error('Failed to save thumbnail');
-          }
-        };
-        reader.readAsDataURL(blob);
-
-      } finally {
-        // Clean up the clone
-        document.body.removeChild(clone);
-      }
+        if (response.ok) {
+          console.log('Thumbnail saved successfully');
+        } else {
+          console.error('Failed to save thumbnail');
+        }
+      };
+      reader.readAsDataURL(blob);
 
     } catch (error) {
       console.error('Screenshot capture failed:', error);
-      // Fallback: try with even more minimal options
-      try {
-        const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
-        if (reactFlowElement) {
-          const canvas = await html2canvas(reactFlowElement, {
-            useCORS: true,
-            allowTaint: true,
-            logging: false,
-            background: theme === 'dark' ? '#1f2937' : '#ffffff',
-          });
-
-          const blob = await new Promise<Blob>((resolve) => {
-            canvas.toBlob((blob) => {
-              resolve(blob!);
-            }, 'image/jpeg', 0.8);
-          });
-
-          const reader = new FileReader();
-          reader.onloadend = async () => {
-            const base64data = reader.result as string;
-            const base64 = base64data.split(',')[1];
-
-            const response = await fetch('/api/board/thumbnail', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                boardId,
-                thumbnail: base64 
-              }),
-            });
-
-            if (response.ok) {
-              console.log('Thumbnail saved successfully (fallback)');
-            } else {
-              console.error('Failed to save thumbnail (fallback)');
-            }
-          };
-          reader.readAsDataURL(blob);
-        }
-      } catch (fallbackError) {
-        console.error('Fallback screenshot capture also failed:', fallbackError);
-      }
     }
   };
 
