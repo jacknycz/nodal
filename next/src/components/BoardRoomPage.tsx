@@ -96,6 +96,7 @@ export default function BoardRoomPage() {
                 onBoardStateChange={handleBoardStateChange}
                 initialBoard={currentBoard ? { nodes: currentBoard.data.nodes, edges: currentBoard.data.edges } : undefined}
                 boardId={currentBoard?.id}
+                boardName={currentBoard?.name}
                 pendingBoardBrief={pendingBoardBrief || undefined}
                 clearPendingBoardBrief={clearPendingBoardBrief}
               />

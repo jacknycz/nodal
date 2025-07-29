@@ -49,6 +49,7 @@ interface BoardProps {
   clearPendingBoardBrief?: () => void
   isBoardView?: boolean
   boardId?: string // Add board ID for existing boards
+  boardName?: string // Add board name for existing boards
 }
 
 function BoardContent({
@@ -58,6 +59,7 @@ function BoardContent({
   clearPendingBoardBrief,
   isBoardView = true,
   boardId,
+  boardName, // Add this parameter
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
@@ -319,13 +321,23 @@ function BoardContent({
       hasInitialBoard: !!initialBoard,
       hasPendingBoardBrief: !!pendingBoardBrief,
       hasLocalBoardId: !!localBoardIdRef.current,
-      boardId
+      boardId,
+      boardName
     })
     
     // Set board ID for existing boards
     if (boardId && !localBoardIdRef.current) {
       console.log('🆔 Setting board ID for existing board:', boardId)
       localBoardIdRef.current = boardId
+    }
+    
+    // Set board name for existing boards
+    if (boardName && !pendingBoardBrief) {
+      console.log('📝 Setting board name for existing board:', boardName)
+      setCurrentBoardName(boardName)
+      if (onBoardStateChange) {
+        onBoardStateChange(boardName, 'saved', false)
+      }
     }
     
     if (initialBoard && initialBoard.nodes) {
@@ -383,7 +395,7 @@ function BoardContent({
     
     // Mark as initialized
     isInitializedRef.current = true
-  }, [initialBoard, pendingBoardBrief, setNodes, setEdges, clearPendingBoardBrief, boardId])
+  }, [initialBoard, pendingBoardBrief, setNodes, setEdges, clearPendingBoardBrief, boardId, boardName])
   
   // Handle connections
   const onConnect = useCallback(
