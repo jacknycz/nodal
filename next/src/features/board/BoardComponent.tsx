@@ -156,6 +156,10 @@ function BoardContent({
   const onBoardStateChangeRef = useRef(onBoardStateChange)
   onBoardStateChangeRef.current = onBoardStateChange
   
+  // Track previous nodes/edges to detect actual changes
+  const prevNodesRef = useRef<Node[]>([])
+  const prevEdgesRef = useRef<Edge[]>([])
+  
   // Simple effect to trigger autosave when nodes/edges change
   useEffect(() => {
     // Skip during initialization
@@ -173,8 +177,12 @@ function BoardContent({
       return
     }
     
-    // Trigger autosave when nodes or edges change
-    if (nodes.length > 0 || edges.length > 0) {
+    // Check if nodes or edges have actually changed
+    const nodesChanged = JSON.stringify(nodes) !== JSON.stringify(prevNodesRef.current)
+    const edgesChanged = JSON.stringify(edges) !== JSON.stringify(prevEdgesRef.current)
+    
+    // Only trigger autosave if there are actual changes
+    if ((nodesChanged || edgesChanged) && (nodes.length > 0 || edges.length > 0)) {
       console.log('📝 Changes detected, triggering autosave...')
       setHasUnsavedChanges(true)
       if (onBoardStateChangeRef.current) {
@@ -182,6 +190,10 @@ function BoardContent({
       }
       triggerAutosaveRef.current()
     }
+    
+    // Update previous values
+    prevNodesRef.current = nodes
+    prevEdgesRef.current = edges
   }, [nodes, edges, currentBoardName, saveStatus])
   
   // Cleanup timeout on unmount
