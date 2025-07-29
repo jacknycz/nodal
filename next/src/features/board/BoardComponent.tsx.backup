@@ -22,7 +22,6 @@ import '@xyflow/react/dist/style.css'
 import { useBoard } from './useBoard'
 import { boardStorage } from '../storage/storage'
 import DocumentNode from '../nodes/DocumentNode'
-import NodalNode from '../nodes/nodalNode'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
@@ -37,7 +36,6 @@ import type { BoardBrief } from './boardTypes'
 import NodeSetupModal from '../../components/NodeSetupModal'
 
 const nodeTypes = {
-  default: NodalNode,
   document: DocumentNode,
 }
 
