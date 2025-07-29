@@ -22,8 +22,8 @@ export async function POST(req: NextRequest) {
 
     // Upload to Supabase storage
     const { error } = await supabase.storage
-      .from('board-thumbnails')
-      .upload(`${boardId}.jpg`, buffer, {
+      .from('boards')
+      .upload(`thumbnails/${boardId}.jpg`, buffer, {
         contentType: 'image/jpeg',
         upsert: true,
       });
