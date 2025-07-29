@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,20 +13,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing boardId' }, { status: 400 });
     }
 
-    // Call the Vercel serverless function
-    const vercelEndpoint = 'https://nodal-steel.vercel.app/api/generate-thumbnail';
-    const response = await fetch(vercelEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ boardId }),
+    // For now, just return success - we'll implement actual thumbnail generation later
+    // This allows us to test the flow without the complex Puppeteer setup
+    console.log(`Thumbnail generation requested for board: ${boardId}`);
+    
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Thumbnail generation endpoint ready - implementation pending' 
     });
-
-    const data = await response.json();
-    if (!response.ok) {
-      return NextResponse.json({ error: data.error || 'Failed to generate thumbnail' }, { status: response.status });
-    }
-
-    return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
