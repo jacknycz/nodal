@@ -19,7 +19,7 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
-  title: "Nodal - Collaborative Mindmapping",
+  title: "Nodal - Your place to think",
   description: "Create, collaborate, and visualize ideas with AI-powered mindmapping",
   icons: {
     icon: [
