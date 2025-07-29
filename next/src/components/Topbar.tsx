@@ -56,12 +56,16 @@ export default function Topbar({
   return (
     <>
       <header ref={headerRef} className="absolute top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-3 items-center px-4 py-0">
+        <div className="grid grid-cols-3 items-center px-4 py-1">
           {/* Left - Logo */}
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenBoardRoom}
-              className="focus:outline-none flex text-white cursor-pointer flex items-center gap-2 bg-primary-500 rounded-full p-1"
+              className={`focus:outline-none flex cursor-pointer flex items-center gap-2 rounded-full p-1 ${
+                isBoardView 
+                  ? 'text-gray-900 dark:text-white' 
+                  : 'bg-primary-500 text-white dark:bg-primary-500'
+              }`}
               aria-label="Go to Board Room"
             >
               <House size={16} />
@@ -77,8 +81,8 @@ export default function Topbar({
                 alt="Nodal Logo"
                 width={48}
                 height={48}
-                className="h-6 w-auto"
-                style={{ width: 'auto', height: 'auto' }}
+                className="h-8 w-auto"
+                // style={{ width: 'auto', height: 'auto' }}
                 priority
               />
             </button>

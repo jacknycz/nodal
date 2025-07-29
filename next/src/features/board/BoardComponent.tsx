@@ -774,26 +774,13 @@ function BoardContent({
         <Controls />
         <MiniMap />
         
-        <Panel position="top-left" className="z-10">
-          <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-            <span className="text-sm font-medium">{currentBoardName}</span>
-            <button
-              onClick={() => saveBoard()}
-              disabled={saveStatus === 'saving'}
-              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-            >
-              {saveStatus === 'saving' ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </Panel>
-        
-        <Panel position="bottom-right" className="z-10">
+        <div className="absolute bottom-4 right-1 z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               💡 Tip: Drag & drop documents and images here
             </p>
           </div>
-        </Panel>
+        </div>
         
         {isBoardView && (
           <>
