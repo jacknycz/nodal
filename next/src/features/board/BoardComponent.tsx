@@ -226,47 +226,101 @@ function BoardContent({
         return;
       }
 
-      // Capture the screenshot
-      const canvas = await html2canvas(reactFlowElement, {
-        background: theme === 'dark' ? '#1f2937' : '#ffffff',
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-      });
+      // Create a clone to avoid modifying the original
+      const clone = reactFlowElement.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '-9999px';
+      document.body.appendChild(clone);
 
-      // Convert to blob
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          resolve(blob!);
-        }, 'image/jpeg', 0.8);
-      });
-
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        const base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
-
-        // Send to API
-        const response = await fetch('/api/board/thumbnail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            boardId,
-            thumbnail: base64 
-          }),
+      try {
+        // Capture the screenshot with minimal options to avoid CSS parsing issues
+        const canvas = await html2canvas(clone, {
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
         });
 
-        if (response.ok) {
-          console.log('Thumbnail saved successfully');
-        } else {
-          console.error('Failed to save thumbnail');
-        }
-      };
-      reader.readAsDataURL(blob);
+        // Convert to blob
+        const blob = await new Promise<Blob>((resolve) => {
+          canvas.toBlob((blob) => {
+            resolve(blob!);
+          }, 'image/jpeg', 0.8);
+        });
+
+        // Convert blob to base64
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64data = reader.result as string;
+          const base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+
+          // Send to API
+          const response = await fetch('/api/board/thumbnail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              boardId,
+              thumbnail: base64 
+            }),
+          });
+
+          if (response.ok) {
+            console.log('Thumbnail saved successfully');
+          } else {
+            console.error('Failed to save thumbnail');
+          }
+        };
+        reader.readAsDataURL(blob);
+
+      } finally {
+        // Clean up the clone
+        document.body.removeChild(clone);
+      }
 
     } catch (error) {
       console.error('Screenshot capture failed:', error);
+      // Fallback: try with even more minimal options
+      try {
+        const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
+        if (reactFlowElement) {
+          const canvas = await html2canvas(reactFlowElement, {
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            background: theme === 'dark' ? '#1f2937' : '#ffffff',
+          });
+
+          const blob = await new Promise<Blob>((resolve) => {
+            canvas.toBlob((blob) => {
+              resolve(blob!);
+            }, 'image/jpeg', 0.8);
+          });
+
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const base64data = reader.result as string;
+            const base64 = base64data.split(',')[1];
+
+            const response = await fetch('/api/board/thumbnail', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                boardId,
+                thumbnail: base64 
+              }),
+            });
+
+            if (response.ok) {
+              console.log('Thumbnail saved successfully (fallback)');
+            } else {
+              console.error('Failed to save thumbnail (fallback)');
+            }
+          };
+          reader.readAsDataURL(blob);
+        }
+      } catch (fallbackError) {
+        console.error('Fallback screenshot capture also failed:', fallbackError);
+      }
     }
   };
 
