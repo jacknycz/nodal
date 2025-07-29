@@ -101,7 +101,7 @@ src/
 - **React**: Functional components with hooks only
 - **Styling**: Tailwind CSS with Pres Start design system
 - **State**: Zustand for global state, local state for UI
-
+- **KISS**: Keep It Simple, Stupid - prefer simple, readable solutions over complex abstractions
 
 
 ## 🤝 Contributing

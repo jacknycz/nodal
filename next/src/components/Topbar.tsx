@@ -102,7 +102,7 @@ export default function Topbar({
                 </div>
                 
                 {/* Save Status */}
-                <div className="flex items-center text-xs">
+                <div className="flex items-center gap-2 text-xs">
                   {saveStatus === 'saving' && (
                     <div className="flex items-center text-blue-600 dark:text-blue-400">
                       <div className="w-2 h-2 mr-2 bg-blue-600 rounded-full animate-pulse"></div>
@@ -126,6 +126,17 @@ export default function Topbar({
                       <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
                       <span>Save failed</span>
                     </div>
+                  )}
+                  
+                  {/* Manual Save Button */}
+                  {hasUnsavedChanges && onSaveBoard && (
+                    <button
+                      onClick={onSaveBoard}
+                      disabled={saveStatus === 'saving'}
+                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Save
+                    </button>
                   )}
                 </div>
               </div>

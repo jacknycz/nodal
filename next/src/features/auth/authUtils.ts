@@ -37,23 +37,16 @@ export function useSupabaseUser() {
   useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser()
-      console.log('[Supabase] getUser() result:', data.user)
       setUser(data.user ?? null)
       // Also log the session
       const sessionResult = await supabase.auth.getSession()
-      console.log('[Supabase] getSession() result:', sessionResult.data.session)
     }
     getUser()
     const { data: listener } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
-      console.log('[Supabase] onAuthStateChange:', session)
       setUser(session?.user ?? null)
     })
     return () => listener?.subscription.unsubscribe()
   }, [])
-
-  useEffect(() => {
-    console.log('[Supabase] useSupabaseUser state:', user)
-  }, [user])
 
   return user
 } 

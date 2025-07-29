@@ -22,14 +22,17 @@ export default function BoardRoomPage() {
     hasUnsavedChanges: false
   })
 
-  console.log('[BoardRoomPage] user:', user)
-
   const handleOpenBoard = async (board: SavedBoard | null, brief?: BoardBrief | null) => {
     console.log('Open board:', board, brief)
     if (board) {
       // Existing board - just open it
       setCurrentBoard(board)
       setCurrentView('board')
+      // Set the board name for existing boards
+      setBoardState(prev => ({
+        ...prev,
+        boardName: board.name
+      }))
     } else if (brief) {
       // New board - just set the brief and switch to board view
       setPendingBoardBrief(brief)
@@ -44,15 +47,33 @@ export default function BoardRoomPage() {
   }
 
   const handleBoardStateChange = (boardName: string, saveStatus: string, hasUnsavedChanges: boolean) => {
+    console.log('📊 BoardRoomPage received state change:', {
+      boardName,
+      saveStatus,
+      hasUnsavedChanges,
+      currentBoardState: boardState
+    })
+    
     setBoardState({ 
       boardName, 
       saveStatus: saveStatus as 'saved' | 'saving' | 'unsaved' | 'error', 
       hasUnsavedChanges 
     })
+    
+    console.log('📊 BoardRoomPage updated state to:', {
+      boardName,
+      saveStatus: saveStatus as 'saved' | 'saving' | 'unsaved' | 'error',
+      hasUnsavedChanges
+    })
   }
 
   const clearPendingBoardBrief = () => {
     setPendingBoardBrief(null)
+  }
+
+  const handleManualSave = () => {
+    // This will be handled by the BoardComponent
+    console.log('Manual save requested')
   }
 
   return (
@@ -62,8 +83,11 @@ export default function BoardRoomPage() {
           <>
             <Topbar 
               currentBoardName={boardState.boardName} 
+              saveStatus={boardState.saveStatus}
+              hasUnsavedChanges={boardState.hasUnsavedChanges}
               isBoardView={currentView === 'board'}
               onOpenBoardRoom={handleOpenBoardRoom}
+              onSaveBoard={handleManualSave}
             />
             {currentView === 'boardroom' ? (
               <BoardRoom onOpenBoard={handleOpenBoard} />
@@ -71,6 +95,7 @@ export default function BoardRoomPage() {
               <BoardComponent 
                 onBoardStateChange={handleBoardStateChange}
                 initialBoard={currentBoard ? { nodes: currentBoard.data.nodes, edges: currentBoard.data.edges } : undefined}
+                boardId={currentBoard?.id}
                 pendingBoardBrief={pendingBoardBrief || undefined}
                 clearPendingBoardBrief={clearPendingBoardBrief}
               />

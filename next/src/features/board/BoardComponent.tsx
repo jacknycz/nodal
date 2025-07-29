@@ -48,6 +48,7 @@ interface BoardProps {
   onBoardStateChange?: (name: string, status: string, hasChanges: boolean) => void
   clearPendingBoardBrief?: () => void
   isBoardView?: boolean
+  boardId?: string // Add board ID for existing boards
 }
 
 function BoardContent({
@@ -56,6 +57,7 @@ function BoardContent({
   onBoardStateChange,
   clearPendingBoardBrief,
   isBoardView = true,
+  boardId,
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
@@ -68,6 +70,11 @@ function BoardContent({
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
+  
+  // Autosave state - simplified
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isInitializedRef = useRef(false)
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
@@ -92,6 +99,102 @@ function BoardContent({
     )
   }
   
+  // Simple autosave function - KISS principle
+  const triggerAutosave = useCallback(() => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current)
+    }
+    
+    autosaveTimeoutRef.current = setTimeout(async () => {
+      if (!localBoardIdRef.current) {
+        console.log('⏭️ Autosave skipped - no board ID')
+        return
+      }
+      
+      try {
+        console.log('🚀 Starting autosave...')
+        setSaveStatus('saving')
+        
+        const boardData = {
+          nodes,
+          edges,
+          viewport: reactFlowInstance.getViewport(),
+        }
+        
+        console.log('💾 Saving board data:', {
+          boardId: localBoardIdRef.current,
+          nodesCount: boardData.nodes.length,
+          edgesCount: boardData.edges.length
+        })
+        
+        await boardStorage.updateBoard(localBoardIdRef.current, boardData)
+        
+        console.log('✅ Autosave completed successfully')
+        setSaveStatus('saved')
+        setHasUnsavedChanges(false)
+        
+        if (onBoardStateChange) {
+          onBoardStateChange(currentBoardName, 'saved', false)
+        }
+      } catch (error) {
+        console.error('❌ Autosave failed:', error)
+        setSaveStatus('error')
+        setHasUnsavedChanges(true)
+        
+        if (onBoardStateChange) {
+          onBoardStateChange(currentBoardName, 'error', true)
+        }
+      }
+    }, 2000) // 2 second delay
+  }, [nodes, edges, reactFlowInstance, currentBoardName])
+  
+  // Store the current triggerAutosave function in a ref to avoid dependency issues
+  const triggerAutosaveRef = useRef(triggerAutosave)
+  triggerAutosaveRef.current = triggerAutosave
+  
+  // Store onBoardStateChange in a ref to avoid dependency issues
+  const onBoardStateChangeRef = useRef(onBoardStateChange)
+  onBoardStateChangeRef.current = onBoardStateChange
+  
+  // Simple effect to trigger autosave when nodes/edges change
+  useEffect(() => {
+    // Skip during initialization
+    if (!isInitializedRef.current) {
+      return
+    }
+    
+    // Skip if no board ID
+    if (!localBoardIdRef.current) {
+      return
+    }
+    
+    // Skip if we're currently saving
+    if (saveStatus === 'saving') {
+      return
+    }
+    
+    // Trigger autosave when nodes or edges change
+    if (nodes.length > 0 || edges.length > 0) {
+      console.log('📝 Changes detected, triggering autosave...')
+      setHasUnsavedChanges(true)
+      if (onBoardStateChangeRef.current) {
+        onBoardStateChangeRef.current(currentBoardName, 'saving', true)
+      }
+      triggerAutosaveRef.current()
+    }
+  }, [nodes, edges, currentBoardName, saveStatus])
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current)
+      }
+    }
+  }, [])
+
+
+  
   // Board utilities
   // Generate starter nodes using AI
   const generateStarterNodes = async (brief: BoardBrief, boardId: string) => {
@@ -115,26 +218,46 @@ function BoardContent({
       try {
         let jsonContent = response.content.trim()
         if (jsonContent.startsWith('```json')) {
-          jsonContent = jsonContent.replace(/^```json\s*/, ').replace(/\s*```$/, ')
+          jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '')
         } else if (jsonContent.startsWith('```')) {
-          jsonContent = jsonContent.replace(/^```\s*/, ').replace(/\s*```$/, ')
+          jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '')
         }
         
-        const nodes = JSON.parse(jsonContent)
-        if (Array.isArray(nodes)) {
-          nodes.forEach((nodeData, index) => {
+        const nodeDataArray = JSON.parse(jsonContent)
+        if (Array.isArray(nodeDataArray)) {
+          // Create all nodes at once
+          const generatedNodes = nodeDataArray.map((nodeData, index) => {
             const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
-            const newNode = {
+            return {
               id: `starter-node-${Date.now()}-${index}`,
               type: 'default',
               position,
               data: { label: nodeData.label, content: nodeData.content },
             }
-            handleAddNodeToStore(newNode)
           })
           
-          // Don't auto-save here - the board is already saved when created
-          // The AI nodes will be saved when the user makes changes or manually saves
+          // Set all nodes at once
+          setNodes(generatedNodes)
+          console.log('📝 Set generated nodes in state:', generatedNodes.length)
+          
+          // Save immediately to database
+          const boardData = {
+            nodes: generatedNodes,
+            edges: [],
+            viewport: reactFlowInstance.getViewport(),
+          }
+          
+          console.log('💾 Saving generated nodes immediately...')
+          await boardStorage.updateBoard(boardId, boardData)
+          console.log('✅ Generated nodes saved successfully')
+          
+          // Update save status
+          setSaveStatus('saved')
+          setHasUnsavedChanges(false)
+          
+          if (onBoardStateChange) {
+            onBoardStateChange(brief.boardName, 'saved', false)
+          }
         }
       } catch (parseError) {
         console.error('Failed to parse AI response:', parseError)
@@ -145,7 +268,26 @@ function BoardContent({
           position: { x: 200, y: 200 },
           data: { label: `Getting Started with ${brief.boardTopic}`, content: response.content },
         }
-        handleAddNodeToStore(newNode)
+        setNodes([newNode])
+        
+        // Save the single node immediately
+        const boardData = {
+          nodes: [newNode],
+          edges: [],
+          viewport: reactFlowInstance.getViewport(),
+        }
+        
+        console.log('💾 Saving single generated node immediately...')
+        await boardStorage.updateBoard(boardId, boardData)
+        console.log('✅ Single generated node saved successfully')
+        
+        // Update save status
+        setSaveStatus('saved')
+        setHasUnsavedChanges(false)
+        
+        if (onBoardStateChange) {
+          onBoardStateChange(brief.boardName, 'saved', false)
+        }
       }
     } catch (error) {
       console.error('Failed to generate starter nodes:', error)
@@ -155,10 +297,31 @@ function BoardContent({
   
   // Initialize board
   useEffect(() => {
+    // Prevent multiple initializations
+    if (isInitializedRef.current) {
+      console.log('⏭️ Skipping initialization - already initialized')
+      return
+    }
+    
+    console.log('🔄 Board initialization effect triggered:', {
+      hasInitialBoard: !!initialBoard,
+      hasPendingBoardBrief: !!pendingBoardBrief,
+      hasLocalBoardId: !!localBoardIdRef.current,
+      boardId
+    })
+    
+    // Set board ID for existing boards
+    if (boardId && !localBoardIdRef.current) {
+      console.log('🆔 Setting board ID for existing board:', boardId)
+      localBoardIdRef.current = boardId
+    }
+    
     if (initialBoard && initialBoard.nodes) {
+      console.log('📥 Loading initial board nodes:', initialBoard.nodes.length)
       setNodes(initialBoard.nodes)
     }
     if (initialBoard && initialBoard.edges) {
+      console.log('📥 Loading initial board edges:', initialBoard.edges.length)
       setEdges(initialBoard.edges)
     }
     if (pendingBoardBrief && !localBoardIdRef.current) { // Only run if we don't already have a localBoardId
@@ -205,7 +368,10 @@ function BoardContent({
         clearPendingBoardBrief()
       }
     }
-  }, [initialBoard, pendingBoardBrief, setNodes, setEdges, clearPendingBoardBrief])
+    
+    // Mark as initialized
+    isInitializedRef.current = true
+  }, [initialBoard, pendingBoardBrief, setNodes, setEdges, clearPendingBoardBrief, boardId])
   
   // Handle connections
   const onConnect = useCallback(
@@ -226,6 +392,7 @@ function BoardContent({
   
   // Handle adding nodes
   const handleAddNode = useCallback((title: string, position: { x: number; y: number }) => {
+    console.log('➕ Adding new node:', { title, position })
     const newNode: Node = {
       id: `node-${Date.now()}`,
       type: 'default',
@@ -234,6 +401,7 @@ function BoardContent({
     }
     // Use React Flow's addNode utility
     const addNode = (node: Node) => {
+      console.log('📝 Adding node to state:', node.id)
       setNodes((nds) => {
         if (!Array.isArray(nds)) return [node]
         return [...nds, node]
@@ -254,13 +422,21 @@ function BoardContent({
   const saveBoard = useCallback(async (name?: string) => {
     console.log('💾 saveBoard called with name:', name, 'localBoardId:', localBoardIdRef.current)
     try {
+      console.log('🚀 Starting manual save...')
       setSaveStatus('saving')
+      setHasUnsavedChanges(false)
       
       const boardData = {
         nodes,
         edges,
         viewport: reactFlowInstance.getViewport(),
       }
+      
+      console.log('💾 Manual save data:', {
+        nodesCount: boardData.nodes.length,
+        edgesCount: boardData.edges.length,
+        boardId: localBoardIdRef.current
+      })
       
       if (localBoardIdRef.current && !name) {
         await boardStorage.updateBoard(localBoardIdRef.current, boardData)
@@ -273,15 +449,26 @@ function BoardContent({
         setCurrentBoardName(boardName)
       }
       
+      console.log('✅ Manual save completed successfully')
       setSaveStatus('saved')
+      
       if (onBoardStateChange) {
+        console.log('🔄 Updating board state: saved, false')
         onBoardStateChange(currentBoardName, 'saved', false)
       }
     } catch (error) {
-      console.error('Failed to save board:', error)
+      console.error('❌ Manual save failed:', error)
       setSaveStatus('error')
+      setHasUnsavedChanges(true)
+      
+      if (onBoardStateChange) {
+        console.log('🔄 Updating board state: error, true')
+        onBoardStateChange(currentBoardName, 'error', true)
+      }
     }
   }, [nodes, edges, localBoardIdRef.current, currentBoardName, reactFlowInstance, onBoardStateChange])
+
+
   
   // Handle document upload
   const handleDocumentUpload = useCallback(async (file: File) => {
@@ -372,7 +559,7 @@ function BoardContent({
         )
       })
     }
-  }, [getViewportCenter, handleAddNodeToStore, setNodes])
+  }, [getViewportCenter, handleAddNodeToStore])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
