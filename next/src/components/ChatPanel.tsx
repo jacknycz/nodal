@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useUnifiedAI } from '../features/ai/useUnifiedAI'
 import { useAIContext } from '../features/ai/aiContext'
 import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key } from 'lucide-react'
-import type { BoardNode, BoardEdge } from '../features/board/boardTypes'
 
 interface ChatPanelProps {
   onGenerateNode?: (nodeData: { label: string; content?: string }) => void
@@ -25,7 +24,6 @@ export default function ChatPanel({
   const {
     messages,
     sendMessage,
-    clearChat,
     generateNodes,
     isLoading,
     isGeneratingNodes,
@@ -91,7 +89,7 @@ export default function ChatPanel({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 left-4 z-50 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors"
+        className="fixed bottom-4 left-4 z-150 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors"
         title="Open Chat"
       >
         <MessageSquare className="w-5 h-5" />
@@ -100,7 +98,7 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 w-96 h-96 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="fixed top-12 right-0 z-50 w-96 h-[calc(100vh-48px)] bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
