@@ -274,7 +274,7 @@ function BoardContent({
       const fileName = `thumbnail-${boardId}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(fileName, blob, {
+        .upload(`${user.id}/${fileName}`, blob, {
           contentType: 'image/jpeg',
           upsert: true,
         });

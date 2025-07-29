@@ -20,6 +20,7 @@ interface SavedBoard {
   lastModified: number
   nodeCount: number
   edgeCount: number
+  userId: string
 }
 
 // Document storage interfaces

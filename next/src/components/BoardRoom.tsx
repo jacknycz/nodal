@@ -18,7 +18,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
   const [imgError, setImgError] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnail-${board.id}.jpg`)
+  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/${board.userId}/thumbnail-${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
 
   // Debug logging
@@ -29,14 +29,14 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     if (loading) {
       const timeout = setTimeout(() => {
         // Bump the URL to force reload
-        const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnail-${board.id}.jpg?${Date.now()}`;
+        const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/${board.userId}/thumbnail-${board.id}.jpg?${Date.now()}`;
         console.log('Updating thumbnail URL:', newUrl);
         setThumbnailUrl(newUrl)
         setLoading(false)
       }, 2000)
       return () => clearTimeout(timeout)
     }
-  }, [loading, board.id])
+  }, [loading, board.id, board.userId])
 
   // Listen for a custom event to trigger loading state
   useEffect(() => {
