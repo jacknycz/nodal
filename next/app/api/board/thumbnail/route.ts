@@ -8,20 +8,39 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { boardId } = await req.json();
+    const { boardId, thumbnail } = await req.json();
     if (!boardId) {
       return NextResponse.json({ error: 'Missing boardId' }, { status: 400 });
     }
 
-    // For now, just return success - we'll implement actual thumbnail generation later
-    // This allows us to test the flow without the complex Puppeteer setup
-    console.log(`Thumbnail generation requested for board: ${boardId}`);
+    if (!thumbnail) {
+      return NextResponse.json({ error: 'Missing thumbnail data' }, { status: 400 });
+    }
+
+    // Convert base64 to buffer
+    const buffer = Buffer.from(thumbnail, 'base64');
+
+    // Upload to Supabase storage
+    const { error } = await supabase.storage
+      .from('board-thumbnails')
+      .upload(`${boardId}.jpg`, buffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    console.log(`Thumbnail saved successfully for board: ${boardId}`);
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Thumbnail generation endpoint ready - implementation pending' 
+      message: 'Thumbnail saved successfully' 
     });
   } catch (err: any) {
+    console.error('Thumbnail API error:', err);
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }

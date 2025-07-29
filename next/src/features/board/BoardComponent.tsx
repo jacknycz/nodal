@@ -18,6 +18,7 @@ import {
   useStore,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import html2canvas from 'html2canvas'
 
 import { useBoard } from './useBoard'
 import { boardStorage } from '../storage/storage'
@@ -215,6 +216,60 @@ function BoardContent({
     }
   }, [])
 
+  // Add screenshot capture function
+  const captureBoardScreenshot = async (boardId: string) => {
+    try {
+      // Find the ReactFlow container
+      const reactFlowElement = document.querySelector('.react-flow') as HTMLElement;
+      if (!reactFlowElement) {
+        console.log('ReactFlow element not found');
+        return;
+      }
+
+      // Capture the screenshot
+      const canvas = await html2canvas(reactFlowElement, {
+        background: theme === 'dark' ? '#1f2937' : '#ffffff',
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+
+      // Convert to blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          resolve(blob!);
+        }, 'image/jpeg', 0.8);
+      });
+
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        const base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+
+        // Send to API
+        const response = await fetch('/api/board/thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            boardId,
+            thumbnail: base64 
+          }),
+        });
+
+        if (response.ok) {
+          console.log('Thumbnail saved successfully');
+        } else {
+          console.error('Failed to save thumbnail');
+        }
+      };
+      reader.readAsDataURL(blob);
+
+    } catch (error) {
+      console.error('Screenshot capture failed:', error);
+    }
+  };
+
   useEffect(() => {
     // Only trigger on transition from 'saving' to 'saved'
     if (prevSaveStatus.current === 'saving' && saveStatus === 'saved' && localBoardIdRef.current) {
@@ -222,16 +277,11 @@ function BoardContent({
       setThumbnailLoading(true);
       // Dispatch event for BoardRoom
       window.dispatchEvent(new CustomEvent('thumbnail-generation', { detail: localBoardIdRef.current }));
-      fetch('/api/board/thumbnail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boardId: localBoardIdRef.current }),
-      })
-        .then(res => res.json())
-        .then(data => {
-          setThumbnailLoading(false);
-        })
-        .catch(() => setThumbnailLoading(false));
+      
+      // Capture and save thumbnail
+      captureBoardScreenshot(localBoardIdRef.current);
+      
+      setThumbnailLoading(false);
     }
     prevSaveStatus.current = saveStatus;
   }, [saveStatus]);
