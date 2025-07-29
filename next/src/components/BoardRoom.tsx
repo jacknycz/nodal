@@ -18,15 +18,20 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
   const [imgError, setImgError] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnails/${board.id}.jpg`)
+  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnail-${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
+
+  // Debug logging
+  console.log('BoardCard render:', { boardId: board.id, thumbnailUrl });
 
   // Optionally, poll for thumbnail updates
   useEffect(() => {
     if (loading) {
       const timeout = setTimeout(() => {
         // Bump the URL to force reload
-        setThumbnailUrl(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnails/${board.id}.jpg?${Date.now()}`)
+        const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnail-${board.id}.jpg?${Date.now()}`;
+        console.log('Updating thumbnail URL:', newUrl);
+        setThumbnailUrl(newUrl)
         setLoading(false)
       }, 2000)
       return () => clearTimeout(timeout)
@@ -96,7 +101,13 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
             alt="Board thumbnail"
             className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
             style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
-            onError={() => setImgError(true)}
+            onError={() => {
+              console.log('Thumbnail failed to load:', thumbnailUrl);
+              setImgError(true);
+            }}
+            onLoad={() => {
+              console.log('Thumbnail loaded successfully:', thumbnailUrl);
+            }}
           />
         ) : null}
         {!loading && imgError && (

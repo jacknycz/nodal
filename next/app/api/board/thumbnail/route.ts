@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+console.log('Supabase URL:', process.env.SUPABASE_URL ? 'Set' : 'Not set');
+console.log('Supabase Service Role Key:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set');
+
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -9,6 +12,8 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { boardId, thumbnail } = await req.json();
+    console.log('Thumbnail API called with boardId:', boardId);
+    
     if (!boardId) {
       return NextResponse.json({ error: 'Missing boardId' }, { status: 400 });
     }
@@ -19,11 +24,13 @@ export async function POST(req: NextRequest) {
 
     // Convert base64 to buffer
     const buffer = Buffer.from(thumbnail, 'base64');
+    console.log('Buffer created, size:', buffer.length);
 
     // Upload to Supabase storage
+    console.log('Attempting to upload to Supabase storage...');
     const { error } = await supabase.storage
       .from('documents')
-      .upload(`thumbnails/${boardId}.jpg`, buffer, {
+      .upload(`thumbnail-${boardId}.jpg`, buffer, {
         contentType: 'image/jpeg',
         upsert: true,
       });

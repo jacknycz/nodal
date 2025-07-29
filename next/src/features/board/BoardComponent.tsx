@@ -36,6 +36,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
 import type { BoardBrief } from './boardTypes'
 import NodeSetupModal from '../../components/NodeSetupModal'
+import { supabase } from '../auth/supabaseClient';
 
 const nodeTypes = {
   default: NodalNode,
@@ -216,86 +217,74 @@ function BoardContent({
     }
   }, [])
 
-  // Add screenshot capture function
+  // Add screenshot capture function (current Canvas API implementation)
   const captureBoardScreenshot = async (boardId: string) => {
     try {
-      // Create a simple canvas representation instead of using html2canvas
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d')!;
-      
-      // Set canvas size
+
       canvas.width = 1200;
       canvas.height = 800;
-      
-      // Fill background based on theme
+
       ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw board title
+
       ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
       ctx.font = 'bold 24px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(currentBoardName || 'Untitled Board', canvas.width / 2, 40);
-      
-      // Draw node count
+
       ctx.font = '16px system-ui';
       ctx.fillText(`${nodes.length} nodes, ${edges.length} connections`, canvas.width / 2, 70);
-      
-      // Draw a simple representation of nodes
+
       const nodeRadius = 8;
       const spacing = 100;
       const startX = 100;
       const startY = 150;
-      
+
       nodes.forEach((node, index) => {
         const x = startX + (index % 8) * spacing;
         const y = startY + Math.floor(index / 8) * spacing;
-        
-        // Draw node circle
+
         ctx.fillStyle = theme === 'dark' ? '#3b82f6' : '#2563eb';
         ctx.beginPath();
         ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
         ctx.fill();
-        
-        // Draw node label
+
         ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
         ctx.font = '12px system-ui';
         ctx.textAlign = 'center';
         const label = (node.data?.title || node.data?.label || `Node ${index + 1}`) as string;
         ctx.fillText(label.substring(0, 15), x, y + 25);
       });
-      
-      // Convert to blob
+
       const blob = await new Promise<Blob>((resolve) => {
         canvas.toBlob((blob) => {
           resolve(blob!);
         }, 'image/jpeg', 0.8);
       });
 
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        const base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+      // Upload directly to Supabase storage using the same client as documents
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated for thumbnail upload');
+        return;
+      }
 
-        // Send to API
-        const response = await fetch('/api/board/thumbnail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            boardId,
-            thumbnail: base64 
-          }),
+      const fileName = `thumbnail-${boardId}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: true,
         });
 
-        if (response.ok) {
-          console.log('Thumbnail saved successfully');
-        } else {
-          console.error('Failed to save thumbnail');
-        }
-      };
-      reader.readAsDataURL(blob);
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        return;
+      }
 
+      console.log('Thumbnail saved successfully to Supabase storage');
     } catch (error) {
       console.error('Screenshot capture failed:', error);
     }
