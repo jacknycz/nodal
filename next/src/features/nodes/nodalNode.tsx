@@ -19,14 +19,14 @@ export default function NodalNode({ data }: NodalNodeProps) {
   const displayTitle = data.label || data.title || 'Untitled'
   
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4 min-w-[200px]">
+    <div className="flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[640px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm">
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="nodal-drag-handle cursor-move">
-        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">
+        <h3 className="text-base font-medium text-gray-900 dark:text-gray-100 mb-2">
           {displayTitle}
         </h3>
         {data.content && (
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             {data.content}
           </p>
         )}

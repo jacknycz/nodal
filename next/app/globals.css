@@ -66,6 +66,7 @@ body {
   --color-tertiary-800: #B30075;
   --color-tertiary-900: #990064;
   --color-tertiary-950: #660043;
+  --font-fredoka: var(--font-fredoka);
 }
 
 
