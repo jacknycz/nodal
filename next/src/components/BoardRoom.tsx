@@ -18,6 +18,29 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
   const [imgError, setImgError] = useState(false)
+  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/board-thumbnails/${board.id}.jpg`)
+  const [loading, setLoading] = useState(false)
+
+  // Optionally, poll for thumbnail updates
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        // Bump the URL to force reload
+        setThumbnailUrl(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/board-thumbnails/${board.id}.jpg?${Date.now()}`)
+        setLoading(false)
+      }, 2000)
+      return () => clearTimeout(timeout)
+    }
+  }, [loading, board.id])
+
+  // Listen for a custom event to trigger loading state
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      if (e.detail === board.id) setLoading(true)
+    }
+    window.addEventListener('thumbnail-generation', handler as EventListener)
+    return () => window.removeEventListener('thumbnail-generation', handler as EventListener)
+  }, [board.id])
 
   const handleRename = () => {
     if (newName.trim() && newName.trim() !== board.name) {
@@ -55,8 +78,6 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     }
   }
 
-  const thumbnailUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/board-thumbnails/${board.id}.jpg`;
-
   return (
     <div
       className="relative group p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
@@ -64,7 +85,12 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     >
       {/* Board Thumbnail */}
       <div className="mb-2 w-full flex justify-center items-center">
-        {!imgError ? (
+        {loading && (
+          <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
+            <span className="text-gray-400 text-xs">Generating...</span>
+          </div>
+        )}
+        {!loading && !imgError ? (
           <img
             src={thumbnailUrl}
             alt="Board thumbnail"
@@ -72,7 +98,8 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
             style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
             onError={() => setImgError(true)}
           />
-        ) : (
+        ) : null}
+        {!loading && imgError && (
           <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded text-gray-400 text-xs">
             No Thumbnail
           </div>

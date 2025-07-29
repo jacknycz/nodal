@@ -53,6 +53,7 @@ interface BoardProps {
   isBoardView?: boolean
   boardId?: string // Add board ID for existing boards
   boardName?: string // Add board name for existing boards
+  screenshotMode?: boolean // Add screenshot mode
 }
 
 function BoardContent({
@@ -63,6 +64,7 @@ function BoardContent({
   isBoardView = true,
   boardId,
   boardName, // Add this parameter
+  screenshotMode = false, // Add screenshotMode
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
@@ -76,6 +78,8 @@ function BoardContent({
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
+  const [thumbnailLoading, setThumbnailLoading] = useState(false);
+  const prevSaveStatus = useRef(saveStatus);
   
   // Autosave state - simplified
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -211,7 +215,26 @@ function BoardContent({
     }
   }, [])
 
-
+  useEffect(() => {
+    // Only trigger on transition from 'saving' to 'saved'
+    if (prevSaveStatus.current === 'saving' && saveStatus === 'saved' && localBoardIdRef.current) {
+      // Trigger thumbnail generation
+      setThumbnailLoading(true);
+      // Dispatch event for BoardRoom
+      window.dispatchEvent(new CustomEvent('thumbnail-generation', { detail: localBoardIdRef.current }));
+      fetch('/api/board/thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boardId: localBoardIdRef.current }),
+      })
+        .then(res => res.json())
+        .then(data => {
+          setThumbnailLoading(false);
+        })
+        .catch(() => setThumbnailLoading(false));
+    }
+    prevSaveStatus.current = saveStatus;
+  }, [saveStatus]);
   
   // Board utilities
   // Generate starter nodes using AI
@@ -825,45 +848,85 @@ function BoardContent({
       
       <BokehBackground />
       
-      {showTopicModal && (
-        <TopicModal
-          isOpen={showTopicModal}
-          onClose={() => setShowTopicModal(false)}
-          onSave={(topic: string) => {
-            setCurrentBoardName(topic)
-            setShowTopicModal(false)
-          }}
-        />
-      )}
-      
-      {showAINodeGenerator && (
-        <AINodeGenerator
-          isOpen={showAINodeGenerator}
-          onClose={() => setShowAINodeGenerator(false)}
-          onGenerate={(nodeData: { label: string; content?: string }) => {
-            const position = getViewportCenter()
-            const newNode = {
-              id: `ai-node-${Date.now()}`,
-              type: 'default',
-              position,
-              data: { ...nodeData },
-            }
-            handleAddNodeToStore(newNode)
-            setShowAINodeGenerator(false)
-          }}
-          initialContext={pendingBoardBrief ? {
-            topic: pendingBoardBrief.boardTopic,
-            description: pendingBoardBrief.description
-          } : undefined}
-        />
-      )}
-
-      {showNodeSetupModal && (
-        <NodeSetupModal
-          isOpen={showNodeSetupModal}
-          onComplete={handleNodeSetupComplete}
-          onClose={() => setShowNodeSetupModal(false)}
-        />
+      {/* Hide overlays, modals, and toolbars in screenshot mode */}
+      {!screenshotMode && (
+        <>
+          {showTopicModal && (
+            <TopicModal
+              isOpen={showTopicModal}
+              onClose={() => setShowTopicModal(false)}
+              onSave={(topic: string) => {
+                setCurrentBoardName(topic)
+                setShowTopicModal(false)
+              }}
+            />
+          )}
+          {showAINodeGenerator && (
+            <AINodeGenerator
+              isOpen={showAINodeGenerator}
+              onClose={() => setShowAINodeGenerator(false)}
+              onGenerate={(nodeData: { label: string; content?: string }) => {
+                const position = getViewportCenter()
+                const newNode = {
+                  id: `ai-node-${Date.now()}`,
+                  type: 'default',
+                  position,
+                  data: { ...nodeData },
+                }
+                handleAddNodeToStore(newNode)
+                setShowAINodeGenerator(false)
+              }}
+              initialContext={pendingBoardBrief ? {
+                topic: pendingBoardBrief.boardTopic,
+                description: pendingBoardBrief.description
+              } : undefined}
+            />
+          )}
+          {showNodeSetupModal && (
+            <NodeSetupModal
+              isOpen={showNodeSetupModal}
+              onComplete={handleNodeSetupComplete}
+              onClose={() => setShowNodeSetupModal(false)}
+            />
+          )}
+          {isBoardView && (
+            <>
+              <FloatingActionButton
+                onAddNode={() => {
+                  setShowNodeSetupModal(true)
+                }}
+                onAIGenerate={() => {
+                  setShowAINodeGenerator(true)
+                }}
+                onUploadDocument={() => {
+                  const input = document.createElement('input')
+                  input.type = 'file'
+                  input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0]
+                    if (file) handleDocumentUpload(file)
+                  }
+                  input.click()
+                }}
+                aiInitialized={aiInitialized}
+              />
+              {aiInitialized && (
+                <ChatPanel
+                  onGenerateNode={(nodeData: { label: string; content?: string }) => {
+                    const position = getViewportCenter()
+                    const newNode = {
+                      id: `ai-node-${Date.now()}`,
+                      type: 'default',
+                      position,
+                      data: { ...nodeData },
+                    }
+                    handleAddNodeToStore(newNode)
+                  }}
+                />
+              )}
+            </>
+          )}
+        </>
       )}
     </div>
   )

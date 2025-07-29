@@ -5,13 +5,16 @@ import { useEffect, useState } from 'react';
 import BoardComponent from '../../../src/features/board/BoardComponent';
 import { boardStorage } from '../../../src/features/storage/storage';
 import type { SavedBoard } from '../../../src/features/storage/storage';
+import { useSearchParams } from 'next/navigation';
 
 export default function BoardPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const boardId = params.boardId as string;
   const [board, setBoard] = useState<SavedBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const screenshotMode = searchParams.get('screenshot') === 'true';
 
   useEffect(() => {
     const loadBoard = async () => {
@@ -57,6 +60,7 @@ export default function BoardPage() {
       <BoardComponent 
         initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
         onBoardStateChange={(name, status, hasChanges) => console.log('Board state:', { name, status, hasChanges })}
+        screenshotMode={screenshotMode}
       />
     </div>
   );
