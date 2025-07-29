@@ -18,7 +18,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
   const [imgError, setImgError] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/boards/thumbnails/${board.id}.jpg`)
+  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnails/${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
 
   // Optionally, poll for thumbnail updates
@@ -26,7 +26,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     if (loading) {
       const timeout = setTimeout(() => {
         // Bump the URL to force reload
-        setThumbnailUrl(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/boards/thumbnails/${board.id}.jpg?${Date.now()}`)
+        setThumbnailUrl(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/documents/thumbnails/${board.id}.jpg?${Date.now()}`)
         setLoading(false)
       }, 2000)
       return () => clearTimeout(timeout)
