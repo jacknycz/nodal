@@ -1,19 +1,19 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useBoard } from '../features/board/useBoard'
+import { useBoard } from '../../next/src/features/board/useBoard'
 import { useAI } from '../features/ai/useAI'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAINodeGenerator } from '../features/ai/useAINodeGenerator'
 import { useBoardAI } from '../features/ai/useAI'
 import { useViewportCenter } from './useViewportCenter'
 
-import type { BoardNode } from '../features/board/boardTypes'
+import type { BoardNode } from '../../next/src/features/board/boardTypes'
 
 // 🦸‍♂️ PHASE 2 IMPORTS - Superman's Advanced Intelligence
 import { actionDetectionEngine as _actionDetectionEngine } from '../features/ai/actionDetection'
 import { multiStepOrchestrator as _multiStepOrchestrator } from '../features/ai/multiStepActions'
 import type { DetectedAction, ActionType as _ActionType } from '../features/ai/actionDetection'
 import type { ExecutionProgress as _ExecutionProgress, ExecutionReport } from '../features/ai/multiStepActions'
-import { useBoardStore } from '../features/board/boardSlice'
+import { useBoardStore } from '../../next/src/features/board/boardSlice'
 import { searchPlacesGoogle } from '../features/places/placesApi'
 
 interface ChatMessage {

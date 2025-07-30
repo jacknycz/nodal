@@ -165,6 +165,7 @@ export default function Topbar({
               onImportBoard={onImportBoard}
               onOpenSettings={onOpenSettings}
               onLoadBoard={onLoadBoard}
+              isBoardView={isBoardView}
             />
           </div>
         </div>

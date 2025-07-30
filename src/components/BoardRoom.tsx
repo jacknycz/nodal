@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
-import type { BoardBrief } from '../features/board/boardTypes'
+import type { BoardBrief } from '../../next/src/features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
 import { Button } from 'pres-start-core'

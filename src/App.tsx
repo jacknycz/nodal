@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from './features/ai/aiContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import BoardComponent from './features/board/BoardComponent'
+import BoardComponent from '../next/src/features/board/BoardComponent'
 import Topbar from './components/Topbar'
 import TestPage from './components/TestPage'
 import LoginScreen from './components/LoginScreen'
@@ -12,7 +12,7 @@ import nodalBlackLogo from './assets/nodal-black.svg'
 import nodalWhiteLogo from './assets/nodal-white.svg'
 import BoardRoom from './components/BoardRoom'
 import type { SavedBoard } from './features/storage/storage';
-import type { BoardBrief } from './features/board/boardTypes';
+import type { BoardBrief } from '../next/src/features/board/boardTypes';
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 

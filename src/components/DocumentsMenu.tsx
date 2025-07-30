@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { FileText, Trash2, Search, X } from 'lucide-react'
 import { Button } from 'pres-start-core'
-import { useBoardStore } from '../features/board/boardSlice'
+import { useBoardStore } from '../../next/src/features/board/boardSlice'
 import { format } from 'date-fns'
 
 function formatFileSize(bytes: number): string {

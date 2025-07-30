@@ -5,7 +5,7 @@ import { useNodeAwareChat } from '../hooks/useNodeAwareChat'
 import { useAIConfig } from '../features/ai/aiContext'
 import type { NodeResponse } from '../types'
 import nodalBlackLogo from '../assets/nodal-black.svg'
-import { useBoardStore } from '../features/board/boardSlice';
+import { useBoardStore } from '../../next/src/features/board/boardSlice';
 
 interface ChatPanelProps {
   className?: string

@@ -5,7 +5,6 @@ import {
   Building, 
   HelpCircle, 
   LogOut,
-  ChevronDown,
   Clock,
   FileText
 } from 'lucide-react'
@@ -22,6 +21,7 @@ interface AvatarMenuProps {
   onOpenSettings?: () => void
   onLoadBoard?: (board: SavedBoard) => void
   className?: string
+  isBoardView?: boolean
 }
 
 export default function AvatarMenu({
@@ -32,11 +32,11 @@ export default function AvatarMenu({
   onOpenBoardRoom,
   onOpenSettings,
   onLoadBoard,
-  className = ''
+  className = '',
+  isBoardView = false
 }: AvatarMenuProps) {
   const user = useSupabaseUser()
   const [isOpen, setIsOpen] = useState(false)
-  const [submenu, setSubmenu] = useState<null | 'recentBoards'>(null);
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -45,7 +45,6 @@ export default function AvatarMenu({
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false);
-        setSubmenu(null);
       }
     };
     if (isOpen) {
@@ -54,12 +53,12 @@ export default function AvatarMenu({
     }
   }, [isOpen]);
 
-  // Load recent boards when submenu opens
+  // Load recent boards when menu opens
   useEffect(() => {
-    if (submenu === 'recentBoards') {
+    if (isOpen) {
       loadRecentBoards();
     }
-  }, [submenu]);
+  }, [isOpen]);
 
   const loadRecentBoards = async () => {
     try {
@@ -68,7 +67,7 @@ export default function AvatarMenu({
       const allBoards = await boardStorage.getAllBoards()
       const recent = allBoards
         .sort((a, b) => b.lastModified - a.lastModified)
-        .slice(0, 5)
+        .slice(0, 3) // Only show last 3 boards
       setRecentBoards(recent)
     } catch (error) {
       console.error('Failed to load recent boards:', error)
@@ -93,7 +92,6 @@ export default function AvatarMenu({
   const handleLoadBoard = (board: SavedBoard) => {
     onLoadBoard?.(board)
     setIsOpen(false)
-    setSubmenu(null)
   }
 
   const getSaveStatusIcon = () => {
@@ -165,13 +163,11 @@ export default function AvatarMenu({
   };
   const handleMouseLeave = () => {
     setIsOpen(false);
-    setSubmenu(null);
   };
   const handleFocus = () => setIsOpen(true);
   const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsOpen(false);
-      setSubmenu(null);
     }
   };
 
@@ -232,97 +228,59 @@ export default function AvatarMenu({
             </div>
           </div>
 
-          {/* Current Board Info */}
-          {currentBoardName && (
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {currentBoardName}
-                </span>
+          {/* Board Room Link - Only show when NOT on BoardRoom page */}
+          {isBoardView && (
+            <button
+              onClick={handleOpenBoardRoom}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
+            >
+              <Building className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Board Room</span>
+            </button>
+          )}
+
+          {/* Recent Boards Section - Only show when NOT on BoardRoom page */}
+          {isBoardView && (
+            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-2 mb-2">
+                <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Recent boards</span>
               </div>
+              {recentBoards.length > 0 ? (
+                <div className="space-y-1">
+                  {recentBoards.map((board) => (
+                    <button
+                      key={board.id}
+                      onClick={() => handleLoadBoard(board)}
+                      className="w-full px-2 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {board.name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(board.lastModified).toLocaleDateString()}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No recent boards</p>
+                  <button
+                    onClick={handleOpenBoardRoom}
+                    className="mt-1 text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline"
+                  >
+                    Create your first board
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Save Board */}
-          {/* <button
-            onClick={handleSaveBoard}
-            disabled={saveStatus === 'saving' || (!hasUnsavedChanges && saveStatus === 'saved')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="flex items-center space-x-2">
-              <Save className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              {getSaveStatusIcon()}
-            </div>
-            <span className="text-sm text-gray-900 dark:text-white">
-              {getSaveStatusText()}
-            </span>
-          </button> */}
-
-          {/* Board Room with Recent Boards */}
-          <div className="relative">
-            <button
-              onClick={() => setSubmenu(submenu === 'recentBoards' ? null : 'recentBoards')}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between"
-              type="button"
-            >
-              <div className="flex items-center space-x-3">
-                <Building className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">Board Room</span>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${submenu === 'recentBoards' ? 'rotate-180' : ''}`} />
-            </button>
-            {/* Recent Boards Submenu */}
-            {submenu === 'recentBoards' && (
-              <div className="absolute right-64 top-0 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2">
-                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Recent Boards</span>
-                  </div>
-                </div>
-                {recentBoards.length > 0 ? (
-                  <>
-                    {recentBoards.map((board) => (
-                      <button
-                        key={board.id}
-                        onClick={() => handleLoadBoard(board)}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {board.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(board.lastModified).toLocaleDateString()}
-                        </div>
-                      </button>
-                    ))}
-                    <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-                      <button
-                        onClick={handleOpenBoardRoom}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-blue-600 dark:text-blue-400 font-medium"
-                      >
-                        View All Boards 
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">No recent boards</p>
-                    <button
-                      onClick={handleOpenBoardRoom}
-                      className="mt-2 text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                    >
-                      Create your first board
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Separator */}
-          <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+          {/* Separator - Only show when we have content above and below */}
+          {isBoardView && (
+            <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+          )}
 
           {/* Settings */}
           <button

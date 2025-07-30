@@ -93,3 +93,113 @@ body {
   background: transparent !important;
   border: none !important;
 } */
+
+/* Edge hover effects */
+.react-flow__edge:hover {
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Delete button animations */
+.edge-delete-button {
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.react-flow__edge:hover + .edge-delete-button,
+.edge-delete-button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Prevent edge selection when clicking delete button */
+.edge-delete-button {
+  pointer-events: all;
+  z-index: 10;
+}
+
+/* CSS-only delete button approach */
+.react-flow__edge {
+  position: relative;
+}
+
+.react-flow__edge::after {
+  content: '×';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.react-flow__edge:hover::after {
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: all;
+}
+
+/* Add this to your globals.css for animated connection lines */
+.animated {
+  stroke-dasharray: 5,5;
+  animation: dash 1s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* Add this to your globals.css for the delete button animations */
+
+/* Subtle breathing animation for delete button */
+@keyframes delete-button-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* Apply the animation to delete buttons */
+.delete-button-animate {
+  animation: delete-button-breathe 2s ease-in-out infinite;
+}
+
+.delete-button-animate:hover {
+  animation: none;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.6);
+}
+
+/* Add this to your globals.css for the delete button entrance animation */
+
+@keyframes delete-button-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-180deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.delete-button-enter {
+  animation: delete-button-enter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

@@ -7,7 +7,7 @@ import ThemeToggle from './ThemeToggle'
 import AISettingsMenu from './AISettingsMenu'
 import DocumentsMenu from './DocumentsMenu'
 import React, { useState, useRef, useEffect } from 'react'
-import { useBoardStore } from '../features/board/boardSlice';
+import { useBoardStore } from '../../next/src/features/board/boardSlice';
 import { House } from 'lucide-react';
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import { AIProvider } from '../features/ai/aiContext'
-import BoardComponent from '../features/board/BoardComponent'
+import BoardComponent from '../../next/src/features/board/BoardComponent'
 import Topbar from './Topbar'
 import { useChat } from '../hooks/useChat'
 import { Play, TestTube, Zap, Brain, Target, Users, Lightbulb, BarChart3 } from 'lucide-react'

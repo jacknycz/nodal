@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useBoardStore } from '../features/board/boardSlice';
+import { useBoardStore } from '../../next/src/features/board/boardSlice';
 import { TrashIcon } from 'lucide-react';
 
 export default function TaskList({ className = '' }: { className?: string }) {

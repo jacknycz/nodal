@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button, Heading } from 'pres-start-core'
 import { useAINodeGenerator } from '../features/ai/useAINodeGenerator'
-import { useBoard } from '../features/board/useBoard'
+import { useBoard } from '../../next/src/features/board/useBoard'
 import { useAIConfig } from '../features/ai/aiContext'
 import type { OpenAIModel } from '../features/ai/aiTypes'
 import type { AINodeGeneratorOptions } from '../features/ai/useAINodeGenerator'

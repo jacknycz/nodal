@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import {
   ReactFlow,
   Node,
@@ -41,10 +41,6 @@ import { supabase } from '../auth/supabaseClient';
 const nodeTypes = {
   default: NodalNode,
   document: DocumentNode,
-}
-
-const edgeTypes = {
-  floating: FloatingEdge,
 }
 
 interface BoardProps {
@@ -272,9 +268,10 @@ function BoardContent({
       }
 
       const fileName = `thumbnail-${boardId}.jpg`;
+      const filePath = `${user.id}/${fileName}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('thumbnails')
-        .upload(fileName, blob, {
+        .upload(filePath, blob, {
           contentType: 'image/jpeg',
           upsert: true,
         });
@@ -836,6 +833,37 @@ function BoardContent({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [saveBoard])
   
+  const handleEdgeDelete = (edgeId: string) => {
+    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
+  }
+
+  const handleNodeDelete = (nodeId: string) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId))
+    // Also remove any edges connected to this node
+    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId))
+  }
+
+  // Memoize nodeTypes to prevent React Flow warnings
+  const nodeTypes = useMemo(() => ({
+    default: (props: any) => (
+      <NodalNode 
+        {...props} 
+        onNodeDelete={handleNodeDelete}
+      />
+    ),
+    document: DocumentNode,
+  }), [handleNodeDelete])
+
+  // Memoize edgeTypes to prevent React Flow warnings
+  const edgeTypes = useMemo(() => ({
+    floating: (props: any) => (
+      <FloatingEdge 
+        {...props} 
+        onEdgeDelete={handleEdgeDelete}
+      />
+    ),
+  }), [handleEdgeDelete])
+
   return (
     <div 
       className="w-full h-full relative" 
@@ -863,7 +891,7 @@ function BoardContent({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
+        edgeTypes={edgeTypes} // Now this has access to handleEdgeDelete
         connectionLineComponent={CustomConnectionLine}
         fitView
         fitViewOptions={{ padding: 0.2, minZoom: 0.5, maxZoom: 2 }}

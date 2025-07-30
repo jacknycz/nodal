@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import type { BoardBrief } from '../features/board/boardTypes'
+import type { BoardBrief } from '../../next/src/features/board/boardTypes'
 
 interface PreSessionChatProps {
   boardBrief: BoardBrief
