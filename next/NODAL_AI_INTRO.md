@@ -107,10 +107,20 @@ next/src/
 
 - **Client-Side Generation**: Uses Canvas API to create board previews without server-side rendering
 - **Automatic Triggers**: Thumbnails are generated when boards transition from 'saving' to 'saved' state
-- **Supabase Storage**: Thumbnails stored in dedicated `thumbnails` bucket with user-specific folders
-- **RLS Policies**: Secure access with user-specific upload permissions and public download access
+- **Supabase Storage**: Thumbnails stored in dedicated `thumbnails` bucket with simplified RLS policies
 - **BoardRoom Integration**: Thumbnails display in BoardRoom with loading states and error handling
 - **Canvas Rendering**: Simplified board representation with title, node count, and visual node layout
+- **Fallback Handling**: Clean UI when thumbnails are unavailable (no placeholder text)
+
+---
+
+## UI/UX Improvements
+
+- **Clean Avatar Menu**: Removed unused import/export functionality for streamlined user experience
+- **Centered Tips**: Drag & drop tips positioned bottom-center for better visibility
+- **Responsive Design**: All components work seamlessly across desktop and mobile devices
+- **Theme Consistency**: Dark/light mode support throughout all components
+- **Loading States**: Proper feedback during thumbnail generation and board operations
 
 ---
 
@@ -120,8 +130,9 @@ next/src/
 - **State Setters**: Avoid naming collisions and shadowing with React state setters. Prefer `useRef` for IDs that must never be functions.
 - **Console Logging**: Use targeted debug logs when tracking down state or module bugs, but remove all logs before production.
 - **Clean Imports**: Always use relative imports that resolve within the Next.js app structure. Avoid deep or ambiguous paths.
-- **Supabase Storage**: Use user-specific folders (`${user.id}/filename`) to satisfy RLS policies. Random filenames may be required for certain buckets.
+- **Supabase Storage**: Simplified RLS policies (`true` for both INSERT and SELECT) work reliably for thumbnail storage.
 - **Canvas API**: Prefer Canvas API over html2canvas for client-side image generation to avoid CSS parsing issues.
+- **Error Handling**: Graceful fallbacks when thumbnails fail to load or generate.
 
 ---
 
@@ -133,6 +144,7 @@ next/src/
 - **Accessibility**: All interactive elements must be keyboard-accessible and theme-aware.
 - **Cloud-First**: All board and document data is stored in Supabase; no local storage or legacy fallback.
 - **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
+- **UI Simplification**: Remove unused features to keep the interface clean and focused.
 
 ---
 
@@ -143,7 +155,9 @@ next/src/
 - **Debugging workflow is documented**: If you hit a "not a function" error, check for module cache, import paths, and state setter shadowing.
 - **Vite/CRA code is deprecated**: All new work must be in the Next.js app.
 - **Thumbnail system is live**: Automatic board preview generation using Canvas API and Supabase storage.
-- **Robust storage architecture**: User-specific folders and proper RLS policies for secure file storage.
+- **Robust storage architecture**: Simplified RLS policies for reliable thumbnail storage.
+- **Clean UI**: Removed unused import/export functionality and improved tip positioning.
+- **Error resilience**: Graceful handling of thumbnail failures and loading states.
 
 ---
 
@@ -153,6 +167,7 @@ next/src/
 - **Ask questions if you're unsure about the Next.js architecture or AI integration.**
 - **Keep the codebase clean, modern, and idiomatic.**
 - **Test thumbnail generation when making board-related changes.**
+- **Focus on core functionality**: Remove unused features to maintain clean UI.
 
 ---
 

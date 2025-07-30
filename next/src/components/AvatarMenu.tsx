@@ -3,8 +3,6 @@ import {
   Settings, 
   Save, 
   Building, 
-  Upload, 
-  Download, 
   HelpCircle, 
   LogOut,
   ChevronDown,
@@ -21,8 +19,6 @@ interface AvatarMenuProps {
   hasUnsavedChanges?: boolean
   onSaveBoard?: () => void
   onOpenBoardRoom?: () => void
-  onExportBoard?: () => void
-  onImportBoard?: () => void
   onOpenSettings?: () => void
   onLoadBoard?: (board: SavedBoard) => void
   className?: string
@@ -34,8 +30,6 @@ export default function AvatarMenu({
   hasUnsavedChanges = false,
   onSaveBoard,
   onOpenBoardRoom,
-  onExportBoard,
-  onImportBoard,
   onOpenSettings,
   onLoadBoard,
   className = ''
@@ -88,16 +82,6 @@ export default function AvatarMenu({
 
   const handleOpenBoardRoom = () => {
     onOpenBoardRoom?.()
-    setIsOpen(false)
-  }
-
-  const handleExportBoard = () => {
-    onExportBoard?.()
-    setIsOpen(false)
-  }
-
-  const handleImportBoard = () => {
-    onImportBoard?.()
     setIsOpen(false)
   }
 
@@ -222,7 +206,7 @@ export default function AvatarMenu({
       </button>
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
+        <div className="absolute right-0 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
           {/* User Info */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -261,7 +245,7 @@ export default function AvatarMenu({
           )}
 
           {/* Save Board */}
-          <button
+          {/* <button
             onClick={handleSaveBoard}
             disabled={saveStatus === 'saving' || (!hasUnsavedChanges && saveStatus === 'saved')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -273,7 +257,7 @@ export default function AvatarMenu({
             <span className="text-sm text-gray-900 dark:text-white">
               {getSaveStatusText()}
             </span>
-          </button>
+          </button> */}
 
           {/* Board Room with Recent Boards */}
           <div className="relative">
@@ -318,7 +302,7 @@ export default function AvatarMenu({
                         onClick={handleOpenBoardRoom}
                         className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-blue-600 dark:text-blue-400 font-medium"
                       >
-                        View All Boards 
+                        View All Boards 
                       </button>
                     </div>
                   </>
@@ -336,27 +320,6 @@ export default function AvatarMenu({
               </div>
             )}
           </div>
-
-          {/* Separator */}
-          <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
-
-          {/* Export Board */}
-          <button
-            onClick={handleExportBoard}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
-          >
-            <Upload className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <span className="text-sm text-gray-900 dark:text-white">Export Board</span>
-          </button>
-
-          {/* Import Board */}
-          <button
-            onClick={handleImportBoard}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
-          >
-            <Download className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <span className="text-sm text-gray-900 dark:text-white">Import Board</span>
-          </button>
 
           {/* Separator */}
           <div className="border-t border-gray-200 dark:border-gray-700 my-2" />

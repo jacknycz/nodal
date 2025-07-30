@@ -18,7 +18,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
   const [imgError, setImgError] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/${board.userId}/thumbnail-${board.id}.jpg`)
+  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
 
   // Debug logging
@@ -29,14 +29,14 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     if (loading) {
       const timeout = setTimeout(() => {
         // Bump the URL to force reload
-        const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/${board.userId}/thumbnail-${board.id}.jpg?${Date.now()}`;
+        const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg?${Date.now()}`;
         console.log('Updating thumbnail URL:', newUrl);
         setThumbnailUrl(newUrl)
         setLoading(false)
       }, 2000)
       return () => clearTimeout(timeout)
     }
-  }, [loading, board.id, board.userId])
+  }, [loading, board.id])
 
   // Listen for a custom event to trigger loading state
   useEffect(() => {
@@ -85,9 +85,69 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
 
   return (
     <div
-      className="relative group p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
+      className="relative grid grid-cols-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950/50 hover:border-gray-300 dark:hover:border-gray-600 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer"
       onClick={onLoad}
     >
+
+      {/* Board Info */}
+      <div className="flex flex-col items-start">
+        {/* Board Name */}
+        <div className="mb-2">
+          {isRenaming ? (
+            <input
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={handleRename}
+              className="w-full text-lg font-semibold bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-white"
+              maxLength={50}
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              {board.name}
+            </h3>
+          )}
+        </div>
+        {/* Board Stats */}
+        <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 mb-2">
+          <span>{board.nodeCount} nodes</span>
+          <span>{board.edgeCount} connections</span>
+        </div>
+        {/* Last Modified */}
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          {formatDate(board.lastModified)}
+        </p>
+        {/* Action Buttons */}
+        <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              setIsRenaming(true)
+            }}
+            className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title="Rename board"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              onDelete()
+            }}
+            className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title="Delete board"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
       {/* Board Thumbnail */}
       <div className="mb-2 w-full flex justify-center items-center">
         {loading && (
@@ -110,70 +170,6 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
             }}
           />
         ) : null}
-        {!loading && imgError && (
-          <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded text-gray-400 text-xs">
-            No Thumbnail
-          </div>
-        )}
-      </div>
-      {/* Board Name */}
-      <div className="mb-2">
-        {isRenaming ? (
-          <input
-            type="text"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={handleRename}
-            className="w-full text-lg font-semibold bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-white"
-            maxLength={50}
-            onClick={e => e.stopPropagation()}
-          />
-        ) : (
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-            {board.name}
-          </h3>
-        )}
-      </div>
-      {/* Board Stats */}
-      <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
-        <div className="flex items-center space-x-1">
-          <span>{board.nodeCount} nodes</span>
-        </div>
-        <div className="flex items-center space-x-1">
-          <span>{board.edgeCount} connections</span>
-        </div>
-      </div>
-      {/* Last Modified */}
-      <p className="text-xs text-gray-400 dark:text-gray-500">
-        {formatDate(board.lastModified)}
-      </p>
-      {/* Action Buttons */}
-      <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={e => {
-            e.stopPropagation()
-            setIsRenaming(true)
-          }}
-          className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          title="Rename board"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        <button
-          onClick={e => {
-            e.stopPropagation()
-            onDelete()
-          }}
-          className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          title="Delete board"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
       </div>
     </div>
   )
@@ -185,7 +181,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewBoardModal, setShowNewBoardModal] = useState(false)
-  
+
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
   const [boardBrief, setBoardBrief] = useState<BoardBrief | null>(null)

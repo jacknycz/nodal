@@ -274,13 +274,20 @@ function BoardContent({
       const fileName = `thumbnail-${boardId}.jpg`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('thumbnails')
-        .upload(`${user.id}/${fileName}`, blob, {
+        .upload(fileName, blob, {
           contentType: 'image/jpeg',
           upsert: true,
         });
 
       if (uploadError) {
         console.error('Supabase upload error:', uploadError);
+        console.error('Upload details:', {
+          bucket: 'thumbnails',
+          path: `${user.id}/${fileName}`,
+          userId: user.id,
+          boardId: boardId,
+          fileName: fileName
+        });
         return;
       }
 
@@ -867,7 +874,7 @@ function BoardContent({
         <Controls />
         <MiniMap />
         
-        <div className="absolute bottom-4 right-1 z-10">
+        <div className="absolute bottom-4 left-16 z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               💡 Tip: Drag & drop documents and images here
