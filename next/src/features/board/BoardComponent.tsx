@@ -629,10 +629,16 @@ function BoardContent({
 
 
   
-  // Handle document upload - Remove useCallback to avoid circular dependency
-  const handleDocumentUpload = async (file: File, position?: { x: number; y: number }) => {
+  // Handle document upload - Memoize to prevent event listener recreation
+  const handleDocumentUpload = useCallback(async (file: File, position?: { x: number; y: number }) => {
     const dropPosition = position || getViewportCenter()
     const nodeId = `document-${Date.now()}`
+    
+    // Generate preview URL for images
+    let previewUrl: string | undefined
+    if (file.type.startsWith('image/')) {
+      previewUrl = URL.createObjectURL(file)
+    }
     
     // Create the node first with empty extracted text
     const newNode = {
@@ -648,6 +654,7 @@ function BoardContent({
         fileSize: file.size,
         status: 'processing' as const,
         extractedText: '',
+        previewUrl, // Add the preview URL for images
       },
     }
     handleAddNodeToStore(newNode)
@@ -723,7 +730,7 @@ function BoardContent({
         )
       })
     }
-  }
+  }, [handleAddNodeToStore, isTextExtractable, setNodes])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -767,9 +774,10 @@ function BoardContent({
     }
 
     const handleWindowDragOver = (e: DragEvent) => {
-      // Prevent browser from opening files
-      if (isFileBeingDragged && e.dataTransfer) {
+      // Always prevent default for file drags
+      if (e.dataTransfer?.types.includes("Files")) {
         e.preventDefault()
+        e.stopPropagation()
         e.dataTransfer.dropEffect = "copy"
       }
     }
@@ -784,69 +792,72 @@ function BoardContent({
     }
 
     const handleWindowDrop = (e: DragEvent) => {
-      if (!isFileBeingDragged) return
+      // Always prevent default for file drops
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        console.log("🎯 Files dropped - preventing default behavior")
+        
+        // Check if we're dropping on the board
+        const boardElement = document.querySelector(".react-flow") as HTMLElement
+        if (boardElement) {
+          const rect = boardElement.getBoundingClientRect()
+          const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom
 
-      // Check if we're dropping on the board
-      const boardElement = document.querySelector(".react-flow") as HTMLElement
-      if (boardElement) {
-        const rect = boardElement.getBoundingClientRect()
-        const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right &&
-          e.clientY >= rect.top && e.clientY <= rect.bottom
-
-        if (isOnBoard && e.dataTransfer?.files) {
-          e.preventDefault()
-          e.stopPropagation()
-
-          console.log("🎯 Files dropped on board!")
-          const position = {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top
-          }
-          
-          // Convert FileList to Array and process each file
-          const files = Array.from(e.dataTransfer.files)
-          const validFiles = files.filter(file => {
-            const validTypes = [
-              'application/pdf',
-              'application/msword',
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-              'text/plain',
-              'text/markdown',
-              'text/csv',
-              'image/png',
-              'image/jpeg',
-              'image/jpg',
-              'image/gif',
-              'image/webp'
-            ]
-            return validTypes.includes(file.type) || 
-              file.name.endsWith('.pdf') || 
-              file.name.endsWith('.doc') || 
-              file.name.endsWith('.docx') || 
-              file.name.endsWith('.txt') || 
-              file.name.endsWith('.md') || 
-              file.name.endsWith('.csv') ||
-              file.name.endsWith('.png') ||
-              file.name.endsWith('.jpg') ||
-              file.name.endsWith('.jpeg') ||
-              file.name.endsWith('.gif') ||
-              file.name.endsWith('.webp')
-          })
-
-          if (validFiles.length > 0) {
-            validFiles.forEach(file => {
-              // Convert screen coordinates to flow coordinates
-              const flowPosition = reactFlowInstance.screenToFlowPosition({
-                x: position.x,
-                y: position.y,
-              })
-              handleDocumentUpload(file, flowPosition)
+          if (isOnBoard) {
+            console.log("🎯 Files dropped on board!")
+            const position = {
+              x: e.clientX - rect.left,
+              y: e.clientY - rect.top
+            }
+            
+            // Convert FileList to Array and process each file
+            const files = Array.from(e.dataTransfer.files)
+            const validFiles = files.filter(file => {
+              const validTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'text/plain',
+                'text/markdown',
+                'text/csv',
+                'image/png',
+                'image/jpeg',
+                'image/jpg',
+                'image/gif',
+                'image/webp'
+              ]
+              return validTypes.includes(file.type) || 
+                file.name.endsWith('.pdf') || 
+                file.name.endsWith('.doc') || 
+                file.name.endsWith('.docx') || 
+                file.name.endsWith('.txt') || 
+                file.name.endsWith('.md') || 
+                file.name.endsWith('.csv') ||
+                file.name.endsWith('.png') ||
+                file.name.endsWith('.jpg') ||
+                file.name.endsWith('.jpeg') ||
+                file.name.endsWith('.gif') ||
+                file.name.endsWith('.webp')
             })
+
+            if (validFiles.length > 0) {
+              validFiles.forEach(file => {
+                // Convert screen coordinates to flow coordinates
+                const flowPosition = reactFlowInstance.screenToFlowPosition({
+                  x: position.x,
+                  y: position.y,
+                })
+                handleDocumentUpload(file, flowPosition)
+              })
+            }
           }
         }
       }
-
-      // Always end drag state on any drop
+      
+      // Reset drag state
       isFileBeingDragged = false
       setIsDragOver(false)
     }

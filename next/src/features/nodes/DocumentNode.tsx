@@ -40,15 +40,27 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
 
   // Use preview URL for image preview
   useEffect(() => {
+    console.log('🖼️ DocumentNode useEffect - data:', {
+      previewUrl: data.previewUrl,
+      fileType: data.fileType,
+      fileName: data.fileName,
+      isImage: data.fileType?.startsWith('image/'),
+      label: data.label
+    })
+    
     if (data.previewUrl && data.fileType?.startsWith('image/')) {
+      console.log('✅ Setting image URL:', data.previewUrl)
       setImageUrl(data.previewUrl)
     } else {
+      console.log('❌ No preview URL or not an image, clearing imageUrl')
       setImageUrl(null)
     }
   }, [data.previewUrl, data.fileType])
 
   const isImage = data.fileType?.startsWith('image/') || 
     data.fileName?.match(/\.(png|jpg|jpeg|gif|webp)$/i)
+
+  console.log('🖼️ DocumentNode render - isImage:', isImage, 'imageUrl:', imageUrl, 'showPreview:', showPreview)
 
   const isPDF = data.fileType?.includes('pdf') || data.fileName?.match(/\.pdf$/i)
 
@@ -104,6 +116,7 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
   }
 
   const handlePreview = () => {
+    console.log('👁️ Preview button clicked - isImage:', isImage, 'imageUrl:', imageUrl)
     // PDF preview disabled since we don't have File object
     // if (isPDF) {
     //   setShowPDFModal(true)
@@ -181,6 +194,8 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
                 src={imageUrl}
                 alt={data.label}
                 className="w-full h-32 object-cover rounded border border-gray-200 dark:border-gray-600"
+                onLoad={() => console.log('✅ Image loaded successfully:', imageUrl)}
+                onError={(e) => console.error('❌ Image failed to load:', imageUrl, e)}
               />
             </div>
           )}
@@ -277,6 +292,8 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
                 src={imageUrl}
                 alt={data.label}
                 className="w-full max-h-48 object-contain rounded"
+                onLoad={() => console.log('✅ Preview image loaded successfully:', imageUrl)}
+                onError={(e) => console.error('❌ Preview image failed to load:', imageUrl, e)}
               />
             </div>
           )}
