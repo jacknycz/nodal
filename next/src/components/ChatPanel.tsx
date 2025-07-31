@@ -45,13 +45,6 @@ export default function ChatPanel({
   // Get selected node data
   const selectedNodes = nodes.filter(node => selectedNodeIds.includes(node.id))
   
-  // Debug logging
-  console.log('ChatPanel - selectedNodeIds:', selectedNodeIds)
-  console.log('ChatPanel - propNodes count:', propNodes?.length || 0)
-  console.log('ChatPanel - nodes count:', nodes.length)
-  console.log('ChatPanel - selectedNodes count:', selectedNodes.length)
-  console.log('ChatPanel - selectedNodes:', selectedNodes.map(n => n.data.label || n.data.title || 'Untitled'))
-
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -129,7 +122,7 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="fixed top-12 right-0 z-40 w-96 h-[calc(100vh-48px)] bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="fixed top-12 right-0 z-40 w-96 h-[calc(100vh-48px)] bg-white dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">

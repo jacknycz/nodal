@@ -24,6 +24,7 @@ interface TopbarProps {
   onOpenSettings?: () => void
   onLoadBoard?: (board: SavedBoard) => void
   isBoardView?: boolean;
+  onDeleteNode?: (nodeId: string) => void;
 }
 
 export default function Topbar({ 
@@ -38,7 +39,8 @@ export default function Topbar({
   onImportBoard,
   onOpenSettings,
   onLoadBoard,
-  isBoardView = false
+  isBoardView = false,
+  onDeleteNode
 }: TopbarProps) {
   const { isDark } = useTheme()
   const [showFeedback, setShowFeedback] = useState(false)
@@ -152,7 +154,9 @@ export default function Topbar({
               isTestMode={isTestMode}
               onToggleTestMode={onToggleTestMode}
             />
-            <DocumentsMenu />
+            <DocumentsMenu 
+              onDeleteNode={onDeleteNode}
+            />
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}

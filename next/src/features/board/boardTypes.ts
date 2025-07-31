@@ -74,6 +74,7 @@ export interface BoardActions {
   addNode: (node: Omit<BoardNode, 'id'>) => void
   updateNode: (id: string, updates: Partial<BoardNode>) => void
   deleteNode: (id: string) => void
+  deleteNodeFromBoard: (id: string) => void
   setNodes: (nodes: BoardNode[]) => void
   addEdge: (edge: Omit<BoardEdge, 'id'>) => void
   deleteEdge: (id: string) => void

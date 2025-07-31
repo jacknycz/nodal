@@ -11,17 +11,33 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
 }
 
-export default function DocumentsMenu({ className = '' }: { className?: string }) {
+export default function DocumentsMenu({ 
+  className = '', 
+  onDeleteNode 
+}: { 
+  className?: string
+  onDeleteNode?: (nodeId: string) => void 
+}) {
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [previewDocId, setPreviewDocId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const nodes = useBoardStore(state => state.nodes)
-  const deleteNode = useBoardStore(state => state.deleteNode)
+  // Remove the Zustand deleteNode - we'll use the passed function instead
 
   // Filter document nodes
   const documents = nodes.filter(n => n.data.type === 'document')
+
+  // Debug logging
+  console.log('📄 DocumentsMenu - Total nodes:', nodes.length)
+  console.log('📄 DocumentsMenu - Document nodes:', documents.length)
+  console.log('📄 DocumentsMenu - All nodes types:', nodes.map(n => ({ 
+    id: n.id, 
+    type: n.data.type, 
+    title: n.data.title,
+    fileName: n.data.fileName 
+  })))
 
   // Search filter
   const filteredDocs = documents.filter(doc => {
@@ -58,7 +74,8 @@ export default function DocumentsMenu({ className = '' }: { className?: string }
 
   // Delete document node
   const handleDelete = (id: string) => {
-    deleteNode(id)
+    // Use the global delete function that calls XYFlow's handleNodeDelete
+    useBoardStore.getState().deleteNodeFromBoard(id)
     setConfirmDeleteId(null)
     setPreviewDocId(null)
   }

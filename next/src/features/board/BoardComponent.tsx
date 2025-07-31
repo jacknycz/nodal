@@ -54,6 +54,7 @@ interface BoardProps {
   boardId?: string // Add board ID for existing boards
   boardName?: string // Add board name for existing boards
   screenshotMode?: boolean // Add screenshot mode
+  onDeleteNode?: (nodeId: string) => void // Add delete function prop
 }
 
 function BoardContent({
@@ -65,6 +66,7 @@ function BoardContent({
   boardId,
   boardName, // Add this parameter
   screenshotMode = false, // Add screenshotMode
+  onDeleteNode, // Add delete function prop
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
@@ -72,6 +74,12 @@ function BoardContent({
   // Basic state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  
+  // Sync XYFlow nodes with Zustand board store for DocumentsMenu
+  useEffect(() => {
+    useBoardStore.getState().setNodes(nodes)
+  }, [nodes])
+  
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
@@ -608,15 +616,15 @@ function BoardContent({
 
   
   // Handle document upload - Remove useCallback to avoid circular dependency
-  const handleDocumentUpload = async (file: File) => {
-    const position = getViewportCenter()
+  const handleDocumentUpload = async (file: File, position?: { x: number; y: number }) => {
+    const dropPosition = position || getViewportCenter()
     const nodeId = `document-${Date.now()}`
     
     // Create the node first with empty extracted text
     const newNode = {
       id: nodeId,
       type: 'document' as const,
-      position,
+      position: dropPosition,
       data: {
         label: file.name,
         file,
@@ -812,7 +820,12 @@ function BoardContent({
 
           if (validFiles.length > 0) {
             validFiles.forEach(file => {
-              handleDocumentUpload(file)
+              // Convert screen coordinates to flow coordinates
+              const flowPosition = reactFlowInstance.screenToFlowPosition({
+                x: position.x,
+                y: position.y,
+              })
+              handleDocumentUpload(file, flowPosition)
             })
           }
         }
@@ -858,7 +871,17 @@ function BoardContent({
     setNodes((nds) => nds.filter((node) => node.id !== nodeId))
     // Also remove any edges connected to this node
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId))
+    // Call parent's onDeleteNode function if provided
+    onDeleteNode?.(nodeId)
   }
+
+  // Register the delete function globally for DocumentsMenu to use
+  useEffect(() => {
+    ;(window as any).__deleteNodeFromBoard = handleNodeDelete
+    return () => {
+      delete (window as any).__deleteNodeFromBoard
+    }
+  }, [handleNodeDelete])
 
   const handleNodeUpdate = (nodeId: string, updates: any) => {
     setNodes((nds) => nds.map((node) => 
@@ -1010,7 +1033,11 @@ function BoardContent({
                 input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
                 input.onchange = (e) => {
                   const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) handleDocumentUpload(file)
+                  if (file) {
+                    // Use viewport center for manual uploads
+                    const viewportCenter = getViewportCenter()
+                    handleDocumentUpload(file, viewportCenter)
+                  }
                 }
                 input.click()
               }}
@@ -1103,27 +1130,16 @@ function BoardContent({
                   input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
                   input.onchange = (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0]
-                    if (file) handleDocumentUpload(file)
+                    if (file) {
+                      // Use viewport center for manual uploads
+                      const viewportCenter = getViewportCenter()
+                      handleDocumentUpload(file, viewportCenter)
+                    }
                   }
                   input.click()
                 }}
                 aiInitialized={aiInitialized}
               />
-              {aiInitialized && (
-                <ChatPanel
-                  nodes={nodes} // Add this line to pass the nodes
-                  onGenerateNode={(nodeData: { label: string; content?: string }) => {
-                    const position = getViewportCenter()
-                    const newNode = {
-                      id: `ai-node-${Date.now()}`,
-                      type: 'default',
-                      position,
-                      data: { ...nodeData },
-                    }
-                    handleAddNodeToStore(newNode)
-                  }}
-                />
-              )}
             </>
           )}
         </>

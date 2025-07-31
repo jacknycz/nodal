@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ThemeProvider } from '../contexts/ThemeContext'
 import { AIProvider } from '../features/ai/aiContext'
 import Topbar from './Topbar'
@@ -21,6 +21,9 @@ export default function BoardRoomPage() {
     saveStatus: 'saved' as 'saved' | 'saving' | 'unsaved' | 'error',
     hasUnsavedChanges: false
   })
+  
+  // Ref to store the delete function from BoardComponent
+  const deleteNodeRef = useRef<((nodeId: string) => void) | null>(null)
 
   const handleOpenBoard = async (board: SavedBoard | null, brief?: BoardBrief | null) => {
     console.log('Open board:', board, brief)
@@ -86,6 +89,12 @@ export default function BoardRoomPage() {
                 boardName={currentBoard?.name}
                 pendingBoardBrief={pendingBoardBrief || undefined}
                 clearPendingBoardBrief={clearPendingBoardBrief}
+                onDeleteNode={(nodeId) => {
+                  // Store the delete function for use in Topbar
+                  deleteNodeRef.current = (nodeId: string) => {
+                    // This will be called by the BoardComponent
+                  }
+                }}
               />
             )}
           </>
