@@ -414,17 +414,8 @@ function BoardContent({
   useEffect(() => {
     // Prevent multiple initializations
     if (isInitializedRef.current) {
-      console.log('⏭️ Skipping initialization - already initialized')
       return
     }
-    
-    console.log('🔄 Board initialization effect triggered:', {
-      hasInitialBoard: !!initialBoard,
-      hasPendingBoardBrief: !!pendingBoardBrief,
-      hasLocalBoardId: !!localBoardIdRef.current,
-      boardId,
-      boardName
-    })
     
     // Set board ID for existing boards
     if (boardId && !localBoardIdRef.current) {
@@ -605,8 +596,8 @@ function BoardContent({
 
 
   
-  // Handle document upload
-  const handleDocumentUpload = useCallback(async (file: File) => {
+  // Handle document upload - Remove useCallback to avoid circular dependency
+  const handleDocumentUpload = async (file: File) => {
     const position = getViewportCenter()
     const nodeId = `document-${Date.now()}`
     
@@ -633,9 +624,14 @@ function BoardContent({
       try {
         console.log('🔍 Starting server-side text extraction for:', file.name)
         
-        // Convert file to base64
+        // Convert file to base64 using a more efficient method
         const arrayBuffer = await file.arrayBuffer()
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        const uint8Array = new Uint8Array(arrayBuffer)
+        let binary = ''
+        for (let i = 0; i < uint8Array.length; i++) {
+          binary += String.fromCharCode(uint8Array[i])
+        }
+        const base64 = btoa(binary)
         
         // Call server-side API
         const response = await fetch('/api/extract-text', {
@@ -694,7 +690,7 @@ function BoardContent({
         )
       })
     }
-  }, [getViewportCenter, handleAddNodeToStore])
+  }
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -843,16 +839,23 @@ function BoardContent({
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId))
   }
 
+  const handleNodeUpdate = (nodeId: string, updates: any) => {
+    setNodes((nds) => nds.map((node) => 
+      node.id === nodeId ? { ...node, data: { ...node.data, ...updates } } : node
+    ))
+  }
+
   // Memoize nodeTypes to prevent React Flow warnings
   const nodeTypes = useMemo(() => ({
     default: (props: any) => (
       <NodalNode 
         {...props} 
         onNodeDelete={handleNodeDelete}
+        onNodeUpdate={handleNodeUpdate}
       />
     ),
     document: DocumentNode,
-  }), [handleNodeDelete])
+  }), [handleNodeDelete, handleNodeUpdate])
 
   // Memoize edgeTypes to prevent React Flow warnings
   const edgeTypes = useMemo(() => ({

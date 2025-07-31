@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { X, Download } from 'lucide-react'
 
 interface PDFPreviewModalProps {
@@ -12,17 +12,29 @@ interface PDFPreviewModalProps {
 
 export default function PDFPreviewModal({ isOpen, onClose, file, fileName }: PDFPreviewModalProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const urlRef = useRef<string | null>(null)
 
   useEffect(() => {
+    // Clean up previous URL if it exists
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current)
+      urlRef.current = null
+    }
+
     if (isOpen && file) {
       // Create object URL for the PDF file
       const url = URL.createObjectURL(file)
+      urlRef.current = url
       setPdfUrl(url)
-      
-      // Cleanup function
-      return () => {
-        URL.revokeObjectURL(url)
-        setPdfUrl(null)
+    } else {
+      setPdfUrl(null)
+    }
+
+    // Cleanup function
+    return () => {
+      if (urlRef.current) {
+        URL.revokeObjectURL(urlRef.current)
+        urlRef.current = null
       }
     }
   }, [isOpen, file])

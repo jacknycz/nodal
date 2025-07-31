@@ -47,23 +47,10 @@ export default function BoardRoomPage() {
   }
 
   const handleBoardStateChange = (boardName: string, saveStatus: string, hasUnsavedChanges: boolean) => {
-    console.log('📊 BoardRoomPage received state change:', {
-      boardName,
-      saveStatus,
-      hasUnsavedChanges,
-      currentBoardState: boardState
-    })
-    
     setBoardState({ 
       boardName, 
       saveStatus: saveStatus as 'saved' | 'saving' | 'unsaved' | 'error', 
       hasUnsavedChanges 
-    })
-    
-    console.log('📊 BoardRoomPage updated state to:', {
-      boardName,
-      saveStatus: saveStatus as 'saved' | 'saving' | 'unsaved' | 'error',
-      hasUnsavedChanges
     })
   }
 

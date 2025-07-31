@@ -21,9 +21,6 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
   const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
 
-  // Debug logging
-  console.log('BoardCard render:', { boardId: board.id, thumbnailUrl });
-
   // Optionally, poll for thumbnail updates
   useEffect(() => {
     if (loading) {

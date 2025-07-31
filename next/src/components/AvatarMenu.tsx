@@ -11,6 +11,7 @@ import {
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 import { useState, useRef, useEffect } from 'react'
+import ThemeToggle from './ThemeToggle'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -290,6 +291,11 @@ export default function AvatarMenu({
             <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             <span className="text-sm text-gray-900 dark:text-white">Settings</span>
           </button>
+
+          {/* Theme Toggle */}
+          <div className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <ThemeToggle />
+          </div>
 
           {/* Help & Support */}
           <button
