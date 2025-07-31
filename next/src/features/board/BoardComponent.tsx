@@ -58,6 +58,18 @@ interface BoardProps {
   onDeleteNode?: (nodeId: string) => void // Add delete function prop
 }
 
+const migrateNodeData = (nodes: Node[]): Node[] => {
+  return nodes.map(node => {
+    const data = node.data as any;
+    // Migrate label to title if needed
+    if (data.label && !data.title) {
+      data.title = data.label;
+      delete data.label;
+    }
+    return { ...node, data };
+  });
+};
+
 function BoardContent({
   initialBoard,
   pendingBoardBrief,
