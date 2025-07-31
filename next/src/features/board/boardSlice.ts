@@ -5,7 +5,7 @@ import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, Docume
 const initialState: BoardState = {
   nodes: [],
   edges: [],
-  selectedNodeId: null,
+  selectedNodeIds: [], // Change from selectedNodeId to selectedNodeIds array
   viewport: {
     x: 0,
     y: 0,
@@ -29,6 +29,10 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setTasks: (tasks: { id: string; text: string; completed: boolean }[]) => void
   setFreeChatMode: (free: boolean) => void
   setTopbarHeight: (height: number) => void
+  setSelectedNodes: (ids: string[]) => void
+  addSelectedNode: (id: string) => void
+  removeSelectedNode: (id: string) => void
+  clearSelectedNodes: () => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -85,7 +89,29 @@ export const useBoardStore = create<BoardState & BoardActions & {
   },
 
   setSelectedNode: (id) => {
-    set({ selectedNodeId: id })
+    set({ selectedNodeIds: id ? [id] : [] })
+  },
+
+  setSelectedNodes: (ids) => {
+    set({ selectedNodeIds: ids })
+  },
+
+  addSelectedNode: (id) => {
+    set((state) => ({
+      selectedNodeIds: state.selectedNodeIds.includes(id) 
+        ? state.selectedNodeIds 
+        : [...state.selectedNodeIds, id]
+    }))
+  },
+
+  removeSelectedNode: (id) => {
+    set((state) => ({
+      selectedNodeIds: state.selectedNodeIds.filter(nodeId => nodeId !== id)
+    }))
+  },
+
+  clearSelectedNodes: () => {
+    set({ selectedNodeIds: [] })
   },
 
   updateViewport: (viewport) => {

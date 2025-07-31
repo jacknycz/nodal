@@ -3,14 +3,17 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useUnifiedAI } from '../features/ai/useUnifiedAI'
 import { useAIContext } from '../features/ai/aiContext'
-import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key } from 'lucide-react'
+import { useBoardStore } from '../features/board/boardSlice'
+import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 
 interface ChatPanelProps {
   onGenerateNode?: (nodeData: { label: string; content?: string }) => void
+  nodes?: any[]
 }
 
 export default function ChatPanel({ 
-  onGenerateNode
+  onGenerateNode,
+  nodes: propNodes
 }: ChatPanelProps) {
   const [isOpen, setIsOpen] = useState(true)
   const [inputValue, setInputValue] = useState('')
@@ -32,20 +35,48 @@ export default function ChatPanel({
   } = useUnifiedAI()
 
   const aiContext = useAIContext()
+  
+  // Get selected nodes from board store
+  const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
+  
+  // Use only props nodes - the store nodes are empty
+  const nodes = propNodes || []
+  
+  // Get selected node data
+  const selectedNodes = nodes.filter(node => selectedNodeIds.includes(node.id))
+  
+  // Debug logging
+  console.log('ChatPanel - selectedNodeIds:', selectedNodeIds)
+  console.log('ChatPanel - propNodes count:', propNodes?.length || 0)
+  console.log('ChatPanel - nodes count:', nodes.length)
+  console.log('ChatPanel - selectedNodes count:', selectedNodes.length)
+  console.log('ChatPanel - selectedNodes:', selectedNodes.map(n => n.data.label || n.data.title || 'Untitled'))
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Handle send message
+  // Handle send message with selected node context
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
 
     const message = inputValue.trim()
     setInputValue('')
     
-    await sendMessage(message)
+    // Add selected node context to the message
+    let contextualMessage = message
+    if (selectedNodes.length > 0) {
+      const nodeContext = selectedNodes.map(node => {
+        const title = node.data.label || node.data.title || 'Untitled Node'
+        const content = node.data.content || ''
+        return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
+      }).join('\n\n')
+      
+      contextualMessage = `Context - Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}:\n${nodeContext}\n\nUser message: ${message}`
+    }
+    
+    await sendMessage(contextualMessage)
   }
 
   // Handle node generation
@@ -243,25 +274,43 @@ export default function ChatPanel({
         </div>
       )}
 
-      {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex space-x-2">
-          <textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder={aiContext.isInitialized ? "Ask me anything about your board..." : "Configure AI to start chatting..."}
-            className="flex-1 p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none disabled:opacity-50 disabled:cursor-not-allowed"
-            rows={1}
-            style={{ minHeight: '40px', maxHeight: '120px' }}
-            disabled={!aiContext.isInitialized}
-          />
+      {/* Selection Notification */}
+      {selectedNodes.length > 0 && (
+        <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+          <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+            <Target className="w-4 h-4" />
+            <span>
+              {selectedNodes.length === 1 
+                ? `Selected: ${selectedNodes[0].data.label || selectedNodes[0].data.title || 'Untitled Node'}`
+                : `Selected: ${selectedNodes.length} nodes`
+              }
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={
+                selectedNodes.length > 0 
+                  ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
+                  : "Ask Nodal AI anything..."
+              }
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={1}
+              style={{ minHeight: '40px', maxHeight: '120px' }}
+            />
+          </div>
           <button
             onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading || !aiContext.isInitialized}
-            className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title={aiContext.isInitialized ? "Send Message" : "Configure AI first"}
+            disabled={!inputValue.trim() || isLoading}
+            className="h-10 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -269,4 +318,4 @@ export default function ChatPanel({
       </div>
     </div>
   )
-} 
+}

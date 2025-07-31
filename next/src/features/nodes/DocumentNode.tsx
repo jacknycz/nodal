@@ -4,6 +4,10 @@ import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { FileText, Download, Eye, Trash2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import PDFPreviewModal from '../../components/PDFPreviewModal'
+import Modal from '../../components/ui/Modal'
+import IconButton from '../../components/ui/IconButton'
+import Button from '../../components/ui/Button'
+import { useBoardStore } from '../board/boardSlice'
 
 interface DocumentNodeData {
   label: string
@@ -18,13 +22,18 @@ interface DocumentNodeData {
 
 interface DocumentNodeProps {
   data: DocumentNodeData
+  id: string
+  onNodeDelete?: (nodeId: string) => void
+  selected?: boolean
 }
 
-export default function DocumentNode({ data }: DocumentNodeProps) {
+export default function DocumentNode({ data, id, onNodeDelete, selected }: DocumentNodeProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  // Use XYFlow's selected prop instead of custom selection
 
   // Create object URL for image preview
   useEffect(() => {
@@ -112,26 +121,29 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
     }
   }
 
-  const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${data.label}"?`)) {
-      return
-    }
-    
-    setIsDeleting(true)
-    try {
-      // In a real implementation, this would delete the file from storage
-      console.log('Delete document:', data.label)
-      // You would also need to remove the node from the board
-    } catch (error) {
-      console.error('Failed to delete document:', error)
-    } finally {
-      setIsDeleting(false)
+  // Remove custom selection logic - use XYFlow's built-in selection
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowDeleteModal(true)
+  }
+
+  const handleConfirmDelete = () => {
+    setShowDeleteModal(false)
+    if (onNodeDelete) {
+      onNodeDelete(id)
     }
   }
 
   return (
     <>
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg shadow-sm p-4 min-w-[250px] max-w-[350px]">
+      <div 
+        className={`bg-blue-50 dark:bg-blue-900/20 border rounded-lg shadow-sm p-4 min-w-[250px] max-w-[350px] group ${
+          selected 
+            ? 'border-blue-500 bg-blue-100 dark:bg-blue-800/30' 
+            : 'border-blue-200 dark:border-blue-700'
+        }`}
+      >
         <Handle type="target" position={Position.Top} className="w-3 h-3" />
         
         <div className="nodal-drag-handle cursor-move">
@@ -181,43 +193,38 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
+          {/* Actions - Only show on hover */}
+          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             {(isTextExtractable || isImage || isPDF) && (
-              <button
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Preview document"
                 onClick={handlePreview}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-700 dark:text-blue-200 rounded transition-colors"
-                title={isImage ? "View image" : isPDF ? "View PDF" : "Preview document"}
               >
-                <Eye className="w-3 h-3" />
-                {isImage ? "View" : isPDF ? "View PDF" : "Preview"}
-              </button>
+                <Eye size={14} />
+              </IconButton>
             )}
             
             {data.file && (
-              <button
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Download document"
                 onClick={handleDownload}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 hover:bg-green-200 dark:bg-green-800 dark:hover:bg-green-700 text-green-700 dark:text-green-200 rounded transition-colors"
-                title="Download document"
               >
-                <Download className="w-3 h-3" />
-                Download
-              </button>
+                <Download size={14} />
+              </IconButton>
             )}
             
-            <button
+            <IconButton
+              variant="danger"
+              size="sm"
+              aria-label="Delete document"
               onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-red-100 hover:bg-red-200 dark:bg-red-800 dark:hover:bg-red-700 text-red-700 dark:text-red-200 rounded transition-colors disabled:opacity-50"
-              title="Delete document"
             >
-              {isDeleting ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Trash2 className="w-3 h-3" />
-              )}
-              Delete
-            </button>
+              <Trash2 size={14} />
+            </IconButton>
           </div>
 
           {/* Text Extraction Status */}
@@ -281,6 +288,34 @@ export default function DocumentNode({ data }: DocumentNodeProps) {
           fileName={data.fileName || data.label}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Document?"
+        description="Are you sure you want to delete this document? This action cannot be undone."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <div className="py-2">
+          <span className="font-medium text-gray-900 dark:text-white">{data.label}</span>
+        </div>
+      </Modal>
     </>
   )
 } 

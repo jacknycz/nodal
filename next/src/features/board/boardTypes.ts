@@ -55,7 +55,7 @@ export interface Task {
 export interface BoardState {
   nodes: BoardNode[]
   edges: BoardEdge[]
-  selectedNodeId: string | null
+  selectedNodeIds: string[] // Change from selectedNodeId to selectedNodeIds
   viewport: {
     x: number
     y: number
@@ -64,10 +64,10 @@ export interface BoardState {
   topic: string | null
   boardBrief?: BoardBrief
   embeddings?: DocumentEmbedding[]
-  currentBoardId?: string // Add this field
+  currentBoardId?: string
   tasks?: Task[]
-  freeChatMode?: boolean // Add per-board free chat mode toggle
-  topbarHeight: number // Add topbar height for global layout
+  freeChatMode?: boolean
+  topbarHeight: number
 }
 
 export interface BoardActions {
@@ -84,4 +84,8 @@ export interface BoardActions {
   setTopic: (topic: string | null) => void
   setBoardBrief: (brief: BoardBrief) => void
   setCurrentBoardId: (id: string | undefined) => void // Add this action
+  setSelectedNodes: (ids: string[]) => void
+  addSelectedNode: (id: string) => void
+  removeSelectedNode: (id: string) => void
+  clearSelectedNodes: () => void
 } 

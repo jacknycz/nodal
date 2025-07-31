@@ -24,6 +24,7 @@ import { useBoard } from './useBoard'
 import { boardStorage } from '../storage/storage'
 import DocumentNode from '../nodes/DocumentNode'
 import NodalNode from '../nodes/nodalNode'
+import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
@@ -487,7 +488,7 @@ function BoardContent({
     
     // Mark as initialized
     isInitializedRef.current = true
-  }, [initialBoard, pendingBoardBrief, setNodes, setEdges, clearPendingBoardBrief, boardId, boardName])
+  }, [initialBoard, pendingBoardBrief, clearPendingBoardBrief, boardId, boardName]) // Removed setNodes, setEdges from dependencies
   
   // Handle connections
   const onConnect = useCallback(
@@ -694,6 +695,16 @@ function BoardContent({
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([])
+
+  // Handle XYFlow's selection changes
+  const handleSelectionChange = useCallback(({ nodes }: { nodes: any[] }) => {
+    const selectedIds = nodes.map(node => node.id)
+    console.log('Selection changed:', selectedIds)
+    setSelectedNodes(selectedIds)
+    // Also update our store for chat integration
+    useBoardStore.getState().setSelectedNodes(selectedIds)
+  }, [])
 
   // Global drag event listener to handle files dragged from outside
   useEffect(() => {
@@ -854,7 +865,12 @@ function BoardContent({
         onNodeUpdate={handleNodeUpdate}
       />
     ),
-    document: DocumentNode,
+    document: (props: any) => (
+      <DocumentNode 
+        {...props} 
+        onNodeDelete={handleNodeDelete}
+      />
+    ),
   }), [handleNodeDelete, handleNodeUpdate])
 
   // Memoize edgeTypes to prevent React Flow warnings
@@ -893,6 +909,7 @@ function BoardContent({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onSelectionChange={handleSelectionChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes} // Now this has access to handleEdgeDelete
         connectionLineComponent={CustomConnectionLine}
@@ -900,6 +917,8 @@ function BoardContent({
         fitViewOptions={{ padding: 0.2, minZoom: 0.5, maxZoom: 2 }}
         proOptions={{ hideAttribution: true }}
         className={`${theme === 'dark' ? 'dark' : ''}`}
+        multiSelectionKeyCode="Meta"
+        deleteKeyCode="Delete"
       >
         <Background />
         <Controls />
@@ -938,6 +957,7 @@ function BoardContent({
             
             {aiInitialized && (
               <ChatPanel
+                nodes={nodes} // Add this line to pass the nodes
                 onGenerateNode={(nodeData: { label: string; content?: string }) => {
                   const position = getViewportCenter()
                   const newNode = {
@@ -1020,6 +1040,7 @@ function BoardContent({
               />
               {aiInitialized && (
                 <ChatPanel
+                  nodes={nodes} // Add this line to pass the nodes
                   onGenerateNode={(nodeData: { label: string; content?: string }) => {
                     const position = getViewportCenter()
                     const newNode = {

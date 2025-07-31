@@ -6,6 +6,7 @@ import { Trash2, Edit3 } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
+import { useBoardStore } from '../board/boardSlice'
 
 interface NodalNodeProps {
   data: {
@@ -19,15 +20,18 @@ interface NodalNodeProps {
   id: string
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: any) => void
+  selected?: boolean
 }
 
-export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate }: NodalNodeProps) {
+export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, selected }: NodalNodeProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editTitle, setEditTitle] = useState(data.label || data.title || '')
   const [editContent, setEditContent] = useState(data.content || '')
   
   const displayTitle = data.label || data.title || 'Untitled'
+
+  // Use XYFlow's selected prop instead of custom selection
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -40,6 +44,8 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate }: Noda
     setEditContent(data.content || '')
     setShowEditModal(true)
   }
+
+  // Remove custom selection logic - use XYFlow's built-in selection
 
   const handleConfirmDelete = () => {
     setShowDeleteModal(false)
@@ -59,7 +65,13 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate }: Noda
   }
 
   return (
-    <div className="flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[640px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm group">
+    <div 
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[640px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
+        selected 
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+          : 'border-gray-200 dark:border-gray-700'
+      }`}
+    >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="nodal-drag-handle cursor-move">
         <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
