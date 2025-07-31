@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.52.1",
     "@types/html2canvas": "^0.5.35",
+    "@vercel/node": "^5.3.7",
     "@xyflow/react": "^12.8.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

@@ -13,7 +13,13 @@ import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 import ThemeToggle from './ThemeToggle'
 
 interface AvatarMenuProps {
+  currentBoardName?: string
+  saveStatus?: 'saved' | 'saving' | 'unsaved' | 'error'
+  hasUnsavedChanges?: boolean
+  onSaveBoard?: () => void
   onOpenBoardRoom?: () => void
+  onExportBoard?: () => void
+  onImportBoard?: () => void
   onOpenSettings?: () => void
   onLoadBoard?: (board: SavedBoard) => void
   className?: string
@@ -21,7 +27,13 @@ interface AvatarMenuProps {
 }
 
 export default function AvatarMenu({ 
+  currentBoardName,
+  saveStatus = 'saved',
+  hasUnsavedChanges = false,
+  onSaveBoard,
   onOpenBoardRoom, 
+  onExportBoard,
+  onImportBoard,
   onOpenSettings, 
   onLoadBoard, 
   className = '', 
