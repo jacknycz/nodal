@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^138.0.2",
     "@supabase/supabase-js": "^2.52.1",
     "@types/html2canvas": "^0.5.35",
     "@vercel/node": "^5.3.7",
