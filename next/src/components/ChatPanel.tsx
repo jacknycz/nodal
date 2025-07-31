@@ -120,7 +120,7 @@ export default function ChatPanel({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-16 right-4 z-150 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors"
+        className="fixed top-16 right-4 z-40 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors"
         title="Open Chat"
       >
         <MessageSquare className="w-5 h-5" />
@@ -129,7 +129,7 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="fixed top-12 right-0 z-50 w-96 h-[calc(100vh-48px)] bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="fixed top-12 right-0 z-40 w-96 h-[calc(100vh-48px)] bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">

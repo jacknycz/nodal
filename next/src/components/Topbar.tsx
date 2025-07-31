@@ -2,7 +2,6 @@
 import { useTheme } from '../contexts/ThemeContext'
 import type { SavedBoard } from '../features/storage/storage'
 import AvatarMenu from './AvatarMenu'
-import ThemeToggle from './ThemeToggle'
 import AISettingsMenu from './AISettingsMenu'
 import DocumentsMenu from './DocumentsMenu'
 import React, { useState, useRef, useEffect } from 'react'
@@ -149,7 +148,6 @@ export default function Topbar({
 
           {/* Right - Controls */}
           <div className="flex items-center gap-3 justify-end">
-            <ThemeToggle />
             <AISettingsMenu 
               isTestMode={isTestMode}
               onToggleTestMode={onToggleTestMode}
