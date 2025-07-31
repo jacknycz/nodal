@@ -58,7 +58,7 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, select
     setShowEditModal(false)
     if (onNodeUpdate) {
       onNodeUpdate(id, {
-        label: editTitle,
+        title: editTitle,
         content: editContent
       })
     }

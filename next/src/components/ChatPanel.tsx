@@ -275,7 +275,7 @@ export default function ChatPanel({
             <Target className="w-4 h-4" />
             <span>
               {selectedNodes.length === 1 
-                ? `Selected: ${selectedNodes[0].data.title || 'Untitled Node'}`
+                ? `Selected: ${selectedNodes[0].data.title || selectedNodes[0].data.label || 'Untitled Node'}`
                 : `Selected: ${selectedNodes.length} nodes`
               }
             </span>

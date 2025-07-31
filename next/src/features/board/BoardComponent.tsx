@@ -454,7 +454,8 @@ function BoardContent({
     
     if (initialBoard && initialBoard.nodes) {
       console.log('📥 Loading initial board nodes:', initialBoard.nodes.length)
-      setNodes(initialBoard.nodes)
+      const migratedNodes = migrateNodeData(initialBoard.nodes);
+      setNodes(migratedNodes)
     }
     if (initialBoard && initialBoard.edges) {
       console.log('📥 Loading initial board edges:', initialBoard.edges.length)
@@ -534,7 +535,7 @@ function BoardContent({
       type: 'default',
       position,
       data: { 
-        label: nodeData.title,
+        title: nodeData.title,
         content: nodeData.content 
       },
     }
@@ -627,7 +628,7 @@ function BoardContent({
       type: 'document' as const,
       position: dropPosition,
       data: {
-        label: file.name,
+        title: file.name,
         file,
         type: 'document',
         fileName: file.name,
