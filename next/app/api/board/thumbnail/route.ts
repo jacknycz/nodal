@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-console.log('Supabase URL:', process.env.SUPABASE_URL ? 'Set' : 'Not set');
-console.log('Supabase Service Role Key:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Set' : 'Not set');
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function POST(req: NextRequest) {
+  // Create Supabase client inside the function to avoid build-time initialization
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error('Missing Supabase environment variables');
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
   try {
     const { boardId, thumbnail } = await req.json();
     console.log('Thumbnail API called with boardId:', boardId);
