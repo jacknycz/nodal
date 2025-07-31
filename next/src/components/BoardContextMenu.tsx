@@ -1,0 +1,62 @@
+'use client'
+
+import React from 'react'
+import { Plus, Sparkles } from 'lucide-react'
+
+interface BoardContextMenuProps {
+  isOpen: boolean
+  position: { x: number; y: number } | null
+  onClose: () => void
+  onAddBlankNode: () => void
+  onGenerateAINode: () => void
+}
+
+export default function BoardContextMenu({
+  isOpen,
+  position,
+  onClose,
+  onAddBlankNode,
+  onGenerateAINode,
+}: BoardContextMenuProps) {
+  if (!isOpen || !position) return null
+
+  const handleAction = (action: () => void) => {
+    action()
+    onClose()
+  }
+
+  return (
+    <>
+      {/* Backdrop to close menu when clicking outside */}
+      <div
+        className="fixed inset-0 z-40"
+        onClick={onClose}
+      />
+      
+      {/* Context menu */}
+      <div
+        className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[200px]"
+        style={{
+          left: position.x,
+          top: position.y,
+        }}
+      >
+        <button
+          onClick={() => handleAction(onAddBlankNode)}
+          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add a Blank Node
+        </button>
+        
+        <button
+          onClick={() => handleAction(onGenerateAINode)}
+          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+        >
+          <Sparkles className="w-4 h-4" />
+          Generate AI Node
+        </button>
+      </div>
+    </>
+  )
+} 

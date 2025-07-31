@@ -37,6 +37,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
 import type { BoardBrief } from './boardTypes'
 import NodeSetupModal from '../../components/NodeSetupModal'
+import BoardContextMenu from '../../components/BoardContextMenu'
 import { supabase } from '../auth/supabaseClient';
 
 const nodeTypes = {
@@ -79,6 +80,15 @@ function BoardContent({
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [thumbnailLoading, setThumbnailLoading] = useState(false);
   const prevSaveStatus = useRef(saveStatus);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number } | null;
+  }>({
+    isOpen: false,
+    position: null,
+  })
   
   // Autosave state - simplified
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -856,6 +866,56 @@ function BoardContent({
     ))
   }
 
+  // Context menu handlers
+  const handlePaneClick = useCallback((event: MouseEvent | React.MouseEvent) => {
+    // Close context menu if clicking on the pane
+    if (contextMenu.isOpen) {
+      setContextMenu({ isOpen: false, position: null })
+    }
+  }, [contextMenu.isOpen])
+
+  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    event.preventDefault()
+    
+    setContextMenu({
+      isOpen: true,
+      position: { x: event.clientX, y: event.clientY },
+    })
+  }, [])
+
+  const handleAddBlankNodeAtPosition = useCallback(() => {
+    if (!contextMenu.position) return
+    
+    const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect()
+    if (!reactFlowBounds) return
+    
+    // Convert screen coordinates to flow coordinates
+    const flowPosition = reactFlowInstance.screenToFlowPosition({
+      x: contextMenu.position.x - reactFlowBounds.left,
+      y: contextMenu.position.y - reactFlowBounds.top,
+    })
+    
+    // Create a blank node at the clicked position
+    const newNode: Node = {
+      id: `node-${Date.now()}`,
+      type: 'default',
+      position: flowPosition,
+      data: { 
+        label: 'New Node',
+        content: ''
+      },
+    }
+    
+    setNodes((nds) => {
+      if (!Array.isArray(nds)) return [newNode]
+      return [...nds, newNode]
+    })
+  }, [contextMenu.position, reactFlowInstance, setNodes])
+
+  const handleOpenAINodeGenerator = useCallback(() => {
+    setShowAINodeGenerator(true)
+  }, [])
+
   // Memoize nodeTypes to prevent React Flow warnings
   const nodeTypes = useMemo(() => ({
     default: (props: any) => (
@@ -910,6 +970,8 @@ function BoardContent({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={handleSelectionChange}
+        onPaneClick={handlePaneClick}
+        onPaneContextMenu={handlePaneContextMenu}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes} // Now this has access to handleEdgeDelete
         connectionLineComponent={CustomConnectionLine}
@@ -975,6 +1037,15 @@ function BoardContent({
       </ReactFlow>
       
       <BokehBackground />
+      
+      {/* Context Menu */}
+      <BoardContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={() => setContextMenu({ isOpen: false, position: null })}
+        onAddBlankNode={handleAddBlankNodeAtPosition}
+        onGenerateAINode={handleOpenAINodeGenerator}
+      />
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}
       {!screenshotMode && (
