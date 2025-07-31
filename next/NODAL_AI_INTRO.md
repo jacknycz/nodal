@@ -18,6 +18,7 @@
 - 🔄 Real-time collaboration and cloud synchronization
 - 📱 Responsive design that works across all devices
 - 🖼️ Automatic thumbnail generation for board previews
+- 🎯 Node selection and focus capabilities with AI chat integration
 
 ---
 
@@ -47,6 +48,8 @@
 - **Focus Tree**: Hierarchical organization system for nodes and ideas.
 - **AI Context**: Persistent memory system for AI conversations and suggestions.
 - **Thumbnail System**: Automatic generation and storage of board previews using Canvas API and Supabase storage.
+- **Node Selection**: Multi-node selection system with AI chat integration and visual feedback.
+- **Design System**: Reusable UI components (Modal, Button, IconButton, Toggle) for consistent design.
 
 ---
 
@@ -70,6 +73,8 @@
 - **Multi-Turn Memory**: AI maintains context across conversation turns using a message buffer.
 - **Context-Aware Suggestions**: AI provides relevant suggestions based on current board state and user history.
 - **Batch Operations**: AI can perform multiple operations across nodes simultaneously.
+- **Node Selection Integration**: AI chat automatically includes context from selected nodes, with dynamic UI notifications.
+- **Contextual Messaging**: Selected node content is prepended to user messages for AI awareness.
 
 ---
 
@@ -80,6 +85,7 @@
 - **AI Store**: Manages AI context, settings, and conversation state
 - **Focus Store**: Handles hierarchical focus tree and navigation state
 - **Theme Store**: Manages dark/light mode and UI preferences
+- **Multi-Node Selection**: Updated board store to handle multiple selected nodes with `selectedNodeIds` array
 
 ---
 
@@ -89,6 +95,8 @@
 next/src/
 ├── app/                    # Next.js App Router pages and API routes
 ├── components/             # Reusable UI components
+│   ├── ui/                # Design system components (Modal, Button, IconButton, Toggle)
+│   └── ...                # Feature-specific components
 ├── features/              # Feature-based organization
 │   ├── ai/               # AI integration and context
 │   ├── auth/             # Authentication and Supabase client
@@ -116,11 +124,49 @@ next/src/
 
 ## UI/UX Improvements
 
-- **Clean Avatar Menu**: Removed unused import/export functionality for streamlined user experience
+- **Clean Avatar Menu**: Removed submenu structure, streamlined with direct "Board Room" link and recent boards
 - **Centered Tips**: Drag & drop tips positioned bottom-center for better visibility
 - **Responsive Design**: All components work seamlessly across desktop and mobile devices
 - **Theme Consistency**: Dark/light mode support throughout all components
 - **Loading States**: Proper feedback during thumbnail generation and board operations
+- **Design System**: Built reusable UI components (Modal, Button, IconButton, Toggle) for consistency
+- **Node Selection UI**: Visual feedback for selected nodes with blue border and background
+- **Chat Panel Integration**: Context-aware chat with node selection notifications and dynamic placeholders
+- **Edge Interactions**: Hover effects, delete buttons with animations, and improved visibility
+- **Floating Action Button**: Moved to bottom-center for better accessibility
+- **Theme Toggle**: Relocated to AvatarMenu for cleaner topbar
+
+---
+
+## Node Selection & AI Integration
+
+- **Multi-Node Selection**: Support for selecting multiple nodes using drag-to-select and Cmd+click
+- **Visual Feedback**: Selected nodes display with blue border and background styling
+- **AI Chat Integration**: Selected node content is automatically included in AI chat context
+- **Dynamic UI Notifications**: Chat panel shows "Selected: [node title]" or "Selected: X nodes"
+- **Contextual Messaging**: User messages are prefixed with selected node context for AI awareness
+- **Smart Placeholders**: Chat input placeholder changes based on node selection state
+- **XYFlow Native Selection**: Leverages XYFlow's built-in selection system for reliability
+
+---
+
+## Edge & Connection Improvements
+
+- **Interactive Edges**: Hover effects with delete buttons and smooth animations
+- **Edge Styling**: Improved visibility with blue stroke, white outline, and glow effects
+- **Delete Functionality**: Animated delete buttons that appear on edge hover
+- **Connection Line**: Enhanced dragging connection line with better visibility and styling
+- **Edge Types**: Custom floating edge component with interactive elements
+
+---
+
+## Design System Components
+
+- **Modal Component**: Reusable modal with backdrop, escape handling, and action buttons
+- **Button Component**: Consistent button styling with variants (primary, secondary, danger, icon)
+- **IconButton Component**: Specialized icon-only buttons with accessibility support
+- **Toggle Component**: Reusable toggle switch with proper ARIA attributes
+- **Consistent Styling**: All components support dark/light themes and responsive design
 
 ---
 
@@ -133,6 +179,9 @@ next/src/
 - **Supabase Storage**: Simplified RLS policies (`true` for both INSERT and SELECT) work reliably for thumbnail storage.
 - **Canvas API**: Prefer Canvas API over html2canvas for client-side image generation to avoid CSS parsing issues.
 - **Error Handling**: Graceful fallbacks when thumbnails fail to load or generate.
+- **XYFlow Selection**: Use native XYFlow selection instead of custom state management for reliability.
+- **Component Memoization**: Memoize nodeTypes and edgeTypes to prevent React Flow warnings.
+- **Z-Index Management**: Proper layering ensures topbar menus appear above chat panel.
 
 ---
 
@@ -145,6 +194,8 @@ next/src/
 - **Cloud-First**: All board and document data is stored in Supabase; no local storage or legacy fallback.
 - **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
 - **UI Simplification**: Remove unused features to keep the interface clean and focused.
+- **Design System**: Use established UI components for consistency and maintainability.
+- **Node Selection**: Leverage XYFlow's native selection capabilities for reliability.
 
 ---
 
@@ -158,6 +209,11 @@ next/src/
 - **Robust storage architecture**: Simplified RLS policies for reliable thumbnail storage.
 - **Clean UI**: Removed unused import/export functionality and improved tip positioning.
 - **Error resilience**: Graceful handling of thumbnail failures and loading states.
+- **Node selection system**: Multi-node selection with AI chat integration and visual feedback.
+- **Design system established**: Reusable UI components for consistency and maintainability.
+- **Edge interactions**: Interactive edges with delete functionality and smooth animations.
+- **Chat panel integration**: Context-aware AI chat with node selection notifications.
+- **Improved UX**: Streamlined avatar menu, centered action button, and better theme management.
 
 ---
 
@@ -168,6 +224,8 @@ next/src/
 - **Keep the codebase clean, modern, and idiomatic.**
 - **Test thumbnail generation when making board-related changes.**
 - **Focus on core functionality**: Remove unused features to maintain clean UI.
+- **Use the design system**: Leverage established UI components for consistency.
+- **Test node selection**: Ensure multi-node selection works with AI chat integration.
 
 ---
 
