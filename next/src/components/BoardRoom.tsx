@@ -4,6 +4,7 @@ import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
+import Loader from './ui/Loader'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -290,7 +291,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
         )}
         {loading ? (
-          <div className="text-center py-16 text-gray-500 dark:text-gray-400">Loading boards...</div>
+          <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+            <Loader />
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBoards.length === 0 ? (

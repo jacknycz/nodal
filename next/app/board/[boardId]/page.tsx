@@ -6,6 +6,7 @@ import BoardComponent from '../../../src/features/board/BoardComponent';
 import { boardStorage } from '../../../src/features/storage/storage';
 import type { SavedBoard } from '../../../src/features/storage/storage';
 import { useSearchParams } from 'next/navigation';
+import Loader from '../../../src/components/ui/Loader';
 
 export default function BoardPage() {
   const params = useParams();
@@ -41,8 +42,11 @@ export default function BoardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span>Loading board...</span>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <Loader size="lg" className="mb-4" />
+        <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+          Loading your board...
+        </p>
       </div>
     );
   }

@@ -28,6 +28,7 @@ import {
   GripVertical
 } from 'lucide-react'
 import IconButton from './ui/IconButton'
+import Loader from './ui/Loader'
 
 interface TipTapEditorProps {
   content: string
@@ -155,7 +156,7 @@ export default function TipTapEditor({ content, onChange, placeholder = 'Start w
           {/* Placeholder toolbar */}
         </div>
         <div className="p-3 bg-white dark:bg-gray-800 min-h-[120px] flex items-center justify-center">
-          <div className="text-gray-500 dark:text-gray-400">Loading editor...</div>
+          <Loader />
         </div>
       </div>
     )
