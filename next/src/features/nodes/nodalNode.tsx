@@ -6,6 +6,7 @@ import { Trash2, Edit3 } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
+import NodeEditModal from '../../components/NodeEditModal'
 import { useBoardStore } from '../board/boardSlice'
 
 interface NodalNodeProps {
@@ -26,12 +27,8 @@ interface NodalNodeProps {
 export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, selected }: NodalNodeProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editTitle, setEditTitle] = useState(data.label || data.title || '')
-  const [editContent, setEditContent] = useState(data.content || '')
   
   const displayTitle = data.label || data.title || 'Untitled'
-
-  // Use XYFlow's selected prop instead of custom selection
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -40,12 +37,8 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, select
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setEditTitle(data.label || data.title || '')
-    setEditContent(data.content || '')
     setShowEditModal(true)
   }
-
-  // Remove custom selection logic - use XYFlow's built-in selection
 
   const handleConfirmDelete = () => {
     setShowDeleteModal(false)
@@ -54,19 +47,28 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, select
     }
   }
 
-  const handleConfirmEdit = () => {
-    setShowEditModal(false)
+  const handleSaveEdit = (title: string, content: string) => {
     if (onNodeUpdate) {
       onNodeUpdate(id, {
-        title: editTitle,
-        content: editContent
+        title,
+        content
       })
     }
   }
 
+  // Function to render rich content safely
+  const renderRichContent = (htmlContent: string) => {
+    return (
+      <div 
+        className="text-xs text-gray-600 dark:text-gray-200 mb-3 prose prose-sm dark:prose-invert max-w-none"
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+      />
+    )
+  }
+
   return (
     <div 
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[640px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
         selected 
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
           : 'border-gray-200 dark:border-gray-700'
@@ -78,9 +80,9 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, select
           {displayTitle}
         </h3>
         {data.content && (
-          <p className="text-xs text-gray-600 dark:text-gray-200 mb-3">
-            {data.content}
-          </p>
+          <div className="mb-3">
+            {renderRichContent(data.content)}
+          </div>
         )}
       </div>
       {/* Action buttons - only show on hover */}
@@ -132,58 +134,14 @@ export default function NodalNode({ data, id, onNodeDelete, onNodeUpdate, select
         </div>
       </Modal>
 
-      {/* Edit modal */}
-      <Modal
+      {/* Rich text edit modal */}
+      <NodeEditModal
         open={showEditModal}
         onClose={() => setShowEditModal(false)}
-        title="Edit Node"
-        description="Update the node's title and content."
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setShowEditModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleConfirmEdit}
-            >
-              Save Changes
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4 py-2">
-          <div>
-            <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Title
-            </label>
-            <input
-              id="edit-title"
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter node title..."
-            />
-          </div>
-          <div>
-            <label htmlFor="edit-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Content
-            </label>
-            <textarea
-              id="edit-content"
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-              placeholder="Enter node content..."
-            />
-          </div>
-        </div>
-      </Modal>
+        onSave={handleSaveEdit}
+        initialTitle={displayTitle}
+        initialContent={data.content || ''}
+      />
     </div>
   )
 }
