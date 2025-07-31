@@ -11,13 +11,16 @@ import { useBoardStore } from '../board/boardSlice'
 
 interface DocumentNodeData {
   label: string
-  file?: File
+  title?: string
   type: string
   fileName?: string
   fileType?: string
   fileSize?: number
   status?: 'processing' | 'ready' | 'error'
   extractedText?: string
+  previewUrl?: string
+  documentId?: string
+  uploadedAt?: number
 }
 
 interface DocumentNodeProps {
@@ -35,14 +38,14 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
 
   // Use XYFlow's selected prop instead of custom selection
 
-  // Create object URL for image preview
+  // Use preview URL for image preview
   useEffect(() => {
-    if (data.file && data.fileType?.startsWith('image/')) {
-      const url = URL.createObjectURL(data.file)
-      setImageUrl(url)
-      return () => URL.revokeObjectURL(url)
+    if (data.previewUrl && data.fileType?.startsWith('image/')) {
+      setImageUrl(data.previewUrl)
+    } else {
+      setImageUrl(null)
     }
-  }, [data.file, data.fileType])
+  }, [data.previewUrl, data.fileType])
 
   const isImage = data.fileType?.startsWith('image/') || 
     data.fileName?.match(/\.(png|jpg|jpeg|gif|webp)$/i)
@@ -101,23 +104,26 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
   }
 
   const handlePreview = () => {
-    if (isPDF) {
-      setShowPDFModal(true)
-    } else {
-      setShowPreview(!showPreview)
-    }
+    // PDF preview disabled since we don't have File object
+    // if (isPDF) {
+    //   setShowPDFModal(true)
+    // } else {
+    setShowPreview(!showPreview)
+    // }
   }
 
   const handleDownload = () => {
-    if (data.file) {
-      const url = URL.createObjectURL(data.file)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = data.fileName || data.label
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+    if (data.previewUrl) {
+      try {
+        const a = document.createElement('a')
+        a.href = data.previewUrl
+        a.download = data.fileName || data.label
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } catch (error) {
+        console.error('Error downloading file:', error)
+      }
     }
   }
 
@@ -206,7 +212,7 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
               </IconButton>
             )}
             
-            {data.file && (
+            {data.previewUrl && (
               <IconButton
                 variant="default"
                 size="sm"
@@ -279,15 +285,15 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
         <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
       </div>
 
-      {/* PDF Preview Modal */}
-      {isPDF && data.file && (
+      {/* PDF Preview Modal - Disabled since we don't have File object */}
+      {/* {isPDF && data.previewUrl && (
         <PDFPreviewModal
           isOpen={showPDFModal}
           onClose={() => setShowPDFModal(false)}
-          file={data.file}
+          file={null}
           fileName={data.fileName || data.label}
         />
-      )}
+      )} */}
 
       {/* Delete confirmation modal */}
       <Modal
