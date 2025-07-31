@@ -25,7 +25,7 @@ export const supabase = {
   get storage() {
     return getSupabaseClient().storage
   },
-  get from() {
-    return getSupabaseClient().from
+  from: function(table: string) {
+    return getSupabaseClient().from(table)
   }
 } 
