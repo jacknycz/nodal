@@ -15,7 +15,7 @@ export default function ChatPanel({
   onGenerateNode,
   nodes: propNodes
 }: ChatPanelProps) {
-  const [isOpen, setIsOpen] = useState(true)
+  const [isOpen, setIsOpen] = useState(true) // Keep it open by default
   const [inputValue, setInputValue] = useState('')
   const [showNodeGenerator, setShowNodeGenerator] = useState(false)
   const [nodePrompt, setNodePrompt] = useState('')
