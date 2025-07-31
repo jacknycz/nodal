@@ -1,11 +1,16 @@
 import { create } from 'zustand'
 
+interface FocusNode {
+  id: string
+  children?: FocusNode[]
+}
+
 interface FocusState {
   focusedNodeId: string | null
-  focusTree: any[]
+  focusTree: FocusNode[]
   enterFocusMode: (nodeId: string) => void
   exitFocusMode: () => void
-  setFocusTree: (tree: any[]) => void
+  setFocusTree: (tree: FocusNode[]) => void
 }
 
 export const useFocusStore = create<FocusState>((set) => ({
@@ -13,5 +18,5 @@ export const useFocusStore = create<FocusState>((set) => ({
   focusTree: [],
   enterFocusMode: (nodeId: string) => set({ focusedNodeId: nodeId }),
   exitFocusMode: () => set({ focusedNodeId: null }),
-  setFocusTree: (tree: any[]) => set({ focusTree: tree }),
+  setFocusTree: (tree: FocusNode[]) => set({ focusTree: tree }),
 })) 

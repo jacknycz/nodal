@@ -25,6 +25,19 @@ interface DocumentFile {
   userId: string
 }
 
+interface DocumentMetadata {
+  id: string
+  fileName: string
+  fileType: string
+  fileSize: number
+  filePath: string
+  extractedText: string
+  boardId: string
+  nodeId?: string
+  userId: string
+  uploadedAt: number
+}
+
 class SupabaseStorage {
   // Save a board to Supabase
   async saveBoard(name: string, data: Omit<BoardData, 'lastModified'>): Promise<string> {
@@ -282,7 +295,7 @@ class SupabaseStorage {
   }
 
   // Get documents for a board
-  async getBoardDocuments(boardId: string): Promise<any[]> {
+  async getBoardDocuments(boardId: string): Promise<DocumentMetadata[]> {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { ArrowLeft, TestTube } from 'lucide-react'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
+import type { OpenAIModel } from '../features/ai/aiTypes'
 
 interface AISettingsMenuProps {
   isTestMode?: boolean
@@ -94,7 +95,7 @@ export default function AISettingsMenu({
             <select
               className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
               value={model}
-              onChange={e => setModel(e.target.value as any)}
+              onChange={e => setModel(e.target.value as OpenAIModel)}
             >
               {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>

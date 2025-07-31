@@ -178,7 +178,7 @@ export default function LoginScreen() {
           {/* Features Preview */}
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-              What you'll get:
+              What you&apos;ll get:
             </h3>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">

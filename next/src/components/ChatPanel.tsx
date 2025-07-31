@@ -5,10 +5,11 @@ import { useUnifiedAI } from '../features/ai/useUnifiedAI'
 import { useAIContext } from '../features/ai/aiContext'
 import { useBoardStore } from '../features/board/boardSlice'
 import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key, Target } from 'lucide-react'
+import type { BoardNode } from '../features/board/boardTypes'
 
 interface ChatPanelProps {
   onGenerateNode?: (nodeData: { label: string; content?: string }) => void
-  nodes?: any[]
+  nodes?: BoardNode[]
 }
 
 export default function ChatPanel({ 
@@ -61,7 +62,7 @@ export default function ChatPanel({
     let contextualMessage = message
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map(node => {
-        const title = node.data.label || node.data.title || 'Untitled Node'
+        const title = node.data.title || 'Untitled Node'
         const content = node.data.content || ''
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
@@ -274,7 +275,7 @@ export default function ChatPanel({
             <Target className="w-4 h-4" />
             <span>
               {selectedNodes.length === 1 
-                ? `Selected: ${selectedNodes[0].data.label || selectedNodes[0].data.title || 'Untitled Node'}`
+                ? `Selected: ${selectedNodes[0].data.title || 'Untitled Node'}`
                 : `Selected: ${selectedNodes.length} nodes`
               }
             </span>

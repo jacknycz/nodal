@@ -57,7 +57,7 @@ export async function extractTextFromPDF(file: Blob): Promise<string> {
           
           // Combine text items from the page
           const pageText = textContent.items
-            .map((item: any) => item.str)
+            .map((item) => 'str' in item ? item.str : '')
             .join(' ')
             .trim()
           

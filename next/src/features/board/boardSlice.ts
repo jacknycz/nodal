@@ -66,7 +66,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   // Global delete function that can be called from anywhere
   deleteNodeFromBoard: (id: string) => {
     // This will be set by the BoardComponent
-    const deleteFunction = (window as any).__deleteNodeFromBoard
+    const deleteFunction = (window as Window & { __deleteNodeFromBoard?: (id: string) => void }).__deleteNodeFromBoard
     if (deleteFunction) {
       deleteFunction(id)
     }

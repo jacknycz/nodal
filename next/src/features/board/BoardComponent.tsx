@@ -3,14 +3,14 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import {
   ReactFlow,
-  Node,
-  Edge,
+  Node, 
+  Edge, 
   addEdge,
-  useNodesState,
-  useEdgesState,
+  useNodesState, 
+  useEdgesState, 
   Connection,
   ReactFlowProvider,
-  useReactFlow,
+  useReactFlow, 
   Background,
   Controls,
   MiniMap,
@@ -39,6 +39,7 @@ import type { BoardBrief } from './boardTypes'
 import NodeSetupModal from '../../components/NodeSetupModal'
 import BoardContextMenu from '../../components/BoardContextMenu'
 import { supabase } from '../auth/supabaseClient';
+import type { BoardNode } from './boardTypes';
 
 const nodeTypes = {
   default: NodalNode,
@@ -716,7 +717,7 @@ function BoardContent({
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
 
   // Handle XYFlow's selection changes
-  const handleSelectionChange = useCallback(({ nodes }: { nodes: any[] }) => {
+  const handleSelectionChange = useCallback(({ nodes }: { nodes: BoardNode[] }) => {
     const selectedIds = nodes.map(node => node.id)
     console.log('Selection changed:', selectedIds)
     setSelectedNodes(selectedIds)
@@ -745,6 +746,7 @@ function BoardContent({
     const handleWindowDragEnter = (e: DragEvent) => {
       // Only activate if we have files and haven't already activated
       if (!isFileBeingDragged && e.dataTransfer?.types.includes("Files")) {
+        e.preventDefault() // This is the key fix - tell browser this is a custom drop zone
         isFileBeingDragged = true
         setIsDragOver(true)
         console.log("🔄 File drag detected - overlay ON")
@@ -883,7 +885,7 @@ function BoardContent({
     }
   }, [handleNodeDelete])
 
-  const handleNodeUpdate = (nodeId: string, updates: any) => {
+  const handleNodeUpdate = (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
     setNodes((nds) => nds.map((node) => 
       node.id === nodeId ? { ...node, data: { ...node.data, ...updates } } : node
     ))

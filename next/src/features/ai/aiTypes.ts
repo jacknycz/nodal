@@ -80,7 +80,7 @@ export interface EmbeddingInfo {
     id: string
     content: string
     embedding: number[]
-    metadata: Record<string, any>
+    metadata: Record<string, string | number | boolean>
   }[]
 }
 
@@ -173,7 +173,7 @@ export interface UsageStats {
 export interface AIError {
   code: AIErrorCode
   message: string
-  details?: any
+  details?: Record<string, unknown>
   timestamp: Date
   requestId?: string
 }

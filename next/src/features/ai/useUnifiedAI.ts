@@ -274,7 +274,7 @@ Consider the existing context and create nodes that build upon or relate to what
       }
 
       // Process generated nodes
-      const generatedNodes: BoardNode[] = (parsedResponse.nodes || []).map((node: any, index: number) => ({
+      const generatedNodes: BoardNode[] = (parsedResponse.nodes || []).map((node: { title?: string; content?: string; type?: string; position?: { x: number; y: number } }, index: number) => ({
         id: `generated-${Date.now()}-${index}`,
         type: 'default',
         position: node.position || position || { x: 100 + index * 200, y: 100 + index * 100 },

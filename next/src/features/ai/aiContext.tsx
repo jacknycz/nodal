@@ -77,9 +77,9 @@ export function AIProvider({ children }: AIProviderProps) {
     totalRequests: 0,
     totalTokens: 0,
     totalCost: 0,
-    requestsByModel: {} as any,
-    tokensByModel: {} as any,
-    costsByModel: {} as any,
+    requestsByModel: {} as Record<OpenAIModel, number>,
+    tokensByModel: {} as Record<OpenAIModel, number>,
+    costsByModel: {} as Record<OpenAIModel, number>,
     dailyUsage: []
   })
   const [error, setError] = useState<AIError | null>(null)
@@ -145,12 +145,19 @@ export function AIProvider({ children }: AIProviderProps) {
 
       return true
     } catch (err) {
-      setError({
-        code: 'unknown_error',
-        message: err instanceof Error ? err.message : 'Unknown error occurred',
+      const aiError = err instanceof Error ? {
+        code: 'unknown_error' as const,
+        message: err.message,
         timestamp: new Date()
-      })
-      return false
+      } : {
+        code: 'unknown_error' as const,
+        message: 'Unknown error occurred',
+        timestamp: new Date()
+      }
+      setError(aiError)
+      throw aiError
+    } finally {
+      setActiveRequestCount(prev => Math.max(0, prev - 1))
     }
   }, [configManager])
 
@@ -230,7 +237,15 @@ export function AIProvider({ children }: AIProviderProps) {
       setUsageStats(service.getUsageStats())
       return response
     } catch (err) {
-      const aiError = err as AIError
+      const aiError = err instanceof Error ? {
+        code: 'unknown_error' as const,
+        message: err.message,
+        timestamp: new Date()
+      } : {
+        code: 'unknown_error' as const,
+        message: 'Unknown error occurred',
+        timestamp: new Date()
+      }
       setError(aiError)
       throw aiError
     } finally {
@@ -255,7 +270,15 @@ export function AIProvider({ children }: AIProviderProps) {
         }
       }
     } catch (err) {
-      const aiError = err as AIError
+      const aiError = err instanceof Error ? {
+        code: 'unknown_error' as const,
+        message: err.message,
+        timestamp: new Date()
+      } : {
+        code: 'unknown_error' as const,
+        message: 'Unknown error occurred',
+        timestamp: new Date()
+      }
       setError(aiError)
       throw aiError
     } finally {

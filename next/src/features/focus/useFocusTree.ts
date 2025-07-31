@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { useBoardStore } from '../board/boardSlice'
 import { useFocusStore } from './focusSlice'
+import type { BoardNode } from '../board/boardTypes'
 
 export function useFocusTree() {
   const nodes = useBoardStore(state => state.nodes)
@@ -12,7 +13,7 @@ export function useFocusTree() {
   const focusTreeNodes = useMemo(() => {
     if (!focusedNodeId) return []
     // Stub implementation - return just the focused node for now
-    const focusedNode = nodes.find((n: any) => n.id === focusedNodeId)
+    const focusedNode = nodes.find((n: BoardNode) => n.id === focusedNodeId)
     return focusedNode ? [focusedNode] : []
   }, [nodes, focusedNodeId])
 

@@ -131,8 +131,8 @@ export default function AISetupModal({ isOpen, onClose }: AISetupModalProps) {
             <ol className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
               <li>1. Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">OpenAI Platform</a></li>
               <li>2. Sign in or create an account</li>
-              <li>3. Click "Create new secret key"</li>
-              <li>4. Copy the key (starts with "sk-")</li>
+              <li>3. Click &quot;Create new secret key&quot;</li>
+              <li>4. Copy the key (starts with &quot;sk-&quot;)</li>
               <li>5. Paste it above and test the connection</li>
             </ol>
           </div>

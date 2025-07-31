@@ -170,59 +170,63 @@ export class OpenAIService {
   }
 
   // Error Handling
-  private categorizeError(error: any): AIError {
+  private categorizeError(error: unknown): AIError {
     const now = new Date()
     
-    if (error.status === 401) {
-      return {
-        code: AIErrorCode.INVALID_API_KEY,
-        message: 'Invalid API key provided',
-        timestamp: now,
-        details: error
+    if (error && typeof error === 'object' && 'status' in error) {
+      const errorObj = error as { status: number; message?: string }
+      
+      if (errorObj.status === 401) {
+        return {
+          code: AIErrorCode.INVALID_API_KEY,
+          message: 'Invalid API key provided',
+          timestamp: now,
+          details: error as Record<string, unknown>
+        }
+      }
+      
+      if (errorObj.status === 429) {
+        return {
+          code: AIErrorCode.RATE_LIMIT_EXCEEDED,
+          message: 'Rate limit exceeded',
+          timestamp: now,
+          details: error as Record<string, unknown>
+        }
+      }
+      
+      if (errorObj.status === 400 && errorObj.message?.includes('maximum context length')) {
+        return {
+          code: AIErrorCode.CONTEXT_TOO_LONG,
+          message: 'Context length exceeds model limit',
+          timestamp: now,
+          details: error as Record<string, unknown>
+        }
+      }
+      
+      if (errorObj.status === 400 && errorObj.message?.includes('content_filter')) {
+        return {
+          code: AIErrorCode.CONTENT_FILTERED,
+          message: 'Content filtered by OpenAI',
+          timestamp: now,
+          details: error as Record<string, unknown>
+        }
       }
     }
     
-    if (error.status === 429) {
-      return {
-        code: AIErrorCode.RATE_LIMIT_EXCEEDED,
-        message: 'Rate limit exceeded',
-        timestamp: now,
-        details: error
-      }
-    }
-    
-    if (error.status === 400 && error.message?.includes('maximum context length')) {
-      return {
-        code: AIErrorCode.CONTEXT_TOO_LONG,
-        message: 'Context length exceeds model limit',
-        timestamp: now,
-        details: error
-      }
-    }
-    
-    if (error.status === 400 && error.message?.includes('content_filter')) {
-      return {
-        code: AIErrorCode.CONTENT_FILTERED,
-        message: 'Content filtered by OpenAI',
-        timestamp: now,
-        details: error
-      }
-    }
-    
-    if (!navigator.onLine || error.name === 'NetworkError') {
+    if (!navigator.onLine || (error && typeof error === 'object' && 'name' in error && (error as { name: string }).name === 'NetworkError')) {
       return {
         code: AIErrorCode.NETWORK_ERROR,
         message: 'Network connection error',
         timestamp: now,
-        details: error
+        details: error as Record<string, unknown>
       }
     }
     
     return {
       code: AIErrorCode.UNKNOWN_ERROR,
-      message: error.message || 'Unknown error occurred',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
       timestamp: now,
-      details: error
+      details: error as Record<string, unknown>
     }
   }
 
@@ -232,7 +236,7 @@ export class OpenAIService {
     maxAttempts: number = 3,
     baseDelay: number = 1000
   ): Promise<T> {
-    let lastError: any
+    let lastError: unknown
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -242,12 +246,9 @@ export class OpenAIService {
         
                  // Don't retry on certain errors
          const aiError = this.categorizeError(error)
-         const nonRetryableErrors = [
-           AIErrorCode.INVALID_API_KEY,
-           AIErrorCode.CONTENT_FILTERED,
-           AIErrorCode.CONTEXT_TOO_LONG
-         ] as const
-         if (nonRetryableErrors.includes(aiError.code as any)) {
+         if (aiError.code === AIErrorCode.INVALID_API_KEY || 
+             aiError.code === AIErrorCode.CONTENT_FILTERED || 
+             aiError.code === AIErrorCode.CONTEXT_TOO_LONG) {
            throw aiError
          }
         
@@ -510,6 +511,7 @@ export class OpenAIService {
               }
             } catch (e) {
               // Skip invalid JSON
+              console.debug('Skipping invalid JSON in stream:', e)
             }
           }
         }

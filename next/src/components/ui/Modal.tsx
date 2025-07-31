@@ -23,6 +23,9 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
 
   if (!open) return null;
 
+  // Only render if we're in the browser
+  if (typeof window === 'undefined') return null;
+
   return ReactDOM.createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -44,7 +47,7 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
         {actions && <div className="mt-6 flex gap-2 justify-end">{actions}</div>}
       </div>
     </div>,
-    typeof window !== 'undefined' ? document.body : (null as any)
+    document.body
   );
 };
 

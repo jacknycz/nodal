@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
       received: body 
     })
   } catch (error) {
+    console.error('Test API error:', error);
     return NextResponse.json({ error: 'Failed to parse JSON' }, { status: 400 })
   }
 } 

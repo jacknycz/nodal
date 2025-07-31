@@ -8,7 +8,7 @@ export function createNode(
   // If first parameter is a complete node object, return it as-is
   if (typeof titleOrNode === 'object') {
     // Migrate label to title if needed
-    const data = titleOrNode.data as any;
+    const data = titleOrNode.data as { label?: string; title?: string; media?: string[] };
     if (data.label && !data.title) {
       data.title = data.label;
       delete data.label;

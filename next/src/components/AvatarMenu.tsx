@@ -1,7 +1,7 @@
+import { useState, useRef, useEffect } from 'react'
 import { 
   User, 
   Settings, 
-  Save, 
   Building, 
   HelpCircle, 
   LogOut,
@@ -10,14 +10,9 @@ import {
 } from 'lucide-react'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
-import { useState, useRef, useEffect } from 'react'
 import ThemeToggle from './ThemeToggle'
 
 interface AvatarMenuProps {
-  currentBoardName?: string
-  saveStatus?: 'saved' | 'saving' | 'unsaved' | 'error'
-  hasUnsavedChanges?: boolean
-  onSaveBoard?: () => void
   onOpenBoardRoom?: () => void
   onOpenSettings?: () => void
   onLoadBoard?: (board: SavedBoard) => void
@@ -25,15 +20,11 @@ interface AvatarMenuProps {
   isBoardView?: boolean
 }
 
-export default function AvatarMenu({
-  currentBoardName,
-  saveStatus = 'saved',
-  hasUnsavedChanges = false,
-  onSaveBoard,
-  onOpenBoardRoom,
-  onOpenSettings,
-  onLoadBoard,
-  className = '',
+export default function AvatarMenu({ 
+  onOpenBoardRoom, 
+  onOpenSettings, 
+  onLoadBoard, 
+  className = '', 
   isBoardView = false
 }: AvatarMenuProps) {
   const user = useSupabaseUser()
@@ -75,11 +66,6 @@ export default function AvatarMenu({
     }
   }
 
-  const handleSaveBoard = () => {
-    onSaveBoard?.()
-    setIsOpen(false)
-  }
-
   const handleOpenBoardRoom = () => {
     onOpenBoardRoom?.()
     setIsOpen(false)
@@ -93,36 +79,6 @@ export default function AvatarMenu({
   const handleLoadBoard = (board: SavedBoard) => {
     onLoadBoard?.(board)
     setIsOpen(false)
-  }
-
-  const getSaveStatusIcon = () => {
-    switch (saveStatus) {
-      case 'saving':
-        return <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-      case 'saved':
-        return <div className="w-2 h-2 bg-green-500 rounded-full" />
-      case 'unsaved':
-        return <div className="w-2 h-2 bg-orange-500 rounded-full" />
-      case 'error':
-        return <div className="w-2 h-2 bg-red-500 rounded-full" />
-      default:
-        return null
-    }
-  }
-
-  const getSaveStatusText = () => {
-    switch (saveStatus) {
-      case 'saving':
-        return 'Saving...'
-      case 'saved':
-        return hasUnsavedChanges ? 'Save Changes' : 'All Saved'
-      case 'unsaved':
-        return 'Save Changes'
-      case 'error':
-        return 'Save Failed'
-      default:
-        return 'Save Board'
-    }
   }
 
   // Get user display name

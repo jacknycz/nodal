@@ -19,7 +19,7 @@ interface NodalNodeProps {
   }
   id: string
   onNodeDelete?: (nodeId: string) => void
-  onNodeUpdate?: (nodeId: string, updates: any) => void
+  onNodeUpdate?: (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => void
   selected?: boolean
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position } from '@xyflow/react'
 import { X } from 'lucide-react'
 
 interface FloatingEdgeProps {
@@ -10,9 +10,12 @@ interface FloatingEdgeProps {
   sourceY: number
   targetX: number
   targetY: number
-  sourcePosition: any
-  targetPosition: any
-  data?: any
+  sourcePosition: Position
+  targetPosition: Position
+  data?: {
+    label?: string
+    type?: 'ai' | 'focus' | 'default'
+  }
   selected?: boolean
   animated?: boolean
   onEdgeDelete?: (edgeId: string) => void
