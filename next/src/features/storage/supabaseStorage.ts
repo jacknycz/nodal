@@ -422,6 +422,42 @@ class SupabaseStorage {
       throw error
     }
   }
+
+  async getSignedUrl(documentId: string): Promise<string | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // Get document metadata to find the file path
+      const { data: docData, error: dbError } = await supabase
+        .from('documents')
+        .select('file_path')
+        .eq('id', documentId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (dbError || !docData) {
+        console.error('Document not found or access denied:', dbError)
+        return null
+      }
+
+      // Generate signed URL (valid for 1 hour)
+      const { data: signedUrl, error: urlError } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(docData.file_path, 3600) // 1 hour expiry
+
+      if (urlError) {
+        console.error('Failed to generate signed URL:', urlError)
+        return null
+      }
+
+      console.log(`Generated signed URL for document ${documentId}`)
+      return signedUrl.signedUrl
+    } catch (error) {
+      console.error('Failed to get signed URL from Supabase:', error)
+      return null
+    }
+  }
 }
 
 export const supabaseStorage = new SupabaseStorage() 

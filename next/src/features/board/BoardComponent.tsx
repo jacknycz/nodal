@@ -40,6 +40,7 @@ import NodeSetupModal from '../../components/NodeSetupModal'
 import BoardContextMenu from '../../components/BoardContextMenu'
 import { supabase } from '../auth/supabaseClient';
 import type { BoardNode } from './boardTypes';
+import { supabaseStorage } from '../storage/supabaseStorage'
 
 const nodeTypes = {
   default: NodalNode,
@@ -634,71 +635,90 @@ function BoardContent({
     const dropPosition = position || getViewportCenter()
     const nodeId = `document-${Date.now()}`
     
-    // Generate preview URL for images
-    let previewUrl: string | undefined
-    if (file.type.startsWith('image/')) {
-      previewUrl = URL.createObjectURL(file)
-    }
-    
-    // Create the node first with empty extracted text
-    const newNode = {
-      id: nodeId,
-      type: 'document' as const,
-      position: dropPosition,
-      data: {
-        title: file.name,
+    // Upload file to Supabase Storage first
+    try {
+      console.log('📤 Uploading file to Supabase Storage:', file.name)
+      const documentId = await boardStorage.saveDocument(
+        file.name,
         file,
-        type: 'document',
-        fileName: file.name,
-        fileType: file.type || 'unknown',
-        fileSize: file.size,
-        status: 'processing' as const,
-        extractedText: '',
-        previewUrl, // Add the preview URL for images
-      },
-    }
-    handleAddNodeToStore(newNode)
-    
-    // Extract text if the file type supports it
-    if (isTextExtractable(file.type, file.name)) {
-      try {
-        console.log('🔍 Starting server-side text extraction for:', file.name)
-        
-        // Convert file to base64 using a more efficient method
-        const arrayBuffer = await file.arrayBuffer()
-        const uint8Array = new Uint8Array(arrayBuffer)
-        let binary = ''
-        for (let i = 0; i < uint8Array.length; i++) {
-          binary += String.fromCharCode(uint8Array[i])
-        }
-        const base64 = btoa(binary)
-        
-        // Call server-side API
-        const response = await fetch('/api/extract-text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            file: base64,
-            fileName: file.name,
-            fileType: file.type
-          })
-        })
-        
-        if (response.ok) {
-          const result = await response.json()
-          console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
+        '', // Empty extracted text for now
+        localBoardIdRef.current || 'temp',
+        nodeId
+      )
+      
+      console.log('✅ File uploaded successfully, documentId:', documentId)
+      
+      // Create the node with file metadata (no File object)
+      const signedUrl = await supabaseStorage.getSignedUrl(documentId);
+      const newNode = {
+        id: nodeId,
+        type: 'document' as const,
+        position: dropPosition,
+        data: {
+          title: file.name,
+          type: 'document',
+          fileName: file.name,
+          fileType: file.type || 'unknown',
+          fileSize: file.size,
+          status: 'processing' as const,
+          extractedText: '',
+          documentId, // Store the document ID instead of File object
+          previewUrl: signedUrl, // Store the signed URL
+        },
+      }
+      handleAddNodeToStore(newNode)
+      
+      // Extract text if the file type supports it
+      if (isTextExtractable(file.type, file.name)) {
+        try {
+          console.log('🔍 Starting server-side text extraction for:', file.name)
           
-          // Update the specific node
-          setNodes((currentNodes) => {
-            if (!Array.isArray(currentNodes)) return currentNodes
-            return currentNodes.map(node => 
-              node.id === nodeId 
-                ? { ...node, data: { ...node.data, extractedText: result.extractedText, status: 'ready' } }
-                : node
-            )
+          // Convert file to base64 using a more efficient method
+          const arrayBuffer = await file.arrayBuffer()
+          const uint8Array = new Uint8Array(arrayBuffer)
+          let binary = ''
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i])
+          }
+          const base64 = btoa(binary)
+          
+          // Call server-side API
+          const response = await fetch('/api/extract-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              file: base64,
+              fileName: file.name,
+              fileType: file.type
+            })
           })
-        } else {
-          console.error('❌ Server-side text extraction failed:', response.statusText)
+          
+          if (response.ok) {
+            const result = await response.json()
+            console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
+            
+            // Update the specific node
+            setNodes((currentNodes) => {
+              if (!Array.isArray(currentNodes)) return currentNodes
+              return currentNodes.map(node => 
+                node.id === nodeId 
+                  ? { ...node, data: { ...node.data, extractedText: result.extractedText, status: 'ready' } }
+                  : node
+              )
+            })
+          } else {
+            console.error('❌ Server-side text extraction failed:', response.statusText)
+            setNodes((currentNodes) => {
+              if (!Array.isArray(currentNodes)) return currentNodes
+              return currentNodes.map(node => 
+                node.id === nodeId 
+                  ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
+                  : node
+              )
+            })
+          }
+        } catch (error) {
+          console.error('❌ Text extraction failed:', error)
           setNodes((currentNodes) => {
             if (!Array.isArray(currentNodes)) return currentNodes
             return currentNodes.map(node => 
@@ -708,29 +728,37 @@ function BoardContent({
             )
           })
         }
-      } catch (error) {
-        console.error('❌ Text extraction failed:', error)
+      } else {
+        // For non-extractable files, mark as ready
         setNodes((currentNodes) => {
           if (!Array.isArray(currentNodes)) return currentNodes
           return currentNodes.map(node => 
             node.id === nodeId 
-              ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
+              ? { ...node, data: { ...node.data, status: 'ready' } }
               : node
           )
         })
       }
-    } else {
-      // For non-extractable files, mark as ready
-      setNodes((currentNodes) => {
-        if (!Array.isArray(currentNodes)) return currentNodes
-        return currentNodes.map(node => 
-          node.id === nodeId 
-            ? { ...node, data: { ...node.data, status: 'ready' } }
-            : node
-        )
-      })
+    } catch (error) {
+      console.error('❌ Failed to upload file to Supabase:', error)
+      // Create node with error status
+      const newNode = {
+        id: nodeId,
+        type: 'document' as const,
+        position: dropPosition,
+        data: {
+          title: file.name,
+          type: 'document',
+          fileName: file.name,
+          fileType: file.type || 'unknown',
+          fileSize: file.size,
+          status: 'error' as const,
+          extractedText: 'File upload failed',
+        },
+      }
+      handleAddNodeToStore(newNode)
     }
-  }, [handleAddNodeToStore, isTextExtractable, setNodes])
+  }, [handleAddNodeToStore, isTextExtractable, setNodes, localBoardIdRef])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)

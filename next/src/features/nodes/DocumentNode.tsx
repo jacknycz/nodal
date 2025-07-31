@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { FileText, Download, Eye, Trash2, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import PDFPreviewModal from '../../components/PDFPreviewModal'
@@ -8,6 +8,7 @@ import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
+import { supabaseStorage } from '../storage/supabaseStorage'
 
 interface DocumentNodeData {
   label: string
@@ -19,7 +20,7 @@ interface DocumentNodeData {
   status?: 'processing' | 'ready' | 'error'
   extractedText?: string
   previewUrl?: string
-  documentId?: string
+  documentId?: string // Store document ID instead of File object
   uploadedAt?: number
 }
 
@@ -34,33 +35,16 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
 
-  // Use XYFlow's selected prop instead of custom selection
-
-  // Use preview URL for image preview
-  useEffect(() => {
-    console.log('🖼️ DocumentNode useEffect - data:', {
-      previewUrl: data.previewUrl,
-      fileType: data.fileType,
-      fileName: data.fileName,
-      isImage: data.fileType?.startsWith('image/'),
-      label: data.label
-    })
-    
-    if (data.previewUrl && data.fileType?.startsWith('image/')) {
-      console.log('✅ Setting image URL:', data.previewUrl)
-      setImageUrl(data.previewUrl)
-    } else {
-      console.log('❌ No preview URL or not an image, clearing imageUrl')
-      setImageUrl(null)
-    }
-  }, [data.previewUrl, data.fileType])
+  // Remove: const [imageUrl, setImageUrl] = useState<string | null>(null)
+  // Remove: const [isLoadingImage, setIsLoadingImage] = useState(false)
+  // Remove: const lastFetchedId = useRef<string | null>(null);
+  // Remove the useEffect that fetches the signed URL
 
   const isImage = data.fileType?.startsWith('image/') || 
     data.fileName?.match(/\.(png|jpg|jpeg|gif|webp)$/i)
 
-  console.log('🖼️ DocumentNode render - isImage:', isImage, 'imageUrl:', imageUrl, 'showPreview:', showPreview)
+  console.log('🖼️ DocumentNode render - isImage:', isImage, 'imageUrl:', data.previewUrl, 'showPreview:', showPreview, 'isLoading:', false)
 
   const isPDF = data.fileType?.includes('pdf') || data.fileName?.match(/\.pdf$/i)
 
@@ -116,13 +100,8 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
   }
 
   const handlePreview = () => {
-    console.log('👁️ Preview button clicked - isImage:', isImage, 'imageUrl:', imageUrl)
-    // PDF preview disabled since we don't have File object
-    // if (isPDF) {
-    //   setShowPDFModal(true)
-    // } else {
+    console.log('👁️ Preview button clicked - isImage:', isImage, 'imageUrl:', data.previewUrl)
     setShowPreview(!showPreview)
-    // }
   }
 
   const handleDownload = () => {
@@ -188,14 +167,14 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
           </div>
 
           {/* Image Preview (if it's an image) */}
-          {isImage && imageUrl && (
+          {isImage && data.previewUrl && (
             <div className="mb-3">
               <img
-                src={imageUrl}
+                src={data.previewUrl}
                 alt={data.label}
                 className="w-full h-32 object-cover rounded border border-gray-200 dark:border-gray-600"
-                onLoad={() => console.log('✅ Image loaded successfully:', imageUrl)}
-                onError={(e) => console.error('❌ Image failed to load:', imageUrl, e)}
+                onLoad={() => console.log('✅ Image loaded successfully:', data.previewUrl)}
+                onError={(e) => console.error('❌ Image failed to load:', data.previewUrl, e)}
               />
             </div>
           )}
@@ -283,17 +262,17 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
           )}
 
           {/* Image Preview Modal */}
-          {showPreview && isImage && imageUrl && (
+          {showPreview && isImage && data.previewUrl && (
             <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
               <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Image Preview
               </h4>
               <img
-                src={imageUrl}
+                src={data.previewUrl}
                 alt={data.label}
                 className="w-full max-h-48 object-contain rounded"
-                onLoad={() => console.log('✅ Preview image loaded successfully:', imageUrl)}
-                onError={(e) => console.error('❌ Preview image failed to load:', imageUrl, e)}
+                onLoad={() => console.log('✅ Preview image loaded successfully:', data.previewUrl)}
+                onError={(e) => console.error('❌ Preview image failed to load:', data.previewUrl, e)}
               />
             </div>
           )}
