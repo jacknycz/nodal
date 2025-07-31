@@ -1,6 +1,31 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+let supabaseClient: ReturnType<typeof createClient> | null = null
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey) 
+export function getSupabaseClient() {
+  if (!supabaseClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing Supabase environment variables')
+    }
+    
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+  }
+  
+  return supabaseClient
+}
+
+// For backward compatibility - lazy initialization
+export const supabase = {
+  get auth() {
+    return getSupabaseClient().auth
+  },
+  get storage() {
+    return getSupabaseClient().storage
+  },
+  get from() {
+    return getSupabaseClient().from
+  }
+} 

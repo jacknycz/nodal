@@ -68,7 +68,7 @@ class SupabaseStorage {
       if (error) throw error
 
       console.log(`Board "${name}" saved to Supabase with ID: ${result.id}`)
-      return result.id
+      return result.id as string
     } catch (error) {
       console.error('Failed to save board to Supabase:', error)
       throw error
@@ -154,14 +154,14 @@ class SupabaseStorage {
       
       // Convert snake_case to camelCase
       return data ? {
-        id: data.id,
-        name: data.name,
-        data: data.data,
-        createdAt: data.created_at,
-        lastModified: data.last_modified,
-        nodeCount: data.node_count,
-        edgeCount: data.edge_count,
-        userId: data.user_id,
+        id: data.id as string,
+        name: data.name as string,
+        data: data.data as BoardData,
+        createdAt: data.created_at as number,
+        lastModified: data.last_modified as number,
+        nodeCount: data.node_count as number,
+        edgeCount: data.edge_count as number,
+        userId: data.user_id as string,
       } : null
     } catch (error) {
       console.error('Failed to load board from Supabase:', error)
@@ -185,14 +185,14 @@ class SupabaseStorage {
       
       // Convert snake_case to camelCase
       return (data || []).map(board => ({
-        id: board.id,
-        name: board.name,
-        data: board.data,
-        createdAt: board.created_at,
-        lastModified: board.last_modified,
-        nodeCount: board.node_count,
-        edgeCount: board.edge_count,
-        userId: board.user_id,
+        id: board.id as string,
+        name: board.name as string,
+        data: board.data as BoardData,
+        createdAt: board.created_at as number,
+        lastModified: board.last_modified as number,
+        nodeCount: board.node_count as number,
+        edgeCount: board.edge_count as number,
+        userId: board.user_id as string,
       }))
     } catch (error) {
       console.error('Failed to get boards from Supabase:', error)
