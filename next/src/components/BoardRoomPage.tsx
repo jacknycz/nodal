@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { ThemeProvider } from '../contexts/ThemeContext'
 import { AIProvider } from '../features/ai/aiContext'
 import Topbar from './Topbar'
@@ -13,7 +14,7 @@ import type { BoardBrief } from '../features/board/boardTypes'
 
 export default function BoardRoomPage() {
   const user = useSupabaseUser()
-  const [currentView, setCurrentView] = useState<'boardroom' | 'board'>('boardroom')
+  const router = useRouter()
   const [currentBoard, setCurrentBoard] = useState<SavedBoard | null>(null)
   const [pendingBoardBrief, setPendingBoardBrief] = useState<BoardBrief | null>(null)
   const [boardState, setBoardState] = useState({
@@ -28,25 +29,15 @@ export default function BoardRoomPage() {
   const handleOpenBoard = async (board: SavedBoard | null, brief?: BoardBrief | null) => {
     console.log('Open board:', board, brief)
     if (board) {
-      // Existing board - just open it
-      setCurrentBoard(board)
-      setCurrentView('board')
-      // Set the board name for existing boards
-      setBoardState(prev => ({
-        ...prev,
-        boardName: board.name
-      }))
+      router.push(`/board/${board.id}`)
     } else if (brief) {
-      // New board - just set the brief and switch to board view
       setPendingBoardBrief(brief)
-      setCurrentView('board')
+      // Optionally, you could push a URL for a new/unsaved board here
     }
   }
 
   const handleOpenBoardRoom = () => {
-    setCurrentView('boardroom')
-    setCurrentBoard(null)
-    setPendingBoardBrief(null)
+    router.push('/')
   }
 
   const handleBoardStateChange = (boardName: string, saveStatus: string, hasUnsavedChanges: boolean) => {
@@ -75,28 +66,11 @@ export default function BoardRoomPage() {
               currentBoardName={boardState.boardName} 
               saveStatus={boardState.saveStatus}
               hasUnsavedChanges={boardState.hasUnsavedChanges}
-              isBoardView={currentView === 'board'}
+              isBoardView={false} // This can be improved if you want to detect board view from URL
               onOpenBoardRoom={handleOpenBoardRoom}
               onSaveBoard={handleManualSave}
             />
-            {currentView === 'boardroom' ? (
-              <BoardRoom onOpenBoard={handleOpenBoard} />
-            ) : (
-              <BoardComponent 
-                onBoardStateChange={handleBoardStateChange}
-                initialBoard={currentBoard ? { nodes: currentBoard.data.nodes, edges: currentBoard.data.edges } : undefined}
-                boardId={currentBoard?.id}
-                boardName={currentBoard?.name}
-                pendingBoardBrief={pendingBoardBrief || undefined}
-                clearPendingBoardBrief={clearPendingBoardBrief}
-                onDeleteNode={(nodeId) => {
-                  // Store the delete function for use in Topbar
-                  deleteNodeRef.current = (nodeId: string) => {
-                    // This will be called by the BoardComponent
-                  }
-                }}
-              />
-            )}
+            <BoardRoom onOpenBoard={handleOpenBoard} />
           </>
         ) : (
           <LoginScreen />

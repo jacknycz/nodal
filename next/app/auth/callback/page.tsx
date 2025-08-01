@@ -5,12 +5,17 @@ import { supabase } from '../../../src/features/auth/supabaseClient';
 
 export default function AuthCallbackPage() {
   useEffect(() => {
-    // Log the session immediately after redirect
     supabase.auth.getSession().then(({ data }) => {
       console.log('[Callback] Supabase session after redirect:', data.session);
     });
     setTimeout(() => {
-      window.location.replace('/');
+      const redirectUrl = sessionStorage.getItem('authRedirectUrl');
+      sessionStorage.removeItem('authRedirectUrl');
+      if (redirectUrl && !redirectUrl.includes('/auth/callback')) {
+        window.location.replace(redirectUrl);
+      } else {
+        window.location.replace('/');
+      }
     }, 500);
   }, []);
   return (

@@ -7,6 +7,9 @@ import { boardStorage } from '../../../src/features/storage/storage';
 import type { SavedBoard } from '../../../src/features/storage/storage';
 import { useSearchParams } from 'next/navigation';
 import Loader from '../../../src/components/ui/Loader';
+import { ThemeProvider } from '../../../src/contexts/ThemeContext';
+import { AIProvider } from '../../../src/features/ai/aiContext';
+import Topbar from '../../../src/components/Topbar';
 
 export default function BoardPage() {
   const params = useParams();
@@ -15,6 +18,8 @@ export default function BoardPage() {
   const [board, setBoard] = useState<SavedBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const screenshotMode = searchParams.get('screenshot') === 'true';
 
   useEffect(() => {
@@ -40,32 +45,47 @@ export default function BoardPage() {
     }
   }, [boardId]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <Loader size="lg" className="mb-4" />
-        <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
-          Loading your board...
-        </p>
-      </div>
-    );
-  }
+  // Update save status and unsaved changes from BoardComponent
+  const handleBoardStateChange = (name: string, status: string, hasChanges: boolean) => {
+    setSaveStatus(status as 'saved' | 'saving' | 'unsaved' | 'error');
+    setHasUnsavedChanges(hasChanges);
+  };
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span>Error: {error}</span>
-      </div>
-    );
-  }
+  const handleOpenBoardRoom = () => {
+    window.location.href = '/';
+  };
 
   return (
-    <div className="h-screen">
-      <BoardComponent 
-        initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
-        onBoardStateChange={(name, status, hasChanges) => console.log('Board state:', { name, status, hasChanges })}
-        screenshotMode={screenshotMode}
-      />
-    </div>
+    <ThemeProvider>
+      <AIProvider>
+        {loading ? (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <Loader size="lg" className="mb-4" />
+            <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+              Loading your board...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="min-h-screen flex items-center justify-center">
+            <span>Error: {error}</span>
+          </div>
+        ) : (
+          <div className="h-screen">
+            <Topbar
+              currentBoardName={board?.name}
+              saveStatus={saveStatus}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isBoardView={true}
+              onOpenBoardRoom={handleOpenBoardRoom}
+            />
+            <BoardComponent 
+              initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
+              onBoardStateChange={handleBoardStateChange}
+              screenshotMode={screenshotMode}
+            />
+          </div>
+        )}
+      </AIProvider>
+    </ThemeProvider>
   );
 } 

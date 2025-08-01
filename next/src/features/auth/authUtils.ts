@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 
 export async function signInWithGoogle() {
+  // Store current URL before redirect
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem('authRedirectUrl', window.location.href);
+  }
   const redirectUrl = process.env.NODE_ENV === 'production'
     ? `${window.location.origin}/auth/callback`
     : "http://localhost:3000/auth/callback"
-    
   const { error } = await supabase.auth.signInWithOAuth({ 
     provider: "google",
     options: {
