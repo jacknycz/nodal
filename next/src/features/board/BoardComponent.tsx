@@ -41,6 +41,7 @@ import BoardContextMenu from '../../components/BoardContextMenu'
 import { supabase } from '../auth/supabaseClient';
 import type { BoardNode } from './boardTypes';
 import { supabaseStorage } from '../storage/supabaseStorage'
+import { useRouter } from 'next/navigation'
 
 const nodeTypes = {
   default: NodalNode,
@@ -84,6 +85,7 @@ function BoardContent({
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
+  const router = useRouter() // Add this line
   
   // Basic state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -351,6 +353,8 @@ function BoardContent({
       const aiService = getOpenAIService()
       if (!aiService) {
         console.error('AI service not available')
+        // Navigate to the board even if AI fails
+        router.push(`/board/${boardId}`)
         return
       }
 
@@ -406,6 +410,9 @@ function BoardContent({
           if (onBoardStateChange) {
             onBoardStateChange(brief.boardName, 'saved', false)
           }
+          
+          // Navigate to the board URL after successful AI generation
+          router.push(`/board/${boardId}`)
         }
       } catch (parseError) {
         console.error('Failed to parse AI response:', parseError)
@@ -436,9 +443,14 @@ function BoardContent({
         if (onBoardStateChange) {
           onBoardStateChange(brief.boardName, 'saved', false)
         }
+        
+        // Navigate to the board URL after fallback node creation
+        router.push(`/board/${boardId}`)
       }
     } catch (error) {
       console.error('Failed to generate starter nodes:', error)
+      // Navigate to the board even if AI generation fails
+      router.push(`/board/${boardId}`)
     }
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
@@ -514,9 +526,6 @@ function BoardContent({
           }
         }
       })()
-      if (clearPendingBoardBrief) {
-        clearPendingBoardBrief()
-      }
     }
     
     // Mark as initialized

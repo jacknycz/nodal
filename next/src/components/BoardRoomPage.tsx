@@ -32,7 +32,11 @@ export default function BoardRoomPage() {
       router.push(`/board/${board.id}`)
     } else if (brief) {
       setPendingBoardBrief(brief)
-      // Optionally, you could push a URL for a new/unsaved board here
+      // Set the board name for the pending board
+      setBoardState(prev => ({
+        ...prev,
+        boardName: brief.boardName
+      }))
     }
   }
 
@@ -53,9 +57,11 @@ export default function BoardRoomPage() {
   }
 
   const handleManualSave = () => {
-    // This will be handled by the BoardComponent
     console.log('Manual save requested')
   }
+
+  // Determine if we should show board view
+  const isBoardView = pendingBoardBrief !== null
 
   return (
     <ThemeProvider>
@@ -66,11 +72,27 @@ export default function BoardRoomPage() {
               currentBoardName={boardState.boardName} 
               saveStatus={boardState.saveStatus}
               hasUnsavedChanges={boardState.hasUnsavedChanges}
-              isBoardView={false} // This can be improved if you want to detect board view from URL
+              isBoardView={isBoardView}
               onOpenBoardRoom={handleOpenBoardRoom}
               onSaveBoard={handleManualSave}
             />
-            <BoardRoom onOpenBoard={handleOpenBoard} />
+            {!isBoardView ? (
+              <BoardRoom onOpenBoard={handleOpenBoard} />
+            ) : (
+              <BoardComponent 
+                onBoardStateChange={handleBoardStateChange}
+                initialBoard={currentBoard ? { nodes: currentBoard.data.nodes, edges: currentBoard.data.edges } : undefined}
+                boardId={currentBoard?.id}
+                boardName={currentBoard?.name}
+                pendingBoardBrief={pendingBoardBrief || undefined}
+                clearPendingBoardBrief={clearPendingBoardBrief}
+                onDeleteNode={(nodeId) => {
+                  deleteNodeRef.current = (nodeId: string) => {
+                    // This will be called by the BoardComponent
+                  }
+                }}
+              />
+            )}
           </>
         ) : (
           <LoginScreen />
