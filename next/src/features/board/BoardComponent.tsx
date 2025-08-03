@@ -223,13 +223,26 @@ function BoardContent({
     if (!boardId) return
 
     const fetchLocks = async () => {
-      const { data } = await supabase
+      // Fetch ALL locks for this board (including expired ones) for debugging
+      const { data: allLocks, error: allError } = await supabase
+        .from('node_locks')
+        .select('*')
+        .eq('board_id', boardId)
+      
+      // Fetch only active locks (normal query)
+      const { data, error } = await supabase
         .from('node_locks')
         .select('*')
         .eq('board_id', boardId)
         .gt('expires_at', new Date().toISOString())
+      
+      console.log('[BoardComponent] fetchLocks - ALL locks in DB:', allLocks)
+      console.log('[BoardComponent] fetchLocks - ACTIVE locks:', { data, error, boardId })
       setNodeLocks(data || [])
     }
+
+    // Add manual refresh capability for debugging
+    ;(window as any).refreshLocks = fetchLocks
 
     const channel = supabase
       .channel('node-locks-' + boardId)
@@ -251,43 +264,65 @@ function BoardContent({
     return () => { supabase.removeChannel(channel) }
   }, [boardId])
 
-  // Memoize locking functions to prevent React Flow warnings
+  // Create functions that get user from stableHandlers to avoid closure issues
   const acquireNodeLock = useCallback(async (nodeId: string) => {
-    if (!boardId || !user?.id) return false
+    const currentUser = stableHandlers.currentUser
+    console.log('[BoardComponent] acquireNodeLock useCallback executed with current user:', currentUser)
+    console.log('[BoardComponent] acquireNodeLock called with:', { boardId, userId: currentUser?.id, nodeId })
+    
+    if (!boardId || !currentUser?.id) {
+      console.log('[BoardComponent] Early return - missing boardId or user.id:', { boardId, userId: currentUser?.id })
+      return false
+    }
+    
+    console.log('[BoardComponent] Attempting to acquire lock:', { boardId, nodeId, userId: currentUser.id })
     
     try {
       const res = await fetch('/api/board/locks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boardId, nodeId, userId: user.id })
+        body: JSON.stringify({ boardId, nodeId, userId: currentUser.id })
       })
       
       if (res.ok) {
+        console.log('[BoardComponent] Lock acquired successfully for node:', nodeId)
         return true
       } else {
         const error = await res.json()
-        // console.log('[Lock] Failed to acquire lock:', error)
+        console.log('[BoardComponent] Failed to acquire lock:', error)
+        console.log('[BoardComponent] Response status:', res.status, res.statusText)
         return false
       }
     } catch (error) {
-      // console.error('[Lock] Error acquiring lock:', error)
+      console.error('[BoardComponent] Error acquiring lock:', error)
       return false
     }
-  }, [boardId, user?.id])
+  }, [boardId])
 
   const releaseNodeLock = useCallback(async (nodeId: string) => {
-    if (!boardId || !user?.id) return
+    const currentUser = stableHandlers.currentUser
+    console.log('[BoardComponent] releaseNodeLock called with user?.id:', currentUser?.id)
+    if (!boardId || !currentUser?.id) return
+    
+    console.log('[BoardComponent] Attempting to release lock:', { boardId, nodeId, userId: currentUser.id })
     
     try {
-      await fetch('/api/board/locks', {
+      const res = await fetch('/api/board/locks', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boardId, nodeId, userId: user.id })
+        body: JSON.stringify({ boardId, nodeId, userId: currentUser.id })
       })
+      
+      if (res.ok) {
+        console.log('[BoardComponent] Lock released successfully for node:', nodeId)
+      } else {
+        const error = await res.json()
+        console.log('[BoardComponent] Failed to release lock:', error)
+      }
     } catch (error) {
-      // console.error('[Lock] Error releasing lock:', error)
+      console.error('[BoardComponent] Error releasing lock:', error)
     }
-  }, [boardId, user?.id])
+  }, [boardId])
 
   // Helper to check if node is locked
   const isNodeLocked = useCallback((nodeId: string) => {
@@ -302,8 +337,9 @@ function BoardContent({
 
   // Helper to check if current user locked a node
   const isNodeLockedByMe = useCallback((nodeId: string) => {
-    return nodeLocks.some(lock => lock.node_id === nodeId && lock.user_id === user?.id)
-  }, [nodeLocks, user?.id])
+    const currentUser = stableHandlers.currentUser
+    return nodeLocks.some(lock => lock.node_id === nodeId && lock.user_id === currentUser?.id)
+  }, [nodeLocks])
 
   // Helper to get avatar for a user_id
   const getCursorAvatar = (userId: string) => {
@@ -1155,17 +1191,29 @@ function BoardContent({
   }, [setEdges])
 
   // Memoize handlers object for node/edge types
-  const handlers = useMemo(() => ({
-    onNodeDelete: handleNodeDelete,
-    onNodeUpdate: handleNodeUpdate,
-    onEdgeDelete: handleEdgeDelete,
-    acquireNodeLock,
-    releaseNodeLock,
-    isNodeLocked,
-    getNodeLockOwner,
-    isNodeLockedByMe,
-    nodeLocks,
-  }), [
+  const handlers = useMemo(() => {
+    console.log('[BoardComponent] Creating handlers, user:', user, 'user?.id:', user?.id)
+    console.log('[BoardComponent] acquireNodeLock reference:', acquireNodeLock)
+    
+    const newHandlers = {
+      onNodeDelete: handleNodeDelete,
+      onNodeUpdate: handleNodeUpdate,
+      onEdgeDelete: handleEdgeDelete,
+      acquireNodeLock,
+      releaseNodeLock,
+      isNodeLocked,
+      getNodeLockOwner,
+      isNodeLockedByMe,
+      nodeLocks,
+      currentUser: user, // Add current user to handlers
+    }
+    
+    // Force update stableHandlers immediately
+    Object.assign(stableHandlers, newHandlers)
+    console.log('[BoardComponent] Updated stableHandlers.acquireNodeLock:', stableHandlers.acquireNodeLock)
+    
+    return newHandlers
+  }, [
     handleNodeDelete,
     handleNodeUpdate,
     handleEdgeDelete,
@@ -1175,10 +1223,8 @@ function BoardContent({
     getNodeLockOwner,
     isNodeLockedByMe,
     nodeLocks,
+    user, // User dependency triggers re-creation when user changes
   ])
-
-  // Assign to stableHandlers (module scope)
-  stableHandlers = handlers
 
   const handleOpenAINodeGenerator = useCallback(() => {
     setShowAINodeGenerator(true)

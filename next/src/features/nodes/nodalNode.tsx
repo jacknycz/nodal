@@ -47,6 +47,7 @@ export default function NodalNode({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const justOpenedRef = useRef(false)
+  const lockReleasedRef = useRef(false)
   const user = useSupabaseUser()
 
   const displayTitle = data.label || data.title || 'Untitled'
@@ -55,6 +56,14 @@ export default function NodalNode({
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
 
+  // Debug logs for lock state
+  console.log(`[NodalNode ${id}] isLocked: ${isLocked}, isLockedByMe: ${isLockedByMe}, showEditModal: ${showEditModal}, nodeLocks count: ${nodeLocks?.length || 0}`)
+  console.log(`[NodalNode ${id}] user:`, user, 'user?.id:', user?.id)
+  if (nodeLocks && nodeLocks.length > 0) {
+    console.log(`[NodalNode ${id}] All nodeLocks:`, nodeLocks)
+    console.log(`[NodalNode ${id}] Filtered nodeLocks for this node:`, nodeLocks.filter(lock => lock.node_id === id))
+  }
+
   // Open modal and acquire lock
   const handleEdit = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -62,36 +71,62 @@ export default function NodalNode({
     if (isLocked && !isLockedByMe) return
     if (showEditModal) return
 
+    // Check if user is authenticated before trying to lock
+    console.log('[DEBUG] handleEdit - user state:', user, 'user?.id:', user?.id)
+    if (!user || !user.id) {
+      alert('Please wait for authentication to complete before editing.')
+      return
+    }
+
     if (acquireNodeLock) {
+      console.log('[DEBUG] About to call acquireNodeLock for node:', id)
       const lockAcquired = await acquireNodeLock(id)
       console.log('[DEBUG] Lock acquired?', lockAcquired, 'for node:', id)
       if (!lockAcquired) {
         alert('This node is being edited by another user. Please wait.')
         return
       }
+    } else {
+      console.log('[DEBUG] acquireNodeLock function not available')
     }
     setShowEditModal(true)
+    lockReleasedRef.current = false // Reset lock release flag
     console.log('[DEBUG] Modal opened for node:', id)
     justOpenedRef.current = true
     setTimeout(() => { justOpenedRef.current = false }, 100)
   }
 
   // Close modal and release lock
-  const handleCloseEdit = () => {
+  const handleCloseEdit = async () => {
     if (justOpenedRef.current) return
     setShowEditModal(false)
     console.log('[DEBUG] Modal closed for node:', id)
-    if (releaseNodeLock) {
-      releaseNodeLock(id)
-      console.log('[DEBUG] Lock released (close) for node:', id)
+    if (releaseNodeLock && !lockReleasedRef.current) {
+      try {
+        await releaseNodeLock(id)
+        lockReleasedRef.current = true
+        console.log('[DEBUG] Lock released (close) for node:', id)
+      } catch (error) {
+        console.error('[DEBUG] Failed to release lock (close) for node:', id, error)
+      }
+    } else if (lockReleasedRef.current) {
+      console.log('[DEBUG] Lock already released, skipping close release for node:', id)
     }
   }
 
-  const handleSaveEdit = (title: string, content: string) => {
+  const handleSaveEdit = async (title: string, content: string) => {
     if (onNodeUpdate) onNodeUpdate(id, { title, content })
-    if (releaseNodeLock) {
-      releaseNodeLock(id)
-      console.log('[DEBUG] Lock released (save) for node:', id)
+    // Release lock BEFORE closing modal
+    if (releaseNodeLock && !lockReleasedRef.current) {
+      try {
+        await releaseNodeLock(id)
+        lockReleasedRef.current = true
+        console.log('[DEBUG] Lock released (save) for node:', id)
+      } catch (error) {
+        console.error('[DEBUG] Failed to release lock (save) for node:', id, error)
+      }
+    } else if (lockReleasedRef.current) {
+      console.log('[DEBUG] Lock already released, skipping save release for node:', id)
     }
     setShowEditModal(false)
     console.log('[DEBUG] Modal closed (save) for node:', id)
