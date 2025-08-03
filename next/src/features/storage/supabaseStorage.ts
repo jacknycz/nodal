@@ -111,9 +111,6 @@ class SupabaseStorage {
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
       const boardData: BoardData = {
         ...data
       }
@@ -127,7 +124,6 @@ class SupabaseStorage {
           edge_count: data.edges.length,
         })
         .eq('id', boardId)
-        .eq('user_id', user.id)
 
       if (error) throw error
       console.log(`Board updated in Supabase successfully`)

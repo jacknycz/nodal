@@ -9,6 +9,7 @@ import { useBoardStore } from '../features/board/boardSlice';
 import { House } from 'lucide-react';
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
+import { getSupabaseClient } from '../features/auth/supabaseClient'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -50,6 +51,8 @@ export default function Topbar({
   const user = useSupabaseUser()
   const currentBoardId = useBoardStore(state => state.currentBoardId)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [presentUsers, setPresentUsers] = useState<{ user_id: string; last_seen: string }[]>([])
+  const supabase = getSupabaseClient()
 
   useEffect(() => {
     if (headerRef.current) {
@@ -88,6 +91,70 @@ export default function Topbar({
     } catch (e) {
       alert('Failed to copy link')
     }
+  }
+
+  // Presence: upsert on mount and every 15s
+  useEffect(() => {
+    if (!currentBoardId || !user?.id) return
+    let interval: NodeJS.Timeout | null = null
+    const upsertPresence = async () => {
+      await supabase.from('board_presence').upsert({
+        board_id: currentBoardId,
+        user_id: user.id,
+        last_seen: new Date().toISOString(),
+      })
+    }
+    upsertPresence()
+    interval = setInterval(upsertPresence, 15000)
+    return () => { if (interval) clearInterval(interval) }
+  }, [currentBoardId, user?.id])
+
+  // Presence: subscribe to changes
+  useEffect(() => {
+    if (!currentBoardId) return
+    const channel = supabase
+      .channel('board-presence-' + currentBoardId)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'board_presence',
+          filter: `board_id=eq.${currentBoardId}`,
+        },
+        payload => {
+          // Refetch presence list on any change
+          fetchPresence()
+        }
+      )
+      .subscribe()
+    const fetchPresence = async () => {
+      const { data } = await supabase
+        .from('board_presence')
+        .select('*')
+        .eq('board_id', currentBoardId)
+        .order('last_seen', { ascending: false })
+      setPresentUsers(data || [])
+    }
+    fetchPresence()
+    return () => { supabase.removeChannel(channel) }
+  }, [currentBoardId])
+
+  // Helper to get avatar for a user_id
+  const getPresenceAvatar = (userId: string) => {
+    if (user && user.id === userId) {
+      // Current user: show their avatar if available
+      const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
+      if (avatar) {
+        return <img src={avatar} alt="avatar" className="w-6 h-6 rounded-full object-cover border-2 border-white" />
+      }
+    }
+    // Fallback: colored initials
+    return (
+      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white border-2 border-white">
+        {userId.slice(0, 2).toUpperCase()}
+      </div>
+    )
   }
 
   return (
@@ -190,6 +257,17 @@ export default function Topbar({
                     </button>
                   )}
                 </div>
+                {/* Presence Avatars */}
+                {presentUsers.length > 0 && (
+                  <div className="flex items-center ml-4 gap-1">
+                    {presentUsers.map((u) => (
+                      <span key={u.user_id} title={u.user_id}>
+                        {getPresenceAvatar(u.user_id)}
+                      </span>
+                    ))}
+                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">{presentUsers.length} online</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
