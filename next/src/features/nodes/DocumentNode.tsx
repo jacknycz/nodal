@@ -29,12 +29,34 @@ interface DocumentNodeProps {
   id: string
   onNodeDelete?: (nodeId: string) => void
   selected?: boolean
+  // Add locking props
+  acquireNodeLock?: (nodeId: string) => Promise<boolean>
+  releaseNodeLock?: (nodeId: string) => Promise<void>
+  isNodeLocked?: (nodeId: string) => boolean
+  getNodeLockOwner?: (nodeId: string) => string | undefined
+  isNodeLockedByMe?: (nodeId: string) => boolean
+  nodeLocks?: any[]
 }
 
-export default function DocumentNode({ data, id, onNodeDelete, selected }: DocumentNodeProps) {
+export default function DocumentNode({ 
+  data, 
+  id, 
+  onNodeDelete, 
+  selected,
+  acquireNodeLock,
+  releaseNodeLock,
+  isNodeLocked,
+  getNodeLockOwner,
+  isNodeLockedByMe,
+  nodeLocks
+}: DocumentNodeProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  const isLocked = isNodeLocked?.(id) || false
+  const isLockedByMe = isNodeLockedByMe?.(id) || false
+  const lockOwner = getNodeLockOwner?.(id)
 
   // Remove: const [imageUrl, setImageUrl] = useState<string | null>(null)
   // Remove: const [isLoadingImage, setIsLoadingImage] = useState(false)
@@ -134,190 +156,120 @@ export default function DocumentNode({ data, id, onNodeDelete, selected }: Docum
   }
 
   return (
-    <>
-      <div 
-        className={`bg-blue-50 dark:bg-blue-900/20 border rounded-lg shadow-sm p-4 min-w-[250px] max-w-[350px] group ${
-          selected 
-            ? 'border-blue-500 bg-blue-100 dark:bg-blue-800/30' 
-            : 'border-blue-200 dark:border-blue-700'
-        }`}
-      >
-        <Handle type="target" position={Position.Top} className="w-3 h-3" />
-        
-        <div className="nodal-drag-handle cursor-move">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{getFileIcon()}</span>
-              <div>
-                <h3 className="font-medium text-blue-900 dark:text-blue-100 text-sm leading-tight">
-                  {data.label}
-                </h3>
-                <p className="text-xs text-blue-600 dark:text-blue-400">
-                  {data.fileType || data.type}
-                </p>
-              </div>
+    <div 
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
+        selected 
+          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+          : isLocked && !isLockedByMe
+          ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+          : 'border-gray-200 dark:border-gray-700'
+      }`}
+    >
+      <Handle type="target" position={Position.Top} className="w-3 h-3" />
+      <div className="nodal-drag-handle cursor-move">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-2xl">{getFileIcon()}</span>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              {data.fileName || 'Untitled Document'}
+            </h3>
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <span>{formatFileSize(data.fileSize)}</span>
+              <span>•</span>
+              <span>{data.fileType || 'Unknown type'}</span>
             </div>
-            <div className="flex items-center gap-1">
-              {getStatusIcon()}
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {getStatusText()}
+          </div>
+          {isLocked && (
+            <div className="flex items-center gap-1 text-xs">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-red-600 dark:text-red-400">
+                {isLockedByMe ? 'Editing...' : 'Locked'}
               </span>
             </div>
-          </div>
-
-          {/* Image Preview (if it's an image) */}
-          {isImage && data.previewUrl && (
-            <div className="mb-3">
-              <img
-                src={data.previewUrl}
-                alt={data.label}
-                className="w-full h-32 object-cover rounded border border-gray-200 dark:border-gray-600"
-                onLoad={() => console.log('✅ Image loaded successfully:', data.previewUrl)}
-                onError={(e) => console.error('❌ Image failed to load:', data.previewUrl, e)}
-              />
-            </div>
           )}
+        </div>
+        
+        {/* Status indicator */}
+        <div className="flex items-center gap-2 mb-3">
+          {getStatusIcon()}
+          <span className="text-xs text-gray-600 dark:text-gray-400">
+            {getStatusText()}
+          </span>
+        </div>
 
-          {/* File Info */}
-          <div className="space-y-1 mb-3">
-            {data.fileSize && (
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Size: {formatFileSize(data.fileSize)}
-              </p>
-            )}
-            {data.fileName && data.fileName !== data.label && (
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                File: {data.fileName}
-              </p>
-            )}
-          </div>
-
-          {/* Actions - Only show on hover */}
-          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            {(isTextExtractable || isImage || isPDF) && (
-              <IconButton
-                variant="default"
-                size="sm"
-                aria-label="Preview document"
-                onClick={handlePreview}
-              >
-                <Eye size={14} />
-              </IconButton>
-            )}
-            
-            {data.previewUrl && (
-              <IconButton
-                variant="default"
-                size="sm"
-                aria-label="Download document"
-                onClick={handleDownload}
-              >
-                <Download size={14} />
-              </IconButton>
-            )}
-            
-            <IconButton
-              variant="danger"
-              size="sm"
-              aria-label="Delete document"
-              onClick={handleDelete}
-            >
-              <Trash2 size={14} />
-            </IconButton>
-          </div>
-
-          {/* Text Extraction Status */}
-          {isTextExtractable && (
-            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs">
-              {hasExtractedText ? (
-                <div className="text-green-600 dark:text-green-400">
-                  ✅ Text extracted ({data.extractedText?.length} characters)
-                </div>
-              ) : data.extractedText?.includes('Text extraction failed') ? (
-                <div className="text-red-600 dark:text-red-400">
-                  ❌ Text extraction failed
-                </div>
-              ) : (
-                <div className="text-gray-600 dark:text-gray-400">
-                  ⏳ Processing text...
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Preview */}
-          {showPreview && hasExtractedText && !isImage && !isPDF && (
-            <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-              <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Document Preview
-              </h4>
-              <div className="text-xs text-gray-600 dark:text-gray-400 max-h-32 overflow-y-auto">
-                {data.extractedText && data.extractedText.length > 300 
-                  ? `${data.extractedText.substring(0, 300)}...` 
-                  : data.extractedText
-                }
+        {/* Extracted text preview */}
+        {hasExtractedText && (
+          <div className="mb-3">
+            <div className="text-xs text-gray-600 dark:text-gray-200 prose prose-sm dark:prose-invert max-w-none">
+              <div className="line-clamp-3">
+                {data.extractedText}
               </div>
             </div>
-          )}
-
-          {/* Image Preview Modal */}
-          {showPreview && isImage && data.previewUrl && (
-            <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-600">
-              <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Image Preview
-              </h4>
-              <img
-                src={data.previewUrl}
-                alt={data.label}
-                className="w-full max-h-48 object-contain rounded"
-                onLoad={() => console.log('✅ Preview image loaded successfully:', data.previewUrl)}
-                onError={(e) => console.error('❌ Preview image failed to load:', data.previewUrl, e)}
-              />
-            </div>
-          )}
-        </div>
-
-        <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
+          </div>
+        )}
       </div>
 
-      {/* PDF Preview Modal - Disabled since we don't have File object */}
-      {/* {isPDF && data.previewUrl && (
-        <PDFPreviewModal
-          isOpen={showPDFModal}
-          onClose={() => setShowPDFModal(false)}
-          file={null}
-          fileName={data.fileName || data.label}
-        />
-      )} */}
+      {/* Action buttons - only show on hover and if not locked by someone else */}
+      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Preview document"
+          onClick={handlePreview}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <Eye size={14} />
+        </IconButton>
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Download document"
+          onClick={handleDownload}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <Download size={14} />
+        </IconButton>
+        <IconButton
+          variant="danger"
+          size="sm"
+          aria-label="Delete document"
+          onClick={handleDelete}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <Trash2 size={14} />
+        </IconButton>
+      </div>
 
-      {/* Delete confirmation modal */}
-      <Modal
-        open={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Delete Document?"
-        description="Are you sure you want to delete this document? This action cannot be undone."
-        actions={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setShowDeleteModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleConfirmDelete}
-            >
-              Delete
-            </Button>
-          </>
-        }
-      >
-        <div className="py-2">
-          <span className="font-medium text-gray-900 dark:text-white">{data.label}</span>
-        </div>
-      </Modal>
-    </>
+      {/* Modals */}
+      {showDeleteModal && (
+        <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Delete Document</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Are you sure you want to delete this document? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={handleConfirmDelete} variant="danger">
+                Delete
+              </Button>
+              <Button onClick={() => setShowDeleteModal(false)} variant="secondary">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {showPreview && (
+        <PDFPreviewModal
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          file={null}
+          fileName={data.fileName || ''}
+        />
+      )}
+
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
+    </div>
   )
 } 

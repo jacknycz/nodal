@@ -29,16 +29,6 @@ export default function DocumentsMenu({
   // Filter document nodes
   const documents = nodes.filter(n => n.data.type === 'document')
 
-  // Debug logging
-  console.log('📄 DocumentsMenu - Total nodes:', nodes.length)
-  console.log('📄 DocumentsMenu - Document nodes:', documents.length)
-  console.log('📄 DocumentsMenu - All nodes types:', nodes.map(n => ({ 
-    id: n.id, 
-    type: n.data.type, 
-    title: n.data.title,
-    fileName: n.data.fileName 
-  })))
-
   // Search filter
   const filteredDocs = documents.filter(doc => {
     const q = search.toLowerCase()

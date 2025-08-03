@@ -42,11 +42,8 @@ import { supabase } from '../auth/supabaseClient';
 import type { BoardNode } from './boardTypes';
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
-
-const nodeTypes = {
-  default: NodalNode,
-  document: DocumentNode,
-}
+import { useSupabaseUser } from '../auth/authUtils'
+import { getSupabaseClient } from '../auth/supabaseClient'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -60,16 +57,29 @@ interface BoardProps {
   onDeleteNode?: (nodeId: string) => void // Add delete function prop
 }
 
+// Add migrateNodeData definition if missing
 const migrateNodeData = (nodes: Node[]): Node[] => {
   return nodes.map(node => {
     const data = node.data as any;
-    // Migrate label to title if needed
     if (data.label && !data.title) {
       data.title = data.label;
       delete data.label;
     }
     return { ...node, data };
   });
+};
+
+// === XYFlow/React Flow: Stable nodeTypes/edgeTypes ===
+// Define at module scope, never re-created
+let stableHandlers: any = {};
+
+export const nodeTypes = {
+  default: (props: any) => <NodalNode {...props} {...stableHandlers} />,
+  document: (props: any) => <DocumentNode {...props} {...stableHandlers} />,
+};
+
+export const edgeTypes = {
+  floating: (props: any) => <FloatingEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
 };
 
 function BoardContent({
@@ -86,7 +96,11 @@ function BoardContent({
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
   const router = useRouter() // Add this line
-  
+  const user = useSupabaseUser()
+  const supabase = getSupabaseClient()
+  const [remoteCursors, setRemoteCursors] = useState<any[]>([])
+  const [myCursor, setMyCursor] = useState<{ x: number; y: number } | null>(null)
+
   // Basic state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -129,6 +143,196 @@ function BoardContent({
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   
+  // Broadcast local cursor position
+  useEffect(() => {
+    if (!boardId || !user?.id) return
+    let lastSent = 0
+    const handleMouseMove = (e: MouseEvent) => {
+      // Get board-relative coordinates
+      const wrapper = reactFlowWrapper.current
+      if (!wrapper) return
+      const rect = wrapper.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      setMyCursor({ x, y })
+      const now = Date.now()
+      if (now - lastSent > 50) { // throttle
+        lastSent = now
+        supabase.from('board_cursors').upsert({
+          board_id: boardId,
+          user_id: user.id,
+          x,
+          y,
+          last_updated: new Date().toISOString(),
+        }).then(({ error, data }) => {
+          if (error) {
+            // console.error('[Cursor] Upsert error:', error)
+          } else {
+            // console.log('[Cursor] Upsert success:', data)
+          }
+        })
+      }
+    }
+    const wrapper = reactFlowWrapper.current
+    if (wrapper) {
+      wrapper.addEventListener('mousemove', handleMouseMove)
+    }
+    return () => {
+      if (wrapper) wrapper.removeEventListener('mousemove', handleMouseMove)
+    }
+  }, [boardId, user?.id])
+
+  // Subscribe to remote cursors
+  useEffect(() => {
+    if (!boardId) return
+
+    // Define fetchCursors first!
+    const fetchCursors = async () => {
+      const { data } = await supabase
+        .from('board_cursors')
+        .select('*')
+        .eq('board_id', boardId)
+      setRemoteCursors(data || [])
+    }
+
+    const channel = supabase
+      .channel('board-cursors-' + boardId)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'board_cursors',
+          filter: `board_id=eq.${boardId}`,
+        },
+        payload => {
+          fetchCursors()
+        }
+      )
+      .subscribe()
+
+    fetchCursors()
+    return () => { supabase.removeChannel(channel) }
+  }, [boardId])
+
+  // Add node locking state and functions
+  const [nodeLocks, setNodeLocks] = useState<any[]>([])
+
+  // Subscribe to node locks
+  useEffect(() => {
+    if (!boardId) return
+
+    const fetchLocks = async () => {
+      const { data } = await supabase
+        .from('node_locks')
+        .select('*')
+        .eq('board_id', boardId)
+        .gt('expires_at', new Date().toISOString())
+      setNodeLocks(data || [])
+    }
+
+    const channel = supabase
+      .channel('node-locks-' + boardId)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'node_locks',
+          filter: `board_id=eq.${boardId}`,
+        },
+        payload => {
+          fetchLocks()
+        }
+      )
+      .subscribe()
+
+    fetchLocks()
+    return () => { supabase.removeChannel(channel) }
+  }, [boardId])
+
+  // Memoize locking functions to prevent React Flow warnings
+  const acquireNodeLock = useCallback(async (nodeId: string) => {
+    if (!boardId || !user?.id) return false
+    
+    try {
+      const res = await fetch('/api/board/locks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boardId, nodeId, userId: user.id })
+      })
+      
+      if (res.ok) {
+        return true
+      } else {
+        const error = await res.json()
+        // console.log('[Lock] Failed to acquire lock:', error)
+        return false
+      }
+    } catch (error) {
+      // console.error('[Lock] Error acquiring lock:', error)
+      return false
+    }
+  }, [boardId, user?.id])
+
+  const releaseNodeLock = useCallback(async (nodeId: string) => {
+    if (!boardId || !user?.id) return
+    
+    try {
+      await fetch('/api/board/locks', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ boardId, nodeId, userId: user.id })
+      })
+    } catch (error) {
+      // console.error('[Lock] Error releasing lock:', error)
+    }
+  }, [boardId, user?.id])
+
+  // Helper to check if node is locked
+  const isNodeLocked = useCallback((nodeId: string) => {
+    return nodeLocks.some(lock => lock.node_id === nodeId)
+  }, [nodeLocks])
+
+  // Helper to get who locked a node
+  const getNodeLockOwner = useCallback((nodeId: string) => {
+    const lock = nodeLocks.find(lock => lock.node_id === nodeId)
+    return lock?.user_id
+  }, [nodeLocks])
+
+  // Helper to check if current user locked a node
+  const isNodeLockedByMe = useCallback((nodeId: string) => {
+    return nodeLocks.some(lock => lock.node_id === nodeId && lock.user_id === user?.id)
+  }, [nodeLocks, user?.id])
+
+  // Helper to get avatar for a user_id
+  const getCursorAvatar = (userId: string) => {
+    if (user && user.id === userId) {
+      const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
+      if (avatar) {
+        return <img src={avatar} alt="avatar" className="w-6 h-6 rounded-full object-cover border-2 border-white" />
+      }
+    }
+    return (
+      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white border-2 border-white">
+        {userId.slice(0, 2).toUpperCase()}
+      </div>
+    )
+  }
+
+  // Render remote cursors (excluding self)
+  const renderRemoteCursors = () => {
+    return remoteCursors.filter(c => user && c.user_id !== user.id).map(c => (
+      <div
+        key={`${c.user_id}-${c.x}-${c.y}`}
+        className="pointer-events-none absolute z-50"
+        style={{ left: c.x, top: c.y, transform: 'translate(-50%, -50%)', border: '2px solid red', background: 'rgba(255,255,255,0.7)' }}
+      >
+        {getCursorAvatar(c.user_id)}
+      </div>
+    ))
+  }
+  
   // Helper function to check if a file type supports text extraction
   const isTextExtractable = (fileType: string, fileName: string): boolean => {
     const normalizedType = fileType.toLowerCase()
@@ -157,12 +361,12 @@ function BoardContent({
     
     autosaveTimeoutRef.current = setTimeout(async () => {
       if (!localBoardIdRef.current) {
-        console.log('⏭️ Autosave skipped - no board ID')
+        // console.log('⏭️ Autosave skipped - no board ID')
         return
       }
       
       try {
-        console.log('🚀 Starting autosave...')
+        // console.log('🚀 Starting autosave...')
         setSaveStatus('saving')
         
         const boardData = {
@@ -171,15 +375,15 @@ function BoardContent({
           viewport: reactFlowInstance.getViewport(),
         }
         
-        console.log('💾 Saving board data:', {
-          boardId: localBoardIdRef.current,
-          nodesCount: boardData.nodes.length,
-          edgesCount: boardData.edges.length
-        })
+        // console.log('💾 Saving board data:', {
+        //   boardId: localBoardIdRef.current,
+        //   nodesCount: boardData.nodes.length,
+        //   edgesCount: boardData.edges.length
+        // })
         
         await boardStorage.updateBoard(localBoardIdRef.current, boardData)
         
-        console.log('✅ Autosave completed successfully')
+        // console.log('✅ Autosave completed successfully')
         setSaveStatus('saved')
         setHasUnsavedChanges(false)
         
@@ -187,7 +391,7 @@ function BoardContent({
           onBoardStateChange(currentBoardName, 'saved', false)
         }
       } catch (error) {
-        console.error('❌ Autosave failed:', error)
+        // console.error('❌ Autosave failed:', error)
         setSaveStatus('error')
         setHasUnsavedChanges(true)
         
@@ -233,7 +437,7 @@ function BoardContent({
     
     // Only trigger autosave if there are actual changes
     if ((nodesChanged || edgesChanged) && (nodes.length > 0 || edges.length > 0)) {
-      console.log('📝 Changes detected, triggering autosave...')
+      // console.log('📝 Changes detected, triggering autosave...')
       setHasUnsavedChanges(true)
       if (onBoardStateChangeRef.current) {
         onBoardStateChangeRef.current(currentBoardName, 'saving', true)
@@ -305,7 +509,7 @@ function BoardContent({
       // Upload directly to Supabase storage using the same client as documents
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        console.error('User not authenticated for thumbnail upload');
+        // console.error('User not authenticated for thumbnail upload');
         return;
       }
 
@@ -319,20 +523,20 @@ function BoardContent({
         });
 
       if (uploadError) {
-        console.error('Supabase upload error:', uploadError);
-        console.error('Upload details:', {
-          bucket: 'thumbnails',
-          path: `${user.id}/${fileName}`,
-          userId: user.id,
-          boardId: boardId,
-          fileName: fileName
-        });
+        // console.error('Supabase upload error:', uploadError);
+        // console.error('Upload details:', {
+        //   bucket: 'thumbnails',
+        //   path: `${user.id}/${fileName}`,
+        //   userId: user.id,
+        //   boardId: boardId,
+        //   fileName: fileName
+        // });
         return;
       }
 
-      console.log('Thumbnail saved successfully to Supabase storage');
+      // console.log('Thumbnail saved successfully to Supabase storage');
     } catch (error) {
-      console.error('Screenshot capture failed:', error);
+      // console.error('Screenshot capture failed:', error);
     }
   };
 
@@ -355,11 +559,11 @@ function BoardContent({
   // Board utilities
   // Generate starter nodes using AI
   const generateStarterNodes = async (brief: BoardBrief, boardId: string) => {
-    console.log('🚀 generateStarterNodes called with boardId:', boardId, 'for brief:', brief.boardName)
+    // console.log('🚀 generateStarterNodes called with boardId:', boardId, 'for brief:', brief.boardName)
     try {
       const aiService = getOpenAIService()
       if (!aiService) {
-        console.error('AI service not available')
+        // console.error('AI service not available')
         // Navigate to the board even if AI fails
         router.push(`/board/${boardId}`)
         return
@@ -397,7 +601,7 @@ function BoardContent({
           
           // Set all nodes at once
           setNodes(generatedNodes)
-          console.log('📝 Set generated nodes in state:', generatedNodes.length)
+          // console.log('📝 Set generated nodes in state:', generatedNodes.length)
           
           // Save immediately to database
           const boardData = {
@@ -406,9 +610,9 @@ function BoardContent({
             viewport: reactFlowInstance.getViewport(),
           }
           
-          console.log('💾 Saving generated nodes immediately...')
+          // console.log('💾 Saving generated nodes immediately...')
           await boardStorage.updateBoard(boardId, boardData)
-          console.log('✅ Generated nodes saved successfully')
+          // console.log('✅ Generated nodes saved successfully')
           
           // Update save status
           setSaveStatus('saved')
@@ -422,8 +626,8 @@ function BoardContent({
           router.push(`/board/${boardId}`)
         }
       } catch (parseError) {
-        console.error('Failed to parse AI response:', parseError)
-        console.log('Raw response content:', response.content)
+        // console.error('Failed to parse AI response:', parseError)
+        // console.log('Raw response content:', response.content)
         const newNode = {
           id: `starter-node-${Date.now()}`,
           type: 'default',
@@ -439,9 +643,9 @@ function BoardContent({
           viewport: reactFlowInstance.getViewport(),
         }
         
-        console.log('💾 Saving single generated node immediately...')
+        // console.log('💾 Saving single generated node immediately...')
         await boardStorage.updateBoard(boardId, boardData)
-        console.log('✅ Single generated node saved successfully')
+        // console.log('✅ Single generated node saved successfully')
         
         // Update save status
         setSaveStatus('saved')
@@ -455,7 +659,7 @@ function BoardContent({
         router.push(`/board/${boardId}`)
       }
     } catch (error) {
-      console.error('Failed to generate starter nodes:', error)
+      // console.error('Failed to generate starter nodes:', error)
       // Navigate to the board even if AI generation fails
       router.push(`/board/${boardId}`)
     }
@@ -471,13 +675,13 @@ function BoardContent({
     
     // Set board ID for existing boards
     if (boardId && !localBoardIdRef.current) {
-      console.log('🆔 Setting board ID for existing board:', boardId)
+      // console.log('🆔 Setting board ID for existing board:', boardId)
       localBoardIdRef.current = boardId
     }
     
     // Set board name for existing boards
     if (boardName && !pendingBoardBrief) {
-      console.log('📝 Setting board name for existing board:', boardName)
+      // console.log('📝 Setting board name for existing board:', boardName)
       setCurrentBoardName(boardName)
       if (onBoardStateChange) {
         onBoardStateChange(boardName, 'saved', false)
@@ -485,23 +689,23 @@ function BoardContent({
     }
     
     if (initialBoard && initialBoard.nodes) {
-      console.log('📥 Loading initial board nodes:', initialBoard.nodes.length)
+      // console.log('📥 Loading initial board nodes:', initialBoard.nodes.length)
       const migratedNodes = migrateNodeData(initialBoard.nodes);
       setNodes(migratedNodes)
     }
     if (initialBoard && initialBoard.edges) {
-      console.log('📥 Loading initial board edges:', initialBoard.edges.length)
+      // console.log('📥 Loading initial board edges:', initialBoard.edges.length)
       setEdges(initialBoard.edges)
     }
     if (pendingBoardBrief && !localBoardIdRef.current) { // Only run if we don't already have a localBoardId
-      console.log('🔄 useEffect triggered for pendingBoardBrief:', pendingBoardBrief.boardName)
+      // console.log('🔄 useEffect triggered for pendingBoardBrief:', pendingBoardBrief.boardName)
       setCurrentBoardName(pendingBoardBrief.boardName)
       if (onBoardStateChange) {
         onBoardStateChange(pendingBoardBrief.boardName, 'saved', false)
       }
-      console.log('pendingBoardBrief:', pendingBoardBrief, 'typeof id:', typeof pendingBoardBrief.id)
+      // console.log('pendingBoardBrief:', pendingBoardBrief, 'typeof id:', typeof pendingBoardBrief.id)
       localBoardIdRef.current = pendingBoardBrief.id;
-      console.log('AFTER ASSIGNMENT:', localBoardIdRef.current, typeof localBoardIdRef.current);
+      // console.log('AFTER ASSIGNMENT:', localBoardIdRef.current, typeof localBoardIdRef.current);
       // ALWAYS create the blank board first to get the localBoardId
       (async () => {
         const boardId = pendingBoardBrief.id
@@ -513,20 +717,20 @@ function BoardContent({
         }
         try {
           await boardStorage.saveBoardWithId(boardId, boardName, boardData)
-          console.log('🔵 CREATING BLANK BOARD with ID:', boardId, 'for name:', boardName)
+          // console.log('🔵 CREATING BLANK BOARD with ID:', boardId, 'for name:', boardName)
           setCurrentBoardName(boardName)
           setSaveStatus('saved')
           if (onBoardStateChange) {
             onBoardStateChange(boardName, 'saved', false)
           }
-          console.log('✅ Blank board created and saved:', boardName)
+          // console.log('✅ Blank board created and saved:', boardName)
           // If startWithAI is true, now generate AI nodes to update the same board
           if (pendingBoardBrief.startWithAI) {
-            console.log('🤖 Starting AI generation for board ID:', boardId)
+            // console.log('🤖 Starting AI generation for board ID:', boardId)
             generateStarterNodes(pendingBoardBrief, boardId)
           }
         } catch (error) {
-          console.error('Failed to create blank board:', error)
+          // console.error('Failed to create blank board:', error)
           setSaveStatus('error')
           if (onBoardStateChange) {
             onBoardStateChange(boardName, 'error', false)
@@ -558,7 +762,7 @@ function BoardContent({
   
   // Handle adding nodes
   const handleAddNode = useCallback((nodeData: { title: string; content?: string }, position: { x: number; y: number }) => {
-    console.log('➕ Adding new node:', { nodeData, position })
+    // console.log('➕ Adding new node:', { nodeData, position })
     const newNode: Node = {
       id: `node-${Date.now()}`,
       type: 'default',
@@ -570,7 +774,7 @@ function BoardContent({
     }
     // Use React Flow's addNode utility
     const addNode = (node: Node) => {
-      console.log('📝 Adding node to state:', node.id)
+      // console.log('📝 Adding node to state:', node.id)
       setNodes((nds) => {
         if (!Array.isArray(nds)) return [node]
         return [...nds, node]
@@ -596,9 +800,9 @@ function BoardContent({
   
   // Save board function
   const saveBoard = useCallback(async (name?: string) => {
-    console.log('💾 saveBoard called with name:', name, 'localBoardId:', localBoardIdRef.current)
+    // console.log('💾 saveBoard called with name:', name, 'localBoardId:', localBoardIdRef.current)
     try {
-      console.log('🚀 Starting manual save...')
+      // console.log('🚀 Starting manual save...')
       setSaveStatus('saving')
       setHasUnsavedChanges(false)
       
@@ -608,37 +812,37 @@ function BoardContent({
         viewport: reactFlowInstance.getViewport(),
       }
       
-      console.log('💾 Manual save data:', {
-        nodesCount: boardData.nodes.length,
-        edgesCount: boardData.edges.length,
-        boardId: localBoardIdRef.current
-      })
+      // console.log('💾 Manual save data:', {
+      //   nodesCount: boardData.nodes.length,
+      //   edgesCount: boardData.edges.length,
+      //   boardId: localBoardIdRef.current
+      // })
       
       if (localBoardIdRef.current && !name) {
         await boardStorage.updateBoard(localBoardIdRef.current, boardData)
-        console.log('✅ Updated existing board:', localBoardIdRef.current)
+        // console.log('✅ Updated existing board:', localBoardIdRef.current)
       } else {
         const boardName = name || `Board ${new Date().toLocaleDateString()}`
         const boardId = await boardStorage.saveBoard(boardName, boardData)
-        console.log('🆕 Created new board:', boardId, 'with name:', boardName)
+        // console.log('🆕 Created new board:', boardId, 'with name:', boardName)
         localBoardIdRef.current = boardId
         setCurrentBoardName(boardName)
       }
       
-      console.log('✅ Manual save completed successfully')
+      // console.log('✅ Manual save completed successfully')
       setSaveStatus('saved')
       
       if (onBoardStateChange) {
-        console.log('🔄 Updating board state: saved, false')
+        // console.log('🔄 Updating board state: saved, false')
         onBoardStateChange(currentBoardName, 'saved', false)
       }
     } catch (error) {
-      console.error('❌ Manual save failed:', error)
+      // console.error('❌ Manual save failed:', error)
       setSaveStatus('error')
       setHasUnsavedChanges(true)
       
       if (onBoardStateChange) {
-        console.log('🔄 Updating board state: error, true')
+        // console.log('🔄 Updating board state: error, true')
         onBoardStateChange(currentBoardName, 'error', true)
       }
     }
@@ -653,7 +857,7 @@ function BoardContent({
     
     // Upload file to Supabase Storage first
     try {
-      console.log('📤 Uploading file to Supabase Storage:', file.name)
+      // console.log('📤 Uploading file to Supabase Storage:', file.name)
       const documentId = await boardStorage.saveDocument(
         file.name,
         file,
@@ -662,7 +866,7 @@ function BoardContent({
         nodeId
       )
       
-      console.log('✅ File uploaded successfully, documentId:', documentId)
+      // console.log('✅ File uploaded successfully, documentId:', documentId)
       
       // Create the node with file metadata (no File object)
       const signedUrl = await supabaseStorage.getSignedUrl(documentId);
@@ -687,7 +891,7 @@ function BoardContent({
       // Extract text if the file type supports it
       if (isTextExtractable(file.type, file.name)) {
         try {
-          console.log('🔍 Starting server-side text extraction for:', file.name)
+          // console.log('🔍 Starting server-side text extraction for:', file.name)
           
           // Convert file to base64 using a more efficient method
           const arrayBuffer = await file.arrayBuffer()
@@ -711,7 +915,7 @@ function BoardContent({
           
           if (response.ok) {
             const result = await response.json()
-            console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
+            // console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
             
             // Update the specific node
             setNodes((currentNodes) => {
@@ -723,7 +927,7 @@ function BoardContent({
               )
             })
           } else {
-            console.error('❌ Server-side text extraction failed:', response.statusText)
+            // console.error('❌ Server-side text extraction failed:', response.statusText)
             setNodes((currentNodes) => {
               if (!Array.isArray(currentNodes)) return currentNodes
               return currentNodes.map(node => 
@@ -734,7 +938,7 @@ function BoardContent({
             })
           }
         } catch (error) {
-          console.error('❌ Text extraction failed:', error)
+          // console.error('❌ Text extraction failed:', error)
           setNodes((currentNodes) => {
             if (!Array.isArray(currentNodes)) return currentNodes
             return currentNodes.map(node => 
@@ -756,7 +960,7 @@ function BoardContent({
         })
       }
     } catch (error) {
-      console.error('❌ Failed to upload file to Supabase:', error)
+      // console.error('❌ Failed to upload file to Supabase:', error)
       // Create node with error status
       const newNode = {
         id: nodeId,
@@ -783,7 +987,7 @@ function BoardContent({
   // Handle XYFlow's selection changes
   const handleSelectionChange = useCallback(({ nodes }: { nodes: BoardNode[] }) => {
     const selectedIds = nodes.map(node => node.id)
-    console.log('Selection changed:', selectedIds)
+    // console.log('Selection changed:', selectedIds)
     setSelectedNodes(selectedIds)
     // Also update our store for chat integration
     useBoardStore.getState().setSelectedNodes(selectedIds)
@@ -813,7 +1017,7 @@ function BoardContent({
         e.preventDefault() // This is the key fix - tell browser this is a custom drop zone
         isFileBeingDragged = true
         setIsDragOver(true)
-        console.log("🔄 File drag detected - overlay ON")
+        // console.log("🔄 File drag detected - overlay ON")
       }
     }
 
@@ -831,7 +1035,7 @@ function BoardContent({
       if (isFileBeingDragged) {
         isFileBeingDragged = false
         setIsDragOver(false)
-        console.log("🏁 File drag ended - overlay OFF")
+        // console.log("🏁 File drag ended - overlay OFF")
       }
     }
 
@@ -841,7 +1045,7 @@ function BoardContent({
         e.preventDefault()
         e.stopPropagation()
         
-        console.log("🎯 Files dropped - preventing default behavior")
+        // console.log("🎯 Files dropped - preventing default behavior")
         
         // Check if we're dropping on the board
         const boardElement = document.querySelector(".react-flow") as HTMLElement
@@ -851,7 +1055,7 @@ function BoardContent({
             e.clientY >= rect.top && e.clientY <= rect.bottom
 
           if (isOnBoard) {
-            console.log("🎯 Files dropped on board!")
+            // console.log("🎯 Files dropped on board!")
             const position = {
               x: e.clientX - rect.left,
               y: e.clientY - rect.top
@@ -933,108 +1137,52 @@ function BoardContent({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [saveBoard])
   
-  const handleEdgeDelete = (edgeId: string) => {
-    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
-  }
-
-  const handleNodeDelete = (nodeId: string) => {
+  // Handler functions
+  const handleNodeDelete = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId))
-    // Also remove any edges connected to this node
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId))
-    // Call parent's onDeleteNode function if provided
-    onDeleteNode?.(nodeId)
-  }
+    if (onDeleteNode) onDeleteNode(nodeId)
+  }, [onDeleteNode, setNodes, setEdges])
 
-  // Register the delete function globally for DocumentsMenu to use
-  useEffect(() => {
-    ;(window as any).__deleteNodeFromBoard = handleNodeDelete
-    return () => {
-      delete (window as any).__deleteNodeFromBoard
-    }
-  }, [handleNodeDelete])
-
-  const handleNodeUpdate = (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
+  const handleNodeUpdate = useCallback((nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
     setNodes((nds) => nds.map((node) => 
       node.id === nodeId ? { ...node, data: { ...node.data, ...updates } } : node
     ))
-  }
+  }, [setNodes])
 
-  // Context menu handlers
-  const handlePaneClick = useCallback((event: MouseEvent | React.MouseEvent) => {
-    // Close context menu if clicking on the pane
-    if (contextMenu.isOpen) {
-      setContextMenu({ isOpen: false, position: null })
-    }
-  }, [contextMenu.isOpen])
+  const handleEdgeDelete = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
+  }, [setEdges])
 
-  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
-    event.preventDefault()
-    
-    setContextMenu({
-      isOpen: true,
-      position: { x: event.clientX, y: event.clientY },
-    })
-  }, [])
+  // Memoize handlers object for node/edge types
+  const handlers = useMemo(() => ({
+    onNodeDelete: handleNodeDelete,
+    onNodeUpdate: handleNodeUpdate,
+    onEdgeDelete: handleEdgeDelete,
+    acquireNodeLock,
+    releaseNodeLock,
+    isNodeLocked,
+    getNodeLockOwner,
+    isNodeLockedByMe,
+    nodeLocks,
+  }), [
+    handleNodeDelete,
+    handleNodeUpdate,
+    handleEdgeDelete,
+    acquireNodeLock,
+    releaseNodeLock,
+    isNodeLocked,
+    getNodeLockOwner,
+    isNodeLockedByMe,
+    nodeLocks,
+  ])
 
-  const handleAddBlankNodeAtPosition = useCallback(() => {
-    if (!contextMenu.position) return
-    
-    const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect()
-    if (!reactFlowBounds) return
-    
-    // Convert screen coordinates to flow coordinates
-    const flowPosition = reactFlowInstance.screenToFlowPosition({
-      x: contextMenu.position.x - reactFlowBounds.left,
-      y: contextMenu.position.y - reactFlowBounds.top,
-    })
-    
-    // Create a blank node at the clicked position
-    const newNode: Node = {
-      id: `node-${Date.now()}`,
-      type: 'default',
-      position: flowPosition,
-      data: { 
-        label: 'New Node',
-        content: ''
-      },
-    }
-    
-    setNodes((nds) => {
-      if (!Array.isArray(nds)) return [newNode]
-      return [...nds, newNode]
-    })
-  }, [contextMenu.position, reactFlowInstance, setNodes])
+  // Assign to stableHandlers (module scope)
+  stableHandlers = handlers
 
   const handleOpenAINodeGenerator = useCallback(() => {
     setShowAINodeGenerator(true)
   }, [])
-
-  // Memoize nodeTypes to prevent React Flow warnings
-  const nodeTypes = useMemo(() => ({
-    default: (props: any) => (
-      <NodalNode 
-        {...props} 
-        onNodeDelete={handleNodeDelete}
-        onNodeUpdate={handleNodeUpdate}
-      />
-    ),
-    document: (props: any) => (
-      <DocumentNode 
-        {...props} 
-        onNodeDelete={handleNodeDelete}
-      />
-    ),
-  }), [handleNodeDelete, handleNodeUpdate])
-
-  // Memoize edgeTypes to prevent React Flow warnings
-  const edgeTypes = useMemo(() => ({
-    floating: (props: any) => (
-      <FloatingEdge 
-        {...props} 
-        onEdgeDelete={handleEdgeDelete}
-      />
-    ),
-  }), [handleEdgeDelete])
 
   return (
     <div 
@@ -1055,7 +1203,6 @@ function BoardContent({
           </div>
         </div>
       )}
-      
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1063,10 +1210,10 @@ function BoardContent({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={handleSelectionChange}
-        onPaneClick={handlePaneClick}
-        onPaneContextMenu={handlePaneContextMenu}
+        onPaneClick={() => setContextMenu({ isOpen: false, position: null })}
+        onPaneContextMenu={() => setContextMenu({ isOpen: true, position: null })}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes} // Now this has access to handleEdgeDelete
+        edgeTypes={edgeTypes}
         connectionLineComponent={CustomConnectionLine}
         fitView
         fitViewOptions={{ padding: 0.2, minZoom: 0.5, maxZoom: 2 }}
@@ -1075,6 +1222,7 @@ function BoardContent({
         multiSelectionKeyCode="Meta"
         deleteKeyCode="Delete"
       >
+        {renderRemoteCursors()}
         <Background />
         <Controls />
         <MiniMap />
@@ -1093,10 +1241,7 @@ function BoardContent({
               onAddNode={() => {
                 setShowNodeSetupModal(true)
               }}
-              onAIGenerate={() => {
-                // Manual AI generation - open the AI node generator modal
-                setShowAINodeGenerator(true)
-              }}
+              onAIGenerate={handleOpenAINodeGenerator}
               onUploadDocument={() => {
                 const input = document.createElement('input')
                 input.type = 'file'
@@ -1140,7 +1285,23 @@ function BoardContent({
         isOpen={contextMenu.isOpen}
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
-        onAddBlankNode={handleAddBlankNodeAtPosition}
+        onAddBlankNode={() => {
+          const position = getViewportCenter();
+          const newNode: Node = {
+            id: `node-${Date.now()}`,
+            type: 'default',
+            position,
+            data: { 
+              label: 'New Node',
+              content: ''
+            },
+          };
+          setNodes((nds) => {
+            if (!Array.isArray(nds)) return [newNode];
+            return [...nds, newNode];
+          });
+          setContextMenu({ isOpen: false, position: null });
+        }}
         onGenerateAINode={handleOpenAINodeGenerator}
       />
       
@@ -1191,9 +1352,7 @@ function BoardContent({
                 onAddNode={() => {
                   setShowNodeSetupModal(true)
                 }}
-                onAIGenerate={() => {
-                  setShowAINodeGenerator(true)
-                }}
+                onAIGenerate={handleOpenAINodeGenerator}
                 onUploadDocument={() => {
                   const input = document.createElement('input')
                   input.type = 'file'
