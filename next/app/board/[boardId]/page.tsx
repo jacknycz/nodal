@@ -82,6 +82,7 @@ export default function BoardPage() {
               initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
+              boardId={boardId} // <-- Pass boardId prop
             />
           </div>
         )}

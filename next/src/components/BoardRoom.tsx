@@ -5,13 +5,14 @@ import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
+import { useSupabaseUser } from '../features/auth/authUtils'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
 }
 
 function BoardCard({ board, onLoad, onRename, onDelete }: {
-  board: SavedBoard
+  board: SavedBoard & { shared?: boolean; invited_by?: string }
   onLoad: () => void
   onRename: (newName: string) => void
   onDelete: () => void
@@ -90,7 +91,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
       {/* Board Info */}
       <div className="flex flex-col items-start">
         {/* Board Name */}
-        <div className="mb-2">
+        <div className="mb-2 flex items-center gap-2">
           {isRenaming ? (
             <input
               type="text"
@@ -107,7 +108,16 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
               {board.name}
             </h3>
           )}
+          {board.shared && (
+            <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
+          )}
         </div>
+        {/* Shared with/by info */}
+        {board.shared && (
+          <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">
+            Invited by: {board.invited_by || 'unknown'}
+          </div>
+        )}
         {/* Board Stats */}
         <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 mb-2">
           <span>{board.nodeCount} nodes</span>
@@ -174,7 +184,9 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
 }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
+  const user = useSupabaseUser()
   const [boards, setBoards] = useState<SavedBoard[]>([])
+  const [sharedBoards, setSharedBoards] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -190,6 +202,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       const { boardStorage } = await import('../features/storage/storage')
       const loadedBoards = await boardStorage.getAllBoards()
       setBoards(loadedBoards)
+      // Fetch shared boards from API
+      if (user?.email) {
+        const res = await fetch(`/api/board/shared?email=${encodeURIComponent(user.email)}`)
+        const json = await res.json()
+        setSharedBoards(Array.isArray(json.boards) ? json.boards : [])
+      } else {
+        setSharedBoards([])
+      }
     } catch (err) {
       setError('Failed to load boards')
     } finally {
@@ -199,7 +219,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   useEffect(() => {
     loadBoards()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email])
 
   const handleRename = async (boardId: string, newName: string) => {
     try {
@@ -259,7 +280,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     setShowBoardSetup(true)
   }
 
-  const filteredBoards = boards.filter(board =>
+  const allBoards = [...boards, ...sharedBoards]
+  const filteredBoards = allBoards.filter(board =>
     board.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 

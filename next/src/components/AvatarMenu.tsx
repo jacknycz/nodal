@@ -43,6 +43,7 @@ export default function AvatarMenu({
   const [isOpen, setIsOpen] = useState(false)
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const menuRef = useRef<HTMLDivElement>(null)
+  const [pendingInvites, setPendingInvites] = useState<any[]>([])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -63,6 +64,21 @@ export default function AvatarMenu({
       loadRecentBoards();
     }
   }, [isOpen]);
+
+  // Fetch pending invitations for the current user
+  useEffect(() => {
+    const fetchInvites = async () => {
+      if (!user?.email) return
+      try {
+        const res = await fetch(`/api/board/invitations?email=${encodeURIComponent(user.email)}`)
+        const json = await res.json()
+        setPendingInvites(Array.isArray(json.invitations) ? json.invitations : [])
+      } catch (e) {
+        setPendingInvites([])
+      }
+    }
+    fetchInvites()
+  }, [user?.email])
 
   const loadRecentBoards = async () => {
     try {
@@ -91,6 +107,24 @@ export default function AvatarMenu({
   const handleLoadBoard = (board: SavedBoard) => {
     onLoadBoard?.(board)
     setIsOpen(false)
+  }
+
+  // Accept invitation handler
+  const handleAcceptInvite = async (inviteId: string) => {
+    try {
+      const res = await fetch('/api/board/invitations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: inviteId, status: 'accepted' })
+      })
+      if (res.ok) {
+        setPendingInvites(invites => invites.filter(inv => inv.id !== inviteId))
+      } else {
+        alert('Failed to accept invitation')
+      }
+    } catch (e) {
+      alert('Failed to accept invitation')
+    }
   }
 
   // Get user display name
@@ -152,7 +186,7 @@ export default function AvatarMenu({
     >
       {/* Avatar Button */}
       <button
-        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
+        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10 relative"
         aria-label="User menu"
         tabIndex={-1}
         style={{ minWidth: '40px', minHeight: '40px' }}
@@ -167,6 +201,10 @@ export default function AvatarMenu({
           <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
+        )}
+        {/* Notification Dot */}
+        {pendingInvites.length > 0 && (
+          <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
         )}
       </button>
       {/* Dropdown Menu */}
@@ -196,6 +234,25 @@ export default function AvatarMenu({
               </div>
             </div>
           </div>
+          {/* Pending Invitations */}
+          {pendingInvites.length > 0 && (
+            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+              <div className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">Pending Invitations</div>
+              <ul className="space-y-1">
+                {pendingInvites.map((invite) => (
+                  <li key={invite.id} className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-200">
+                    <span>
+                      Board: {invite.board_id.slice(0, 8)}...<br/>
+                      Invited by: {invite.invited_by?.slice?.(0, 8) || 'unknown'}
+                    </span>
+                    <button className="ml-2 px-2 py-0.5 bg-blue-500 text-white rounded text-xs" onClick={() => handleAcceptInvite(invite.id)}>
+                      Accept
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Board Room Link - Only show when NOT on BoardRoom page */}
           {isBoardView && (

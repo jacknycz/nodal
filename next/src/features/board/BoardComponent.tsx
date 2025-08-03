@@ -96,6 +96,13 @@ function BoardContent({
     useBoardStore.getState().setNodes(nodes)
   }, [nodes])
   
+  // Set Zustand currentBoardId from prop
+  useEffect(() => {
+    if (boardId) {
+      useBoardStore.getState().setCurrentBoardId(boardId)
+    }
+  }, [boardId])
+  
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')

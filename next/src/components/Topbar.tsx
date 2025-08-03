@@ -8,6 +8,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
 import { House } from 'lucide-react';
 import Image from 'next/image';
+import { useSupabaseUser } from '../features/auth/authUtils'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -46,6 +47,9 @@ export default function Topbar({
   const [showFeedback, setShowFeedback] = useState(false)
   const setTopbarHeight = useBoardStore(state => state.setTopbarHeight);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
+  const user = useSupabaseUser()
+  const currentBoardId = useBoardStore(state => state.currentBoardId)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => {
     if (headerRef.current) {
@@ -53,6 +57,38 @@ export default function Topbar({
       setTopbarHeight(height);
     }
   }, [setTopbarHeight]);
+
+  // Temporary share handler
+  const handleShareBoard = async () => {
+    console.log('currentBoardId:', currentBoardId, 'user:', user);
+    if (!currentBoardId || !user) {
+      alert('No board or user')
+      return
+    }
+    const email = window.prompt('Enter email to invite:')
+    if (!email) return
+    const res = await fetch('/api/board/invitations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boardId: currentBoardId, email, invitedBy: user.id })
+    })
+    if (res.ok) {
+      alert('Invitation sent!')
+    } else {
+      const json = await res.json()
+      alert('Error: ' + (json.error || 'Unknown error'))
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 1500)
+    } catch (e) {
+      alert('Failed to copy link')
+    }
+  }
 
   return (
     <>
@@ -91,6 +127,16 @@ export default function Topbar({
             <button className="text-xs rounded text-gray-600 dark:text-white border border-red-500 p-1 ml-4" onClick={() => setShowFeedback(true)}>
               FEEDBACK
             </button>
+            {/* TEMP: Share Board button */}
+            <button className="text-xs rounded text-white bg-blue-500 hover:bg-blue-600 p-1 ml-2" onClick={handleShareBoard}>
+              Share Board
+            </button>
+            <button className="text-xs rounded text-white bg-gray-500 hover:bg-gray-600 p-1 ml-2" onClick={handleCopyLink}>
+              Copy Link
+            </button>
+            {linkCopied && (
+              <span className="ml-2 text-green-600 text-xs">Link copied!</span>
+            )}
           </div>
 
           {/* Center - Board Info (truly centered) */}

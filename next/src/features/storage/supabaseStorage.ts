@@ -140,18 +140,14 @@ class SupabaseStorage {
   // Load a specific board
   async loadBoard(boardId: string): Promise<SavedBoard | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
+      // Remove user check for shared boards
       const { data, error } = await supabase
         .from('boards')
         .select('*')
         .eq('id', boardId)
-        .eq('user_id', user.id)
         .single()
 
       if (error) throw error
-      
       // Convert snake_case to camelCase
       return data ? {
         id: data.id as string,
