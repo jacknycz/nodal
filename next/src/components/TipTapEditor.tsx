@@ -35,9 +35,16 @@ interface TipTapEditorProps {
   onChange: (content: string) => void
   placeholder?: string
   className?: string
+  onKeyDown?: (e: React.KeyboardEvent) => void
 }
 
-export default function TipTapEditor({ content, onChange, placeholder = 'Start writing...', className = '' }: TipTapEditorProps) {
+export default function TipTapEditor({ 
+  content, 
+  onChange, 
+  placeholder = 'Start writing...', 
+  className = '',
+  onKeyDown 
+}: TipTapEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [editorHeight, setEditorHeight] = useState(200)
   const [isResizing, setIsResizing] = useState(false)
@@ -90,7 +97,14 @@ export default function TipTapEditor({ content, onChange, placeholder = 'Start w
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none',
+        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full min-h-full',
+      },
+      handleKeyDown: (view, event) => {
+        // Call the parent onKeyDown if provided
+        if (onKeyDown) {
+          onKeyDown(event as any)
+        }
+        return false // Let TipTap handle the event normally
       },
     },
     immediatelyRender: false,
@@ -311,7 +325,10 @@ export default function TipTapEditor({ content, onChange, placeholder = 'Start w
         style={{ height: `${editorHeight}px` }}
       >
         <div className="p-3 h-full overflow-y-auto">
-          <EditorContent editor={editor} className="h-full" />
+          <EditorContent 
+            editor={editor} 
+            className="h-full min-h-full prose prose-sm dark:prose-invert max-w-none focus:outline-none" 
+          />
         </div>
         
         {/* Resize handle */}
