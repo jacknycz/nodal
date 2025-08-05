@@ -133,19 +133,32 @@ export default function ChatPanel({
       if (pointMatch) {
         // Save previous point if exists
         if (currentPoint) points.push(currentPoint)
-        // Extract title (remove markdown)
-        const title = pointMatch[2].replace(/\*\*/g, '').trim()
-        currentPoint = { title, content: title }
+        
+        // Extract and clean title
+        let title = pointMatch[2]
+          .replace(/\*\*/g, '') // Remove bold markdown
+          .replace(/^Node:\s*"?|"?$/g, '') // Remove "Node:" prefix and quotes
+          .trim()
+        
+        currentPoint = { title, content: '' }
       } else if (currentPoint && line.trim()) {
-        // Add line to current point's content
-        currentPoint.content += '\n' + line.trim()
+        const cleanedLine = line
+          .replace(/^\s*-\s*\*\*Connection:\*\*.*$/i, '') // Remove connection lines
+          .replace(/^\s*-\s*\*\*Content:\*\*\s*/i, '') // Remove content prefix
+          .replace(/\*\*/g, '') // Remove any remaining bold markdown
+          .trim()
+        
+        if (cleanedLine) {
+          currentPoint.content += (currentPoint.content ? '\n' : '') + cleanedLine
+        }
       }
     }
     
     // Add final point
     if (currentPoint) points.push(currentPoint)
     
-    return points
+    // Filter out any points that ended up empty after cleaning
+    return points.filter(point => point.title && point.content)
   }
 
   // Update the fan layout calculation to take a center point
