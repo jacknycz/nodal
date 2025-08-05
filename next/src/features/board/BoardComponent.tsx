@@ -41,6 +41,7 @@ import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
+import NodeEditModal from '../../components/NodeEditModal'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -1302,6 +1303,9 @@ function BoardContent({
     setShowAINodeGenerator(true)
   }, [])
 
+  const [showAddNodeModal, setShowAddNodeModal] = useState(false)
+  const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null)
+
   return (
     <div 
       className="w-full h-full relative" 
@@ -1329,7 +1333,13 @@ function BoardContent({
         onConnect={onConnect}
         onSelectionChange={handleSelectionChange}
         onPaneClick={() => setContextMenu({ isOpen: false, position: null })}
-        onPaneContextMenu={() => setContextMenu({ isOpen: true, position: null })}
+        onPaneContextMenu={(event) => {
+          event.preventDefault();
+          setContextMenu({ 
+            isOpen: true, 
+            position: { x: event.clientX, y: event.clientY } 
+          });
+        }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionLineComponent={CustomConnectionLine}
@@ -1404,20 +1414,15 @@ function BoardContent({
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
         onAddBlankNode={() => {
-          const position = getViewportCenter();
-          const newNode: Node = {
-            id: `node-${Date.now()}`,
-            type: 'default',
-            position,
-            data: { 
-              label: 'New Node',
-              content: ''
-            },
-          };
-          setNodes((nds) => {
-            if (!Array.isArray(nds)) return [newNode];
-            return [...nds, newNode];
-          });
+          // Store the position and show the modal instead of creating a blank node
+          if (contextMenu.position) {
+            const flowPosition = reactFlowInstance.screenToFlowPosition({
+              x: contextMenu.position.x,
+              y: contextMenu.position.y,
+            });
+            setPendingNodePosition(flowPosition);
+            setShowAddNodeModal(true);
+          }
           setContextMenu({ isOpen: false, position: null });
         }}
         onGenerateAINode={handleOpenAINodeGenerator}
@@ -1490,6 +1495,36 @@ function BoardContent({
             </>
           )}
         </>
+      )}
+      {showAddNodeModal && (
+        <NodeEditModal
+          open={showAddNodeModal}
+          onClose={() => {
+            setShowAddNodeModal(false);
+            setPendingNodePosition(null);
+          }}
+          onSave={(title: string, content: string) => {
+            if (pendingNodePosition) {
+              const newNode: Node = {
+                id: `node-${Date.now()}`,
+                type: 'default',
+                position: pendingNodePosition,
+                data: { 
+                  title: title || 'New Node',
+                  content: content
+                },
+              };
+              setNodes((nds) => {
+                if (!Array.isArray(nds)) return [newNode];
+                return [...nds, newNode];
+              });
+            }
+            setShowAddNodeModal(false);
+            setPendingNodePosition(null);
+          }}
+          initialTitle=""
+          initialContent=""
+        />
       )}
     </div>
   )

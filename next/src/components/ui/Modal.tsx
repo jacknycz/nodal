@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom'
 
 interface ModalProps {
@@ -12,6 +12,26 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, children, actions, className }) => {
+  const [isVisible, setIsVisible] = useState(false)
+  const [shouldRender, setShouldRender] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true)
+      // Small delay to ensure the element is in the DOM before animating
+      requestAnimationFrame(() => {
+        setIsVisible(true)
+      })
+    } else {
+      setIsVisible(false)
+      // Wait for animation to complete before removing from DOM
+      const timer = setTimeout(() => {
+        setShouldRender(false)
+      }, 200) // Match the transition duration
+      return () => clearTimeout(timer)
+    }
+  }, [open])
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -21,7 +41,7 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!shouldRender) return null;
 
   // Only render if we're in the browser
   if (typeof window === 'undefined') return null;
@@ -30,13 +50,19 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-40 backdrop-blur-sm transition-opacity"
+        className={`absolute inset-0 bg-black backdrop-blur-sm transition-all duration-200 ease-out ${
+          isVisible ? 'bg-opacity-40' : 'bg-opacity-0'
+        }`}
         onClick={onClose}
         aria-label="Close modal"
       />
       {/* Modal content */}
       <div
-        className={`relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col ${className || ''}`}
+        className={`relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out ${
+          isVisible 
+            ? 'opacity-100 scale-100 translate-y-0' 
+            : 'opacity-0 scale-95 translate-y-4'
+        } ${className || ''}`}
         role="dialog"
         aria-modal="true"
         onClick={e => e.stopPropagation()}
