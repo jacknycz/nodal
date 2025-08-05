@@ -590,7 +590,7 @@ function BoardContent({
         }, 'image/jpeg', 0.8);
       });
 
-      // Upload directly to Supabase storage using the same client as documents
+      // Upload directly to Supabase storage - save at root path to match BoardRoom expectations
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         // console.error('User not authenticated for thumbnail upload');
@@ -598,10 +598,10 @@ function BoardContent({
       }
 
       const fileName = `thumbnail-${boardId}.jpg`;
-      const filePath = `${user.id}/${fileName}`;
+      // Save at root path instead of user subfolder to match BoardRoom expectations
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('thumbnails')
-        .upload(filePath, blob, {
+        .upload(fileName, blob, {
           contentType: 'image/jpeg',
           upsert: true,
         });
@@ -610,7 +610,7 @@ function BoardContent({
         // console.error('Supabase upload error:', uploadError);
         // console.error('Upload details:', {
         //   bucket: 'thumbnails',
-        //   path: `${user.id}/${fileName}`,
+        //   path: fileName,
         //   userId: user.id,
         //   boardId: boardId,
         //   fileName: fileName
