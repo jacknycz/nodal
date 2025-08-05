@@ -5,7 +5,6 @@ import {
   ReactFlow,
   Node, 
   Edge, 
-  addEdge,
   useNodesState, 
   useEdgesState, 
   Connection,
@@ -14,11 +13,9 @@ import {
   Background,
   Controls,
   MiniMap,
-  Panel,
-  useStore,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import html2canvas from 'html2canvas'
+// import html2canvas from 'html2canvas' // Unused for now
 
 import { useBoard } from './useBoard'
 import { boardStorage } from '../storage/storage'
@@ -38,7 +35,7 @@ import TopicModal from '../../components/TopicModal'
 import type { BoardBrief } from './boardTypes'
 import NodeSetupModal from '../../components/NodeSetupModal'
 import BoardContextMenu from '../../components/BoardContextMenu'
-import { supabase } from '../auth/supabaseClient';
+// import { supabase } from '../auth/supabaseClient'; // Using getSupabaseClient instead
 import type { BoardNode } from './boardTypes';
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
@@ -71,7 +68,7 @@ const migrateNodeData = (nodes: Node[]): Node[] => {
 
 // === XYFlow/React Flow: Stable nodeTypes/edgeTypes ===
 // Define at module scope, never re-created
-let stableHandlers: any = {};
+const stableHandlers: any = {};
 
 export const nodeTypes = {
   default: (props: any) => <NodalNode {...props} {...stableHandlers} />,
