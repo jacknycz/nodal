@@ -264,6 +264,57 @@ function BoardContent({
     return () => { supabase.removeChannel(channel) }
   }, [boardId])
 
+  // Subscribe to board updates for real-time content sync
+  useEffect(() => {
+    if (!boardId || !user?.id) return
+
+    console.log('[BoardComponent] Setting up board_updates subscription for board:', boardId, 'user:', user.id)
+
+    const applyRemoteUpdate = (payload: any) => {
+      console.log('[BoardComponent] RAW subscription payload received:', payload)
+      
+      const { node_id, update_type, data, user_id } = payload.new || {}
+      
+      // Don't apply our own updates
+      if (user_id === user.id) {
+        console.log('[BoardComponent] Ignoring own update from user:', user_id)
+        return
+      }
+      
+      console.log('[BoardComponent] Received remote update:', { node_id, update_type, data, user_id })
+      
+      if (update_type === 'content') {
+        setNodes((nds) => nds.map((node) => 
+          node.id === node_id ? { ...node, data: { ...node.data, ...data } } : node
+        ))
+        console.log('[BoardComponent] Applied remote content update to node:', node_id)
+      }
+    }
+
+    const channel = supabase
+      .channel('board-updates-' + boardId)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'board_updates',
+          filter: `board_id=eq.${boardId}`,
+        },
+        applyRemoteUpdate
+      )
+      .subscribe((status) => {
+        console.log('[BoardComponent] Board updates subscription status:', status)
+      })
+
+    console.log('[BoardComponent] Board updates subscription channel created:', channel)
+
+    return () => { 
+      console.log('[BoardComponent] Cleaning up board_updates subscription')
+      supabase.removeChannel(channel) 
+    }
+  }, [boardId, user?.id, setNodes, supabase])
+
   // Create functions that get user from stableHandlers to avoid closure issues
   const acquireNodeLock = useCallback(async (nodeId: string) => {
     const currentUser = stableHandlers.currentUser
@@ -1180,11 +1231,35 @@ function BoardContent({
     if (onDeleteNode) onDeleteNode(nodeId)
   }, [onDeleteNode, setNodes, setEdges])
 
-  const handleNodeUpdate = useCallback((nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
+  const handleNodeUpdate = useCallback(async (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
+    // Update local nodes immediately
     setNodes((nds) => nds.map((node) => 
       node.id === nodeId ? { ...node, data: { ...node.data, ...updates } } : node
     ))
-  }, [setNodes])
+
+    // Broadcast the update to other users via Supabase
+    if (boardId && user?.id) {
+      try {
+        const { error } = await supabase
+          .from('board_updates')
+          .insert({
+            board_id: boardId,
+            node_id: nodeId,
+            update_type: 'content',
+            data: updates,
+            user_id: user.id
+          })
+        
+        if (error) {
+          console.error('[BoardComponent] Failed to broadcast node update:', error)
+        } else {
+          console.log('[BoardComponent] Broadcasted node update:', { nodeId, updates })
+        }
+      } catch (error) {
+        console.error('[BoardComponent] Error broadcasting node update:', error)
+      }
+    }
+  }, [setNodes, boardId, user?.id, supabase])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))

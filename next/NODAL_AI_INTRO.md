@@ -15,7 +15,7 @@
 - 🧑‍💻 Prioritize maintainable, scalable, and idiomatic Next.js + React code
 - ☁️ Use Supabase for authentication, board storage, document uploads, and thumbnail storage
 - 🎨 Ensure delightful, accessible, and themeable UI/UX
-- 🔄 Real-time collaboration and cloud synchronization
+- 🔄 Real-time collaboration with board sharing, presence, cursors, and optimistic node locking
 - 📱 Responsive design that works across all devices
 - 🖼️ Automatic thumbnail generation for board previews
 - 🎯 Node selection and focus capabilities with AI chat integration
@@ -52,6 +52,9 @@
 - **Node Selection**: Multi-node selection system with AI chat integration and visual feedback.
 - **Design System**: Reusable UI components (Modal, Button, IconButton, Toggle) for consistent design.
 - **Rich Text Editing**: TipTap WYSIWYG editor for node content with formatting options.
+- **Collaborative Boards**: Real-time board sharing with email invitations, presence indicators, and live cursors.
+- **Optimistic Node Locking**: Prevents editing conflicts with visual lock indicators and seamless lock acquisition/release.
+- **Real-time Content Sync**: Live updates to node content across all connected users with conflict prevention.
 
 ---
 
@@ -186,6 +189,37 @@ next/src/
 
 ---
 
+## Collaborative Boards Implementation
+
+### Database Schema for Collaboration
+- **board_invitations**: Email-based board sharing with pending/accepted status tracking
+- **board_presence**: Real-time user presence with 15-second heartbeat upserts
+- **board_cursors**: Live cursor position tracking with throttled updates
+- **node_locks**: Optimistic locking system with 5-minute auto-expiration
+- **board_updates**: Real-time content sync broadcasting (implemented but needs debugging)
+
+### Core Collaboration Features
+- **Board Sharing**: Email invitation system with shareable links and notification indicators
+- **Real-time Presence**: "Jack is in here" indicators in topbar with user avatars/initials
+- **Live Cursors**: Real-time cursor position tracking across all connected users
+- **Node Locking**: Modal-driven optimistic locking prevents simultaneous edits
+- **Visual Indicators**: Red borders, pulsing dots, and "Editing..." status for locked nodes
+- **Shared Board UI**: "Shared" badges and "Invited by" labels in Board Room
+
+### Technical Architecture
+- **Supabase Realtime**: postgres_changes subscriptions for live updates
+- **RLS Policies**: Properly configured for collaborative access while maintaining security
+- **Stable Handlers Pattern**: Module-level stableHandlers object with Object.assign updates to prevent React Flow warnings
+- **Closure Management**: Dynamic user resolution via stableHandlers.currentUser to avoid stale closure issues
+- **Throttled Updates**: 200ms throttling for cursor positions to prevent database spam
+
+### Key Implementation Lessons
+- **React Flow Integration**: Memoized nodeTypes/edgeTypes at module level with stable handler references
+- **Stale Closures Fix**: Functions read user from stableHandlers object instead of closure variables
+- **Modal-Driven Locking**: Simplified approach where modal open/close directly controls lock state
+- **Row Level Security**: Critical for collaborative features - must allow cross-user access for shared boards
+- **Supabase Storage Modification**: Removed user_id filters from loadBoard/updateBoard for shared access
+
 ## Recent Improvements (Latest Session)
 
 ### Drag & Drop Fix
@@ -252,6 +286,10 @@ next/src/
 - **Environment Variables**: Ensure Supabase client initialization happens at runtime, not build time.
 - **OAuth Configuration**: Update Supabase project settings for production URLs, not localhost.
 - **Node Data Migration**: When changing data structures, provide migration functions for backward compatibility.
+- **Collaborative Debugging**: Real-time features require careful logging and multi-window testing for proper validation.
+- **Supabase Realtime**: Enable Realtime for tables, configure RLS policies for cross-user access, use postgres_changes subscriptions.
+- **React Closure Issues**: Use dynamic property access (object.property) instead of closure variables for real-time data.
+- **Modal State Management**: Simple modal open/close state can effectively drive optimistic locking without complex heartbeat systems.
 
 ---
 
@@ -291,6 +329,46 @@ next/src/
 - **Build system optimization**: Configured for successful production builds with appropriate error handling.
 - **Rich text editing**: TipTap integration for enhanced node content editing.
 - **Codebase cleanup**: Complete removal of legacy Vite/CRA codebase.
+- **Collaborative boards**: Full real-time collaboration with sharing, presence, cursors, and node locking.
+- **Optimistic locking system**: Prevents editing conflicts with visual indicators and seamless UX.
+- **Real-time content sync**: Live node updates across users (implemented, debugging subscription issues).
+
+---
+
+## Current Collaboration Status & Next Steps
+
+### ✅ **Completed Features**
+- **Board Sharing**: Email invitations with accept/reject functionality
+- **Real-time Presence**: Live user indicators in topbar with avatars
+- **Live Cursors**: Real-time cursor tracking across all users
+- **Optimistic Node Locking**: Visual lock indicators with seamless acquisition/release
+- **Shared Board Management**: UI for shared boards in Board Room with proper labeling
+- **RLS Configuration**: Proper row-level security for collaborative access
+
+### 🔧 **In Progress/Debugging**
+- **Real-time Content Sync**: Broadcast logic implemented, subscription debugging needed
+  - Broadcasting works: `[BoardComponent] Broadcasted node update` logs appear
+  - Subscription issue: Missing `[BoardComponent] Received remote update` logs
+  - Likely causes: Supabase Realtime not enabled for `board_updates` table or RLS blocking subscriptions
+
+### 🚀 **Next Priorities**
+1. **Fix Real-time Content Sync**: Debug subscription issue and complete live content updates
+2. **Real-time Node/Edge Creation**: Broadcast node/edge additions and deletions
+3. **Real-time Positioning**: Live node dragging with throttled position updates
+4. **Enhanced Cursors**: User names, avatars, and smooth animations
+5. **Typing Indicators**: Show when users are actively typing in nodes
+6. **Conflict Resolution**: Handle simultaneous edits more gracefully
+
+### 📋 **SQL Setup for New Developers**
+```sql
+-- Required tables for collaboration (run in Supabase SQL editor)
+-- See BoardComponent.tsx comments for complete SQL setup
+CREATE TABLE board_invitations (...);
+CREATE TABLE board_presence (...);
+CREATE TABLE board_cursors (...);
+CREATE TABLE node_locks (...);
+CREATE TABLE board_updates (...); -- Needs Realtime enabled
+```
 
 ---
 
@@ -305,6 +383,8 @@ next/src/
 - **Test node selection**: Ensure multi-node selection works with AI chat integration.
 - **Test drag & drop**: Verify document uploads work consistently from first drop.
 - **Check build errors**: Ensure TypeScript and ESLint configurations are appropriate for deployment.
+- **Test collaboration**: Use multiple browser windows/users to verify real-time features work correctly.
+- **Debug Supabase Realtime**: Check subscription status, RLS policies, and enable Realtime for new tables.
 
 ---
 
