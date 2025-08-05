@@ -293,7 +293,12 @@ next/src/
 
 ---
 
+// Update the Best Practices section (around line 296):
 ## Best Practices for Next.js Nodal
+
+- **AI Response Handling**: Parse and generate nodes from structured AI responses with proper layout and connections
+- **Modal UX**: Use smooth animations, auto-focus, and keyboard shortcuts for better interaction
+- **Document Preview**: Handle PDF previews client-side with proper error states and loading indicators
 
 - **Atomic Components**: Keep components small, focused, and reusable.
 - **Strict Typing**: Use TypeScript everywhere, with strictest settings.
@@ -309,7 +314,26 @@ next/src/
 
 ---
 
+// Add to Recent Improvements section (around line 312):
 ## Recent Improvements
+
+- **Enhanced AI Node Generation**: 
+  - Smart fan layout for generated nodes with proper spacing
+  - Automatic connection to parent/source nodes
+  - Support for both numbered lists and bullet points
+  - Proper title/content separation in generated nodes
+
+- **TipTap Editor Enhancements**:
+  - Full-height clickable area in edit modal
+  - Auto-focus on title field for better UX
+  - Enter key support for quick saving
+  - Improved modal animations for smoother transitions
+
+- **Document Handling Improvements**:
+  - PDF preview functionality with signed URL support
+  - Graceful fallback for text extraction
+  - Preview of extracted text in document nodes
+  - Client-side PDF handling to prevent SSR issues
 
 - **Board creation is now bulletproof**: No more double-saves, duplicate IDs, or race conditions.
 - **AI setup is context-aware**: The AI receives the full board brief and user intent.
