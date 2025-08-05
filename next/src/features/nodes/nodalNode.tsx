@@ -208,24 +208,22 @@ export default function NodalNode({
       </div>
 
       {/* Modals */}
-      {showDeleteModal && (
-        <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Delete Node</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Are you sure you want to delete this node? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <Button onClick={handleConfirmDelete} variant="danger">
-                Delete
-              </Button>
-              <Button onClick={() => setShowDeleteModal(false)} variant="secondary">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <Modal 
+        open={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Node"
+        description="Are you sure you want to delete this node? This action cannot be undone."
+        actions={
+          <>
+            <Button onClick={() => setShowDeleteModal(false)} variant="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} variant="danger">
+              Delete
+            </Button>
+          </>
+        }
+      />
 
       {showEditModal && (
         <NodeEditModal

@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { X, Download } from 'lucide-react'
+import Loader from './ui/Loader'
 
 interface PDFPreviewModalProps {
   isOpen: boolean
   onClose: () => void
-  file: File | null
+  file?: File | null
+  fileUrl?: string | null
   fileName: string
 }
 
-export default function PDFPreviewModal({ isOpen, onClose, file, fileName }: PDFPreviewModalProps) {
+export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileName }: PDFPreviewModalProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const urlRef = useRef<string | null>(null)
 
@@ -21,11 +23,16 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileName }: PDF
       urlRef.current = null
     }
 
-    if (isOpen && file) {
-      // Create object URL for the PDF file
-      const url = URL.createObjectURL(file)
-      urlRef.current = url
-      setPdfUrl(url)
+    if (isOpen) {
+      if (file) {
+        // Create object URL for the PDF file
+        const url = URL.createObjectURL(file)
+        urlRef.current = url
+        setPdfUrl(url)
+      } else if (fileUrl) {
+        // Use the provided URL directly
+        setPdfUrl(fileUrl)
+      }
     } else {
       setPdfUrl(null)
     }
@@ -37,7 +44,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileName }: PDF
         urlRef.current = null
       }
     }
-  }, [isOpen, file])
+  }, [isOpen, file, fileUrl])
 
   const handleDownload = () => {
     if (file) {
@@ -49,6 +56,13 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileName }: PDF
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+    } else if (fileUrl) {
+      const a = document.createElement('a')
+      a.href = fileUrl
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
     }
   }
 
@@ -93,7 +107,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileName }: PDF
             />
           ) : (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <Loader size="md" />
             </div>
           )}
         </div>

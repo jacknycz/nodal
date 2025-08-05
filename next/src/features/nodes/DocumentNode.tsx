@@ -199,11 +199,15 @@ export default function DocumentNode({
 
         {/* Extracted text preview */}
         {hasExtractedText && (
-          <div className="mb-3">
-            <div className="text-xs text-gray-600 dark:text-gray-200 prose prose-sm dark:prose-invert max-w-none">
-              <div className="line-clamp-3">
-                {data.extractedText}
-              </div>
+          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
+            <div className="text-gray-500 dark:text-gray-400 mb-1 font-medium">
+              Extracted Text:
+            </div>
+            <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              {data.extractedText.length > 250 
+                ? `${data.extractedText.substring(0, 250)}...` 
+                : data.extractedText
+              }
             </div>
           </div>
         )}
@@ -241,30 +245,28 @@ export default function DocumentNode({
       </div>
 
       {/* Modals */}
-      {showDeleteModal && (
-        <Modal open={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-          <div className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Delete Document</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Are you sure you want to delete this document? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <Button onClick={handleConfirmDelete} variant="danger">
-                Delete
-              </Button>
-              <Button onClick={() => setShowDeleteModal(false)} variant="secondary">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      <Modal 
+        open={showDeleteModal} 
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Document"
+        description="Are you sure you want to delete this document? This action cannot be undone."
+        actions={
+          <>
+            <Button onClick={() => setShowDeleteModal(false)} variant="secondary">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmDelete} variant="danger">
+              Delete
+            </Button>
+          </>
+        }
+      />
 
       {showPreview && (
         <PDFPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
-          file={null}
+          fileUrl={data.previewUrl}  // Use the signed URL instead of null file
           fileName={data.fileName || ''}
         />
       )}

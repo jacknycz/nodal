@@ -976,59 +976,49 @@ function BoardContent({
       // Extract text if the file type supports it
       if (isTextExtractable(file.type, file.name)) {
         try {
-          // console.log('🔍 Starting server-side text extraction for:', file.name)
+          console.log('🔍 Starting client-side text extraction for:', file.name)
           
-          // Convert file to base64 using a more efficient method
-          const arrayBuffer = await file.arrayBuffer()
-          const uint8Array = new Uint8Array(arrayBuffer)
-          let binary = ''
-          for (let i = 0; i < uint8Array.length; i++) {
-            binary += String.fromCharCode(uint8Array[i])
-          }
-          const base64 = btoa(binary)
+          // Dynamic import to avoid SSR issues
+          const { extractTextFromFile } = await import('../storage/textExtractor')
+          const extractedText = await extractTextFromFile(file, file.type, file.name)
           
-          // Call server-side API
-          const response = await fetch('/api/extract-text', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              file: base64,
-              fileName: file.name,
-              fileType: file.type
-            })
-          })
-          
-          if (response.ok) {
-            const result = await response.json()
-            // console.log('✅ Server-side text extraction completed:', result.characterCount, 'characters')
+          if (extractedText && extractedText.length > 0) {
+            console.log(`✅ Text extracted successfully: ${extractedText.length} characters`)
             
-            // Update the specific node
+            // Update the node with extracted text
             setNodes((currentNodes) => {
               if (!Array.isArray(currentNodes)) return currentNodes
               return currentNodes.map(node => 
                 node.id === nodeId 
-                  ? { ...node, data: { ...node.data, extractedText: result.extractedText, status: 'ready' } }
+                  ? { ...node, data: { ...node.data, extractedText, status: 'ready' } }
                   : node
               )
             })
           } else {
-            // console.error('❌ Server-side text extraction failed:', response.statusText)
+            console.log('⚠️ No text was extracted from the file')
             setNodes((currentNodes) => {
               if (!Array.isArray(currentNodes)) return currentNodes
               return currentNodes.map(node => 
                 node.id === nodeId 
-                  ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
+                  ? { ...node, data: { ...node.data, status: 'ready' } }
                   : node
               )
             })
           }
         } catch (error) {
-          // console.error('❌ Text extraction failed:', error)
+          console.error('❌ Client-side text extraction failed:', error)
           setNodes((currentNodes) => {
             if (!Array.isArray(currentNodes)) return currentNodes
             return currentNodes.map(node => 
               node.id === nodeId 
-                ? { ...node, data: { ...node.data, extractedText: 'Text extraction failed', status: 'error' } }
+                ? { 
+                    ...node, 
+                    data: { 
+                      ...node.data, 
+                      extractedText: `Text extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                      status: 'error' 
+                    } 
+                  }
                 : node
             )
           })
