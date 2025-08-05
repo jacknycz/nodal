@@ -1315,6 +1315,7 @@ function BoardContent({
           </div>
         </div>
       )}
+      <BokehBackground />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -1420,8 +1421,6 @@ function BoardContent({
           </>
         )}
       </ReactFlow>
-      
-      <BokehBackground />
       
       {/* Context Menu */}
       <BoardContextMenu
