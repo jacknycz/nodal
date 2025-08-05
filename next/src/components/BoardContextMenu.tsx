@@ -35,7 +35,7 @@ export default function BoardContextMenu({
       
       {/* Context menu */}
       <div
-        className="fixed z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 min-w-[200px]"
+        className="fixed z-50 bg-white overflow-hidden dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[200px]"
         style={{
           left: position.x,
           top: position.y,
@@ -43,7 +43,7 @@ export default function BoardContextMenu({
       >
         <button
           onClick={() => handleAction(onAddBlankNode)}
-          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add a Blank Node
@@ -51,7 +51,7 @@ export default function BoardContextMenu({
         
         <button
           onClick={() => handleAction(onGenerateAINode)}
-          className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
         >
           <Sparkles className="w-4 h-4" />
           Generate AI Node

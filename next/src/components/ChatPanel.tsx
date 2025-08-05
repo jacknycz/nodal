@@ -110,6 +110,61 @@ export default function ChatPanel({
     }
   }
 
+  // Add this helper function at the top
+  const hasStructuredContent = (content: string): boolean => {
+    // Check for numbered lists (1. 2. etc)
+    const hasNumberedList = /\d+\.\s/.test(content)
+    // Check for bullet points
+    const hasBulletPoints = /•|\*|\-\s/.test(content)
+    return hasNumberedList || hasBulletPoints
+  }
+
+  // Add this function to extract points from content
+  const extractPoints = (content: string): { title: string; content: string }[] => {
+    const points: { title: string; content: string }[] = []
+    
+    // Split by numbered points or bullet points
+    const lines = content.split('\n')
+    let currentPoint: { title: string; content: string } | null = null
+    
+    for (const line of lines) {
+      // Check for new point (1. or * or -)
+      const pointMatch = line.match(/^(\d+\.|[\*\-])\s+(.+)/)
+      if (pointMatch) {
+        // Save previous point if exists
+        if (currentPoint) points.push(currentPoint)
+        // Extract title (remove markdown)
+        const title = pointMatch[2].replace(/\*\*/g, '').trim()
+        currentPoint = { title, content: title }
+      } else if (currentPoint && line.trim()) {
+        // Add line to current point's content
+        currentPoint.content += '\n' + line.trim()
+      }
+    }
+    
+    // Add final point
+    if (currentPoint) points.push(currentPoint)
+    
+    return points
+  }
+
+  // Update the fan layout calculation to take a center point
+  const calculateFanPosition = (
+    index: number, 
+    total: number, 
+    centerPoint: { x: number, y: number },
+    radius: number = 300
+  ) => {
+    // Calculate angle for this node in the fan
+    const angleStep = (Math.PI * 0.8) / (total - 1) // 0.8 = 144 degrees total span
+    const angle = -Math.PI * 0.4 + (angleStep * index) // Start at -72 degrees
+    
+    return {
+      x: centerPoint.x + Math.cos(angle) * radius,
+      y: centerPoint.y + Math.sin(angle) * radius
+    }
+  }
+
   if (!isOpen) {
     return (
       <button
@@ -234,6 +289,48 @@ export default function ChatPanel({
                 }`}>
                   {message.timestamp.toLocaleTimeString()}
                 </div>
+                
+                {/* Add Generate Nodes button for AI responses with structured content */}
+                {message.role === 'assistant' && hasStructuredContent(message.content) && (
+                  <button
+                    onClick={() => {
+                      const points = extractPoints(message.content)
+                      const selectedNode = selectedNodes[0] // Get the reference node
+                      
+                      if (!selectedNode) return
+                      
+                      // Generate nodes in a fan layout around the parent node
+                      points.forEach((point, index) => {
+                        const fanPosition = calculateFanPosition(
+                          index, 
+                          points.length,
+                          selectedNode.position // Use the parent node's position as center
+                        )
+                        
+                        // Add slight delay to ensure unique timestamps
+                        setTimeout(() => {
+                          const nodeId = `ai-node-${Date.now()}`
+                          
+                          // Create the node with absolute position
+                          onGenerateNode?.({
+                            id: nodeId,
+                            label: point.title,
+                            content: point.content,
+                            position: fanPosition, // Now this is an absolute position
+                            referenceNode: {
+                              id: selectedNode.id,
+                              title: selectedNode.data.title || 'Reference Node'
+                            }
+                          })
+                        }, index * 50)
+                      })
+                    }}
+                    className="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    Generate {extractPoints(message.content).length} Connected Nodes
+                  </button>
+                )}
               </div>
             </div>
           ))

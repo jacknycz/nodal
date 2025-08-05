@@ -1380,15 +1380,40 @@ function BoardContent({
             {aiInitialized && (
               <ChatPanel
                 nodes={nodes} // Add this line to pass the nodes
-                onGenerateNode={(nodeData: { label: string; content?: string }) => {
-                  const position = getViewportCenter()
+                onGenerateNode={(nodeData: { 
+                  id: string,
+                  label: string, 
+                  content?: string, 
+                  position: { x: number, y: number }, // Now required since it's absolute
+                  referenceNode?: { id: string, title: string }
+                }) => {
+                  // Create the new node with the absolute position
                   const newNode = {
-                    id: `ai-node-${Date.now()}`,
+                    id: nodeData.id,
                     type: 'default',
-                    position,
-                    data: { ...nodeData },
+                    position: nodeData.position, // Use the absolute position directly
+                    data: { 
+                      title: nodeData.label,
+                      content: nodeData.content,
+                      aiGenerated: true
+                    },
                   }
+                  
+                  // Add the node
                   handleAddNodeToStore(newNode)
+                  
+                  // If we have a reference node, create an edge
+                  if (nodeData.referenceNode) {
+                    const newEdge: Edge = {
+                      id: `edge-${Date.now()}`,
+                      source: nodeData.referenceNode.id,
+                      target: nodeData.id,
+                      type: 'floating',
+                    }
+                    
+                    // Add the edge
+                    setEdges(eds => [...eds, newEdge])
+                  }
                 }}
               />
             )}
