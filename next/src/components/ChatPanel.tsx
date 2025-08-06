@@ -383,7 +383,7 @@ export default function ChatPanel({
         <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
           <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
             <Target className="w-4 h-4" />
-            <span>
+            <span className="text-xs">
               {selectedNodes.length === 1 
                 ? `Selected: ${selectedNodes[0].data.title || 'Untitled Node'}`
                 : `Selected: ${selectedNodes.length} nodes`

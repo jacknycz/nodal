@@ -173,6 +173,7 @@ next/src/
 - **Button Component**: Consistent button styling with variants (primary, secondary, danger, icon)
 - **IconButton Component**: Specialized icon-only buttons with accessibility support
 - **Toggle Component**: Reusable toggle switch with proper ARIA attributes
+- **Menu Component**: Unified dropdown menu system with support for custom content, notifications, and consistent hover behavior
 - **Consistent Styling**: All components support dark/light themes and responsive design
 
 ---
@@ -317,11 +318,18 @@ next/src/
 // Add to Recent Improvements section (around line 312):
 ## Recent Improvements
 
+- **Unified Menu System**: 
+  - Created reusable Menu component with consistent hover behavior and styling
+  - Refactored all topbar menus (Share, AI Settings, Documents, Avatar) to use new component
+  - Support for custom content, notifications, and configurable width
+  - Cleaner codebase with reduced duplication and improved maintainability
+
 - **Enhanced AI Node Generation**: 
   - Smart fan layout for generated nodes with proper spacing
   - Automatic connection to parent/source nodes
   - Support for both numbered lists and bullet points
   - Proper title/content separation in generated nodes
+  - Fixed title/content duplication issue in ChatPanel
 
 - **TipTap Editor Enhancements**:
   - Full-height clickable area in edit modal
@@ -345,6 +353,7 @@ next/src/
 - **Error resilience**: Graceful handling of thumbnail failures and loading states.
 - **Node selection system**: Multi-node selection with AI chat integration and visual feedback.
 - **Design system established**: Reusable UI components for consistency and maintainability.
+- **Unified menu system**: All topbar menus now use consistent Menu component with proper hover behavior.
 - **Edge interactions**: Interactive edges with delete functionality and smooth animations.
 - **Chat panel integration**: Context-aware AI chat with node selection notifications.
 - **Improved UX**: Streamlined avatar menu, centered action button, and better theme management.

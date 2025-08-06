@@ -1,16 +1,18 @@
-import { useState, useRef, useEffect } from 'react'
+'use client'
+
+import { useState, useEffect } from 'react'
 import { 
   User, 
   Settings, 
   Building, 
   HelpCircle, 
   LogOut,
-  Clock,
-  FileText
+  Clock
 } from 'lucide-react'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 import ThemeToggle from './ThemeToggle'
+import Menu from './ui/Menu'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -40,30 +42,22 @@ export default function AvatarMenu({
   isBoardView = false
 }: AvatarMenuProps) {
   const user = useSupabaseUser()
-  const [isOpen, setIsOpen] = useState(false)
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
-  const menuRef = useRef<HTMLDivElement>(null)
   const [pendingInvites, setPendingInvites] = useState<any[]>([])
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
   // Load recent boards when menu opens
-  useEffect(() => {
-    if (isOpen) {
-      loadRecentBoards();
+  const loadRecentBoards = async () => {
+    try {
+      const { boardStorage } = await import('../features/storage/storage')
+      const allBoards = await boardStorage.getAllBoards()
+      const recent = allBoards
+        .sort((a, b) => b.lastModified - a.lastModified)
+        .slice(0, 3) // Only show last 3 boards
+      setRecentBoards(recent)
+    } catch (error) {
+      console.error('Failed to load recent boards:', error)
     }
-  }, [isOpen]);
+  }
 
   // Fetch pending invitations for the current user
   useEffect(() => {
@@ -79,35 +73,6 @@ export default function AvatarMenu({
     }
     fetchInvites()
   }, [user?.email])
-
-  const loadRecentBoards = async () => {
-    try {
-      // Load recent boards from storage
-      const { boardStorage } = await import('../features/storage/storage')
-      const allBoards = await boardStorage.getAllBoards()
-      const recent = allBoards
-        .sort((a, b) => b.lastModified - a.lastModified)
-        .slice(0, 3) // Only show last 3 boards
-      setRecentBoards(recent)
-    } catch (error) {
-      console.error('Failed to load recent boards:', error)
-    }
-  }
-
-  const handleOpenBoardRoom = () => {
-    onOpenBoardRoom?.()
-    setIsOpen(false)
-  }
-
-  const handleOpenSettings = () => {
-    onOpenSettings?.()
-    setIsOpen(false)
-  }
-
-  const handleLoadBoard = (board: SavedBoard) => {
-    onLoadBoard?.(board)
-    setIsOpen(false)
-  }
 
   // Accept invitation handler
   const handleAcceptInvite = async (inviteId: string) => {
@@ -131,16 +96,9 @@ export default function AvatarMenu({
   const getUserDisplayName = () => {
     if (!user) return 'User'
     
-    // Try to get the best available name
-    if (user.user_metadata?.full_name) {
-      return user.user_metadata.full_name
-    }
-    if (user.user_metadata?.name) {
-      return user.user_metadata.name
-    }
-    if (user.email) {
-      return user.email.split('@')[0] // Just the username part
-    }
+    if (user.user_metadata?.full_name) return user.user_metadata.full_name
+    if (user.user_metadata?.name) return user.user_metadata.name
+    if (user.email) return user.email.split('@')[0]
     
     return 'User'
   }
@@ -149,67 +107,37 @@ export default function AvatarMenu({
   const getUserAvatar = () => {
     if (!user) return null
     
-    // Try to get avatar from Google OAuth metadata
-    if (user.user_metadata?.avatar_url) {
-      return user.user_metadata.avatar_url
-    }
-    if (user.user_metadata?.picture) {
-      return user.user_metadata.picture
-    }
+    if (user.user_metadata?.avatar_url) return user.user_metadata.avatar_url
+    if (user.user_metadata?.picture) return user.user_metadata.picture
     
     return null
   }
 
-  // Clean hover/focus logic, no timeouts
-  const handleMouseEnter = () => {
-    setIsOpen(true);
-  };
-  const handleMouseLeave = () => {
-    setIsOpen(false);
-  };
-  const handleFocus = () => setIsOpen(true);
-  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setIsOpen(false);
-    }
-  };
-
   return (
-    <div
-      ref={menuRef}
-      className={`relative ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      tabIndex={0}
-    >
-      {/* Avatar Button */}
-      <button
-        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10 relative"
-        aria-label="User menu"
-        tabIndex={-1}
-        style={{ minWidth: '40px', minHeight: '40px' }}
-      >
-        {getUserAvatar() ? (
-          <img 
-            src={getUserAvatar()} 
-            alt={getUserDisplayName()}
-            className="w-6 h-6 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-          />
-        ) : (
-          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
-          </div>
-        )}
-        {/* Notification Dot */}
-        {pendingInvites.length > 0 && (
-          <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
-        )}
-      </button>
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+    <Menu
+      trigger={
+        <button
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10 relative"
+          aria-label="User menu"
+          style={{ minWidth: '40px', minHeight: '40px' }}
+        >
+          {getUserAvatar() ? (
+            <img 
+              src={getUserAvatar()} 
+              alt={getUserDisplayName()}
+              className="w-6 h-6 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+            />
+          ) : (
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+          )}
+        </button>
+      }
+      showNotification={pendingInvites.length > 0}
+      width="w-64"
+      customContent={
+        <div>
           {/* User Info */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
@@ -234,6 +162,7 @@ export default function AvatarMenu({
               </div>
             </div>
           </div>
+
           {/* Pending Invitations */}
           {pendingInvites.length > 0 && (
             <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
@@ -257,7 +186,7 @@ export default function AvatarMenu({
           {/* Board Room Link - Only show when NOT on BoardRoom page */}
           {isBoardView && (
             <button
-              onClick={handleOpenBoardRoom}
+              onClick={onOpenBoardRoom}
               className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
             >
               <Building className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -277,7 +206,7 @@ export default function AvatarMenu({
                   {recentBoards.map((board) => (
                     <button
                       key={board.id}
-                      onClick={() => handleLoadBoard(board)}
+                      onClick={() => onLoadBoard?.(board)}
                       className="w-full px-2 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                     >
                       <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -293,7 +222,7 @@ export default function AvatarMenu({
                 <div className="text-center py-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400">No recent boards</p>
                   <button
-                    onClick={handleOpenBoardRoom}
+                    onClick={onOpenBoardRoom}
                     className="mt-1 text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline"
                   >
                     Create your first board
@@ -310,7 +239,7 @@ export default function AvatarMenu({
 
           {/* Settings */}
           <button
-            onClick={handleOpenSettings}
+            onClick={onOpenSettings}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
           >
             <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -339,7 +268,7 @@ export default function AvatarMenu({
             onClick={async () => {
               try {
                 await signOut();
-                window.location.reload(); // Or redirect to login page if you have one
+                window.location.reload();
               } catch (err) {
                 alert('Sign out failed: ' + (err instanceof Error ? err.message : err));
               }
@@ -350,7 +279,8 @@ export default function AvatarMenu({
             <span className="text-sm">Sign Out</span>
           </button>
         </div>
-      )}
-    </div>
+      }
+      className={className}
+    />
   )
-} 
+}
