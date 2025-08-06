@@ -68,7 +68,7 @@ export default function Menu({
       tabIndex={0}
     >
       {/* Trigger */}
-      <div className={`relative ${triggerClassName}`}>
+      <div className={`relative cursor-pointer ${triggerClassName}`}>
         {trigger}
         {showNotification && (
           <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
@@ -76,54 +76,58 @@ export default function Menu({
       </div>
 
       {/* Dropdown */}
-      {isOpen && (
-        <div
-          className={`absolute z-50 ${width || 'w-56'} rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
-        >
-          {customContent ? (
-            customContent
-          ) : items?.length ? (
-            <div className="py-1">
-              {items.map((item, index) => {
-                if (item.divider) {
-                  return <hr key={index} className="my-1 border-gray-200 dark:border-gray-700" />
-                }
-                
-                return (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      item.onClick?.()
-                      setIsOpen(false)
-                    }}
-                    disabled={item.disabled}
-                    className={`
-                      group flex w-full items-center px-4 py-2 text-sm
-                      ${item.disabled
-                        ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
-                        : item.danger
-                          ? 'text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                      }
-                    `}
-                  >
-                    {item.icon && (
-                      <item.icon
-                        className={`mr-3 h-4 w-4 ${
-                          item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
-                        }`}
-                      />
-                    )}
-                    {item.label}
-                  </button>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
-      )}
+      <div
+        className={`
+          absolute z-50 ${width || 'w-56'} rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none
+          transition-all duration-200 ease-out
+          ${align === 'right' ? 'right-0' : 'left-0'}
+          ${isOpen 
+            ? 'opacity-100 scale-100 translate-y-0' 
+            : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
+          }
+        `}
+      >
+        {customContent ? (
+          customContent
+        ) : items?.length ? (
+          <div className="py-1">
+            {items.map((item, index) => {
+              if (item.divider) {
+                return <hr key={index} className="my-1 border-gray-200 dark:border-gray-700" />
+              }
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    item.onClick?.()
+                    setIsOpen(false)
+                  }}
+                  disabled={item.disabled}
+                  className={`
+                    group flex w-full items-center px-4 py-2 text-sm transition-colors duration-150
+                    ${item.disabled
+                      ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
+                      : item.danger
+                        ? 'text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
+                    }
+                  `}
+                >
+                  {item.icon && (
+                    <item.icon
+                      className={`mr-3 h-4 w-4 transition-colors duration-150 ${
+                        item.danger ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    />
+                  )}
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

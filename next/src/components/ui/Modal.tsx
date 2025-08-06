@@ -61,7 +61,7 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
         className={`relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out ${
           isVisible 
             ? 'opacity-100 scale-100 translate-y-0' 
-            : 'opacity-0 scale-95 translate-y-4'
+            : 'opacity-0 scale-95 -translate-y-1'
         } ${className || ''}`}
         role="dialog"
         aria-modal="true"
