@@ -4,6 +4,7 @@ import type { SavedBoard } from '../features/storage/storage'
 import AvatarMenu from './AvatarMenu'
 import AISettingsMenu from './AISettingsMenu'
 import DocumentsMenu from './DocumentsMenu'
+import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
 import { House } from 'lucide-react';
@@ -191,16 +192,11 @@ export default function Topbar({
               />
             </button>
 
-            <button className="text-xs rounded text-gray-600 dark:text-white border border-red-500 p-1 ml-4" onClick={() => setShowFeedback(true)}>
-              FEEDBACK
-            </button>
-            {/* TEMP: Share Board button */}
-            <button className="text-xs rounded text-white bg-blue-500 hover:bg-blue-600 p-1 ml-2" onClick={handleShareBoard}>
-              Share Board
-            </button>
-            <button className="text-xs rounded text-white bg-gray-500 hover:bg-gray-600 p-1 ml-2" onClick={handleCopyLink}>
-              Copy Link
-            </button>
+            <ShareMenu
+              onShareBoard={handleShareBoard}
+              onCopyLink={handleCopyLink}
+              onShowFeedback={() => setShowFeedback(true)}
+            />
             {linkCopied && (
               <span className="ml-2 text-green-600 text-xs">Link copied!</span>
             )}

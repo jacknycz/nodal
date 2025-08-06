@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+'use client'
+
+import { useState } from 'react'
 import { FileText, Trash2, Search, X } from 'lucide-react'
 import { useBoardStore } from '../features/board/boardSlice'
 import { format } from 'date-fns'
+import Menu from './ui/Menu'
 
 function formatFileSize(bytes: number): string {
   if (!bytes) return '0 B'
@@ -18,13 +21,10 @@ export default function DocumentsMenu({
   className?: string
   onDeleteNode?: (nodeId: string) => void 
 }) {
-  const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [previewDocId, setPreviewDocId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
   const nodes = useBoardStore(state => state.nodes)
-  // Remove the Zustand deleteNode - we'll use the passed function instead
 
   // Filter document nodes
   const documents = nodes.filter(n => n.data.type === 'document')
@@ -40,72 +40,32 @@ export default function DocumentsMenu({
     )
   })
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setPreviewDocId(null);
-        setConfirmDeleteId(null);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
   // Focus/highlight node on board (stub: could scroll to node, etc.)
   const handleFocusNode = (id: string) => {
-    // Optionally: scroll to node, highlight, etc.
     setPreviewDocId(id)
-    setIsOpen(true)
   }
 
   // Delete document node
   const handleDelete = (id: string) => {
-    // Use the global delete function that calls XYFlow's handleNodeDelete
     useBoardStore.getState().deleteNodeFromBoard(id)
     setConfirmDeleteId(null)
     setPreviewDocId(null)
   }
 
-  // Clean hover/focus logic, no timeouts
-  const handleMouseEnter = () => {
-    setIsOpen(true);
-  };
-  const handleMouseLeave = () => {
-    setIsOpen(false);
-  };
-  const handleFocus = () => setIsOpen(true);
-  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setIsOpen(false);
-    }
-  };
-
   return (
-    <div
-      ref={menuRef}
-      className={`relative ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      tabIndex={0}
-    >
-      {/* Documents Button */}
-      <button
-        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
-        aria-label="Documents"
-        tabIndex={-1}
-        style={{ minWidth: '40px', minHeight: '40px' }}
-      >
-        <FileText className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-      </button>
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 min-w-[24rem] w-[24rem] bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
+    <Menu
+      trigger={
+        <button
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
+          aria-label="Documents"
+          style={{ minWidth: '40px', minHeight: '40px' }}
+        >
+          <FileText className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+        </button>
+      }
+      width="min-w-[24rem] w-[24rem]"
+      customContent={
+        <div className="p-4">
           <div className="mb-3 flex items-center gap-2">
             <Search className="w-4 h-4 text-gray-400" />
             <input
@@ -180,7 +140,8 @@ export default function DocumentsMenu({
             </div>
           )}
         </div>
-      )}
-    </div>
+      }
+      className={className}
+    />
   )
-} 
+}

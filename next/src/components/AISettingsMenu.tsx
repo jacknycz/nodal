@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+'use client'
+
 import { ArrowLeft, TestTube } from 'lucide-react'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import type { OpenAIModel } from '../features/ai/aiTypes'
+import Menu from './ui/Menu'
 
 interface AISettingsMenuProps {
   isTestMode?: boolean
@@ -28,66 +30,24 @@ export default function AISettingsMenu({
   onToggleTestMode,
   className = ''
 }: AISettingsMenuProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
   const { model, setModel, positionStrategy, setPositionStrategy, temperature, setTemperature } = useAISettingsStore()
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen]);
-
-  // Clean hover/focus logic, no timeouts
-  const handleMouseEnter = () => {
-    setIsOpen(true);
-  };
-  const handleMouseLeave = () => {
-    setIsOpen(false);
-  };
-  const handleFocus = () => setIsOpen(true);
-  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setIsOpen(false);
-    }
-  };
-
-  const handleToggleTestMode = () => {
-    onToggleTestMode?.()
-    setIsOpen(false)
-  }
-
   return (
-    <div
-      ref={menuRef}
-      className={`relative ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      tabIndex={0}
-    >
-      {/* Settings Button */}
-      <button
-        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
-        aria-label="AI Settings"
-        tabIndex={-1}
-        style={{ minWidth: '40px', minHeight: '40px' }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-600 dark:text-gray-300">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-        </svg>
-      </button>
-      {/* Dropdown Menu */}
-      {isOpen && (
-        <div className="absolute right-0 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-50">
+    <Menu
+      trigger={
+        <button
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
+          aria-label="AI Settings"
+          style={{ minWidth: '40px', minHeight: '40px' }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-600 dark:text-gray-300">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          </svg>
+        </button>
+      }
+      width="w-64"
+      customContent={
+        <div className="p-4">
           <div className="mb-3 font-semibold text-gray-800 dark:text-gray-100 text-sm">AI Settings</div>
 
           <div className="mb-3">
@@ -133,7 +93,7 @@ export default function AISettingsMenu({
 
           {onToggleTestMode && (
             <button
-              onClick={handleToggleTestMode}
+              onClick={onToggleTestMode}
               className="flex items-center gap-2 w-full mt-4 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title={isTestMode ? "Exit Test Mode" : "Enter Test Mode"}
             >
@@ -151,7 +111,8 @@ export default function AISettingsMenu({
             </button>
           )}
         </div>
-      )}
-    </div>
+      }
+      className={className}
+    />
   )
-} 
+}
