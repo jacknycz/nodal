@@ -65,7 +65,6 @@ export default function Menu({
       onMouseLeave={handleMouseLeave}
       onFocus={handleFocus}
       onBlur={handleBlur}
-      tabIndex={0}
     >
       {/* Trigger */}
       <div className={`relative cursor-pointer ${triggerClassName}`}>

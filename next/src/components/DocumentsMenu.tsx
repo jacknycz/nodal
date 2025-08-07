@@ -74,7 +74,6 @@ export default function DocumentsMenu({
               placeholder="Search documents..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              autoFocus
             />
             {search && (
               <button onClick={() => setSearch('')} className="ml-1 text-gray-400 hover:text-gray-600">
