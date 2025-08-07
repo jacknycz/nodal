@@ -154,9 +154,13 @@ export class AIConfigManager {
         if (response.ok) {
           const data = await response.json()
           apiKey = data.apiKey
+        } else if (response.status === 404) {
+          console.info('Server API key not configured, using localStorage fallback')
+        } else {
+          console.warn('Failed to fetch server API key, status:', response.status)
         }
       } catch (err) {
-        console.warn('Failed to fetch server API key, falling back to localStorage')
+        console.warn('Failed to fetch server API key, falling back to localStorage:', err)
       }
       
       // Fallback to stored API key if server doesn't provide one
