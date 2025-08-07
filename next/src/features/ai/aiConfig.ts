@@ -146,16 +146,34 @@ export class AIConfigManager {
   // Configuration Management
   async loadConfig(): Promise<AIConfig | null> {
     try {
-      // Try to load from localStorage first
-      const saved = localStorage.getItem(STORAGE_KEYS.AI_CONFIG)
-      const apiKey = this.getStoredAPIKey()
-
-      if (saved && apiKey) {
-        const parsedConfig = JSON.parse(saved)
+      // Always try to get API key from server first (for seamless user experience)
+      let apiKey = null
+      
+      try {
+        const response = await fetch('/api/ai/config')
+        if (response.ok) {
+          const data = await response.json()
+          apiKey = data.apiKey
+        }
+      } catch (err) {
+        console.warn('Failed to fetch server API key, falling back to localStorage')
+      }
+      
+      // Fallback to stored API key if server doesn't provide one
+      if (!apiKey) {
+        apiKey = this.getStoredAPIKey()
+      }
+      
+      // If we have an API key, create the config
+      if (apiKey && validateAPIKey(apiKey)) {
+        // Try to load saved preferences from localStorage
+        const saved = localStorage.getItem(STORAGE_KEYS.AI_CONFIG)
+        const userPreferences = saved ? JSON.parse(saved) : {}
+        
         const fullConfig: AIConfig = {
           ...DEFAULT_AI_CONFIG,
-          ...parsedConfig,
-          apiKey
+          ...userPreferences,
+          apiKey // Always use the API key (server or stored)
         }
 
         const validation = validateAIConfig(fullConfig)
@@ -165,17 +183,14 @@ export class AIConfigManager {
           return this.config
         } else {
           console.warn('Invalid AI config found, using defaults:', validation.errors)
+          // Even if validation fails, try with just the API key
+          this.config = {
+            ...DEFAULT_AI_CONFIG,
+            apiKey
+          }
+          this.notifyListeners()
+          return this.config
         }
-      }
-
-      // If no valid config, try to create one with stored API key
-      if (apiKey) {
-        this.config = {
-          ...DEFAULT_AI_CONFIG,
-          apiKey
-        }
-        this.notifyListeners()
-        return this.config
       }
 
       this.config = null
