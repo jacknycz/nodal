@@ -135,7 +135,7 @@ export default function ChatPanel({
         if (currentPoint) points.push(currentPoint)
         
         // Extract and clean title
-        let title = pointMatch[2]
+        const title = pointMatch[2]
           .replace(/\*\*/g, '') // Remove bold markdown
           .replace(/^Node:\s*"?|"?$/g, '') // Remove "Node:" prefix and quotes
           .trim()
