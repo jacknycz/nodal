@@ -57,12 +57,12 @@ export default function NodalNode({
   const isLockedByMe = isNodeLockedByMe?.(id) || false
 
   // Debug logs for lock state
-  console.log(`[NodalNode ${id}] isLocked: ${isLocked}, isLockedByMe: ${isLockedByMe}, showEditModal: ${showEditModal}, nodeLocks count: ${nodeLocks?.length || 0}`)
-  console.log(`[NodalNode ${id}] user:`, user, 'user?.id:', user?.id)
-  if (nodeLocks && nodeLocks.length > 0) {
-    console.log(`[NodalNode ${id}] All nodeLocks:`, nodeLocks)
-    console.log(`[NodalNode ${id}] Filtered nodeLocks for this node:`, nodeLocks.filter(lock => lock.node_id === id))
-  }
+  // console.log(`[NodalNode ${id}] isLocked: ${isLocked}, isLockedByMe: ${isLockedByMe}, showEditModal: ${showEditModal}, nodeLocks count: ${nodeLocks?.length || 0}`)
+  // console.log(`[NodalNode ${id}] user:`, user, 'user?.id:', user?.id)
+  // if (nodeLocks && nodeLocks.length > 0) {
+  //   console.log(`[NodalNode ${id}] All nodeLocks:`, nodeLocks)
+  //   console.log(`[NodalNode ${id}] Filtered nodeLocks for this node:`, nodeLocks.filter(lock => lock.node_id === id))
+  // }
 
   // Open modal and acquire lock
   const handleEdit = async (e: React.MouseEvent) => {

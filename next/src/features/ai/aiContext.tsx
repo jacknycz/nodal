@@ -338,12 +338,15 @@ export function AIProvider({ children }: AIProviderProps) {
   useEffect(() => {
     const loadInitialConfig = async () => {
       try {
+        console.log('[aiContext] Loading initial AI configuration...')
         const savedConfig = await configManager.loadConfig()
         if (savedConfig) {
-          console.log('Attempting to initialize with saved API key...')
+          console.log('[aiContext] Found saved config, attempting to initialize AI service...')
           const success = await initialize(savedConfig.apiKey)
-          if (!success) {
-            console.warn('Failed to initialize AI service with saved config - clearing invalid API key')
+          if (success) {
+            console.log('[aiContext] AI service initialized successfully!')
+          } else {
+            console.warn('[aiContext] Failed to initialize AI service with saved config - clearing invalid API key')
             // Clear invalid API key to prevent repeated failures
             localStorage.removeItem('nodal_api_key')
             localStorage.removeItem('nodal_ai_config')
@@ -351,10 +354,10 @@ export function AIProvider({ children }: AIProviderProps) {
             configManager.clearConfig()
           }
         } else {
-          console.log('No saved AI configuration found')
+          console.log('[aiContext] No saved AI configuration found')
         }
       } catch (err) {
-        console.error('Failed to load initial AI configuration:', err)
+        console.error('[aiContext] Failed to load initial AI configuration:', err)
         // Clear potentially corrupt config
         localStorage.removeItem('nodal_api_key')
         localStorage.removeItem('nodal_ai_config')

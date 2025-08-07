@@ -1378,7 +1378,10 @@ function BoardContent({
               aiInitialized={aiInitialized}
             />
             
-            {aiInitialized && (
+            {(() => {
+              console.log('[BoardComponent] aiInitialized:', aiInitialized)
+              return aiInitialized
+            })() && (
               <ChatPanel
                 nodes={nodes} // Add this line to pass the nodes
                 onGenerateNode={(nodeData: { 
