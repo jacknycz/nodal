@@ -146,24 +146,10 @@ export class AIConfigManager {
   // Configuration Management
   async loadConfig(): Promise<AIConfig | null> {
     try {
-      // Always try to get API key from server first (for seamless user experience)
-      let apiKey = null
+      // Get API key from environment variables first (client-side)
+      let apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY
       
-      try {
-        const response = await fetch('/api/ai/config')
-        if (response.ok) {
-          const data = await response.json()
-          apiKey = data.apiKey
-        } else if (response.status === 404) {
-          console.info('Server API key not configured, using localStorage fallback')
-        } else {
-          console.warn('Failed to fetch server API key, status:', response.status)
-        }
-      } catch (err) {
-        console.warn('Failed to fetch server API key, falling back to localStorage:', err)
-      }
-      
-      // Fallback to stored API key if server doesn't provide one
+      // Fallback to stored API key if env var not available
       if (!apiKey) {
         apiKey = this.getStoredAPIKey()
       }
