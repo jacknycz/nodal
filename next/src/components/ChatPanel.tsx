@@ -311,7 +311,7 @@ export default function ChatPanel({
       {/* Header */}
       <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
-          <Bot className="w-5 h-5 text-secondary-500" />
+          <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
           {/* <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3> */}
         </div>
         
@@ -413,7 +413,7 @@ export default function ChatPanel({
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            <Bot className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <img src="/nobot.svg" alt="Nodal" width={32} height={32} className="mx-auto mb-2 opacity-50" />
             <p className="text-sm">Start a conversation with Nodal AI</p>
             <p className="text-xs mt-1">Ask questions, generate nodes, or get help with your board</p>
           </div>
