@@ -418,7 +418,7 @@ export default function ChatPanel({
                         }, index * 50)
                       })
                     }}
-                    className="mt-2 text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-p-700 transition-colors flex items-center gap-1"ry
+                    className="mt-2 text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700 transition-colors flex items-center gap-1"
                   >
                     <Sparkles className="w-3 h-3" />
                     Generate {extractPoints(message.content).length} Connected Nodes

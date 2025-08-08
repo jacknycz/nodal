@@ -77,28 +77,49 @@ export function useUnifiedAI(): UseUnifiedAIResult {
 
   // Sanitize streamed assistant content to reduce duplicated paragraphs/blocks
   const sanitizeStreamContent = useCallback((text: string): string => {
-    // Collapse adjacent duplicate paragraphs
-    const paragraphs = text.split(/\n\s*\n/)
-    const deduped: string[] = []
-    for (const p of paragraphs) {
-      const trimmed = p.trim()
-      if (trimmed.length === 0) continue
-      if (deduped.length === 0 || deduped[deduped.length - 1] !== trimmed) {
-        deduped.push(trimmed)
-      }
-    }
-    let collapsed = deduped.join('\n\n')
+    let s = text
+    // Insert paragraph breaks before capitalized sentences glued after a period
+    s = s.replace(/([a-z])\.(?=[A-Z][a-z])/g, '$1.\n\n')
+    // Ensure numbered lists start on a new paragraph
+    s = s.replace(/([^\n])(\s*)(\d+\.\s)/g, '$1\n\n$3')
 
-    // If entire content was duplicated (X + X), collapse to one
-    if (collapsed.length >= 40) {
-      const half = Math.floor(collapsed.length / 2)
-      const first = collapsed.slice(0, half)
-      const second = collapsed.slice(half)
-      if (first === second) {
-        collapsed = first
+    // Collapse adjacent duplicate paragraphs
+    const paras = s.split(/\n\s*\n/)
+    const out: string[] = []
+    for (const p of paras) {
+      const t = p.trim()
+      if (!t) continue
+      if (out.length === 0 || out[out.length - 1] !== t) out.push(t)
+    }
+    s = out.join('\n\n')
+
+    // If exact half duplicate, collapse
+    if (s.length >= 60) {
+      const half = Math.floor(s.length / 2)
+      const a = s.slice(0, half)
+      const b = s.slice(half)
+      if (b.startsWith(a)) s = a
+    }
+    // If exact third duplicate pattern (A A A or A A tail), collapse
+    if (s.length >= 90) {
+      const third = Math.floor(s.length / 3)
+      const head = s.slice(0, third)
+      const tail = s.slice(third)
+      if (tail.startsWith(head)) {
+        while (s.endsWith(head + head)) s = s.slice(0, s.length - head.length)
       }
     }
-    return collapsed
+    // If last N paragraphs equal previous N, drop the last N
+    const ps = s.split(/\n\s*\n/)
+    for (let n = Math.min(8, Math.floor(ps.length / 2)); n >= 2; n--) {
+      const a = ps.slice(ps.length - 2 * n, ps.length - n)
+      const b = ps.slice(ps.length - n)
+      if (a.length === n && b.length === n && a.join('\n') === b.join('\n')) {
+        s = ps.slice(0, ps.length - n).join('\n\n')
+        break
+      }
+    }
+    return s
   }, [])
 
   // Clear error
