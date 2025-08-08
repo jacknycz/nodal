@@ -69,6 +69,7 @@ export function useUnifiedAI(): UseUnifiedAIResult {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isGeneratingNodes, setIsGeneratingNodes] = useState(false)
+  const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentContext, setCurrentContext] = useState<AIContextType>({})
   
@@ -163,6 +164,75 @@ export function useUnifiedAI(): UseUnifiedAIResult {
     }
   }, [aiContext, messages, currentContext])
 
+  // Streaming chat message
+  const sendMessageStream = useCallback(async (content: string, context?: Partial<AIContextType>) => {
+    if (!aiContext.service) {
+      setError('AI service not initialized')
+      return
+    }
+
+    setIsLoading(false)
+    setIsStreaming(true)
+    setError(null)
+
+    const messageId = Date.now().toString()
+    const userMessage: ChatMessage = {
+      id: messageId,
+      role: 'user',
+      content,
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, userMessage])
+
+    const assistantId = (Date.now() + 1).toString()
+    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '', timestamp: new Date() }])
+
+    try {
+      if (abortControllerRef.current) abortControllerRef.current.abort()
+      abortControllerRef.current = new AbortController()
+
+      const aiContextData: AIContextType = {
+        ...currentContext,
+        ...context,
+        conversation: {
+          messages: [...messages, userMessage],
+          sessionId: 'current-session',
+          startedAt: new Date()
+        }
+      }
+
+      for await (const chunk of aiContext.generateStream({
+        prompt: content,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nBe helpful, concise, and focused on the user's current context.`,
+        context: aiContextData,
+        model: aiContext.selectOptimalModel('chat'),
+        temperature: 0.7,
+        stream: true,
+        signal: abortControllerRef.current.signal as any
+      })) {
+        const delta = (chunk as any).delta || (chunk as any).content || ''
+        if (!delta) continue
+        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: (m.content + delta) } : m))
+      }
+    } catch (err) {
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        setError(err instanceof Error ? err.message : 'Failed to stream message')
+      }
+    } finally {
+      setIsStreaming(false)
+      abortControllerRef.current = null
+    }
+  }, [aiContext, messages, currentContext])
+
+  const cancelStreaming = useCallback(() => {
+    try {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      aiContext.cancel?.()
+    } catch { /* noop */ }
+  }, [aiContext])
+
   // Clear chat
   const clearChat = useCallback(() => {
     setMessages([])
@@ -245,31 +315,47 @@ Consider the existing context and create nodes that build upon or relate to what
       // Parse response
       let parsedResponse
       try {
-        // Try to extract JSON from the response
-        const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          parsedResponse = JSON.parse(jsonMatch[0])
+        // Prefer fenced code block with json
+        const fenced = response.content.match(/```json\s*([\s\S]*?)\s*```/i)
+        if (fenced) {
+          parsedResponse = JSON.parse(fenced[1])
         } else {
-          throw new Error('No JSON found in response')
+          // Fallback: try to extract first balanced JSON object
+          const jsonMatch = response.content.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            parsedResponse = JSON.parse(jsonMatch[0])
+          } else {
+            throw new Error('No JSON found in response')
+          }
         }
       } catch (parseError) {
-        // Fallback: create simple nodes from the response
+        // Fallback: create nodes from list-like content using simple extraction
         const lines = response.content.split('\n').filter((line: string) => line.trim())
-        const nodes: BoardNode[] = lines.slice(0, count).map((line: string, index: number) => ({
-          id: `fallback-${Date.now()}-${index}`,
-          type: 'default',
-          position: position || { x: 100 + index * 200, y: 100 + index * 100 },
-          data: {
-            title: line.substring(0, 50).trim(),
-            content: line,
+        const bulletLike = lines
+          .map(line => line.replace(/^\s*(\d+\.|[\-*•])\s+/, '').trim())
+          .filter(Boolean)
+
+        const nodes: BoardNode[] = bulletLike.slice(0, count).map((text: string, index: number) => {
+          // Split at colon to get title/content if available
+          const m = text.match(/^([^:]{1,80})\s*:\s*(.*)$/)
+          const title = (m ? m[1] : text).slice(0, 50).trim()
+          const contentText = m ? m[2] : ''
+          return {
+            id: `fallback-${Date.now()}-${index}`,
             type: 'default',
-            aiGenerated: true
+            position: position || { x: 100 + index * 200, y: 100 + index * 100 },
+            data: {
+              title,
+              content: contentText || text,
+              type: 'default',
+              aiGenerated: true
+            }
           }
-        }))
-        
+        })
+
         return {
           nodes,
-          explanation: 'Generated nodes from AI response'
+          explanation: 'Generated nodes from non-JSON AI response'
         }
       }
 
@@ -330,10 +416,14 @@ Consider the existing context and create nodes that build upon or relate to what
     })
   }, [aiContext, currentContext])
 
+  // Note: streaming chat is implemented above (single definition)
+
   return {
     // Chat functionality
     messages,
     sendMessage,
+    sendMessageStream,
+    cancelStreaming,
     clearChat,
     
     // Node generation
@@ -346,6 +436,7 @@ Consider the existing context and create nodes that build upon or relate to what
     // State
     isLoading,
     isGeneratingNodes,
+    isStreaming,
     error,
     clearError,
     

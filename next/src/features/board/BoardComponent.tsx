@@ -234,8 +234,8 @@ function BoardContent({
         .eq('board_id', boardId)
         .gt('expires_at', new Date().toISOString())
       
-      console.log('[BoardComponent] fetchLocks - ALL locks in DB:', allLocks)
-      console.log('[BoardComponent] fetchLocks - ACTIVE locks:', { data, error, boardId })
+      // console.log('[BoardComponent] fetchLocks - ALL locks in DB:', allLocks)
+      // console.log('[BoardComponent] fetchLocks - ACTIVE locks:', { data, error, boardId })
       setNodeLocks(data || [])
     }
 
@@ -266,26 +266,26 @@ function BoardContent({
   useEffect(() => {
     if (!boardId || !user?.id) return
 
-    console.log('[BoardComponent] Setting up board_updates subscription for board:', boardId, 'user:', user.id)
+    // console.log('[BoardComponent] Setting up board_updates subscription for board:', boardId, 'user:', user.id)
 
     const applyRemoteUpdate = (payload: any) => {
-      console.log('[BoardComponent] RAW subscription payload received:', payload)
+      // console.log('[BoardComponent] RAW subscription payload received:', payload)
       
       const { node_id, update_type, data, user_id } = payload.new || {}
       
       // Don't apply our own updates
       if (user_id === user.id) {
-        console.log('[BoardComponent] Ignoring own update from user:', user_id)
+        // console.log('[BoardComponent] Ignoring own update from user:', user_id)
         return
       }
       
-      console.log('[BoardComponent] Received remote update:', { node_id, update_type, data, user_id })
+      // console.log('[BoardComponent] Received remote update:', { node_id, update_type, data, user_id })
       
       if (update_type === 'content') {
         setNodes((nds) => nds.map((node) => 
           node.id === node_id ? { ...node, data: { ...node.data, ...data } } : node
         ))
-        console.log('[BoardComponent] Applied remote content update to node:', node_id)
+        // console.log('[BoardComponent] Applied remote content update to node:', node_id)
       }
     }
 
@@ -302,13 +302,13 @@ function BoardContent({
         applyRemoteUpdate
       )
       .subscribe((status) => {
-        console.log('[BoardComponent] Board updates subscription status:', status)
+        // console.log('[BoardComponent] Board updates subscription status:', status)
       })
 
-    console.log('[BoardComponent] Board updates subscription channel created:', channel)
+    // console.log('[BoardComponent] Board updates subscription channel created:', channel)
 
     return () => { 
-      console.log('[BoardComponent] Cleaning up board_updates subscription')
+      // console.log('[BoardComponent] Cleaning up board_updates subscription')
       supabase.removeChannel(channel) 
     }
   }, [boardId, user?.id, setNodes, supabase])
@@ -316,15 +316,15 @@ function BoardContent({
   // Create functions that get user from stableHandlers to avoid closure issues
   const acquireNodeLock = useCallback(async (nodeId: string) => {
     const currentUser = stableHandlers.currentUser
-    console.log('[BoardComponent] acquireNodeLock useCallback executed with current user:', currentUser)
-    console.log('[BoardComponent] acquireNodeLock called with:', { boardId, userId: currentUser?.id, nodeId })
+    // console.log('[BoardComponent] acquireNodeLock useCallback executed with current user:', currentUser)
+    // console.log('[BoardComponent] acquireNodeLock called with:', { boardId, userId: currentUser?.id, nodeId })
     
     if (!boardId || !currentUser?.id) {
-      console.log('[BoardComponent] Early return - missing boardId or user.id:', { boardId, userId: currentUser?.id })
+      // console.log('[BoardComponent] Early return - missing boardId or user.id:', { boardId, userId: currentUser?.id })
       return false
     }
     
-    console.log('[BoardComponent] Attempting to acquire lock:', { boardId, nodeId, userId: currentUser.id })
+    // console.log('[BoardComponent] Attempting to acquire lock:', { boardId, nodeId, userId: currentUser.id })
     
     try {
       const res = await fetch('/api/board/locks', {
@@ -334,26 +334,26 @@ function BoardContent({
       })
       
       if (res.ok) {
-        console.log('[BoardComponent] Lock acquired successfully for node:', nodeId)
+        // console.log('[BoardComponent] Lock acquired successfully for node:', nodeId)
         return true
       } else {
         const error = await res.json()
-        console.log('[BoardComponent] Failed to acquire lock:', error)
-        console.log('[BoardComponent] Response status:', res.status, res.statusText)
+        // console.log('[BoardComponent] Failed to acquire lock:', error)
+        // console.log('[BoardComponent] Response status:', res.status, res.statusText)
         return false
       }
     } catch (error) {
-      console.error('[BoardComponent] Error acquiring lock:', error)
+      // console.error('[BoardComponent] Error acquiring lock:', error)
       return false
     }
   }, [boardId])
 
   const releaseNodeLock = useCallback(async (nodeId: string) => {
     const currentUser = stableHandlers.currentUser
-    console.log('[BoardComponent] releaseNodeLock called with user?.id:', currentUser?.id)
+    // console.log('[BoardComponent] releaseNodeLock called with user?.id:', currentUser?.id)
     if (!boardId || !currentUser?.id) return
     
-    console.log('[BoardComponent] Attempting to release lock:', { boardId, nodeId, userId: currentUser.id })
+    // console.log('[BoardComponent] Attempting to release lock:', { boardId, nodeId, userId: currentUser.id })
     
     try {
       const res = await fetch('/api/board/locks', {
@@ -363,13 +363,13 @@ function BoardContent({
       })
       
       if (res.ok) {
-        console.log('[BoardComponent] Lock released successfully for node:', nodeId)
+        // console.log('[BoardComponent] Lock released successfully for node:', nodeId)
       } else {
         const error = await res.json()
-        console.log('[BoardComponent] Failed to release lock:', error)
+        // console.log('[BoardComponent] Failed to release lock:', error)
       }
     } catch (error) {
-      console.error('[BoardComponent] Error releasing lock:', error)
+      // console.error('[BoardComponent] Error releasing lock:', error)
     }
   }, [boardId])
 
@@ -976,14 +976,14 @@ function BoardContent({
       // Extract text if the file type supports it
       if (isTextExtractable(file.type, file.name)) {
         try {
-          console.log('🔍 Starting client-side text extraction for:', file.name)
+          // console.log('🔍 Starting client-side text extraction for:', file.name)
           
           // Dynamic import to avoid SSR issues
           const { extractTextFromFile } = await import('../storage/textExtractor')
           const extractedText = await extractTextFromFile(file, file.type, file.name)
           
           if (extractedText && extractedText.length > 0) {
-            console.log(`✅ Text extracted successfully: ${extractedText.length} characters`)
+            // console.log(`✅ Text extracted successfully: ${extractedText.length} characters`)
             
             // Update the node with extracted text
             setNodes((currentNodes) => {
@@ -995,7 +995,7 @@ function BoardContent({
               )
             })
           } else {
-            console.log('⚠️ No text was extracted from the file')
+            // console.log('⚠️ No text was extracted from the file')
             setNodes((currentNodes) => {
               if (!Array.isArray(currentNodes)) return currentNodes
               return currentNodes.map(node => 
@@ -1006,7 +1006,7 @@ function BoardContent({
             })
           }
         } catch (error) {
-          console.error('❌ Client-side text extraction failed:', error)
+          // console.error('❌ Client-side text extraction failed:', error)
           setNodes((currentNodes) => {
             if (!Array.isArray(currentNodes)) return currentNodes
             return currentNodes.map(node => 
@@ -1239,12 +1239,12 @@ function BoardContent({
           })
         
         if (error) {
-          console.error('[BoardComponent] Failed to broadcast node update:', error)
+          // console.error('[BoardComponent] Failed to broadcast node update:', error)
         } else {
-          console.log('[BoardComponent] Broadcasted node update:', { nodeId, updates })
+          // console.log('[BoardComponent] Broadcasted node update:', { nodeId, updates })
         }
       } catch (error) {
-        console.error('[BoardComponent] Error broadcasting node update:', error)
+        // console.error('[BoardComponent] Error broadcasting node update:', error)
       }
     }
   }, [setNodes, boardId, user?.id, supabase])
@@ -1255,8 +1255,8 @@ function BoardContent({
 
   // Memoize handlers object for node/edge types
   const handlers = useMemo(() => {
-    console.log('[BoardComponent] Creating handlers, user:', user, 'user?.id:', user?.id)
-    console.log('[BoardComponent] acquireNodeLock reference:', acquireNodeLock)
+    // console.log('[BoardComponent] Creating handlers, user:', user, 'user?.id:', user?.id)
+    // console.log('[BoardComponent] acquireNodeLock reference:', acquireNodeLock)
     
     const newHandlers = {
       onNodeDelete: handleNodeDelete,
@@ -1273,7 +1273,7 @@ function BoardContent({
     
     // Force update stableHandlers immediately
     Object.assign(stableHandlers, newHandlers)
-    console.log('[BoardComponent] Updated stableHandlers.acquireNodeLock:', stableHandlers.acquireNodeLock)
+    // console.log('[BoardComponent] Updated stableHandlers.acquireNodeLock:', stableHandlers.acquireNodeLock)
     
     return newHandlers
   }, [
@@ -1378,49 +1378,44 @@ function BoardContent({
               aiInitialized={aiInitialized}
             />
             
-            {(() => {
-              console.log('[BoardComponent] aiInitialized:', aiInitialized)
-              return aiInitialized
-            })() && (
-              <ChatPanel
-                nodes={nodes} // Add this line to pass the nodes
-                onGenerateNode={(nodeData: { 
-                  id: string,
-                  label: string, 
-                  content?: string, 
-                  position: { x: number, y: number }, // Now required since it's absolute
-                  referenceNode?: { id: string, title: string }
-                }) => {
-                  // Create the new node with the absolute position
-                  const newNode = {
-                    id: nodeData.id,
-                    type: 'default',
-                    position: nodeData.position, // Use the absolute position directly
-                    data: { 
-                      title: nodeData.label,
-                      content: nodeData.content,
-                      aiGenerated: true
-                    },
+            <ChatPanel
+              nodes={nodes} // Add this line to pass the nodes
+              onGenerateNode={(nodeData: { 
+                id: string,
+                label: string, 
+                content?: string, 
+                position: { x: number, y: number }, // Now required since it's absolute
+                referenceNode?: { id: string, title: string }
+              }) => {
+                // Create the new node with the absolute position
+                const newNode = {
+                  id: nodeData.id,
+                  type: 'default',
+                  position: nodeData.position, // Use the absolute position directly
+                  data: { 
+                    title: nodeData.label,
+                    content: nodeData.content,
+                    aiGenerated: true
+                  },
+                }
+                
+                // Add the node
+                handleAddNodeToStore(newNode)
+                
+                // If we have a reference node, create an edge
+                if (nodeData.referenceNode) {
+                  const newEdge: Edge = {
+                    id: `edge-${Date.now()}`,
+                    source: nodeData.referenceNode.id,
+                    target: nodeData.id,
+                    type: 'floating',
                   }
                   
-                  // Add the node
-                  handleAddNodeToStore(newNode)
-                  
-                  // If we have a reference node, create an edge
-                  if (nodeData.referenceNode) {
-                    const newEdge: Edge = {
-                      id: `edge-${Date.now()}`,
-                      source: nodeData.referenceNode.id,
-                      target: nodeData.id,
-                      type: 'floating',
-                    }
-                    
-                    // Add the edge
-                    setEdges(eds => [...eds, newEdge])
-                  }
-                }}
-              />
-            )}
+                  // Add the edge
+                  setEdges(eds => [...eds, newEdge])
+                }
+              }}
+            />
           </>
         )}
       </ReactFlow>

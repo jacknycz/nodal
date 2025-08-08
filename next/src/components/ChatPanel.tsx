@@ -28,14 +28,19 @@ export default function ChatPanel({
   const {
     messages,
     sendMessage,
+    sendMessageStream,
+    cancelStreaming,
     generateNodes,
     isLoading,
     isGeneratingNodes,
+    isStreaming,
     error,
     clearError
   } = useUnifiedAI()
 
+  // Add AI status to the context
   const aiContext = useAIContext()
+  const { isInitialized: aiInitialized } = aiContext
   
   // Get selected nodes from board store
   const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
@@ -70,7 +75,7 @@ export default function ChatPanel({
       contextualMessage = `Context - Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}:\n${nodeContext}\n\nUser message: ${message}`
     }
     
-    await sendMessage(contextualMessage)
+    await sendMessageStream(contextualMessage)
   }
 
   // Handle node generation
@@ -110,55 +115,69 @@ export default function ChatPanel({
     }
   }
 
-  // Add this helper function at the top
+  // Detect structured content (numbered or bullet list lines)
   const hasStructuredContent = (content: string): boolean => {
-    // Check for numbered lists (1. 2. etc)
-    const hasNumberedList = /\d+\.\s/.test(content)
-    // Check for bullet points
-    const hasBulletPoints = /•|\*|\-\s/.test(content)
+    // Use multiline anchors to detect list markers at the beginning of lines
+    const hasNumberedList = /^\s*\d+\.\s+/m.test(content)
+    const hasBulletPoints = /^\s*[•\-*]\s+/m.test(content)
     return hasNumberedList || hasBulletPoints
   }
 
-  // Add this function to extract points from content
+  // Extract points from content (supports inline "Title: content" on same line)
   const extractPoints = (content: string): { title: string; content: string }[] => {
     const points: { title: string; content: string }[] = []
-    
-    // Split by numbered points or bullet points
     const lines = content.split('\n')
     let currentPoint: { title: string; content: string } | null = null
-    
+
     for (const line of lines) {
-      // Check for new point (1. or * or -)
-      const pointMatch = line.match(/^(\d+\.|[\*\-])\s+(.+)/)
+      // New point lines: "1. ..." or "* ..." or "- ..." or "• ..."
+      const pointMatch = line.match(/^(\d+\.|[\*\-•])\s+(.+)/)
       if (pointMatch) {
-        // Save previous point if exists
+        // Push previous accumulated point
         if (currentPoint) points.push(currentPoint)
-        
-        // Extract and clean title
-        const title = pointMatch[2]
-          .replace(/\*\*/g, '') // Remove bold markdown
-          .replace(/^Node:\s*"?|"?$/g, '') // Remove "Node:" prefix and quotes
-          .trim()
-        
-        currentPoint = { title, content: '' }
-      } else if (currentPoint && line.trim()) {
+
+        const rest = pointMatch[2].trim()
+
+        // Try to split "**Title**: content" or "Title: content"
+        let title = rest.replace(/\*\*/g, '').trim()
+        let inlineContent = ''
+
+        const boldInline = rest.match(/^\*\*(.+?)\*\*\s*:?\s*(.*)$/)
+        const plainInline = !boldInline && rest.match(/^([^:]+):\s*(.*)$/)
+
+        if (boldInline) {
+          title = boldInline[1].trim()
+          inlineContent = (boldInline[2] || '').trim()
+        } else if (plainInline) {
+          title = plainInline[1].replace(/\*\*/g, '').trim()
+          inlineContent = (plainInline[2] || '').trim()
+        }
+
+        // Remove optional Node: prefix and quotes
+        title = title.replace(/^Node:\s*"?|"?$/g, '').trim()
+
+        currentPoint = { title, content: inlineContent }
+        continue
+      }
+
+      // Accumulate additional description lines for the current point
+      if (currentPoint) {
         const cleanedLine = line
-          .replace(/^\s*-\s*\*\*Connection:\*\*.*$/i, '') // Remove connection lines
-          .replace(/^\s*-\s*\*\*Content:\*\*\s*/i, '') // Remove content prefix
-          .replace(/\*\*/g, '') // Remove any remaining bold markdown
+          .replace(/^\s*-\s*\*\*Connection:\*\*.*$/i, '')
+          .replace(/^\s*-\s*\*\*Content:\*\*\s*/i, '')
+          .replace(/\*\*/g, '')
           .trim()
-        
+
         if (cleanedLine) {
           currentPoint.content += (currentPoint.content ? '\n' : '') + cleanedLine
         }
       }
     }
-    
-    // Add final point
+
     if (currentPoint) points.push(currentPoint)
-    
-    // Filter out any points that ended up empty after cleaning
-    return points.filter(point => point.title && point.content)
+
+    // Keep items with titles even if content is empty (inline title-only bullets)
+    return points.filter(point => !!point.title)
   }
 
   // Update the fan layout calculation to take a center point
@@ -198,23 +217,41 @@ export default function ChatPanel({
           <Bot className="w-5 h-5 text-blue-600" />
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3>
         </div>
+        
+        {/* AI Status Indicator */}
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setShowNodeGenerator(!showNodeGenerator)}
-            className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-            title="Generate Nodes"
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
+          {aiInitialized ? (
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-yellow-600 dark:text-yellow-400">Connecting...</span>
+            </div>
+          )}
+          
           <button
             onClick={() => setIsOpen(false)}
-            className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            title="Close Chat"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
       </div>
+
+      {/* AI Status Banner (when not initialized) */}
+      {!aiInitialized && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
+          <div className="flex items-center space-x-2">
+            <Key className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+            <p className="text-xs text-yellow-700 dark:text-yellow-300">
+              AI is initializing... Check console for status
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Node Generator */}
       {showNodeGenerator && (
@@ -406,18 +443,27 @@ export default function ChatPanel({
                   ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
                   : "Ask Nodal AI anything..."
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               rows={1}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
           </div>
-          <button
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isLoading}
-            className="h-10 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          {isStreaming ? (
+            <button
+              onClick={cancelStreaming}
+              className="h-10 px-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading}
+              className="h-10 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
     </div>
