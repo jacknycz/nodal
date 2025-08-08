@@ -58,7 +58,7 @@ export default function ChatPanel({
 
   // Handle send message with selected node context
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return
+    if (!inputValue.trim() || isLoading || isStreaming) return
 
     const message = inputValue.trim()
     setInputValue('')
@@ -125,8 +125,10 @@ export default function ChatPanel({
 
   // Extract points from content (supports inline "Title: content" on same line)
   const extractPoints = (content: string): { title: string; content: string }[] => {
+    // Normalize: ensure a newline before the first numbered list if glued to text
+    const normalized = content.replace(/([^\n])\s*(\d+\.\s)/g, '$1\n\n$2')
     const points: { title: string; content: string }[] = []
-    const lines = content.split('\n')
+    const lines = normalized.split('\n')
     let currentPoint: { title: string; content: string } | null = null
 
     for (const line of lines) {
@@ -176,8 +178,49 @@ export default function ChatPanel({
 
     if (currentPoint) points.push(currentPoint)
 
-    // Keep items with titles even if content is empty (inline title-only bullets)
-    return points.filter(point => !!point.title)
+    // De-duplicate by normalized title
+    const seen = new Set<string>()
+    const unique: { title: string; content: string }[] = []
+    for (const p of points) {
+      const key = p.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+      if (key && !seen.has(key)) {
+        seen.add(key)
+        unique.push(p)
+      }
+    }
+    return unique
+  }
+
+  // Sanitize assistant text for display: add missing line breaks and collapse duplicates
+  const sanitizeForDisplay = (text: string): string => {
+    let s = text
+    // Ensure numbered lists start on a new paragraph when glued to previous sentence
+    s = s.replace(/([^\n])(\s*)(\d+\.\s)/g, '$1\n\n$3')
+
+    // Collapse full-body repeats (common model hiccup)
+    if (s.length >= 120) {
+      const third = Math.floor(s.length / 3)
+      const head = s.slice(0, third)
+      const tail = s.slice(third)
+      if (tail.startsWith(head)) {
+        // Strip subsequent repeats of the head
+        while (s.endsWith(head + head)) {
+          s = s.slice(0, s.length - head.length)
+        }
+      }
+    }
+
+    // De-duplicate adjacent paragraphs
+    const paras = s.split(/\n\s*\n/)
+    const out: string[] = []
+    for (const p of paras) {
+      const t = p.trim()
+      if (!t) continue
+      if (out.length === 0 || out[out.length - 1] !== t) {
+        out.push(t)
+      }
+    }
+    return out.join('\n\n')
   }
 
   // Update the fan layout calculation to take a center point
@@ -201,7 +244,7 @@ export default function ChatPanel({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-16 right-4 z-40 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors"
+        className="fixed top-16 right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-colors"
         title="Open Chat"
       >
         <MessageSquare className="w-5 h-5" />
@@ -210,16 +253,16 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="fixed top-12 right-0 z-40 w-96 h-[calc(100vh-48px)] bg-white dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="fixed top-12 right-0 z-40 w-96 h-[calc(100vh-48px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
-          <Bot className="w-5 h-5 text-blue-600" />
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3>
+          <Bot className="w-5 h-5 text-secondary-500" />
+          {/* <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3> */}
         </div>
         
         {/* AI Status Indicator */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
           {aiInitialized ? (
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -287,7 +330,7 @@ export default function ChatPanel({
               <button
                 onClick={handleGenerateNodes}
                 disabled={!nodePrompt.trim() || isGeneratingNodes}
-                className="flex-1 bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 bg-slate-600 text-white px-3 py-1 rounded-md text-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isGeneratingNodes ? (
                   <>
@@ -329,13 +372,13 @@ export default function ChatPanel({
               <div
                 className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
                   message.role === 'user'
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-indigo-500 dark:bg-indigo-700 text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{message.content}</div>
+                <div className="whitespace-pre-wrap">{message.role === 'assistant' ? sanitizeForDisplay(message.content) : message.content}</div>
                 <div className={`text-xs mt-1 ${
-                  message.role === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
+                  message.role === 'user' ? 'text-primary-100' : 'text-gray-500 dark:text-gray-400'
                 }`}>
                   {message.timestamp.toLocaleTimeString()}
                 </div>
@@ -375,7 +418,7 @@ export default function ChatPanel({
                         }, index * 50)
                       })
                     }}
-                    className="mt-2 text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    className="mt-2 text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-p-700 transition-colors flex items-center gap-1"ry
                   >
                     <Sparkles className="w-3 h-3" />
                     Generate {extractPoints(message.content).length} Connected Nodes
@@ -417,8 +460,8 @@ export default function ChatPanel({
 
       {/* Selection Notification */}
       {selectedNodes.length > 0 && (
-        <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
-          <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+        <div className="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800">
+          <div className="flex items-center gap-2 text-sm text-primary-700 dark:text-primary-300">
             <Target className="w-4 h-4" />
             <span className="text-xs">
               {selectedNodes.length === 1 
@@ -443,7 +486,7 @@ export default function ChatPanel({
                   ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
                   : "Ask Nodal AI anything..."
               }
-              className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
               rows={1}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
@@ -458,8 +501,8 @@ export default function ChatPanel({
           ) : (
             <button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
-              className="h-10 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              disabled={!inputValue.trim() || isLoading || isStreaming}
+              className="h-10 px-4 bg-primary-700 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               <Send className="w-4 h-4" />
             </button>

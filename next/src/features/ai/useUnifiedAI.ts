@@ -75,6 +75,32 @@ export function useUnifiedAI(): UseUnifiedAIResult {
   
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  // Sanitize streamed assistant content to reduce duplicated paragraphs/blocks
+  const sanitizeStreamContent = useCallback((text: string): string => {
+    // Collapse adjacent duplicate paragraphs
+    const paragraphs = text.split(/\n\s*\n/)
+    const deduped: string[] = []
+    for (const p of paragraphs) {
+      const trimmed = p.trim()
+      if (trimmed.length === 0) continue
+      if (deduped.length === 0 || deduped[deduped.length - 1] !== trimmed) {
+        deduped.push(trimmed)
+      }
+    }
+    let collapsed = deduped.join('\n\n')
+
+    // If entire content was duplicated (X + X), collapse to one
+    if (collapsed.length >= 40) {
+      const half = Math.floor(collapsed.length / 2)
+      const first = collapsed.slice(0, half)
+      const second = collapsed.slice(half)
+      if (first === second) {
+        collapsed = first
+      }
+    }
+    return collapsed
+  }, [])
+
   // Clear error
   const clearError = useCallback(() => {
     setError(null)
@@ -130,15 +156,17 @@ export function useUnifiedAI(): UseUnifiedAIResult {
       // Generate response
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. 
-        
-        Your role is to help users:
-        - Understand and organize their thoughts
-        - Generate relevant nodes and connections
-        - Provide insights and suggestions
-        - Answer questions about their board content
-        
-        Be helpful, concise, and focused on the user's current context.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.
+
+Strictly avoid repeating content or restating prior sentences. Do not re-list items already listed. End your final response with the token: END_OF_RESPONSE
+
+Your role is to help users:
+- Understand and organize their thoughts
+- Generate relevant nodes and connections
+- Provide insights and suggestions
+- Answer questions about their board content
+
+Be helpful, concise, and focused on the user's current context.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -203,7 +231,7 @@ export function useUnifiedAI(): UseUnifiedAIResult {
 
       for await (const chunk of aiContext.generateStream({
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nBe helpful, concise, and focused on the user's current context.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nStrictly avoid repeating content or restating prior sentences. Do not re-list items already listed. End your final response with the token: END_OF_RESPONSE\n\nBe helpful, concise, and focused on the user's current context.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -212,7 +240,15 @@ export function useUnifiedAI(): UseUnifiedAIResult {
       })) {
         const delta = (chunk as any).delta || (chunk as any).content || ''
         if (!delta) continue
-        setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: (m.content + delta) } : m))
+        setMessages(prev => prev.map(m => {
+          if (m.id !== assistantId) return m
+          let next = (m.content + delta)
+          // Strip sentinel if present during stream
+          if (next.includes('END_OF_RESPONSE')) {
+            next = next.replace(/END_OF_RESPONSE[\s\S]*$/,'').trim()
+          }
+          return { ...m, content: sanitizeStreamContent(next) }
+        }))
       }
     } catch (err) {
       if (!(err instanceof Error && err.name === 'AbortError')) {

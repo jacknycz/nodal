@@ -398,6 +398,9 @@ export class OpenAIService {
         messages,
         temperature: temperature ?? this.config.defaultSettings.temperature,
         max_tokens: maxTokens ?? this.config.defaultSettings.maxTokens,
+        presence_penalty: 0.3,
+        frequency_penalty: 0.6,
+        stop: ["END_OF_RESPONSE"],
         stream: false
       }),
       signal
@@ -451,6 +454,9 @@ export class OpenAIService {
         messages,
         temperature: temperature ?? this.config.defaultSettings.temperature,
         max_tokens: maxTokens ?? this.config.defaultSettings.maxTokens,
+        presence_penalty: 0.3,
+        frequency_penalty: 0.6,
+        stop: ["END_OF_RESPONSE"],
         stream: true
       }),
       signal
