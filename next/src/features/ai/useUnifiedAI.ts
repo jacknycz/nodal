@@ -44,6 +44,8 @@ interface UseUnifiedAIResult {
   // Chat functionality
   messages: ChatMessage[]
   sendMessage: (content: string, context?: Partial<AIContextType>) => Promise<void>
+  sendMessageStream: (content: string, context?: Partial<AIContextType>) => Promise<void>
+  cancelStreaming: () => void
   clearChat: () => void
   
   // Node generation
@@ -56,6 +58,7 @@ interface UseUnifiedAIResult {
   // State
   isLoading: boolean
   isGeneratingNodes: boolean
+  isStreaming: boolean
   error: string | null
   clearError: () => void
   
@@ -250,15 +253,21 @@ Be helpful, concise, and focused on the user's current context.`,
         }
       }
 
-      for await (const chunk of aiContext.generateStream({
+      const streamOptions: any = {
         prompt: content,
         systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nStrictly avoid repeating content or restating prior sentences. Do not re-list items already listed. End your final response with the token: END_OF_RESPONSE\n\nBe helpful, concise, and focused on the user's current context.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
-        stream: true,
-        signal: abortControllerRef.current.signal as any
-      })) {
+        stream: true
+      }
+
+      // Pass abort signal only if the underlying implementation supports it via aiContext
+      if ((streamOptions as any) && abortControllerRef.current) {
+        ;(streamOptions as any).signal = abortControllerRef.current.signal as any
+      }
+
+      for await (const chunk of aiContext.generateStream(streamOptions)) {
         const delta = (chunk as any).delta || (chunk as any).content || ''
         if (!delta) continue
         setMessages(prev => prev.map(m => {

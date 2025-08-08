@@ -6,9 +6,16 @@ import { useAIContext } from '../features/ai/aiContext'
 import { useBoardStore } from '../features/board/boardSlice'
 import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 import type { BoardNode } from '../features/board/boardTypes'
+import { useFocusStore } from '../features/focus/focusSlice'
 
 interface ChatPanelProps {
-  onGenerateNode?: (nodeData: { label: string; content?: string }) => void
+  onGenerateNode?: (nodeData: { 
+    id?: string
+    label: string; 
+    content?: string 
+    position?: { x: number; y: number }
+    referenceNode?: { id: string; title: string }
+  }) => void
   nodes?: BoardNode[]
 }
 
@@ -44,12 +51,15 @@ export default function ChatPanel({
   
   // Get selected nodes from board store
   const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
+  const mode = useFocusStore((s) => s.mode)
+  const focusedIds = useFocusStore((s) => s.focusedIds)
   
   // Use only props nodes - the store nodes are empty
   const nodes = propNodes || []
   
   // Get selected node data
   const selectedNodes = nodes.filter(node => selectedNodeIds.includes(node.id))
+  const focusedNodeList = mode ? nodes.filter(n => focusedIds.has(n.id)) : []
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -63,16 +73,21 @@ export default function ChatPanel({
     const message = inputValue.trim()
     setInputValue('')
     
-    // Add selected node context to the message
+    // Add focus/selected node context to the message
     let contextualMessage = message
-    if (selectedNodes.length > 0) {
-      const nodeContext = selectedNodes.map(node => {
+    const contextNodes = focusedNodeList.length > 0 ? focusedNodeList : selectedNodes
+    if (contextNodes.length > 0) {
+      const nodeContext = contextNodes.map(node => {
         const title = node.data.title || 'Untitled Node'
         const content = node.data.content || ''
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
       
-      contextualMessage = `Context - Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}:\n${nodeContext}\n\nUser message: ${message}`
+      const label = focusedNodeList.length > 0
+        ? `Focused ${contextNodes.length === 1 ? 'node' : 'nodes'}`
+        : `Selected ${contextNodes.length === 1 ? 'node' : 'nodes'}`
+
+      contextualMessage = `Context - ${label}:\n${nodeContext}\n\nUser message: ${message}`
     }
     
     await sendMessageStream(contextualMessage)
@@ -223,21 +238,60 @@ export default function ChatPanel({
     return out.join('\n\n')
   }
 
-  // Update the fan layout calculation to take a center point
-  const calculateFanPosition = (
-    index: number, 
-    total: number, 
-    centerPoint: { x: number, y: number },
-    radius: number = 300
-  ) => {
-    // Calculate angle for this node in the fan
-    const angleStep = (Math.PI * 0.8) / (total - 1) // 0.8 = 144 degrees total span
-    const angle = -Math.PI * 0.4 + (angleStep * index) // Start at -72 degrees
-    
-    return {
-      x: centerPoint.x + Math.cos(angle) * radius,
-      y: centerPoint.y + Math.sin(angle) * radius
+  // Estimate node width (px) based on title/content length
+  const estimateNodeWidth = (title: string, content?: string): number => {
+    const titleChars = Math.min(40, title.length)
+    const contentChars = Math.min(120, (content || '').length)
+    const titleWidth = 16 + titleChars * 7 // approx 7px per char
+    const contentWidth = Math.sqrt(contentChars) * 12 // diminishing growth
+    const estimated = Math.max(titleWidth, contentWidth)
+    return Math.max(160, Math.min(360, estimated)) // clamp
+  }
+
+  // Compute a chord-safe radius so neighbor chords >= estimated width + padding
+  const computeSafeRadius = (
+    points: { title: string; content: string }[],
+    angleStep: number,
+    baseRadius: number
+  ): number => {
+    if (points.length <= 1) return baseRadius
+    const half = Math.max(0.01, angleStep / 2)
+    const sinHalf = Math.sin(half)
+    let required = baseRadius
+    for (const p of points) {
+      const w = estimateNodeWidth(p.title, p.content) + 24 // padding
+      const rReq = w / (2 * sinHalf)
+      if (rReq > required) required = rReq
     }
+    return Math.min(900, required) // safety cap
+  }
+
+  // Fan position calculator centered below parent (rotated 90° clockwise)
+  const calculateFanPosition = (
+    index: number,
+    total: number,
+    centerPoint: { x: number; y: number },
+    radius: number,
+    angleSpan: number = Math.PI * 0.8,
+    angleCenter: number = Math.PI / 2, // downwards in screen coords
+    yOffset: number = 160, // push arc further below parent
+    minBelow: number = 220, // ensure at least this many px below parent
+    verticalStep: number = 36 // extra per-step drop to separate neighbors
+  ) => {
+    if (total === 1) {
+      const ySingle = centerPoint.y + radius + yOffset
+      return { x: centerPoint.x, y: Math.max(ySingle, centerPoint.y + minBelow) }
+    }
+    const step = angleSpan / (total - 1)
+    const start = angleCenter - angleSpan / 2
+    const angle = start + step * index
+    const x = centerPoint.x + Math.cos(angle) * radius
+    let y = centerPoint.y + Math.sin(angle) * radius + yOffset
+    // Stagger vertically more for nodes farther from center
+    const rel = Math.abs(index - (total - 1) / 2)
+    y += rel * verticalStep
+    if (y < centerPoint.y + minBelow) y = centerPoint.y + minBelow
+    return { x, y }
   }
 
   if (!isOpen) {
@@ -392,12 +446,23 @@ export default function ChatPanel({
                       
                       if (!selectedNode) return
                       
-                      // Generate nodes in a fan layout around the parent node
+                      // Determine safe radius based on estimated widths and target angular spacing
+                      const angleSpan = Math.PI * 0.9 // a bit wider arc
+                      const angleStep = points.length > 1 ? angleSpan / (points.length - 1) : angleSpan
+                      const baseRadius = 320
+                      const safeRadius = computeSafeRadius(points, angleStep, baseRadius)
+                      const depthFactor = 1.35
+                      const finalRadius = safeRadius * depthFactor
+
+                      // Generate nodes in a fan layout centered below the parent node
                       points.forEach((point, index) => {
                         const fanPosition = calculateFanPosition(
-                          index, 
+                          index,
                           points.length,
-                          selectedNode.position // Use the parent node's position as center
+                          selectedNode.position,
+                          finalRadius,
+                          angleSpan,
+                          -Math.PI / 2 // downwards center
                         )
                         
                         // Add slight delay to ensure unique timestamps
@@ -409,7 +474,7 @@ export default function ChatPanel({
                             id: nodeId,
                             label: point.title,
                             content: point.content,
-                            position: fanPosition, // Now this is an absolute position
+                            position: fanPosition, // absolute position with width-aware radius
                             referenceNode: {
                               id: selectedNode.id,
                               title: selectedNode.data.title || 'Reference Node'

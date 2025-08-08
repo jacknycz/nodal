@@ -42,6 +42,7 @@ import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import NodeEditModal from '../../components/NodeEditModal'
+import { useFocusStore } from '../focus/focusSlice'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -140,6 +141,10 @@ function BoardContent({
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
+  const focusMode = useFocusStore((s) => s.mode)
+  const focusNeighborhood = useFocusStore((s) => s.focusNeighborhood)
+  const focusGroup = useFocusStore((s) => s.focusGroup)
+  const clearFocus = useFocusStore((s) => s.clearFocus)
   
   // Broadcast local cursor position
   useEffect(() => {
@@ -1059,6 +1064,27 @@ function BoardContent({
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
 
+  // Keyboard shortcuts for focus
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (selectedNodes.length === 0) return
+      if (e.key.toLowerCase() === 'f' && !e.shiftKey) {
+        e.preventDefault()
+        focusNeighborhood(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
+      } else if (e.key.toLowerCase() === 'f' && e.shiftKey) {
+        e.preventDefault()
+        focusGroup(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
+      } else if (e.key === 'Escape') {
+        if (focusMode) {
+          e.preventDefault()
+          clearFocus()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selectedNodes, edges, focusMode, focusNeighborhood, focusGroup, clearFocus])
+
   // Handle XYFlow's selection changes
   const handleSelectionChange = useCallback(({ nodes }: { nodes: BoardNode[] }) => {
     const selectedIds = nodes.map(node => node.id)
@@ -1346,6 +1372,21 @@ function BoardContent({
         <Controls />
         <MiniMap />
         
+        {/* Focus chip */}
+        {focusMode && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+            <div className="px-3 py-1 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 shadow flex items-center gap-3 text-xs">
+              <span className="font-medium text-gray-700 dark:text-gray-200">Focus: {focusMode === 'neighbors' ? 'Neighborhood' : 'Group'}</span>
+              <button
+                onClick={() => clearFocus()}
+                className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="absolute bottom-4 left-16 z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
             <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -1438,6 +1479,15 @@ function BoardContent({
           setContextMenu({ isOpen: false, position: null });
         }}
         onGenerateAINode={handleOpenAINodeGenerator}
+        onFocusNeighborhood={() => {
+          if (selectedNodes.length === 0) return
+          focusNeighborhood(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
+        }}
+        onFocusGroup={() => {
+          if (selectedNodes.length === 0) return
+          focusGroup(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
+        }}
+        onClearFocus={() => clearFocus()}
       />
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}

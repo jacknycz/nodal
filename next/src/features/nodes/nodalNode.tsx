@@ -8,6 +8,7 @@ import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import NodeEditModal from '../../components/NodeEditModal'
 import { useSupabaseUser } from '../auth/authUtils'
+import { useFocusStore } from '../focus/focusSlice'
 
 interface NodalNodeProps {
   data: {
@@ -49,6 +50,8 @@ export default function NodalNode({
   const justOpenedRef = useRef(false)
   const lockReleasedRef = useRef(false)
   const user = useSupabaseUser()
+  const mode = useFocusStore((s) => s.mode)
+  const focusedIds = useFocusStore((s) => s.focusedIds)
 
   const displayTitle = data.label || data.title || 'Untitled'
 
@@ -154,6 +157,8 @@ export default function NodalNode({
     )
   }
 
+  const isDimmedByFocus = Boolean(mode) && !focusedIds.has(id)
+
   return (
     <div
       className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
@@ -162,7 +167,7 @@ export default function NodalNode({
           : isLocked && !isLockedByMe
           ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
           : 'border-gray-200 dark:border-gray-700'
-      }`}
+      } ${isDimmedByFocus ? 'opacity-30 pointer-events-none' : ''}`}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="nodal-drag-handle cursor-move">
