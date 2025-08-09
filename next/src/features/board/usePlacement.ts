@@ -256,7 +256,8 @@ export function usePlacement() {
   const placeManualNode = useCallback(async (
     node: NodeToPlace,
     preferredPosition?: { x: number; y: number },
-    constraints?: Partial<PlacementConstraints>
+    constraints?: Partial<PlacementConstraints>,
+    existingNodesOverride?: BoardNode[]
   ): Promise<PlacementResult> => {
     const context = createPlacementContext(undefined, constraints)
     
@@ -265,11 +266,15 @@ export function usePlacement() {
       node.preferredPosition = preferredPosition
     }
 
+    // Allow callers to override existingNodes to avoid store sync lag
+    const effectiveContext = existingNodesOverride
+      ? { ...context, existingNodes: existingNodesOverride }
+      : context
+
     return placeNodes({
       nodes: [node],
-      context,
-      strategy: PlacementStrategy.MANUAL_ADD,
-      algorithm: LayoutAlgorithm.FAN
+      context: effectiveContext,
+      strategy: PlacementStrategy.SMART_AUTO
     })
   }, [createPlacementContext])
 

@@ -819,7 +819,7 @@ function BoardContent({
     }
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
-  const { placeBoardNodes } = usePlacement()
+  const { placeBoardNodes, placeManualNode } = usePlacement()
   
   // Initialize board
   useEffect(() => {
@@ -1423,7 +1423,7 @@ function BoardContent({
           <>
             <FloatingActionButton
               onAddNode={() => {
-                setShowNodeSetupModal(true)
+                setShowAddNodeModal(true)
               }}
               onAIGenerate={handleOpenAINodeGenerator}
               onUploadDocument={() => {
@@ -1541,18 +1541,12 @@ function BoardContent({
               } : undefined}
             />
           )}
-          {showNodeSetupModal && (
-            <NodeSetupModal
-              isOpen={showNodeSetupModal}
-              onComplete={handleNodeSetupComplete}
-              onClose={() => setShowNodeSetupModal(false)}
-            />
-          )}
+          {/* NodeSetupModal deprecated for add-new-node; using NodeEditModal instead */}
           {isBoardView && (
             <>
               <FloatingActionButton
                 onAddNode={() => {
-                  setShowNodeSetupModal(true)
+                  setShowAddNodeModal(true)
                 }}
                 onAIGenerate={handleOpenAINodeGenerator}
                 onUploadDocument={() => {
@@ -1584,22 +1578,29 @@ function BoardContent({
             setShowAddNodeModal(false);
             setPendingNodePosition(null);
           }}
-          onSave={(title: string, content: string) => {
-            if (pendingNodePosition) {
-              const newNode: Node = {
-                id: `node-${Date.now()}`,
-                type: 'default',
-                position: pendingNodePosition,
-                data: { 
-                  title: title || 'New Node',
-                  content: content
-                },
-              };
-              setNodes((nds) => {
-                if (!Array.isArray(nds)) return [newNode];
-                return [...nds, newNode];
-              });
-            }
+          onSave={async (title: string, content: string) => {
+            const preferred = pendingNodePosition || getViewportCenter()
+            // Use placement engine with current XYFlow nodes to avoid race conditions
+            const result = await placeManualNode(
+              { title: title || 'New Node', content },
+              preferred,
+              { avoidOverlap: true, minDistance: 50 },
+              nodes
+            )
+            const finalPos = result.placements[0]?.position || preferred
+            const newNode: Node = {
+              id: `node-${Date.now()}`,
+              type: 'default',
+              position: finalPos,
+              data: { 
+                title: title || 'New Node',
+                content: content
+              },
+            };
+            setNodes((nds) => {
+              if (!Array.isArray(nds)) return [newNode];
+              return [...nds, newNode];
+            });
             setShowAddNodeModal(false);
             setPendingNodePosition(null);
           }}

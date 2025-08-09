@@ -378,8 +378,13 @@ export function analyzeSpatialRegions(
   // Define analysis area (larger than viewport for better context)
   const analysisWidth = viewport.width * 2
   const analysisHeight = viewport.height * 2
-  const startX = viewport.x - analysisWidth / 2
-  const startY = viewport.y - analysisHeight / 2
+  // Compute flow-space viewport center using XYFlow transform convention
+  const flowViewportCenter = {
+    x: -viewport.x / viewport.zoom + (viewport.width / 2) / viewport.zoom,
+    y: -viewport.y / viewport.zoom + (viewport.height / 2) / viewport.zoom
+  }
+  const startX = flowViewportCenter.x - analysisWidth / 2
+  const startY = flowViewportCenter.y - analysisHeight / 2
   
   const cols = Math.ceil(analysisWidth / regionSize)
   const rows = Math.ceil(analysisHeight / regionSize)
@@ -448,13 +453,13 @@ function analyzeRegion(bounds: Bounds, existingNodes: BoardNode[], viewport: any
   // Calculate quality score
   let quality = 1 - Math.min(1, density * 1000000) // Lower density = higher quality
   
-  // Bonus for being in viewport
+  // Bonus for being near the viewport center (in flow space)
   const regionCenter = { x: centerX, y: centerY }
-  const viewportCenter = { 
-    x: viewport.x + viewport.width / 2, 
-    y: viewport.y + viewport.height / 2 
+  const flowViewportCenter = {
+    x: -viewport.x / viewport.zoom + (viewport.width / 2) / viewport.zoom,
+    y: -viewport.y / viewport.zoom + (viewport.height / 2) / viewport.zoom
   }
-  const distanceFromViewport = calculateDistance(regionCenter, viewportCenter)
+  const distanceFromViewport = calculateDistance(regionCenter, flowViewportCenter)
   const viewportBonus = Math.max(0, 1 - (distanceFromViewport / (viewport.width + viewport.height)))
   quality = (quality + viewportBonus) / 2
   
