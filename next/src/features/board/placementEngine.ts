@@ -1,8 +1,6 @@
 import type {
   PlacementRequest,
   PlacementResult,
-  PlacementStrategy,
-  LayoutAlgorithm,
   NodeToPlace,
   NodePlacement,
   EdgePlacement,
@@ -11,6 +9,10 @@ import type {
   LayoutOptions,
   PlacementMetadata,
   LayoutQualityMetrics
+} from './placementTypes'
+import {
+  PlacementStrategy,
+  LayoutAlgorithm
 } from './placementTypes'
 import type { BoardEdge } from './boardTypes'
 import {

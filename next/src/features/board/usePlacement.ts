@@ -27,7 +27,7 @@ import { useBoardStore } from './boardSlice'
  * Provides easy-to-use functions for all placement scenarios
  */
 export function usePlacement() {
-  const { getViewport, screenToFlowPosition } = useReactFlow()
+  const { getViewport, screenToFlowPosition, setNodes } = useReactFlow()
   const { nodes: existingNodes, edges: existingEdges, selectedNodeIds } = useBoardStore()
 
   /**
@@ -162,8 +162,42 @@ export function usePlacement() {
         }))
       : []
 
-    return reorganizeBoard(nodesToPlace, context, algorithm)
-  }, [createPlacementContext, existingNodes])
+    const result = await reorganizeBoard(nodesToPlace, context, algorithm)
+    
+    console.log('Reorganization result:', result)
+    console.log('Existing nodes before update:', existingNodes.length)
+    console.log('Placements returned:', result.placements.length)
+    console.log('First few placements:', result.placements.slice(0, 3).map(p => ({ id: p.node.id, position: p.position })))
+    console.log('First few existing nodes:', existingNodes.slice(0, 3).map(n => ({ id: n.id, position: n.position })))
+    console.log('All placement IDs:', result.placements.map(p => p.node.id))
+    console.log('All existing node IDs:', existingNodes.map(n => n.id))
+    
+    // Apply the new positions to the actual board nodes
+    if (result.success && result.placements.length > 0) {
+      const updatedNodes = existingNodes.map(node => {
+        const placement = result.placements.find(p => p.node.id === node.id)
+        console.log(`Node ${node.id}: placement found = ${!!placement}`)
+        if (placement) {
+          console.log(`Moving node ${node.id} from ${JSON.stringify(node.position)} to ${JSON.stringify(placement.position)}`)
+          return {
+            ...node,
+            position: placement.position
+          }
+        } else {
+          console.log(`No placement found for node ${node.id}`)
+        }
+        return node
+      })
+      
+      console.log('Updated nodes:', updatedNodes.length)
+      // Update the board with new positions
+      setNodes(updatedNodes)
+    } else {
+      console.log('No placements to apply or result failed')
+    }
+    
+    return result
+  }, [createPlacementContext, existingNodes, setNodes])
 
   /**
    * Gets the current viewport center in flow coordinates
