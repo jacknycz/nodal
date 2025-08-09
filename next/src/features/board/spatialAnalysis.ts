@@ -133,11 +133,14 @@ export function checkCollision(
   for (const node of existingNodes) {
     if (excludeNodeIds.includes(node.id)) continue
     
-    const nodeDimensions = estimateNodeDimensions(
-      node.data.title || 'Node',
-      node.data.content,
-      node.data.type
-    )
+    // Prefer XYFlow's measured dimensions when available
+    const nodeDimensions = (node as any).width && (node as any).height
+      ? { width: (node as any).width as number, height: (node as any).height as number }
+      : estimateNodeDimensions(
+          node.data.title || 'Node',
+          node.data.content,
+          node.data.type
+        )
     const nodeBounds = getNodeBounds(node.position, nodeDimensions)
     
     if (boundsOverlap(bounds, nodeBounds)) {

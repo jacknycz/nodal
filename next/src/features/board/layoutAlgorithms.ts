@@ -158,6 +158,7 @@ function placeMultipleNodesInFan(
     
     const basePosition = { x: baseX, y: baseY + staggerY }
     
+    // Prefer measured node size when available on existing nodes; for new nodes we estimate
     const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
     
     let finalPosition = basePosition

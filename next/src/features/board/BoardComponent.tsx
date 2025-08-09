@@ -1199,16 +1199,11 @@ function BoardContent({
           const isOnBoard = e.clientX >= rect.left && e.clientX <= rect.right &&
             e.clientY >= rect.top && e.clientY <= rect.bottom
 
-          if (isOnBoard) {
-            // console.log("🎯 Files dropped on board!")
-            const position = {
-              x: e.clientX - rect.left,
-              y: e.clientY - rect.top
-            }
-            
-            // Convert FileList to Array and process each file
-            const files = Array.from(e.dataTransfer.files)
-            const validFiles = files.filter(file => {
+            if (isOnBoard) {
+              // console.log("🎯 Files dropped on board!")
+              // Convert FileList to Array and process each file
+              const files = Array.from(e.dataTransfer.files)
+              const validFiles = files.filter(file => {
               const validTypes = [
                 'application/pdf',
                 'application/msword',
@@ -1236,16 +1231,16 @@ function BoardContent({
                 file.name.endsWith('.webp')
             })
 
-            if (validFiles.length > 0) {
-              validFiles.forEach(file => {
-                // Convert screen coordinates to flow coordinates
-                const flowPosition = reactFlowInstance.screenToFlowPosition({
-                  x: position.x,
-                  y: position.y,
+              if (validFiles.length > 0) {
+                validFiles.forEach(file => {
+                  // Convert screen coordinates (client) to flow coordinates via XYFlow utility
+                  const flowPosition = reactFlowInstance.screenToFlowPosition({
+                    x: e.clientX,
+                    y: e.clientY,
+                  })
+                  handleDocumentUpload(file, flowPosition)
                 })
-                handleDocumentUpload(file, flowPosition)
-              })
-            }
+              }
           }
         }
       }

@@ -92,12 +92,14 @@ function calculateClusterBounds(nodes: BoardNode[]) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
   
   nodes.forEach(node => {
-    // Use actual estimated dimensions for better bounds calculation
-    const dimensions = estimateNodeDimensions(
-      node.data.title || 'Node',
-      node.data.content,
-      node.data.type
-    )
+    // Prefer XYFlow measured size when available for accurate bounds
+    const dimensions = (node as any).width && (node as any).height
+      ? { width: (node as any).width as number, height: (node as any).height as number }
+      : estimateNodeDimensions(
+          node.data.title || 'Node',
+          node.data.content,
+          node.data.type
+        )
     minX = Math.min(minX, node.position.x)
     minY = Math.min(minY, node.position.y)
     maxX = Math.max(maxX, node.position.x + dimensions.width)

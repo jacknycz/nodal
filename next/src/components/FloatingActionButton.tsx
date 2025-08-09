@@ -33,7 +33,7 @@ export default function FloatingActionButton({
           <Plus className="w-5 h-5" />
         </button>
         
-        {aiInitialized && (
+        {/* {aiInitialized && (
           <button
             onClick={onAIGenerate}
             className="w-12 h-12 bg-purple-500 hover:bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
@@ -41,7 +41,7 @@ export default function FloatingActionButton({
           >
             <span className="text-lg">🤖</span>
           </button>
-        )}
+        )} */}
         
         <button
           onClick={onUploadDocument}
