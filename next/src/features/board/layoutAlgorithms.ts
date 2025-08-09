@@ -139,7 +139,7 @@ function placeMultipleNodesInFan(
   const focusPosition = focusNode.position
   
   // Calculate angle step
-  const angleStep = nodeToPlace.length > 1 ? angleSpan / (nodesToPlace.length - 1) : 0
+  const angleStep = nodesToPlace.length > 1 ? angleSpan / (nodesToPlace.length - 1) : 0
   const startAngle = angleCenter - angleSpan / 2
   
   // Sort nodes by priority if specified

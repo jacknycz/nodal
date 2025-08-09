@@ -686,17 +686,14 @@ function BoardContent({
             
             const placementResult = await placeBoardNodes(nodesToPlace)
             
-            if (placementResult.success && placementResult.placements.length > 0) {
-              // Create nodes from intelligent placement
-              const generatedNodes = placementResult.placements.map(placement => ({
-                id: placement.node.id,
-                type: placement.node.type,
-                position: placement.position,
-                data: { 
-                  title: placement.node.data.title,
-                  content: placement.node.data.content
-                }
-              }))
+              if (placementResult.success && placementResult.placements.length > 0) {
+                // Create nodes from intelligent placement
+                const generatedNodes = placementResult.placements.map(placement => ({
+                  id: placement.node.id,
+                  type: placement.node.type,
+                  position: placement.position,
+                  data: { ...placement.node.data }
+                }))
               
               // Set all nodes at once
               setNodes(generatedNodes)
