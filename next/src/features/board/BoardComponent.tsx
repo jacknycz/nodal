@@ -18,6 +18,7 @@ import '@xyflow/react/dist/style.css'
 // import html2canvas from 'html2canvas' // Unused for now
 
 import { useBoard } from './useBoard'
+import { usePlacement } from './usePlacement'
 import { boardStorage } from '../storage/storage'
 import DocumentNode from '../nodes/DocumentNode'
 import NodalNode from '../nodes/nodalNode'
@@ -42,7 +43,7 @@ import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import NodeEditModal from '../../components/NodeEditModal'
-import { useFocusStore } from '../focus/focusSlice'
+import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -122,6 +123,7 @@ function BoardContent({
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
+  const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
   const [thumbnailLoading, setThumbnailLoading] = useState(false);
   const prevSaveStatus = useRef(saveStatus);
   
@@ -141,10 +143,6 @@ function BoardContent({
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
-  const focusMode = useFocusStore((s) => s.mode)
-  const focusNeighborhood = useFocusStore((s) => s.focusNeighborhood)
-  const focusGroup = useFocusStore((s) => s.focusGroup)
-  const clearFocus = useFocusStore((s) => s.clearFocus)
   
   // Broadcast local cursor position
   useEffect(() => {
@@ -678,31 +676,100 @@ function BoardContent({
         
         const nodeDataArray = JSON.parse(jsonContent)
         if (Array.isArray(nodeDataArray)) {
-          // Create all nodes at once
-          const generatedNodes = nodeDataArray.map((nodeData, index) => {
-            const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
-            return {
-              id: `starter-node-${Date.now()}-${index}`,
-              type: 'default',
-              position,
-              data: { label: nodeData.label, content: nodeData.content },
+          // Use our intelligent placement system for board creation
+          try {
+            const nodesToPlace = nodeDataArray.map(nodeData => ({
+              title: nodeData.label,
+              content: nodeData.content,
+              type: 'default' as const
+            }))
+            
+            const placementResult = await placeBoardNodes(nodesToPlace)
+            
+            if (placementResult.success && placementResult.placements.length > 0) {
+              // Create nodes from intelligent placement
+              const generatedNodes = placementResult.placements.map(placement => ({
+                id: placement.node.id,
+                type: placement.node.type,
+                position: placement.position,
+                data: { 
+                  title: placement.node.data.title,
+                  content: placement.node.data.content
+                }
+              }))
+              
+              // Set all nodes at once
+              setNodes(generatedNodes)
+              console.log(`✨ Placed ${generatedNodes.length} starter nodes using ${placementResult.metadata.algorithm} algorithm`)
+              
+              // Create edges if any were suggested
+              if (placementResult.connections.length > 0) {
+                const generatedEdges = placementResult.connections.map(connection => ({
+                  id: connection.edge.id,
+                  source: connection.edge.source,
+                  target: connection.edge.target,
+                  type: connection.edge.type || 'floating'
+                }))
+                setEdges(generatedEdges)
+              }
+              
+              // Save immediately to database
+              const boardData = {
+                nodes: generatedNodes,
+                edges: placementResult.connections.map(c => c.edge),
+                viewport: reactFlowInstance.getViewport(),
+              }
+              
+              await boardStorage.updateBoard(boardId, boardData)
+              console.log('✅ Intelligently placed starter nodes saved successfully')
+              
+            } else {
+              // Fallback to simple grid placement
+              const generatedNodes = nodeDataArray.map((nodeData, index) => {
+                const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
+                return {
+                  id: `starter-node-${Date.now()}-${index}`,
+                  type: 'default',
+                  position,
+                  data: { title: nodeData.label, content: nodeData.content },
+                }
+              })
+              
+              setNodes(generatedNodes)
+              
+              const boardData = {
+                nodes: generatedNodes,
+                edges: [],
+                viewport: reactFlowInstance.getViewport(),
+              }
+              
+              await boardStorage.updateBoard(boardId, boardData)
+              console.log('⚠️ Used fallback placement for starter nodes')
             }
-          })
-          
-          // Set all nodes at once
-          setNodes(generatedNodes)
-          // console.log('📝 Set generated nodes in state:', generatedNodes.length)
-          
-          // Save immediately to database
-          const boardData = {
-            nodes: generatedNodes,
-            edges: [],
-            viewport: reactFlowInstance.getViewport(),
+            
+          } catch (placementError) {
+            console.error('Placement system error, using fallback:', placementError)
+            // Fallback to old system
+            const generatedNodes = nodeDataArray.map((nodeData, index) => {
+              const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
+              return {
+                id: `starter-node-${Date.now()}-${index}`,
+                type: 'default',
+                position,
+                data: { title: nodeData.label, content: nodeData.content },
+              }
+            })
+            
+            setNodes(generatedNodes)
+            
+            const boardData = {
+              nodes: generatedNodes,
+              edges: [],
+              viewport: reactFlowInstance.getViewport(),
+            }
+            
+            await boardStorage.updateBoard(boardId, boardData)
           }
-          
-          // console.log('💾 Saving generated nodes immediately...')
-          await boardStorage.updateBoard(boardId, boardData)
-          // console.log('✅ Generated nodes saved successfully')
           
           // Update save status
           setSaveStatus('saved')
@@ -755,6 +822,7 @@ function BoardContent({
     }
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
+  const { placeBoardNodes } = usePlacement()
   
   // Initialize board
   useEffect(() => {
@@ -1064,27 +1132,6 @@ function BoardContent({
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
 
-  // Keyboard shortcuts for focus
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (selectedNodes.length === 0) return
-      if (e.key.toLowerCase() === 'f' && !e.shiftKey) {
-        e.preventDefault()
-        focusNeighborhood(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
-      } else if (e.key.toLowerCase() === 'f' && e.shiftKey) {
-        e.preventDefault()
-        focusGroup(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
-      } else if (e.key === 'Escape') {
-        if (focusMode) {
-          e.preventDefault()
-          clearFocus()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedNodes, edges, focusMode, focusNeighborhood, focusGroup, clearFocus])
-
   // Handle XYFlow's selection changes
   const handleSelectionChange = useCallback(({ nodes }: { nodes: BoardNode[] }) => {
     const selectedIds = nodes.map(node => node.id)
@@ -1371,21 +1418,6 @@ function BoardContent({
         <Background />
         <Controls />
         <MiniMap />
-        
-        {/* Focus chip */}
-        {focusMode && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="px-3 py-1 rounded-full bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 shadow flex items-center gap-3 text-xs">
-              <span className="font-medium text-gray-700 dark:text-gray-200">Focus: {focusMode === 'neighbors' ? 'Neighborhood' : 'Group'}</span>
-              <button
-                onClick={() => clearFocus()}
-                className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="absolute bottom-4 left-16 z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
@@ -1416,7 +1448,9 @@ function BoardContent({
                 }
                 input.click()
               }}
+              onReorganize={() => setShowReorganizeMenu(true)}
               aiInitialized={aiInitialized}
+              nodeCount={nodes.length}
             />
             
             <ChatPanel
@@ -1479,15 +1513,6 @@ function BoardContent({
           setContextMenu({ isOpen: false, position: null });
         }}
         onGenerateAINode={handleOpenAINodeGenerator}
-        onFocusNeighborhood={() => {
-          if (selectedNodes.length === 0) return
-          focusNeighborhood(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
-        }}
-        onFocusGroup={() => {
-          if (selectedNodes.length === 0) return
-          focusGroup(selectedNodes, edges.map(e => ({ source: e.source as string, target: e.target as string })))
-        }}
-        onClearFocus={() => clearFocus()}
       />
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}
@@ -1552,7 +1577,9 @@ function BoardContent({
                   }
                   input.click()
                 }}
+                onReorganize={() => setShowReorganizeMenu(true)}
                 aiInitialized={aiInitialized}
+                nodeCount={nodes.length}
               />
             </>
           )}
@@ -1588,6 +1615,13 @@ function BoardContent({
           initialContent=""
         />
       )}
+      
+      {/* Reorganize Menu */}
+      <BoardReorganizeMenu
+        isOpen={showReorganizeMenu}
+        onClose={() => setShowReorganizeMenu(false)}
+        nodeCount={nodes.length}
+      />
     </div>
   )
 }

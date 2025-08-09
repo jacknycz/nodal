@@ -1,20 +1,24 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, RotateCcw } from 'lucide-react'
 
 interface FloatingActionButtonProps {
   onAddNode: () => void
   onAIGenerate: () => void
   onUploadDocument: () => void
+  onReorganize?: () => void
   aiInitialized: boolean
+  nodeCount?: number
 }
 
 export default function FloatingActionButton({
   onAddNode,
   onAIGenerate,
   onUploadDocument,
+  onReorganize,
   aiInitialized,
+  nodeCount = 0,
 }: FloatingActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -46,6 +50,16 @@ export default function FloatingActionButton({
         >
           <span className="text-lg">📄</span>
         </button>
+        
+        {onReorganize && nodeCount > 1 && (
+          <button
+            onClick={onReorganize}
+            className="w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
+            title={`Reorganize ${nodeCount} nodes`}
+          >
+            <RotateCcw className="w-5 h-5" />
+          </button>
+        )}
       </div>
       
       <button

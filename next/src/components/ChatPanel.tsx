@@ -4,9 +4,10 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useUnifiedAI } from '../features/ai/useUnifiedAI'
 import { useAIContext } from '../features/ai/aiContext'
 import { useBoardStore } from '../features/board/boardSlice'
+import { useAIPlacement } from '../features/board/usePlacement'
 import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 import type { BoardNode } from '../features/board/boardTypes'
-import { useFocusStore } from '../features/focus/focusSlice'
+import type { NodeToPlace } from '../features/board/placementTypes'
 
 interface ChatPanelProps {
   onGenerateNode?: (nodeData: { 
@@ -51,15 +52,15 @@ export default function ChatPanel({
   
   // Get selected nodes from board store
   const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
-  const mode = useFocusStore((s) => s.mode)
-  const focusedIds = useFocusStore((s) => s.focusedIds)
   
   // Use only props nodes - the store nodes are empty
   const nodes = propNodes || []
   
   // Get selected node data
   const selectedNodes = nodes.filter(node => selectedNodeIds.includes(node.id))
-  const focusedNodeList = mode ? nodes.filter(n => focusedIds.has(n.id)) : []
+  
+  // Use the new AI placement system
+  const { placeGeneratedNodes } = useAIPlacement()
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -73,9 +74,9 @@ export default function ChatPanel({
     const message = inputValue.trim()
     setInputValue('')
     
-    // Add focus/selected node context to the message
+    // Add selected node context to the message
     let contextualMessage = message
-    const contextNodes = focusedNodeList.length > 0 ? focusedNodeList : selectedNodes
+    const contextNodes = selectedNodes
     if (contextNodes.length > 0) {
       const nodeContext = contextNodes.map(node => {
         const title = node.data.title || 'Untitled Node'
@@ -83,9 +84,7 @@ export default function ChatPanel({
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
       
-      const label = focusedNodeList.length > 0
-        ? `Focused ${contextNodes.length === 1 ? 'node' : 'nodes'}`
-        : `Selected ${contextNodes.length === 1 ? 'node' : 'nodes'}`
+      const label = `Selected ${contextNodes.length === 1 ? 'node' : 'nodes'}`
 
       contextualMessage = `Context - ${label}:\n${nodeContext}\n\nUser message: ${message}`
     }
@@ -238,60 +237,87 @@ export default function ChatPanel({
     return out.join('\n\n')
   }
 
-  // Estimate node width (px) based on title/content length
-  const estimateNodeWidth = (title: string, content?: string): number => {
-    const titleChars = Math.min(40, title.length)
-    const contentChars = Math.min(120, (content || '').length)
-    const titleWidth = 16 + titleChars * 7 // approx 7px per char
-    const contentWidth = Math.sqrt(contentChars) * 12 // diminishing growth
-    const estimated = Math.max(titleWidth, contentWidth)
-    return Math.max(160, Math.min(360, estimated)) // clamp
-  }
-
-  // Compute a chord-safe radius so neighbor chords >= estimated width + padding
-  const computeSafeRadius = (
-    points: { title: string; content: string }[],
-    angleStep: number,
-    baseRadius: number
-  ): number => {
-    if (points.length <= 1) return baseRadius
-    const half = Math.max(0.01, angleStep / 2)
-    const sinHalf = Math.sin(half)
-    let required = baseRadius
-    for (const p of points) {
-      const w = estimateNodeWidth(p.title, p.content) + 24 // padding
-      const rReq = w / (2 * sinHalf)
-      if (rReq > required) required = rReq
+  // Generate nodes using our new intelligent placement system
+  const handleGenerateNodesFromMessage = async (points: { title: string; content: string }[]) => {
+    if (!selectedNodes.length) {
+      console.warn('No selected node for AI generation')
+      return
     }
-    return Math.min(900, required) // safety cap
-  }
 
-  // Fan position calculator centered below parent (rotated 90° clockwise)
-  const calculateFanPosition = (
-    index: number,
-    total: number,
-    centerPoint: { x: number; y: number },
-    radius: number,
-    angleSpan: number = Math.PI * 0.8,
-    angleCenter: number = Math.PI / 2, // downwards in screen coords
-    yOffset: number = 160, // push arc further below parent
-    minBelow: number = 220, // ensure at least this many px below parent
-    verticalStep: number = 36 // extra per-step drop to separate neighbors
-  ) => {
-    if (total === 1) {
-      const ySingle = centerPoint.y + radius + yOffset
-      return { x: centerPoint.x, y: Math.max(ySingle, centerPoint.y + minBelow) }
+    try {
+      // Convert points to NodeToPlace format
+      const nodesToPlace: NodeToPlace[] = points.map(point => ({
+        title: point.title,
+        content: point.content,
+        type: 'default'
+      }))
+
+      // Use our intelligent placement system
+      const result = await placeGeneratedNodes(nodesToPlace, selectedNodes[0].id)
+      
+      if (result.success && result.placements.length > 0) {
+        // Create nodes using the callback with intelligent positioning
+        result.placements.forEach((placement, index) => {
+          setTimeout(() => {
+            onGenerateNode?.({
+              id: placement.node.id,
+              label: placement.node.data.title || 'Generated Node',
+              content: placement.node.data.content,
+              position: placement.position,
+              referenceNode: {
+                id: selectedNodes[0].id,
+                title: selectedNodes[0].data.title || 'Reference Node'
+              }
+            })
+          }, index * 50) // Stagger creation for smooth animation
+        })
+        
+        console.log(`✨ Placed ${result.placements.length} nodes using ${result.metadata.algorithm} algorithm`)
+        if (result.warnings.length > 0) {
+          console.warn('Placement warnings:', result.warnings)
+        }
+      } else {
+        console.error('Failed to place nodes:', result.warnings)
+        // Fallback to basic placement
+        points.forEach((point, index) => {
+          setTimeout(() => {
+            onGenerateNode?.({
+              id: `ai-node-${Date.now()}-${index}`,
+              label: point.title,
+              content: point.content,
+              position: { 
+                x: selectedNodes[0].position.x + (index - points.length/2) * 200, 
+                y: selectedNodes[0].position.y + 300 
+              },
+              referenceNode: {
+                id: selectedNodes[0].id,
+                title: selectedNodes[0].data.title || 'Reference Node'
+              }
+            })
+          }, index * 50)
+        })
+      }
+    } catch (error) {
+      console.error('Error in intelligent node placement:', error)
+      // Fallback to simple placement
+      points.forEach((point, index) => {
+        setTimeout(() => {
+          onGenerateNode?.({
+            id: `ai-node-${Date.now()}-${index}`,
+            label: point.title,
+            content: point.content,
+            position: { 
+              x: selectedNodes[0].position.x + (index - points.length/2) * 200, 
+              y: selectedNodes[0].position.y + 300 
+            },
+            referenceNode: {
+              id: selectedNodes[0].id,
+              title: selectedNodes[0].data.title || 'Reference Node'
+            }
+          })
+        }, index * 50)
+      })
     }
-    const step = angleSpan / (total - 1)
-    const start = angleCenter - angleSpan / 2
-    const angle = start + step * index
-    const x = centerPoint.x + Math.cos(angle) * radius
-    let y = centerPoint.y + Math.sin(angle) * radius + yOffset
-    // Stagger vertically more for nodes farther from center
-    const rel = Math.abs(index - (total - 1) / 2)
-    y += rel * verticalStep
-    if (y < centerPoint.y + minBelow) y = centerPoint.y + minBelow
-    return { x, y }
   }
 
   if (!isOpen) {
@@ -438,50 +464,11 @@ export default function ChatPanel({
                 </div>
                 
                 {/* Add Generate Nodes button for AI responses with structured content */}
-                {message.role === 'assistant' && hasStructuredContent(message.content) && (
+                {message.role === 'assistant' && hasStructuredContent(message.content) && selectedNodes.length > 0 && (
                   <button
                     onClick={() => {
                       const points = extractPoints(message.content)
-                      const selectedNode = selectedNodes[0] // Get the reference node
-                      
-                      if (!selectedNode) return
-                      
-                      // Determine safe radius based on estimated widths and target angular spacing
-                      const angleSpan = Math.PI * 0.9 // a bit wider arc
-                      const angleStep = points.length > 1 ? angleSpan / (points.length - 1) : angleSpan
-                      const baseRadius = 320
-                      const safeRadius = computeSafeRadius(points, angleStep, baseRadius)
-                      const depthFactor = 1.35
-                      const finalRadius = safeRadius * depthFactor
-
-                      // Generate nodes in a fan layout centered below the parent node
-                      points.forEach((point, index) => {
-                        const fanPosition = calculateFanPosition(
-                          index,
-                          points.length,
-                          selectedNode.position,
-                          finalRadius,
-                          angleSpan,
-                          -Math.PI / 2 // downwards center
-                        )
-                        
-                        // Add slight delay to ensure unique timestamps
-                        setTimeout(() => {
-                          const nodeId = `ai-node-${Date.now()}`
-                          
-                          // Create the node with absolute position
-                          onGenerateNode?.({
-                            id: nodeId,
-                            label: point.title,
-                            content: point.content,
-                            position: fanPosition, // absolute position with width-aware radius
-                            referenceNode: {
-                              id: selectedNode.id,
-                              title: selectedNode.data.title || 'Reference Node'
-                            }
-                          })
-                        }, index * 50)
-                      })
+                      handleGenerateNodesFromMessage(points)
                     }}
                     className="mt-2 text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700 transition-colors flex items-center gap-1"
                   >

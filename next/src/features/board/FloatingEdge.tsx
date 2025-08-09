@@ -3,7 +3,6 @@
 import React, { useState, useRef } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position } from '@xyflow/react'
 import { X } from 'lucide-react'
-import { useFocusStore } from '../focus/focusSlice'
 
 interface FloatingEdgeProps {
   id: string
@@ -42,8 +41,6 @@ export default function FloatingEdge({
 }: FloatingEdgeProps) {
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const mode = useFocusStore((s) => s.mode)
-  const focusedIds = useFocusStore((s) => s.focusedIds)
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -65,8 +62,6 @@ export default function FloatingEdge({
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
       transition: 'all 0.2s ease',
-      opacity: mode ? ((source && target && focusedIds.has(source) && focusedIds.has(target)) ? 1 : 0.3) : 1,
-      pointerEvents: mode ? ((source && target && focusedIds.has(source) && focusedIds.has(target)) ? 'auto' : 'none') : 'auto',
     } as React.CSSProperties
 
     switch (data?.type) {
