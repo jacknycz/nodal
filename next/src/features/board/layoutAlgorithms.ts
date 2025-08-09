@@ -540,10 +540,12 @@ function getCenterPosition(context: PlacementContext): Position {
     }
   }
   
-  // Use actual viewport center
+  // Use actual viewport center - convert screen center to flow coordinates
+  // The viewport x,y are offsets (pan position), not screen coordinates
+  // We need to convert the screen center to flow coordinates
   return {
-    x: context.viewport.x + context.viewport.width / 2,
-    y: context.viewport.y + context.viewport.height / 2
+    x: -context.viewport.x / context.viewport.zoom + (context.viewport.width / 2) / context.viewport.zoom,
+    y: -context.viewport.y / context.viewport.zoom + (context.viewport.height / 2) / context.viewport.zoom
   }
 }
 

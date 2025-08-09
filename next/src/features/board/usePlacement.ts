@@ -20,7 +20,160 @@ import {
   placeBoardCreationNodes,
   reorganizeBoard
 } from './placementEngine'
+import { estimateNodeDimensions } from './spatialAnalysis'
 import { useBoardStore } from './boardSlice'
+
+// ===============================
+// CLUSTER MANAGEMENT FOR BETTER NODE SPACING
+// ===============================
+
+interface NodeCluster {
+  id: string
+  nodes: BoardNode[]
+  bounds: { minX: number; minY: number; maxX: number; maxY: number }
+  centerPosition: { x: number; y: number }
+  size: number
+}
+
+function detectNodeClusters(nodes: BoardNode[], edges: any[]): NodeCluster[] {
+  const visited = new Set<string>()
+  const clusters: NodeCluster[] = []
+  
+  // Build adjacency map
+  const adjacencyMap = new Map<string, Set<string>>()
+  nodes.forEach(node => adjacencyMap.set(node.id, new Set()))
+  edges.forEach(edge => {
+    adjacencyMap.get(edge.source)?.add(edge.target)
+    adjacencyMap.get(edge.target)?.add(edge.source)
+  })
+  
+  // Find connected components using DFS
+  nodes.forEach(node => {
+    if (!visited.has(node.id)) {
+      const clusterNodes: BoardNode[] = []
+      const stack = [node.id]
+      
+      while (stack.length > 0) {
+        const currentId = stack.pop()!
+        if (!visited.has(currentId)) {
+          visited.add(currentId)
+          const currentNode = nodes.find(n => n.id === currentId)
+          if (currentNode) {
+            clusterNodes.push(currentNode)
+            adjacencyMap.get(currentId)?.forEach(neighborId => {
+              if (!visited.has(neighborId)) {
+                stack.push(neighborId)
+              }
+            })
+          }
+        }
+      }
+      
+      if (clusterNodes.length > 0) {
+        const bounds = calculateClusterBounds(clusterNodes)
+        clusters.push({
+          id: `cluster-${clusters.length}`,
+          nodes: clusterNodes,
+          bounds,
+          centerPosition: {
+            x: bounds.minX + (bounds.maxX - bounds.minX) / 2,
+            y: bounds.minY + (bounds.maxY - bounds.minY) / 2
+          },
+          size: clusterNodes.length
+        })
+      }
+    }
+  })
+  
+  return clusters
+}
+
+function calculateClusterBounds(nodes: BoardNode[]) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  
+  nodes.forEach(node => {
+    // Use actual estimated dimensions for better bounds calculation
+    const dimensions = estimateNodeDimensions(
+      node.data.title || 'Node',
+      node.data.content,
+      node.data.type
+    )
+    minX = Math.min(minX, node.position.x)
+    minY = Math.min(minY, node.position.y)
+    maxX = Math.max(maxX, node.position.x + dimensions.width)
+    maxY = Math.max(maxY, node.position.y + dimensions.height)
+  })
+  
+  return { minX, minY, maxX, maxY }
+}
+
+function applyClusterSpacing(
+  nodes: BoardNode[], 
+  edges: any[], 
+  spacing = 350, 
+  center = { x: 400, y: 300 }
+): BoardNode[] {
+  const clusters = detectNodeClusters(nodes, edges)
+  
+  if (clusters.length <= 1) {
+    console.log('Single cluster detected, no spacing adjustment needed')
+    return nodes
+  }
+  
+  console.log(`🔍 Detected ${clusters.length} node clusters, applying spacing of ${spacing}px...`)
+  clusters.forEach((cluster, i) => {
+    console.log(`  Cluster ${i + 1}: ${cluster.size} nodes, bounds:`, cluster.bounds)
+  })
+  
+  // Sort clusters by size (largest first) for better arrangement
+  const sortedClusters = [...clusters].sort((a, b) => b.size - a.size)
+  
+  // Calculate total width needed
+  const totalClusterWidth = sortedClusters.reduce((sum, c) => sum + (c.bounds.maxX - c.bounds.minX), 0)
+  const totalSpacing = (clusters.length - 1) * spacing
+  const totalWidth = totalClusterWidth + totalSpacing
+  
+  // Start position (center the entire arrangement)
+  let currentX = center.x - totalWidth / 2
+  
+  const updates = new Map<string, { x: number; y: number }>()
+  
+  // Position each cluster
+  sortedClusters.forEach((cluster, index) => {
+    const clusterWidth = cluster.bounds.maxX - cluster.bounds.minX
+    const clusterHeight = cluster.bounds.maxY - cluster.bounds.minY
+    
+    // Calculate offset to move cluster to new position
+    const offsetX = currentX - cluster.bounds.minX
+    const offsetY = center.y - cluster.bounds.minY - clusterHeight / 2
+    
+    console.log(`  Moving cluster ${index + 1} by offset (${Math.round(offsetX)}, ${Math.round(offsetY)})`)
+    
+    // Update positions for all nodes in this cluster
+    cluster.nodes.forEach(node => {
+      updates.set(node.id, {
+        x: node.position.x + offsetX,
+        y: node.position.y + offsetY
+      })
+    })
+    
+    // Move to next cluster position
+    currentX += clusterWidth + spacing
+  })
+  
+  // Apply updates
+  const result = nodes.map(node => {
+    const update = updates.get(node.id)
+    if (update) {
+      console.log(`  📍 Node ${node.id}: (${Math.round(node.position.x)}, ${Math.round(node.position.y)}) → (${Math.round(update.x)}, ${Math.round(update.y)})`)
+      return { ...node, position: update }
+    }
+    return node
+  })
+  
+  console.log(`✅ Applied cluster spacing to ${updates.size} nodes`)
+  return result
+}
 
 /**
  * Main hook for using the placement system
@@ -190,14 +343,28 @@ export function usePlacement() {
       })
       
       console.log('Updated nodes:', updatedNodes.length)
+      
+      // Apply cluster spacing if there are multiple disconnected groups
+      // TEMPORARILY DISABLED FOR DEBUGGING
+      console.log('🚧 Cluster spacing temporarily disabled for debugging')
+      const finalNodes = updatedNodes
+      
+      // TODO: Re-enable cluster spacing after fixing the grid layout issue
+      // const viewport = getViewport()
+      // const viewportCenter = {
+      //   x: -viewport.x / viewport.zoom + (window.innerWidth / 2) / viewport.zoom,
+      //   y: -viewport.y / viewport.zoom + (window.innerHeight / 2) / viewport.zoom
+      // }
+      // const finalNodes = applyClusterSpacing(updatedNodes, existingEdges, 350, viewportCenter)
+      
       // Update the board with new positions
-      setNodes(updatedNodes)
+      setNodes(finalNodes)
     } else {
       console.log('No placements to apply or result failed')
     }
     
     return result
-  }, [createPlacementContext, existingNodes, setNodes])
+  }, [createPlacementContext, existingNodes, existingEdges, setNodes])
 
   /**
    * Gets the current viewport center in flow coordinates
