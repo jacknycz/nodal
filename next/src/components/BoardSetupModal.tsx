@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardBrief } from '../features/board/boardTypes'
 import Modal from './ui/Modal'
+import TextInput from './ui/TextInput'
 
 interface BoardSetupModalProps {
   isOpen: boolean
@@ -60,12 +61,11 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Title *
           </label>
-          <input
-            type="text"
+          <TextInput
             value={boardName}
-            onChange={(e) => setBoardName(e.target.value)}
+            onChange={(e) => setBoardName((e.target as HTMLInputElement).value)}
             placeholder="e.g., My Project Ideas, Research Notes..."
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            fullWidth
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             This is the name of your board and how it appears in your board list.
@@ -76,12 +76,11 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Topic (optional)
           </label>
-          <input
-            type="text"
+          <TextInput
             value={boardTopic}
-            onChange={(e) => setBoardTopic(e.target.value)}
+            onChange={(e) => setBoardTopic((e.target as HTMLInputElement).value)}
             placeholder="e.g., AI and productivity, Personal projects..."
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            fullWidth
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             This helps the AI understand the context of your board. It can be changed later.

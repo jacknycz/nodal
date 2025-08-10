@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import TextInput from './ui/TextInput'
 
 interface BoardNameModalProps {
   isOpen: boolean
@@ -108,18 +109,15 @@ export default function BoardNameModal({
             <label htmlFor="boardName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Board Name
             </label>
-            <input
+            <TextInput
               ref={inputRef}
               id="boardName"
-              type="text"
               value={boardName}
-              onChange={handleInputChange}
+              onChange={handleInputChange as any}
               onKeyDown={handleKeyDown}
               placeholder="e.g., Project Ideas, Meeting Notes, Research..."
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                error ? 'border-red-500' : 'border-gray-300'
-              }`}
-              maxLength={50}
+              error={error || undefined}
+              fullWidth
             />
             {error && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>

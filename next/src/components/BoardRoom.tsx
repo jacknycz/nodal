@@ -7,6 +7,7 @@ import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
+import TextInput from './ui/TextInput'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -121,7 +122,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       {/* Title row (full width) */}
       <div className="col-span-2 mb-2 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
         {isEditingTitle ? (
-          <input
+          <TextInput
             ref={titleInputRef}
             type="text"
             value={newName}
@@ -131,8 +132,9 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
               if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
             }}
             onBlur={commitTitleEdit}
-            className="w-full px-2 py-1 text-lg font-semibold bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-white"
-            maxLength={50}
+            size="md"
+            fullWidth
+            maxLength={50 as any}
           />
         ) : (
           <h3 className="w-full text-lg font-semibold text-gray-900 dark:text-white truncate">{newName}</h3>
@@ -270,11 +272,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Share link</label>
             <div className="flex gap-2">
-              <input
-                readOnly
-                value={shareLink}
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-              />
+              <TextInput readOnly value={shareLink} fullWidth />
               <button
                 onClick={() => { navigator.clipboard.writeText(shareLink) }}
                 className="px-3 py-2 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -288,7 +286,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Invite by email</label>
             <div className="flex gap-2">
-              <input
+              <TextInput
                 type="email"
                 placeholder="Add email and press Enter"
                 value={shareInput}
@@ -303,7 +301,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                     }
                   }
                 }}
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                fullWidth
               />
               <button
                 onClick={() => {
@@ -380,6 +378,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewBoardModal, setShowNewBoardModal] = useState(false)
   const [pinnedBoardIds, setPinnedBoardIds] = useState<string[]>([])
+  const [showSharedOnly, setShowSharedOnly] = useState(false)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -488,9 +487,11 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   const allBoards = [...boards, ...sharedBoards]
-  const filteredBoards = allBoards.filter(board =>
-    board.name.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredBoards = allBoards
+    .filter(board =>
+      board.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter(board => !showSharedOnly || (board as any).shared === true)
 
   // Sort: pinned first, then by lastModified desc
   const sortedBoards = [...filteredBoards].sort((a, b) => {
@@ -516,7 +517,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             <span>New Board</span>
           </button>
         </div>
-        <div className="mb-6">
+        
+        <div className="mb-6 flex items-center gap-4">
           <input
             type="text"
             placeholder="Search boards..."
@@ -524,6 +526,16 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          
+          <label className="flex items-center gap-2 select-none text-sm text-gray-700 dark:text-gray-200">
+            <input
+              type="checkbox"
+              checked={showSharedOnly}
+              onChange={e => setShowSharedOnly(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Show shared only
+          </label>
         </div>
         {error && (
           <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>

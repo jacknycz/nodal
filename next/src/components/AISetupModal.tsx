@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import TextInput from './ui/TextInput'
 import { useAIContext } from '../features/ai/aiContext'
 import { X, Key, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
@@ -84,12 +85,12 @@ export default function AISetupModal({ isOpen, onClose }: AISetupModalProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               OpenAI API Key
             </label>
-            <input
+            <TextInput
               type="password"
               value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
+              onChange={(e) => setApiKey((e.target as HTMLInputElement).value)}
               placeholder="sk-..."
-              className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              fullWidth
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Your API key is stored locally and never sent to our servers

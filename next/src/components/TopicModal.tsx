@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import TextInput from './ui/TextInput'
 
 interface TopicModalProps {
   isOpen: boolean
@@ -27,17 +28,15 @@ export default function TopicModal({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-96 max-w-full">
         <h2 className="text-xl font-bold mb-4">Set Board Topic</h2>
-        <input
-          type="text"
+        <TextInput
           value={topic}
-          onChange={(e) => setTopic(e.target.value)}
+          onChange={(e) => setTopic((e.target as HTMLInputElement).value)}
           placeholder="Enter board topic..."
-          className="w-full p-3 border border-gray-300 rounded-lg mb-4"
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              handleSave()
-            }
+          fullWidth
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave()
           }}
+          className="mb-4"
         />
         <div className="flex gap-2 justify-end">
           <button
