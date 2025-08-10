@@ -84,7 +84,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
 
   return (
     <div
-      className="relative grid grid-cols-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950/50 hover:border-gray-300 dark:hover:border-gray-600 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer"
+      className="group relative grid grid-cols-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950/50 hover:border-gray-300 dark:hover:border-gray-600 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer"
       onClick={onLoad}
     >
 
@@ -163,7 +163,7 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
             <span className="text-gray-400 text-xs">Generating...</span>
           </div>
         )}
-        {!loading && !imgError ? (
+        {!loading && !imgError && thumbnailUrl ? (
           <img
             src={thumbnailUrl}
             alt="Board thumbnail"
@@ -177,7 +177,21 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
               console.log('Thumbnail loaded successfully:', thumbnailUrl);
             }}
           />
-        ) : null}
+        ) : (
+          <div
+            className="w-32 h-32 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
+            style={{ minHeight: 64, minWidth: 64 }}
+          >
+            <span className="text-lg font-semibold text-gray-700 dark:text-gray-200 select-none">
+              {(board.name || '')
+                .trim()
+                .split(/\s+/)
+                .slice(0, 2)
+                .map(s => (s[0] ? s[0].toUpperCase() : ''))
+                .join('') || 'NB'}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -286,7 +300,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   )
 
   return (
-    <div className="h-full pt-16 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
+    <div className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
