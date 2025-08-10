@@ -140,7 +140,7 @@ export interface PlacementRequest {
   strategy: PlacementStrategy
   algorithm?: LayoutAlgorithm // Override automatic algorithm selection
   constraints?: PlacementConstraints
-  options?: LayoutOptions // Algorithm-specific options
+  options?: Partial<LayoutOptions> // Algorithm-specific options
 }
 
 // ===============================

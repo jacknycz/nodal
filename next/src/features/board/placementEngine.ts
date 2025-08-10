@@ -295,7 +295,7 @@ export class PlacementEngine {
     algorithm: LayoutAlgorithm,
     nodes: NodeToPlace[],
     context: PlacementContext,
-    options?: LayoutOptions
+    options?: Partial<LayoutOptions>
   ): Promise<NodePlacement[]> {
     
     switch (algorithm) {
@@ -545,7 +545,9 @@ export async function placeAIGeneratedNodes(
     nodes,
     context: enhancedContext,
     strategy: PlacementStrategy.AI_GENERATION,
-    algorithm: LayoutAlgorithm.FAN // Prefer fan for AI generation
+    algorithm: LayoutAlgorithm.FAN, // Prefer fan for AI generation
+    // Adjust placement settings (radius, distances, etc.) here for AI-generated nodes
+    options: { radius: 250, verticalOffset: 60 }
   })
 }
 
