@@ -35,7 +35,7 @@ export function calculateFanLayout(
   const {
     radius = 300,
     angleSpan = Math.PI * 1.2, // 216 degrees - wide enough for good spacing
-    angleCenter = -Math.PI / 2, // Downward by default
+    angleCenter = Math.PI / 2, // Downward by default (screen y increases downward)
     minDistance = 30,
     maxDistance = 800,
     verticalOffset = 120,
