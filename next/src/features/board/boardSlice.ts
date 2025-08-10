@@ -34,6 +34,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   addSelectedNode: (id: string) => void
   removeSelectedNode: (id: string) => void
   clearSelectedNodes: () => void
+  setEdges: (edges: BoardEdge[]) => void
   setFocusedNodes: (ids: string[]) => void
   clearFocusedNodes: () => void
   toggleFocusOnNode: (id: string, includeNeighbors?: boolean) => void
@@ -142,9 +143,11 @@ export const useBoardStore = create<BoardState & BoardActions & {
       }
       // Compute first-degree neighbors
       const neighborIds = new Set<string>([id])
-      state.edges.forEach(edge => {
-        if (edge.source === id) neighborIds.add(edge.target)
-        if (edge.target === id) neighborIds.add(edge.source)
+      ;(state.edges || []).forEach(edge => {
+        const source = typeof edge.source === 'string' ? edge.source : (edge.source as any)?.id
+        const target = typeof edge.target === 'string' ? edge.target : (edge.target as any)?.id
+        if (source === id && target) neighborIds.add(target)
+        if (target === id && source) neighborIds.add(source)
       })
       return { focusedNodeIds: Array.from(neighborIds) }
     })
@@ -152,9 +155,11 @@ export const useBoardStore = create<BoardState & BoardActions & {
   getFirstDegreeNeighbors: (id) => {
     const state = _get()
     const neighborIds = new Set<string>()
-    state.edges.forEach(edge => {
-      if (edge.source === id) neighborIds.add(edge.target)
-      if (edge.target === id) neighborIds.add(edge.source)
+    ;(state.edges || []).forEach(edge => {
+      const source = typeof edge.source === 'string' ? edge.source : (edge.source as any)?.id
+      const target = typeof edge.target === 'string' ? edge.target : (edge.target as any)?.id
+      if (source === id && target) neighborIds.add(target)
+      if (target === id && source) neighborIds.add(source)
     })
     return Array.from(neighborIds)
   },

@@ -109,6 +109,10 @@ function BoardContent({
   useEffect(() => {
     useBoardStore.getState().setNodes(nodes)
   }, [nodes])
+  // Sync XYFlow edges with store so focus neighbor computation has data
+  useEffect(() => {
+    useBoardStore.getState().setEdges(edges)
+  }, [edges])
   
   // Set Zustand currentBoardId from prop
   useEffect(() => {
