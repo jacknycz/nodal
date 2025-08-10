@@ -53,7 +53,7 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
         className={`absolute inset-0 bg-black backdrop-blur-sm transition-all duration-200 ease-out ${
           isVisible ? 'bg-opacity-40' : 'bg-opacity-0'
         }`}
-        onClick={onClose}
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
         aria-label="Close modal"
       />
       {/* Modal content */}

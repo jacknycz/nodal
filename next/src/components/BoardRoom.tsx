@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
@@ -24,9 +24,14 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
   const [imgError, setImgError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
-  const [showRenameModal, setShowRenameModal] = useState(false)
-  const [tempName, setTempName] = useState(board.name)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [originalName, setOriginalName] = useState(board.name)
+  const titleInputRef = useRef<HTMLInputElement | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareEmails, setShareEmails] = useState<string[]>([])
+  const [shareInput, setShareInput] = useState('')
+  const shareLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${board.id}`
 
   // Optionally, poll for thumbnail updates
   useEffect(() => {
@@ -51,24 +56,39 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
     return () => window.removeEventListener('thumbnail-generation', handler as EventListener)
   }, [board.id])
 
-  const confirmRename = () => {
-    if (tempName.trim() && tempName.trim() !== board.name) {
-      onRename(tempName.trim())
-      setNewName(tempName.trim())
+  const commitTitleEdit = () => {
+    const trimmed = newName.trim()
+    if (!trimmed) {
+      setNewName(originalName)
+      setIsEditingTitle(false)
+      return
     }
-    setShowRenameModal(false)
+    if (trimmed !== originalName) {
+      onRename(trimmed)
+    }
+    setIsEditingTitle(false)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      confirmRename()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      setShowRenameModal(false)
-      setTempName(newName)
+  // Click-outside to commit and exit title editing
+  useEffect(() => {
+    if (!isEditingTitle) return
+    const handleMouseDown = (e: MouseEvent) => {
+      const inputEl = titleInputRef.current
+      if (inputEl && !inputEl.contains(e.target as Node)) {
+        commitTitleEdit()
+      }
     }
-  }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [isEditingTitle, newName, originalName])
+
+  // Autofocus and select when entering title edit mode
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [isEditingTitle])
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp)
@@ -87,28 +107,57 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
     }
   }
 
+  const handleCardClick = () => {
+    if (showShareModal || showDeleteModal || isEditingTitle) return
+    onLoad()
+  }
+
   return (
     <div
-      className="group relative grid grid-cols-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950/50 hover:border-gray-300 dark:hover:border-gray-600 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer"
-      onClick={onLoad}
+      className="group relative grid grid-cols-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950/50 hover:border-gray-300 dark:hover:bg-gray-600 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer"
+      onClick={handleCardClick}
     >
 
-      {/* Board Info */}
+      {/* Title row (full width) */}
+      <div className="col-span-2 mb-2 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
+        {isEditingTitle ? (
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
+              if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
+            }}
+            onBlur={commitTitleEdit}
+            className="w-full px-2 py-1 text-lg font-semibold bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-white"
+            maxLength={50}
+          />
+        ) : (
+          <h3 className="w-full text-lg font-semibold text-gray-900 dark:text-white truncate">{newName}</h3>
+        )}
+        {!isEditingTitle && (
+          <button
+            onClick={() => { setOriginalName(newName); setIsEditingTitle(true) }}
+            className="ml-2 px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+            title="Edit title"
+          >
+            ✎
+          </button>
+        )}
+      </div>
+
+      {/* Board Info (left column) */}
       <div className="flex flex-col items-start">
-        {/* Board Name */}
+        {/* Shared with/by info */}
         <div className="mb-2 flex items-center gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-            {newName}
-          </h3>
           {board.shared && (
             <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
           )}
         </div>
-        {/* Shared with/by info */}
         {board.shared && (
-          <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">
-            Invited by: {board.invited_by || 'unknown'}
-          </div>
+          <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
         )}
         {/* Board Stats */}
         <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -122,19 +171,20 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         {/* Action Buttons - persistent bottom row */}
         <div className="col-span-2 mt-3 flex items-center justify-end gap-2">
           <button
+            onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
+            className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 transition-colors"
+            title="Share board"
+          >
+            Share
+          </button>
+          <button
             onClick={e => { e.stopPropagation(); onTogglePin() }}
             className={`px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ${isPinned ? 'text-yellow-700' : 'text-gray-700 dark:text-gray-200'}`}
             title={isPinned ? 'Unpin board' : 'Pin board'}
           >
             {isPinned ? 'Unpin' : 'Pin'}
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); setTempName(newName); setShowRenameModal(true) }}
-            className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            title="Rename board"
-          >
-            Edit
-          </button>
+          {/* Edit button removed; inline edit via title icon */}
           <button
             onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
             className="px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 transition-colors"
@@ -183,39 +233,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         )}
       </div>
 
-      {/* Rename Modal */}
-      <Modal
-        open={showRenameModal}
-        onClose={() => setShowRenameModal(false)}
-        title="Rename Board"
-        description="Update the name of your board."
-      >
-        <div className="space-y-4">
-          <input
-            type="text"
-            value={tempName}
-            onChange={e => setTempName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={50}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setShowRenameModal(false)}
-              className="px-3 py-1.5 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmRename}
-              className="px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-              disabled={!tempName.trim()}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {/* Inline title editing replaces rename modal */}
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -237,6 +255,116 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           >
             Delete
           </button>
+        </div>
+      </Modal>
+
+      {/* Share Modal */}
+      <Modal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title="Share Board"
+        description="Copy a link or invite people by email."
+      >
+        <div className="space-y-4">
+          {/* Share link */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Share link</label>
+            <div className="flex gap-2">
+              <input
+                readOnly
+                value={shareLink}
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+              />
+              <button
+                onClick={() => { navigator.clipboard.writeText(shareLink) }}
+                className="px-3 py-2 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          {/* Share by email */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Invite by email</label>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="Add email and press Enter"
+                value={shareInput}
+                onChange={e => setShareInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const email = shareInput.trim()
+                    if (email && !shareEmails.includes(email)) {
+                      setShareEmails(prev => [...prev, email])
+                      setShareInput('')
+                    }
+                  }
+                }}
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              />
+              <button
+                onClick={() => {
+                  const email = shareInput.trim()
+                  if (email && !shareEmails.includes(email)) {
+                    setShareEmails(prev => [...prev, email])
+                    setShareInput('')
+                  }
+                }}
+                className="px-3 py-2 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                Add
+              </button>
+            </div>
+            {shareEmails.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {shareEmails.map(email => (
+                  <span key={email} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
+                    {email}
+                    <button
+                      onClick={() => setShareEmails(prev => prev.filter(e => e !== email))}
+                      className="ml-1 text-gray-500 hover:text-gray-800 dark:hover:text-white"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="px-3 py-1.5 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Close
+            </button>
+            <button
+              onClick={async () => {
+                // Fire invitations for each email
+                try {
+                  await Promise.all(shareEmails.map(async (email) => {
+                    await fetch('/api/board/invitations', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ boardId: board.id, email, invitedBy: board.userId })
+                    })
+                  }))
+                  setShowShareModal(false)
+                  setShareEmails([])
+                } catch (e) {
+                  console.error('Failed to send invites', e)
+                }
+              }}
+              disabled={shareEmails.length === 0}
+              className="px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+            >
+              Send Invites
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
@@ -298,12 +426,16 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   const handleRename = async (boardId: string, newName: string) => {
+    // Optimistic update: avoid full reload/loader flicker
+    setBoards(prev => prev.map(b => b.id === boardId ? { ...b, name: newName, lastModified: Date.now() } : b))
+    setSharedBoards(prev => prev.map((b: any) => b.id === boardId ? { ...b, name: newName, lastModified: Date.now() } : b))
     try {
       const { boardStorage } = await import('../features/storage/storage')
       await boardStorage.renameBoard(boardId, newName)
-      await loadBoards()
     } catch (err) {
       setError('Failed to rename board')
+      // Optional: reload to reconcile state if needed, but avoid blocking UI
+      // void loadBoards()
     }
   }
 
