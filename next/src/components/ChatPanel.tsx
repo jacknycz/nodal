@@ -53,6 +53,8 @@ export default function ChatPanel({
   // Get selection and focus from board store
   const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
   const focusedNodeIds = useBoardStore((state) => state.focusedNodeIds || [])
+  const clearSelectedNodes = useBoardStore((state) => state.clearSelectedNodes)
+  const clearFocusedNodes = useBoardStore((state) => state.clearFocusedNodes)
   
   // Use only props nodes - the store nodes are empty
   const nodes = propNodes || []
@@ -512,17 +514,28 @@ export default function ChatPanel({
         </div>
       )}
 
-      {/* Selection Notification */}
+      {/* Selection/Focus Notification */}
       {selectedNodes.length > 0 && (
         <div className="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800">
-          <div className="flex items-center gap-2 text-sm text-primary-700 dark:text-primary-300">
-            <Target className="w-4 h-4" />
-            <span className="text-xs">
-              {selectedNodes.length === 1 
-                ? `Selected: ${selectedNodes[0].data.title || 'Untitled Node'}`
-                : `Selected: ${selectedNodes.length} nodes`
-              }
-            </span>
+          <div className="flex items-center justify-between text-sm text-primary-700 dark:text-primary-300">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4" />
+              <span className="text-xs">
+                {selectedNodes.length === 1 
+                  ? `Selected: ${selectedNodes[0].data.title || 'Untitled Node'}`
+                  : `Selected: ${selectedNodes.length} nodes`}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                clearSelectedNodes()
+                clearFocusedNodes()
+              }}
+              className="text-primary-400 hover:text-primary-600 dark:hover:text-primary-200"
+              aria-label="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
