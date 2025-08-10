@@ -56,6 +56,7 @@ export interface BoardState {
   nodes: BoardNode[]
   edges: BoardEdge[]
   selectedNodeIds: string[] // Change from selectedNodeId to selectedNodeIds
+  focusedNodeIds?: string[]
   viewport: {
     x: number
     y: number

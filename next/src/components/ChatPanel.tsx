@@ -50,14 +50,16 @@ export default function ChatPanel({
   const aiContext = useAIContext()
   const { isInitialized: aiInitialized } = aiContext
   
-  // Get selected nodes from board store
+  // Get selection and focus from board store
   const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
+  const focusedNodeIds = useBoardStore((state) => state.focusedNodeIds || [])
   
   // Use only props nodes - the store nodes are empty
   const nodes = propNodes || []
   
-  // Get selected node data
-  const selectedNodes = nodes.filter(node => selectedNodeIds.includes(node.id))
+  // Get context nodes: prefer focus if present, else selection
+  const contextIds = (focusedNodeIds && focusedNodeIds.length > 0) ? focusedNodeIds : selectedNodeIds
+  const selectedNodes = nodes.filter(node => contextIds.includes(node.id))
   
   // Use the new AI placement system
   const { placeGeneratedNodes } = useAIPlacement()

@@ -6,6 +6,7 @@ const initialState: BoardState = {
   nodes: [],
   edges: [],
   selectedNodeIds: [], // Change from selectedNodeId to selectedNodeIds array
+  focusedNodeIds: [],
   viewport: {
     x: 0,
     y: 0,
@@ -33,6 +34,10 @@ export const useBoardStore = create<BoardState & BoardActions & {
   addSelectedNode: (id: string) => void
   removeSelectedNode: (id: string) => void
   clearSelectedNodes: () => void
+  setFocusedNodes: (ids: string[]) => void
+  clearFocusedNodes: () => void
+  toggleFocusOnNode: (id: string, includeNeighbors?: boolean) => void
+  getFirstDegreeNeighbors: (id: string) => string[]
 }>((set, _get) => ({
   ...initialState,
 
@@ -121,6 +126,37 @@ export const useBoardStore = create<BoardState & BoardActions & {
 
   clearSelectedNodes: () => {
     set({ selectedNodeIds: [] })
+  },
+
+  // Focus controls
+  setFocusedNodes: (ids) => set({ focusedNodeIds: ids }),
+  clearFocusedNodes: () => set({ focusedNodeIds: [] }),
+  toggleFocusOnNode: (id, includeNeighbors = true) => {
+    set((state) => {
+      const isFocused = (state.focusedNodeIds || []).includes(id)
+      if (isFocused) {
+        return { focusedNodeIds: [] }
+      }
+      if (!includeNeighbors) {
+        return { focusedNodeIds: [id] }
+      }
+      // Compute first-degree neighbors
+      const neighborIds = new Set<string>([id])
+      state.edges.forEach(edge => {
+        if (edge.source === id) neighborIds.add(edge.target)
+        if (edge.target === id) neighborIds.add(edge.source)
+      })
+      return { focusedNodeIds: Array.from(neighborIds) }
+    })
+  },
+  getFirstDegreeNeighbors: (id) => {
+    const state = _get()
+    const neighborIds = new Set<string>()
+    state.edges.forEach(edge => {
+      if (edge.source === id) neighborIds.add(edge.target)
+      if (edge.target === id) neighborIds.add(edge.source)
+    })
+    return Array.from(neighborIds)
   },
 
   updateViewport: (viewport) => {

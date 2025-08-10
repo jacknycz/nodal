@@ -2,7 +2,8 @@
 
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash2, Edit3 } from 'lucide-react'
+import { useBoardStore } from '../board/boardSlice'
+import { Trash2, Edit3, Focus } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -29,6 +30,9 @@ interface NodalNodeProps {
   getNodeLockOwner?: (nodeId: string) => string | undefined
   isNodeLockedByMe?: (nodeId: string) => boolean
   nodeLocks?: any[]
+  // Focus props injected via stable handlers
+  focusedNodeIds?: string[]
+  toggleFocusOnNode?: (nodeId: string) => void
 }
 
 export default function NodalNode({
@@ -154,15 +158,22 @@ export default function NodalNode({
     )
   }
 
+  const focusedNodeIds = useBoardStore((s) => s.focusedNodeIds || [])
+  const toggleFocusOnNode = useBoardStore((s) => s.toggleFocusOnNode)
+  const hasFocus = Array.isArray(focusedNodeIds) && focusedNodeIds.length > 0
+  const isFocused = hasFocus ? focusedNodeIds.includes(id) : false
+
+  const glowClass = isFocused
+    ? 'border-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.2)]'
+    : selected
+    ? 'border-blue-500'
+    : isLocked && !isLockedByMe
+    ? 'border-red-500'
+    : 'border-gray-200 dark:border-gray-700'
+
   return (
     <div
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
-        selected
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-          : isLocked && !isLockedByMe
-          ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-          : 'border-gray-200 dark:border-gray-700'
-      }`}
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${hasFocus && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
       <div className="nodal-drag-handle cursor-move">
@@ -187,6 +198,22 @@ export default function NodalNode({
       </div>
       {/* Action buttons - only show on hover and if not locked by someone else */}
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Focus node"
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            if (typeof toggleFocusOnNode === 'function') {
+              toggleFocusOnNode(id)
+            } else if ((window as any).__toggleFocusOnNode) {
+              (window as any).__toggleFocusOnNode(id)
+            }
+          }}
+        >
+          <Focus size={14} />
+        </IconButton>
         <IconButton
           variant="default"
           size="sm"

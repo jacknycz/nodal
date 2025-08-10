@@ -1270,6 +1270,11 @@ function BoardContent({
       if ((event.ctrlKey || event.metaKey) && event.key === 's') {
         event.preventDefault()
         saveBoard()
+      } else if (event.key === 'Escape') {
+        // Clear focus on Escape
+        useBoardStore.getState().clearFocusedNodes()
+        ;(window as any).__focusedNodeIds = []
+        setNodes((nds) => Array.isArray(nds) ? [...nds] : nds)
       }
     }
     
@@ -1333,6 +1338,11 @@ function BoardContent({
       getNodeLockOwner,
       isNodeLockedByMe,
       nodeLocks,
+      focusedNodeIds: useBoardStore.getState().focusedNodeIds,
+      toggleFocusOnNode: (nodeId: string) => {
+        useBoardStore.getState().toggleFocusOnNode(nodeId, true)
+        setNodes((nds) => Array.isArray(nds) ? [...nds] : nds)
+      },
       currentUser: user, // Add current user to handlers
     }
     
@@ -1353,6 +1363,12 @@ function BoardContent({
     nodeLocks,
     user, // User dependency triggers re-creation when user changes
   ])
+
+  // Focus state wiring for nodes (exposed to node components via window for now)
+  useEffect(() => {
+    // keep global copy only for legacy consumers; nodes now receive focused ids via props
+    (window as any).__focusedNodeIds = useBoardStore.getState().focusedNodeIds || []
+  }, [nodes])
 
   const handleOpenAINodeGenerator = useCallback(() => {
     setShowAINodeGenerator(true)
@@ -1388,7 +1404,12 @@ function BoardContent({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onSelectionChange={handleSelectionChange}
-        onPaneClick={() => setContextMenu({ isOpen: false, position: null })}
+        onPaneClick={() => {
+          setContextMenu({ isOpen: false, position: null })
+          // Clear focus when clicking empty space
+          useBoardStore.getState().clearFocusedNodes()
+          ;(window as any).__focusedNodeIds = []
+        }}
         onPaneContextMenu={(event) => {
           event.preventDefault();
           setContextMenu({ 
