@@ -6,22 +6,27 @@ import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
 import { useSupabaseUser } from '../features/auth/authUtils'
+import Modal from './ui/Modal'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
 }
 
-function BoardCard({ board, onLoad, onRename, onDelete }: {
+function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }: {
   board: SavedBoard & { shared?: boolean; invited_by?: string }
   onLoad: () => void
   onRename: (newName: string) => void
   onDelete: () => void
+  isPinned: boolean
+  onTogglePin: () => void
 }) {
-  const [isRenaming, setIsRenaming] = useState(false)
   const [newName, setNewName] = useState(board.name)
   const [imgError, setImgError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg`)
   const [loading, setLoading] = useState(false)
+  const [showRenameModal, setShowRenameModal] = useState(false)
+  const [tempName, setTempName] = useState(board.name)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // Optionally, poll for thumbnail updates
   useEffect(() => {
@@ -46,22 +51,22 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
     return () => window.removeEventListener('thumbnail-generation', handler as EventListener)
   }, [board.id])
 
-  const handleRename = () => {
-    if (newName.trim() && newName.trim() !== board.name) {
-      onRename(newName.trim())
+  const confirmRename = () => {
+    if (tempName.trim() && tempName.trim() !== board.name) {
+      onRename(tempName.trim())
+      setNewName(tempName.trim())
     }
-    setIsRenaming(false)
-    setNewName(board.name)
+    setShowRenameModal(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      handleRename()
+      confirmRename()
     } else if (e.key === 'Escape') {
       e.preventDefault()
-      setIsRenaming(false)
-      setNewName(board.name)
+      setShowRenameModal(false)
+      setTempName(newName)
     }
   }
 
@@ -92,22 +97,9 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
       <div className="flex flex-col items-start">
         {/* Board Name */}
         <div className="mb-2 flex items-center gap-2">
-          {isRenaming ? (
-            <input
-              type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={handleRename}
-              className="w-full text-lg font-semibold bg-transparent border-b border-blue-500 focus:outline-none text-gray-900 dark:text-white"
-              maxLength={50}
-              onClick={e => e.stopPropagation()}
-            />
-          ) : (
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
-              {board.name}
-            </h3>
-          )}
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+            {newName}
+          </h3>
           {board.shared && (
             <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
           )}
@@ -127,31 +119,28 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
         <p className="text-xs text-gray-400 dark:text-gray-500">
           {formatDate(board.lastModified)}
         </p>
-        {/* Action Buttons */}
-        <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Action Buttons - persistent bottom row */}
+        <div className="col-span-2 mt-3 flex items-center justify-end gap-2">
           <button
-            onClick={e => {
-              e.stopPropagation()
-              setIsRenaming(true)
-            }}
-            className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            title="Rename board"
+            onClick={e => { e.stopPropagation(); onTogglePin() }}
+            className={`px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ${isPinned ? 'text-yellow-700' : 'text-gray-700 dark:text-gray-200'}`}
+            title={isPinned ? 'Unpin board' : 'Pin board'}
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
+            {isPinned ? 'Unpin' : 'Pin'}
           </button>
           <button
-            onClick={e => {
-              e.stopPropagation()
-              onDelete()
-            }}
-            className="p-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            onClick={e => { e.stopPropagation(); setTempName(newName); setShowRenameModal(true) }}
+            className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title="Rename board"
+          >
+            Edit
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
+            className="px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 transition-colors"
             title="Delete board"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
+            Delete
           </button>
         </div>
       </div>
@@ -193,6 +182,63 @@ function BoardCard({ board, onLoad, onRename, onDelete }: {
           </div>
         )}
       </div>
+
+      {/* Rename Modal */}
+      <Modal
+        open={showRenameModal}
+        onClose={() => setShowRenameModal(false)}
+        title="Rename Board"
+        description="Update the name of your board."
+      >
+        <div className="space-y-4">
+          <input
+            type="text"
+            value={tempName}
+            onChange={e => setTempName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            maxLength={50}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowRenameModal(false)}
+              className="px-3 py-1.5 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmRename}
+              className="px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              disabled={!tempName.trim()}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Board"
+        description={`Are you sure you want to delete "${newName}"? This action cannot be undone.`}
+      >
+        <div className="flex justify-end gap-2 mt-2">
+          <button
+            onClick={() => setShowDeleteModal(false)}
+            className="px-3 py-1.5 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { setShowDeleteModal(false); onDelete() }}
+            className="px-3 py-1.5 text-sm rounded bg-red-600 hover:bg-red-700 text-white"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -205,6 +251,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewBoardModal, setShowNewBoardModal] = useState(false)
+  const [pinnedBoardIds, setPinnedBoardIds] = useState<string[]>([])
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -233,8 +280,22 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   useEffect(() => {
     loadBoards()
+    // Load pinned boards from localStorage
+    try {
+      const stored = localStorage.getItem('pinnedBoards')
+      if (stored) setPinnedBoardIds(JSON.parse(stored))
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
+
+  const togglePin = (boardId: string) => {
+    setPinnedBoardIds(prev => {
+      const exists = prev.includes(boardId)
+      const next = exists ? prev.filter(id => id !== boardId) : [boardId, ...prev]
+      try { localStorage.setItem('pinnedBoards', JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
 
   const handleRename = async (boardId: string, newName: string) => {
     try {
@@ -299,6 +360,15 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     board.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Sort: pinned first, then by lastModified desc
+  const sortedBoards = [...filteredBoards].sort((a, b) => {
+    const aPinned = pinnedBoardIds.includes(a.id)
+    const bPinned = pinnedBoardIds.includes(b.id)
+    if (aPinned && !bPinned) return -1
+    if (!aPinned && bPinned) return 1
+    return (b.lastModified || 0) - (a.lastModified || 0)
+  })
+
   return (
     <div className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -332,18 +402,20 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBoards.length === 0 ? (
+            {sortedBoards.length === 0 ? (
               <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
                 No boards found. Create a new board to get started!
               </div>
             ) : (
-              filteredBoards.map(board => (
+              sortedBoards.map(board => (
                 <BoardCard
                   key={board.id}
                   board={board}
                   onLoad={() => onOpenBoard(board, undefined)}
                   onRename={newName => handleRename(board.id, newName)}
                   onDelete={() => handleDelete(board.id)}
+                  isPinned={pinnedBoardIds.includes(board.id)}
+                  onTogglePin={() => togglePin(board.id)}
                 />
               ))
             )}
