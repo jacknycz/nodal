@@ -8,9 +8,11 @@ import Loader from './ui/Loader'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
+import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
-import { PencilIcon } from 'lucide-react'
+import { PencilIcon, PinIcon } from 'lucide-react'
+import UnsplashBackground from './UnsplashBackground'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -118,123 +120,138 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
 
   return (
     <div
-      className="group relative grid grid-cols-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950/50 hover:border-gray-300 dark:hover:bg-gray-600 p-4 rounded-lg border transition-all duration-200 hover:shadow-md cursor-pointer"
+      className="group relative border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-950/50 hover:border-gray-300 dark:hover:bg-gray-600 p-4 rounded-3xl border transition-all duration-200 hover:shadow-md cursor-pointer"
       onClick={handleCardClick}
     >
 
-      {/* Title row (full width) */}
-      <div className="col-span-2 mb-2 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
-        {isEditingTitle ? (
-          <TextInput
-            ref={titleInputRef}
-            type="text"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
-              if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
-            }}
-            onBlur={commitTitleEdit}
-            size="md"
-            fullWidth
-            maxLength={50 as any}
-          />
-        ) : (
-          <h3 className="w-full text-lg font-semibold text-gray-900 dark:text-white truncate">{newName}</h3>
-        )}
-        {!isEditingTitle && (
-          <IconButton
-            aria-label="Edit title"
-            onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
-            className="ml-2"
-          >
-            <PencilIcon className="w-4 h-4" />
-          </IconButton>
-        )}
-      </div>
+      <IconButton
+        aria-label={isPinned ? 'Unpin board' : 'Pin board'}
+        onClick={(e) => { e.stopPropagation(); onTogglePin() }}
+        variant={isPinned ? 'primaryGhost' : 'secondaryGhost'}
+        className={`absolute top-2 right-2 ${isPinned ? 'text-tertiary-500 hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
+      >
+        <PinIcon className="w-4 h-4" />
+      </IconButton>
 
-      {/* Board Info (left column) */}
-      <div className="flex flex-col items-start">
-        {/* Shared with/by info */}
-        <div className="mb-2 flex items-center gap-2">
-          {board.shared && (
-            <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
+      <div className="flex justify-between">
+        {/* Title row (full width) */}
+        <div className="col-span-2 mb-2 flex items-center justify-between gap-1" onClick={e => e.stopPropagation()}>
+          {isEditingTitle ? (
+            <TextInput
+              ref={titleInputRef}
+              type="text"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
+                if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
+              }}
+              onBlur={commitTitleEdit}
+              size="md"
+              fullWidth
+              maxLength={50 as any}
+            />
+          ) : (
+            <h3 className="w-full text-2xl font-thin text-gray-900 dark:text-white truncate">{newName}</h3>
+          )}
+          {!isEditingTitle && (
+            <div className="flex items-center gap-1 ml-2">
+              <IconButton
+                variant="secondaryGhost"
+                aria-label="Edit title"
+                onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
+                className="ml-1"
+              >
+                <PencilIcon className="w-4 h-4" />
+              </IconButton>
+            </div>
           )}
         </div>
-        {board.shared && (
-          <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
-        )}
-        {/* Board Stats */}
-        <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 mb-2">
-          <span>{board.nodeCount} nodes</span>
-          <span>{board.edgeCount} connections</span>
+      </div>
+
+      <div className="grid grid-cols-2">
+        {/* Board Info (left column) */}
+        <div className="flex flex-col items-start">
+          {/* Shared with/by info */}
+          <div className="mb-2 flex items-center gap-2">
+            {board.shared && (
+              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
+            )}
+          </div>
+          {board.shared && (
+            <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
+          )}
+          {/* Board Stats */}
+          <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <div className="flex flex-col">
+              <span className="text-2xl font-thin">{board.nodeCount}</span>
+              <span className="text-xs">nodes</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-thin">{board.edgeCount}</span>
+              <span className="text-xs">connections</span>
+            </div>
+          </div>
+          {/* Last Modified */}
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {formatDate(board.lastModified)}
+          </p>
         </div>
-        {/* Last Modified */}
-        <p className="text-xs text-gray-400 dark:text-gray-500">
-          {formatDate(board.lastModified)}
-        </p>
-        {/* Action Buttons - persistent bottom row */}
-        <div className="col-span-2 mt-3 flex items-center justify-end gap-2">
-          <Button
-            variant="secondary"
-            onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
-            className="text-xs px-2 py-1"
-            title="Share board"
-          >
-            Share
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={e => { e.stopPropagation(); onTogglePin() }}
-            className="text-xs px-2 py-1"
-            title={isPinned ? 'Unpin board' : 'Pin board'}
-          >
-            {isPinned ? 'Unpin' : 'Pin'}
-          </Button>
-          {/* Edit button removed; inline edit via title icon */}
-          <Button
-            variant="danger"
-            onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
-            className="text-xs px-2 py-1"
-            title="Delete board"
-          >
-            Delete
-          </Button>
+
+        {/* Board Thumbnail */}
+        <div className="mb-2 w-full flex justify-center items-center">
+          {loading && (
+            <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
+              <span className="text-gray-400 text-xs">Generating...</span>
+            </div>
+          )}
+          {!loading && !imgError && thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt="Board thumbnail"
+              className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
+              style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
+              onError={() => {
+                setImgError(true);
+              }}
+            />
+          ) : (
+            <div
+              className="w-32 h-32 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
+              style={{ minHeight: 64, minWidth: 64 }}
+            >
+              <span className="text-lg font-semibold text-gray-700 dark:text-gray-200 select-none">
+                {(board.name || '')
+                  .trim()
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map(s => (s[0] ? s[0].toUpperCase() : ''))
+                  .join('') || 'NB'}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Board Thumbnail */}
-      <div className="mb-2 w-full flex justify-center items-center">
-        {loading && (
-          <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
-            <span className="text-gray-400 text-xs">Generating...</span>
-          </div>
-        )}
-        {!loading && !imgError && thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt="Board thumbnail"
-            className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
-            style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
-            onError={() => {
-              setImgError(true);
-            }}
-          />
-        ) : (
-          <div
-            className="w-32 h-32 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
-            style={{ minHeight: 64, minWidth: 64 }}
-          >
-            <span className="text-lg font-semibold text-gray-700 dark:text-gray-200 select-none">
-              {(board.name || '')
-                .trim()
-                .split(/\s+/)
-                .slice(0, 2)
-                .map(s => (s[0] ? s[0].toUpperCase() : ''))
-                .join('') || 'NB'}
-            </span>
-          </div>
-        )}
+      {/* Action Buttons - persistent bottom row */}
+      <div className="col-span-2 mt-3 flex items-center justify-end gap-2">
+        <Button
+          // variant="secondary"
+          onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
+          className="text-xs px-2 py-1"
+          title="Share board"
+        >
+          Share
+        </Button>
+        {/* Edit button removed; inline edit via title icon */}
+        <Button
+          variant="dangerGhost"
+          onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
+          className="text-xs px-2 py-1"
+          title="Delete board"
+        >
+          Delete
+        </Button>
       </div>
 
       {/* Inline title editing replaces rename modal */}
@@ -399,7 +416,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           ...((Array.isArray((await (user?.email ? fetch(`/api/board/shared?email=${encodeURIComponent(user!.email)}`) : null))?.json) ? [] : []) as any)
         ]
         // Fallback: rely on state after sharedBoards set in next tick
-      } catch {}
+      } catch { }
     } catch (err) {
       setError('Failed to load boards')
     } finally {
@@ -413,7 +430,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     try {
       const stored = localStorage.getItem('pinnedBoards')
       if (stored) setPinnedBoardIds(JSON.parse(stored))
-    } catch {}
+    } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
 
@@ -455,7 +472,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     setPinnedBoardIds(prev => {
       const exists = prev.includes(boardId)
       const next = exists ? prev.filter(id => id !== boardId) : [boardId, ...prev]
-      try { localStorage.setItem('pinnedBoards', JSON.stringify(next)) } catch {}
+      try { localStorage.setItem('pinnedBoards', JSON.stringify(next)) } catch { }
       return next
     })
   }
@@ -538,18 +555,22 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     return (b.lastModified || 0) - (a.lastModified || 0)
   })
 
+  // Determine a topic query from latest board (owned or shared)
+  const latestBoardTopic = (boards.concat(sharedBoards as any[])
+    .sort((a: any, b: any) => (b.lastModified || 0) - (a.lastModified || 0))[0]?.data?.topic) || 'creative'
+
   return (
-    <div className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
+    <div className="relative min-h-screen pt-16 flex flex-col">
+      <UnsplashBackground query={latestBoardTopic || 'creative'} />
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         {/* Welcome + Stats */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="col-span-1 md:col-span-2 rounded-xl p-5 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white">
-              Welcome back{user ? `, ${
-                (user.user_metadata?.full_name as string) ||
+            <h1 className="mb-4 text-xl md:text-4xl font-fredoka font-light text-gray-900 dark:text-white">
+              Welcome back{user ? `, ${(user.user_metadata?.full_name as string) ||
                 (user.user_metadata?.name as string) ||
                 (user.email ? (user.email as string).split('@')[0] : '')
-              }` : ''}!
+                }` : ''}!
             </h1>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               Pick up where you left off or create something new.
@@ -570,19 +591,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-between mb-8">
+
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
-          <button
-            onClick={handleNewBoardClick}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+          <Button onClick={handleNewBoardClick} className="flex items-center gap-2 bg-tertiary-500 hover:bg-tertiary-600 text-white">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span>New Board</span>
-          </button>
+          </Button>
         </div>
-        
+
         <div className="mb-6 flex items-center gap-4">
           <input
             type="text"
@@ -591,16 +611,13 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          
-          <label className="flex items-center gap-2 select-none text-sm text-gray-700 dark:text-gray-200">
-            <input
-              type="checkbox"
-              checked={showSharedOnly}
-              onChange={e => setShowSharedOnly(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            Show shared only
-          </label>
+
+          <Checkbox
+            label="Show shared only"
+            checked={showSharedOnly}
+            onChange={(v) => setShowSharedOnly(v)}
+            labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
+          />
         </div>
         {error && (
           <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>

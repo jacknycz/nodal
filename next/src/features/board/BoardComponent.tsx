@@ -59,15 +59,33 @@ interface BoardProps {
 
 // Add migrateNodeData definition if missing
 const migrateNodeData = (nodes: Node[]): Node[] => {
-  return nodes.map(node => {
-    const data = node.data as any;
-    if (data.label && !data.title) {
-      data.title = data.label;
-      delete data.label;
+  return nodes.map((node, index) => {
+    // Ensure data object exists and migrate legacy label
+    const data = (node?.data || {}) as any
+    if (data && typeof data === 'object' && data.label && !data.title) {
+      data.title = data.label
+      delete data.label
     }
-    return { ...node, data };
-  });
-};
+
+    // Ensure required fields exist
+    const hasValidPosition =
+      node && node.position &&
+      typeof (node.position as any).x === 'number' && isFinite((node.position as any).x) &&
+      typeof (node.position as any).y === 'number' && isFinite((node.position as any).y)
+
+    // Fallback grid placement if missing/invalid
+    const fallbackPos = { x: 120 + (index % 6) * 180, y: 120 + Math.floor(index / 6) * 140 }
+    const position = hasValidPosition ? node.position : fallbackPos
+
+    // Ensure type
+    const type = node?.type || 'default'
+
+    // Ensure id is a string
+    const id = typeof node?.id === 'string' ? node.id : `node-${Date.now()}-${index}`
+
+    return { ...node, id, type, position, data }
+  })
+}
 
 // === XYFlow/React Flow: Stable nodeTypes/edgeTypes ===
 // Define at module scope, never re-created
