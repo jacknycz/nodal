@@ -50,7 +50,7 @@
 - **AI Context**: Persistent memory system for AI conversations and suggestions.
 - **Thumbnail System**: Automatic generation and storage of board previews using Canvas API and Supabase storage.
 - **Node Selection**: Multi-node selection system with AI chat integration and visual feedback.
-- **Design System**: Reusable UI components (Modal, Button, IconButton, Toggle) for consistent design.
+- **Design System**: Reusable UI components (Modal, Button, IconButton, Toggle, TextInput, Checkbox, Menu, Loader) for consistent design.
 - **Rich Text Editing**: TipTap WYSIWYG editor for node content with formatting options.
 - **Collaborative Boards**: Real-time board sharing with email invitations, presence indicators, and live cursors.
 - **Optimistic Node Locking**: Prevents editing conflicts with visual lock indicators and seamless lock acquisition/release.
@@ -100,7 +100,7 @@
 next/src/
 ├── app/                    # Next.js App Router pages and API routes
 ├── components/             # Reusable UI components
-│   ├── ui/                # Design system components (Modal, Button, IconButton, Toggle)
+│   ├── ui/                # Design system components (Modal, Button, IconButton, Toggle, TextInput, Checkbox, Menu, Loader)
 │   ├── TipTapEditor.tsx   # Rich text editor component
 │   ├── NodeEditModal.tsx  # Modal for editing node content
 │   └── ...                # Feature-specific components
@@ -175,6 +175,18 @@ next/src/
 - **Toggle Component**: Reusable toggle switch with proper ARIA attributes
 - **Menu Component**: Unified dropdown menu system with support for custom content, notifications, and consistent hover behavior
 - **Consistent Styling**: All components support dark/light themes and responsive design
+
+### Newly added/updated components
+
+- **TextInput Component**: Design-system input with label, description, error, left/right icons, sizes (sm|md|lg), variants (default|unstyled), and `fullWidth` support.
+  - Class hooks: `className` for the input, uses Tailwind focus rings and dark theme tokens.
+- **Checkbox Component**: Accessible checkbox built around a native `input type="checkbox"` with a visually styled control.
+  - Props: `label`, `description`, `error`, `size` (sm|md|lg), `variant` (default|unstyled), `indeterminate`, `checked`, `defaultChecked`.
+  - Events: `onChange(checked: boolean, e)`.
+  - Class hooks: `className` (root label), `inputClassName` (hidden input), `controlClassName` (box), `labelTextClassName`, `descriptionClassName`.
+  - Accessibility: The native input remains in the DOM (sr-only) for proper focus and screen reader support.
+  - Usage example: `BoardRoom.tsx` “Show shared only” filter.
+- **Button/IconButton cursor behavior**: Base classes include `cursor-pointer` and proper disabled states.
 
 ---
 
@@ -309,6 +321,10 @@ next/src/
 - **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
 - **UI Simplification**: Remove unused features to keep the interface clean and focused.
 - **Design System**: Use established UI components for consistency and maintainability.
+- **Checkbox/Inputs**: Keep native inputs in the DOM for accessibility; visually hide when styling custom controls. Prefer design-system components (`TextInput`, `Checkbox`) over raw inputs.
+- **XYFlow Coordinates**: Use XYFlow utilities like `screenToFlowPosition` for converting pointer/screen coordinates to flow space. Avoid manual math where XYFlow provides helpers.
+- **Node Dimensions**: Prefer actual `node.width`/`node.height` when available; only fall back to estimations when necessary.
+- **Placement Tuning**: Centralize tweak points for node placement (radius, offsets, minDistance) to enable quick UX iteration.
 - **Node Selection**: Leverage XYFlow's native selection capabilities for reliability.
 - **Rich Text Editing**: Use TipTap for consistent, accessible rich text editing across the app.
 - **Build Optimization**: Configure ESLint and TypeScript settings appropriately for development vs production.
@@ -365,6 +381,39 @@ next/src/
 - **Collaborative boards**: Full real-time collaboration with sharing, presence, cursors, and node locking.
 - **Optimistic locking system**: Prevents editing conflicts with visual indicators and seamless UX.
 - **Real-time content sync**: Live node updates across users (implemented, debugging subscription issues).
+
+### New since latest session
+
+- **Placement Engine & XYFlow Consistency**
+  - AI-generated nodes placement tuned: radius = 250, verticalOffset = 60. Quick-tweak comment added near invocation point.
+  - Manual node placement uses `SMART_AUTO` with `minDistance = 50` and overlap avoidance, leveraging current node list for collision detection.
+  - Fan layout fix: corrected angle step calculation and flipped default orientation downward via `angleCenter = Math.PI / 2`.
+  - Spatial analysis prefers real `node.width`/`node.height` over estimates.
+  - Drag/drop and placement use XYFlow-native coordinate conversions (`screenToFlowPosition`).
+
+- **Focus Mode & Chat Integration**
+  - Focus toggles on a node include its first-degree neighbors; non-focused nodes are dimmed/blurred.
+  - Focus and selection are reflected in ChatPanel context; added a banner clear (X) to deselect/clear focus quickly.
+
+- **Board Room Enhancements**
+  - Pinned Boards: pin icon at `absolute top-2 right-2` toggles pin state; pinned boards sort first.
+  - Share/Delete actions: persistent bottom-row buttons; delete uses confirmation modal.
+  - Inline title editing: pencil icon next to title; autofocus/select on edit; optimistic rename to avoid loader flicker.
+  - Thumbnail resilience: initials fallback when image missing/fails; polling for refreshed thumbnails.
+  - Background: new `UnsplashBackground` with gradient base layer and blurred image overlay; positioned with `fixed inset-0 -z-10`; container uses `min-h-screen` so gradient covers full scroll.
+  - Show shared only: filter surfaced via new design-system `Checkbox` component.
+
+- **Design System Updates**
+  - New `Checkbox` component with accessibility-first approach and class hooks for flexible theming.
+  - New `TextInput` component adopted across modals and Board Room search.
+  - Button/IconButton variants expanded (ghost variants), unified pointer cursor behavior.
+
+### Quick tweak locations for developers
+
+- AI placement radius/offset: see `next/src/features/board/placementEngine.ts` near AI placement invocation (commented “Adjust placement settings ... here”).
+- Fan orientation/angle step: `next/src/features/board/layoutAlgorithms.ts` (`angleCenter`, `angleStep`).
+- Manual placement spacing: `next/src/features/board/usePlacement.ts` and calls in `BoardComponent.tsx`.
+- Modal z-index/backdrop: `next/src/components/ui/Modal.tsx` (uses `z-60` and stops click-through on backdrop).
 
 ---
 
