@@ -552,7 +552,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     .sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0))[0]?.data?.topic) || 'creative'
 
   return (
-    <div className="relative min-h-screen pt-16 flex flex-col">
+    <div className="relative min-h-screen pt-20 flex flex-col">
       <UnsplashBackground query={latestBoardTopic || 'creative'} />
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         {/* Welcome + Stats */}
