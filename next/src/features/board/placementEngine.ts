@@ -409,7 +409,7 @@ export class PlacementEngine {
     const executionTime = performance.now() - startTime
     
     // Calculate bounds
-    let bounds = {
+    const bounds = {
       minX: Infinity,
       minY: Infinity,
       maxX: -Infinity,

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
@@ -17,6 +17,8 @@ import UnsplashBackground from './UnsplashBackground'
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
 }
+
+type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
 
 function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }: {
   board: SavedBoard & { shared?: boolean; invited_by?: string }
@@ -45,7 +47,6 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       const timeout = setTimeout(() => {
         // Bump the URL to force reload
         const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg?${Date.now()}`;
-        console.log('Updating thumbnail URL:', newUrl);
         setThumbnailUrl(newUrl)
         setLoading(false)
       }, 2000)
@@ -62,7 +63,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
     return () => window.removeEventListener('thumbnail-generation', handler as EventListener)
   }, [board.id])
 
-  const commitTitleEdit = () => {
+  const commitTitleEdit = useCallback(() => {
     const trimmed = newName.trim()
     if (!trimmed) {
       setNewName(originalName)
@@ -73,7 +74,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       onRename(trimmed)
     }
     setIsEditingTitle(false)
-  }
+  }, [newName, originalName, onRename])
 
   // Click-outside to commit and exit title editing
   useEffect(() => {
@@ -86,7 +87,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
     }
     document.addEventListener('mousedown', handleMouseDown)
     return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [isEditingTitle, newName, originalName])
+  }, [isEditingTitle, newName, originalName, commitTitleEdit])
 
   // Autofocus and select when entering title edit mode
   useEffect(() => {
@@ -149,7 +150,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
               onBlur={commitTitleEdit}
               size="md"
               fullWidth
-              maxLength={50 as any}
+              maxLength={50}
             />
           ) : (
             <h3 className="w-full text-2xl font-thin text-gray-900 dark:text-white truncate">{newName}</h3>
@@ -206,15 +207,17 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
             </div>
           )}
           {!loading && !imgError && thumbnailUrl ? (
-            <img
-              src={thumbnailUrl}
-              alt="Board thumbnail"
-              className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
-              style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
-              onError={() => {
-                setImgError(true);
-              }}
-            />
+            <picture>
+              <img
+                src={thumbnailUrl}
+                alt="Board thumbnail"
+                className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
+                style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
+                onError={() => {
+                  setImgError(true);
+                }}
+              />
+            </picture>
           ) : (
             <div
               className="w-32 h-32 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
@@ -380,7 +383,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const user = useSupabaseUser()
   const [boards, setBoards] = useState<SavedBoard[]>([])
-  const [sharedBoards, setSharedBoards] = useState<any[]>([])
+  const [sharedBoards, setSharedBoards] = useState<SharedBoard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -392,7 +395,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
-  const [boardBrief, setBoardBrief] = useState<BoardBrief | null>(null)
 
   const loadBoards = async () => {
     try {
@@ -408,16 +410,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       } else {
         setSharedBoards([])
       }
-      // Compute total documents across all boards (owned + shared)
-      try {
-        setStatsLoading(true)
-        const allIds = [
-          ...loadedBoards.map(b => b.id),
-          ...((Array.isArray((await (user?.email ? fetch(`/api/board/shared?email=${encodeURIComponent(user!.email)}`) : null))?.json) ? [] : []) as any)
-        ]
-        // Fallback: rely on state after sharedBoards set in next tick
-      } catch { }
-    } catch (err) {
+      // Stats computed in a separate effect when state settles
+    } catch {
       setError('Failed to load boards')
     } finally {
       setLoading(false)
@@ -442,7 +436,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         const { boardStorage } = await import('../features/storage/storage')
         const allIds: string[] = [
           ...boards.map(b => b.id),
-          ...sharedBoards.map((b: any) => b.id)
+          ...sharedBoards.map((b) => b.id)
         ]
         const counts = await Promise.all(
           allIds.map(async (id) => {
@@ -480,11 +474,11 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const handleRename = async (boardId: string, newName: string) => {
     // Optimistic update: avoid full reload/loader flicker
     setBoards(prev => prev.map(b => b.id === boardId ? { ...b, name: newName, lastModified: Date.now() } : b))
-    setSharedBoards(prev => prev.map((b: any) => b.id === boardId ? { ...b, name: newName, lastModified: Date.now() } : b))
+    setSharedBoards(prev => prev.map((b) => b.id === boardId ? { ...b, name: newName, lastModified: Date.now() } : b))
     try {
       const { boardStorage } = await import('../features/storage/storage')
       await boardStorage.renameBoard(boardId, newName)
-    } catch (err) {
+    } catch {
       setError('Failed to rename board')
       // Optional: reload to reconcile state if needed, but avoid blocking UI
       // void loadBoards()
@@ -496,7 +490,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       const { boardStorage } = await import('../features/storage/storage')
       await boardStorage.deleteBoard(boardId)
       await loadBoards()
-    } catch (err) {
+    } catch {
       setError('Failed to delete board')
     }
   }
@@ -516,15 +510,13 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         await loadBoards() // Refresh the board list
         onOpenBoard(newBoard, undefined) // Mark as new
       }
-    } catch (error) {
-      console.error('Failed to create new board:', error)
+    } catch {
       setError('Failed to create new board')
     }
   }
 
   // Handle board setup completion (now creates the board directly)
   const handleBoardSetupComplete = (brief: BoardBrief) => {
-    setBoardBrief(brief)
     setShowBoardSetup(false)
     onOpenBoard(null, brief) // Pass brief to App/Board
   }
@@ -532,19 +524,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   // Handle cancellation of any modal in the flow
   const handleCancelSetup = () => {
     setShowBoardSetup(false)
-    setBoardBrief(null)
   }
 
   const handleNewBoardClick = () => {
     setShowBoardSetup(true)
   }
 
-  const allBoards = [...boards, ...sharedBoards]
+  const allBoards: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
   const filteredBoards = allBoards
     .filter(board =>
       board.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
-    .filter(board => !showSharedOnly || (board as any).shared === true)
+    .filter(board => !showSharedOnly || ('shared' in board && board.shared === true))
 
   // Sort: pinned first, then by lastModified desc
   const sortedBoards = [...filteredBoards].sort((a, b) => {
@@ -556,8 +547,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   })
 
   // Determine a topic query from latest board (owned or shared)
-  const latestBoardTopic = (boards.concat(sharedBoards as any[])
-    .sort((a: any, b: any) => (b.lastModified || 0) - (a.lastModified || 0))[0]?.data?.topic) || 'creative'
+  const latestBoards: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
+  const latestBoardTopic = (latestBoards
+    .sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0))[0]?.data?.topic) || 'creative'
 
   return (
     <div className="relative min-h-screen pt-16 flex flex-col">

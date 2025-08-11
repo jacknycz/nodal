@@ -108,7 +108,7 @@ export default function Topbar({
     upsertPresence()
     interval = setInterval(upsertPresence, 15000)
     return () => { if (interval) clearInterval(interval) }
-  }, [currentBoardId, user?.id])
+  }, [currentBoardId, user?.id, supabase])
 
   // Presence: subscribe to changes
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function Topbar({
     }
     fetchPresence()
     return () => { supabase.removeChannel(channel) }
-  }, [currentBoardId])
+  }, [currentBoardId, supabase])
 
   // Helper to get avatar for a user_id
   const getPresenceAvatar = (userId: string) => {
@@ -147,7 +147,7 @@ export default function Topbar({
       // Current user: show their avatar if available
       const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
       if (avatar) {
-        return <img src={avatar} alt="avatar" className="w-6 h-6 rounded-full object-cover border-2 border-white" />
+        return <Image src={avatar} alt="avatar" width={24} height={24} className="w-6 h-6 rounded-full object-cover border-2 border-white" unoptimized />
       }
     }
     // Fallback: colored initials
@@ -166,7 +166,7 @@ export default function Topbar({
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenBoardRoom}
-              className={`focus:outline-none flex cursor-pointer flex items-center gap-2 rounded-full p-1 ${
+              className={`focus:outline-none cursor-pointer flex items-center gap-2 rounded-full p-1 ${
                 isBoardView 
                   ? 'text-gray-900 dark:text-white' 
                   : 'bg-primary-500 text-white dark:bg-primary-500'

@@ -63,9 +63,9 @@ class BoardStorage {
     return supabaseStorage.getDocument(documentId)
   }
 
-  async getDocumentMetadata(_documentId: string): Promise<DocumentMetadata | null> {
+  async getDocumentMetadata(documentId: string): Promise<DocumentMetadata | null> {
     // This would need to be implemented in supabaseStorage
-    console.warn('getDocumentMetadata not yet implemented for Supabase storage')
+    console.warn('getDocumentMetadata not yet implemented for Supabase storage:', documentId)
     return null
   }
 

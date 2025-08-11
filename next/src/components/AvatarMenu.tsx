@@ -12,6 +12,7 @@ import {
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 import ThemeToggle from './ThemeToggle'
+import Image from 'next/image'
 import Menu from './ui/Menu'
 
 interface AvatarMenuProps {
@@ -54,8 +55,8 @@ export default function AvatarMenu({
         .sort((a, b) => b.lastModified - a.lastModified)
         .slice(0, 3) // Only show last 3 boards
       setRecentBoards(recent)
-    } catch (error) {
-      console.error('Failed to load recent boards:', error)
+    } catch {
+      // Silently ignore
     }
   }
 
@@ -122,10 +123,13 @@ export default function AvatarMenu({
           style={{ minWidth: '40px', minHeight: '40px' }}
         >
           {getUserAvatar() ? (
-            <img 
-              src={getUserAvatar()} 
+            <Image 
+              src={getUserAvatar()}
               alt={getUserDisplayName()}
+              width={24}
+              height={24}
               className="w-6 h-6 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+              unoptimized
             />
           ) : (
             <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -142,10 +146,13 @@ export default function AvatarMenu({
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
               {getUserAvatar() ? (
-                <img 
-                  src={getUserAvatar()} 
+                <Image 
+                  src={getUserAvatar()}
                   alt={getUserDisplayName()}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                  unoptimized
                 />
               ) : (
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">

@@ -8,14 +8,13 @@ import BoardRoom from './BoardRoom'
 import BoardComponent from '../features/board/BoardComponent'
 import LoginScreen from './LoginScreen'
 import { useSupabaseUser } from '../features/auth/authUtils'
-import { boardStorage } from '../features/storage/storage'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 
 export default function BoardRoomPage() {
   const user = useSupabaseUser()
   const router = useRouter()
-  const [currentBoard, setCurrentBoard] = useState<SavedBoard | null>(null)
+  const [currentBoard, _setCurrentBoard] = useState<SavedBoard | null>(null)
   const [pendingBoardBrief, setPendingBoardBrief] = useState<BoardBrief | null>(null)
   const [boardState, setBoardState] = useState({
     boardName: undefined as string | undefined,
@@ -86,8 +85,8 @@ export default function BoardRoomPage() {
                 boardName={currentBoard?.name}
                 pendingBoardBrief={pendingBoardBrief || undefined}
                 clearPendingBoardBrief={clearPendingBoardBrief}
-                onDeleteNode={(nodeId) => {
-                  deleteNodeRef.current = (nodeId: string) => {
+                 onDeleteNode={(_nodeId) => {
+                  deleteNodeRef.current = (_nodeId: string) => {
                     // This will be called by the BoardComponent
                   }
                 }}
