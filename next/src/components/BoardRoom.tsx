@@ -136,7 +136,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
 
       <div className="flex justify-between">
         {/* Title row (full width) */}
-        <div className="col-span-2 mb-2 flex items-center justify-between gap-1" onClick={e => e.stopPropagation()}>
+        <div className="col-span-2 mb-2 pr-6 flex items-center justify-between gap-1 max-w-full" onClick={e => e.stopPropagation()}>
           {isEditingTitle ? (
             <TextInput
               ref={titleInputRef}
@@ -153,12 +153,12 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
               maxLength={50}
             />
           ) : (
-            <h3 className="w-full text-2xl font-thin text-gray-900 dark:text-white truncate">{newName}</h3>
+            <h3 className="w-full text-xl font-thin text-gray-900 dark:text-white truncate">{newName}</h3>
           )}
           {!isEditingTitle && (
             <div className="flex items-center gap-1 ml-2">
               <IconButton
-                variant="secondaryGhost"
+                variant="primaryGhost"
                 aria-label="Edit title"
                 onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
                 className="ml-1"
@@ -237,9 +237,9 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       </div>
 
       {/* Action Buttons - persistent bottom row */}
-      <div className="col-span-2 mt-3 flex items-center justify-end gap-2">
+      <div className="col-span-2 mt-4 flex items-center justify-between gap-2">
         <Button
-          // variant="secondary"
+          variant="secondary"
           onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
           className="text-xs px-2 py-1"
           title="Share board"
@@ -551,40 +551,52 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const latestBoardTopic = (latestBoards
     .sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0))[0]?.data?.topic) || 'creative'
 
+  // Prefer first name; if missing, use last name; otherwise no name
+  const greetingName = (() => {
+    const meta = user?.user_metadata as Record<string, unknown> | undefined
+    const given = String(meta?.given_name ?? '').trim()
+    const family = String(meta?.family_name ?? '').trim()
+    const full = String((meta?.full_name ?? meta?.name) ?? '').trim()
+    if (given) return given.split(/\s+/)[0]
+    if (full) {
+      const parts = full.split(/\s+/).filter(Boolean)
+      if (parts.length >= 2) return parts[0]
+    }
+    if (family) return family.split(/\s+/)[0]
+    return ''
+  })()
+
   return (
-    <div className="relative min-h-screen pt-20 flex flex-col">
+    <div className="relative min-h-screen pt-16 flex flex-col">
       <UnsplashBackground query={latestBoardTopic || 'creative'} />
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-        {/* Welcome + Stats */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="col-span-1 md:col-span-2 rounded-xl p-5 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 shadow-sm">
-            <h1 className="mb-4 text-xl md:text-4xl font-fredoka font-light text-gray-900 dark:text-white">
-              Welcome back{user ? `, ${(user.user_metadata?.full_name as string) ||
-                (user.user_metadata?.name as string) ||
-                (user.email ? (user.email as string).split('@')[0] : '')
-                }` : ''}!
+        {/* Welcome + Stats Open */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-1 rounded-xl ">
+            <h1 className="mb-4 text-xl md:text-5xl font-fredoka font-medium text-white dark:text-white">
+              <span className="font-normal">Welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-sm text-gray-200">
               Pick up where you left off or create something new.
             </p>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-center">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
-              <div className="text-xl font-bold text-gray-900 dark:text-white">{boards.length}</div>
+            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+              <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
+              <div className="text-4xl font-medium text-gray-900 dark:text-white">{boards.length}</div>
             </div>
-            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-center">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
-              <div className="text-xl font-bold text-gray-900 dark:text-white">{sharedBoards.length}</div>
+            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+              <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
+              <div className="text-4xl font-medium text-gray-900 dark:text-white">{sharedBoards.length}</div>
             </div>
-            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-center">
-              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
-              <div className="text-xl font-bold text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
+            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+              <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
+              <div className="text-4xl font-medium text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 mt-16">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
 
           <Button onClick={handleNewBoardClick} className="flex items-center gap-2 bg-tertiary-500 hover:bg-tertiary-600 text-white">
@@ -601,7 +613,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             placeholder="Search boards..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full max-w-md px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full max-w-md px-4 py-2 rounded-4xl bg-white/80 border-0 dark:bg-gray-950/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           <Checkbox
