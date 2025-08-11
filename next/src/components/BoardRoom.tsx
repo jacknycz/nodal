@@ -8,6 +8,9 @@ import Loader from './ui/Loader'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
+import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import { PencilIcon } from 'lucide-react'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -140,13 +143,13 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           <h3 className="w-full text-lg font-semibold text-gray-900 dark:text-white truncate">{newName}</h3>
         )}
         {!isEditingTitle && (
-          <button
-            onClick={() => { setOriginalName(newName); setIsEditingTitle(true) }}
-            className="ml-2 px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-            title="Edit title"
+          <IconButton
+            aria-label="Edit title"
+            onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
+            className="ml-2"
           >
-            ✎
-          </button>
+            <PencilIcon className="w-4 h-4" />
+          </IconButton>
         )}
       </div>
 
@@ -172,28 +175,31 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         </p>
         {/* Action Buttons - persistent bottom row */}
         <div className="col-span-2 mt-3 flex items-center justify-end gap-2">
-          <button
+          <Button
+            variant="secondary"
             onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
-            className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 transition-colors"
+            className="text-xs px-2 py-1"
             title="Share board"
           >
             Share
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
             onClick={e => { e.stopPropagation(); onTogglePin() }}
-            className={`px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ${isPinned ? 'text-yellow-700' : 'text-gray-700 dark:text-gray-200'}`}
+            className="text-xs px-2 py-1"
             title={isPinned ? 'Unpin board' : 'Pin board'}
           >
             {isPinned ? 'Unpin' : 'Pin'}
-          </button>
+          </Button>
           {/* Edit button removed; inline edit via title icon */}
-          <button
+          <Button
+            variant="danger"
             onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
-            className="px-2 py-1 text-xs rounded bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 transition-colors"
+            className="text-xs px-2 py-1"
             title="Delete board"
           >
             Delete
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -211,11 +217,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
             className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
             style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
             onError={() => {
-              console.log('Thumbnail failed to load:', thumbnailUrl);
               setImgError(true);
-            }}
-            onLoad={() => {
-              console.log('Thumbnail loaded successfully:', thumbnailUrl);
             }}
           />
         ) : (
@@ -245,18 +247,12 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         description={`Are you sure you want to delete "${newName}"? This action cannot be undone.`}
       >
         <div className="flex justify-end gap-2 mt-2">
-          <button
-            onClick={() => setShowDeleteModal(false)}
-            className="px-3 py-1.5 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-          >
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="text-sm px-3 py-1.5">
             Cancel
-          </button>
-          <button
-            onClick={() => { setShowDeleteModal(false); onDelete() }}
-            className="px-3 py-1.5 text-sm rounded bg-red-600 hover:bg-red-700 text-white"
-          >
+          </Button>
+          <Button variant="danger" onClick={() => { setShowDeleteModal(false); onDelete() }} className="text-sm px-3 py-1.5">
             Delete
-          </button>
+          </Button>
         </div>
       </Modal>
 
@@ -273,12 +269,9 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Share link</label>
             <div className="flex gap-2">
               <TextInput readOnly value={shareLink} fullWidth />
-              <button
-                onClick={() => { navigator.clipboard.writeText(shareLink) }}
-                className="px-3 py-2 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-              >
+              <Button variant="secondary" onClick={() => { navigator.clipboard.writeText(shareLink) }} className="text-sm px-3 py-2">
                 Copy
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -303,7 +296,8 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                 }}
                 fullWidth
               />
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => {
                   const email = shareInput.trim()
                   if (email && !shareEmails.includes(email)) {
@@ -311,10 +305,10 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                     setShareInput('')
                   }
                 }}
-                className="px-3 py-2 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="text-sm px-3 py-2"
               >
                 Add
-              </button>
+              </Button>
             </div>
             {shareEmails.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
@@ -334,13 +328,10 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           </div>
 
           <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setShowShareModal(false)}
-              className="px-3 py-1.5 text-sm rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-            >
+            <Button variant="secondary" onClick={() => setShowShareModal(false)} className="text-sm px-3 py-1.5">
               Close
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={async () => {
                 // Fire invitations for each email
                 try {
@@ -358,10 +349,10 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                 }
               }}
               disabled={shareEmails.length === 0}
-              className="px-3 py-1.5 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+              className="text-sm px-3 py-1.5"
             >
               Send Invites
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -379,6 +370,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [showNewBoardModal, setShowNewBoardModal] = useState(false)
   const [pinnedBoardIds, setPinnedBoardIds] = useState<string[]>([])
   const [showSharedOnly, setShowSharedOnly] = useState(false)
+  const [totalDocuments, setTotalDocuments] = useState<number>(0)
+  const [statsLoading, setStatsLoading] = useState<boolean>(false)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -398,6 +391,15 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       } else {
         setSharedBoards([])
       }
+      // Compute total documents across all boards (owned + shared)
+      try {
+        setStatsLoading(true)
+        const allIds = [
+          ...loadedBoards.map(b => b.id),
+          ...((Array.isArray((await (user?.email ? fetch(`/api/board/shared?email=${encodeURIComponent(user!.email)}`) : null))?.json) ? [] : []) as any)
+        ]
+        // Fallback: rely on state after sharedBoards set in next tick
+      } catch {}
     } catch (err) {
       setError('Failed to load boards')
     } finally {
@@ -414,6 +416,40 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
+
+  // Re-compute document stats whenever boards/sharedBoards change
+  useEffect(() => {
+    const computeDocs = async () => {
+      try {
+        setStatsLoading(true)
+        const { boardStorage } = await import('../features/storage/storage')
+        const allIds: string[] = [
+          ...boards.map(b => b.id),
+          ...sharedBoards.map((b: any) => b.id)
+        ]
+        const counts = await Promise.all(
+          allIds.map(async (id) => {
+            try {
+              const docs = await boardStorage.getBoardDocuments(id)
+              return docs.length
+            } catch {
+              return 0
+            }
+          })
+        )
+        const total = counts.reduce((a, b) => a + b, 0)
+        setTotalDocuments(total)
+      } catch {
+        setTotalDocuments(0)
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+    // Only run after initial boards load completes
+    if (!loading) {
+      computeDocs()
+    }
+  }, [boards, sharedBoards, loading])
 
   const togglePin = (boardId: string) => {
     setPinnedBoardIds(prev => {
@@ -505,6 +541,35 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   return (
     <div className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+        {/* Welcome + Stats */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="col-span-1 md:col-span-2 rounded-xl p-5 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white">
+              Welcome back{user ? `, ${
+                (user.user_metadata?.full_name as string) ||
+                (user.user_metadata?.name as string) ||
+                (user.email ? (user.email as string).split('@')[0] : '')
+              }` : ''}!
+            </h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Pick up where you left off or create something new.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">{boards.length}</div>
+            </div>
+            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">{sharedBoards.length}</div>
+            </div>
+            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700 text-center">
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
+            </div>
+          </div>
+        </div>
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
           <button
