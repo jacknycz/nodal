@@ -11,8 +11,8 @@ import TextInput from './ui/TextInput'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
-import { PencilIcon, PinIcon } from 'lucide-react'
-import UnsplashBackground from './UnsplashBackground'
+import { CircuitBoard, FileText, Users, PencilIcon, PinIcon } from 'lucide-react'
+// Gradient background only (no external images)
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -568,28 +568,39 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   return (
     <div className="relative min-h-screen pt-16 flex flex-col">
-      <UnsplashBackground query={latestBoardTopic || 'creative'} />
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
+      </div>
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         {/* Welcome + Stats Open */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-1 rounded-xl ">
-            <h1 className="mb-4 text-xl md:text-5xl font-fredoka font-medium text-white dark:text-white">
+            <h1 className="mb-4 text-xl md:text-5xl font-fredoka font-medium text-gray-900 dark:text-white">
               <span className="font-normal">Welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
             </h1>
-            <p className="mt-1 text-sm text-gray-200">
+            <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">
               Pick up where you left off or create something new.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
+              <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
+                <CircuitBoard size={32} />
+              </div>
               <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
               <div className="text-4xl font-medium text-gray-900 dark:text-white">{boards.length}</div>
             </div>
-            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
+                <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
+                  <Users size={32} />
+                </div>
               <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
               <div className="text-4xl font-medium text-gray-900 dark:text-white">{sharedBoards.length}</div>
             </div>
-            <div className="rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-700">
+              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
+                <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
+                  <FileText size={32} />
+                </div>
               <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
               <div className="text-4xl font-medium text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
             </div>
