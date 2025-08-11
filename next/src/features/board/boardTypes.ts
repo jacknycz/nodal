@@ -36,6 +36,7 @@ export interface BoardBrief {
   boardTopic: string
   description: string
   startWithAI: boolean
+  starterNodes?: string[]
 }
 
 // Embedding info for a document

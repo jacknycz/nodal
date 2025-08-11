@@ -1,27 +1,27 @@
 import React from 'react'
 import clsx from 'clsx'
 
-export type TextInputSize = 'sm' | 'md' | 'lg'
-export type TextInputVariant = 'default' | 'unstyled'
+export type TextAreaSize = 'sm' | 'md' | 'lg'
+export type TextAreaVariant = 'default' | 'unstyled'
 
-interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   label?: string
   description?: string
   error?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
-  size?: TextInputSize
-  variant?: TextInputVariant
+  size?: TextAreaSize
+  variant?: TextAreaVariant
   fullWidth?: boolean
 }
 
-const sizeClasses: Record<TextInputSize, string> = {
+const sizeClasses: Record<TextAreaSize, string> = {
   sm: 'px-2 py-1 text-sm',
   md: 'px-3 py-2 text-sm',
   lg: 'px-4 py-3 text-base',
 }
 
-const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
+const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({
     label,
     description,
@@ -32,17 +32,19 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     variant = 'default',
     fullWidth = false,
     className = '',
+    rows = 3,
     ...props
   }, ref) => {
     const baseField = (
       <div className={clsx('relative', fullWidth && 'w-full')}>
         {leftIcon && (
-          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+          <span className="pointer-events-none absolute inset-y-0 left-0 flex items-start pt-2 pl-3 text-gray-400">
             {leftIcon}
           </span>
         )}
-        <input
+        <textarea
           ref={ref}
+          rows={rows}
           className={clsx(
             'rounded-md border focus:outline-none focus:ring-2 transition-colors',
             'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white',
@@ -58,7 +60,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
           {...props}
         />
         {rightIcon && (
-          <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+          <span className="absolute inset-y-0 right-0 flex items-start pt-2 pr-3 text-gray-400">
             {rightIcon}
           </span>
         )}
@@ -68,7 +70,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     if (!label && !description && !error) return baseField
 
     return (
-      <div className={clsx('flex flex-col gap-1', fullWidth && 'w-full')}>
+      <div className={clsx('flex flex-col gap-1', fullWidth && 'w-full')}> 
         {label && (
           <label className="text-sm font-medium text-gray-900 dark:text-white">
             {label}
@@ -89,8 +91,8 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
   }
 )
 
-TextInput.displayName = 'TextInput'
+TextArea.displayName = 'TextArea'
 
-export default TextInput
+export default TextArea
 
 

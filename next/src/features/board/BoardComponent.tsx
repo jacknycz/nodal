@@ -672,9 +672,54 @@ function BoardContent({
     // console.log('🚀 generateStarterNodes called with boardId:', boardId, 'for brief:', brief.boardName)
     try {
       const aiService = getOpenAIService()
+      // If user provided manual starter nodes, prioritize those and skip AI
+      if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
+        const nodesToPlace = brief.starterNodes.map(title => ({ title, content: '', type: 'default' as const }))
+        try {
+          const placementResult = await placeBoardNodes(nodesToPlace)
+          if (placementResult.success && placementResult.placements.length > 0) {
+            const generatedNodes = placementResult.placements.map(placement => ({
+              id: placement.node.id,
+              type: placement.node.type,
+              position: placement.position,
+              data: { ...placement.node.data }
+            }))
+            setNodes(generatedNodes)
+            if (placementResult.connections.length > 0) {
+              const generatedEdges = placementResult.connections.map(connection => ({
+                id: connection.edge.id,
+                source: connection.edge.source,
+                target: connection.edge.target,
+                type: connection.edge.type || 'floating'
+              }))
+              setEdges(generatedEdges)
+            }
+            const boardData = { nodes: generatedNodes, edges: placementResult.connections.map(c => c.edge), viewport: reactFlowInstance.getViewport() }
+            await boardStorage.updateBoard(boardId, boardData)
+            setSaveStatus('saved')
+            setHasUnsavedChanges(false)
+            if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+            router.push(`/board/${boardId}`)
+            return
+          }
+        } catch {}
+        // Fallback: simple placement
+        const generatedNodes = brief.starterNodes.map((title, index) => ({
+          id: `starter-node-${Date.now()}-${index}`,
+          type: 'default' as const,
+          position: { x: 200 + (index * 300), y: 200 + (index * 100) },
+          data: { title, content: '' },
+        }))
+        setNodes(generatedNodes)
+        const boardData = { nodes: generatedNodes, edges: [], viewport: reactFlowInstance.getViewport() }
+        await boardStorage.updateBoard(boardId, boardData)
+        setSaveStatus('saved')
+        setHasUnsavedChanges(false)
+        if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+        router.push(`/board/${boardId}`)
+        return
+      }
       if (!aiService) {
-        // console.error('AI service not available')
-        // Navigate to the board even if AI fails
         router.push(`/board/${boardId}`)
         return
       }
