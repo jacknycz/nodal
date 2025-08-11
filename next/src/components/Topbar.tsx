@@ -163,8 +163,8 @@ export default function Topbar({
       <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
         <div className="grid grid-cols-3 items-center px-4 py-1">
           {/* Left - Logo */}
-          <div className="flex items-center gap-2">
-            <button
+          <div className="flex items-center gap-6">
+            {/* <button
               onClick={onOpenBoardRoom}
               className={`focus:outline-none cursor-pointer flex items-center gap-2 rounded-full p-1 ${
                 isBoardView 
@@ -174,7 +174,7 @@ export default function Topbar({
               aria-label="Go to Board Room"
             >
               <House size={16} />
-            </button>
+            </button> */}
 
             <button
               onClick={onOpenBoardRoom}
