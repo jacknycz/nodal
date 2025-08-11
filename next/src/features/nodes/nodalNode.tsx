@@ -175,7 +175,12 @@ export default function NodalNode({
     <div
       className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${hasFocus && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3" />
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="rf-handle-hit-32"
+      />
+
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-1">
           <h3 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -262,7 +267,11 @@ export default function NodalNode({
         />
       )}
 
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="rf-handle-hit-32"
+      />
     </div>
   )
 }
