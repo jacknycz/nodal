@@ -165,6 +165,7 @@ function BoardContent({
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
+  const setConnectingSource = useBoardStore((s: any) => s.setConnectingSource)
   
   // Broadcast local cursor position
   useEffect(() => {
@@ -981,6 +982,44 @@ function BoardContent({
     },
     [setEdges]
   )
+
+  // Node-wide drop connection support
+  const connectingSourceRef = useRef<string | null>(null)
+  const clearConnecting = useCallback(() => {
+    connectingSourceRef.current = null
+    setConnectingSource(null)
+  }, [setConnectingSource])
+
+  const onConnectStart = useCallback((_: any, params: any) => {
+    const srcId = params?.nodeId ?? null
+    connectingSourceRef.current = srcId
+    setConnectingSource(srcId)
+  }, [setConnectingSource])
+
+  const onConnectEnd = useCallback((event: any) => {
+    const sourceId = connectingSourceRef.current
+    const done = () => clearConnecting()
+    if (!sourceId) return done()
+
+    // If released over a handle, let default onConnect flow handle it
+    const targetHandle = (event?.target as Element | null)?.closest?.('.react-flow__handle')
+    if (targetHandle) return done()
+
+    // Otherwise, accept drop on a node surface
+    const nodeEl = (event?.target as Element | null)?.closest?.('.react-flow__node') as HTMLElement | null
+    const targetId = nodeEl?.getAttribute?.('data-id') || null
+
+    if (targetId && targetId !== sourceId) {
+      const newEdge: Edge = {
+        id: `edge-${Date.now()}`,
+        source: sourceId,
+        target: targetId,
+        type: 'floating',
+      }
+      setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+    }
+    done()
+  }, [setEdges, clearConnecting])
   
   // Handle adding nodes
   const handleAddNode = useCallback((nodeData: { title: string; content?: string }, position: { x: number; y: number }) => {
@@ -1470,12 +1509,15 @@ function BoardContent({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
         onSelectionChange={handleSelectionChange}
         onPaneClick={() => {
           setContextMenu({ isOpen: false, position: null })
           // Clear focus when clicking empty space
           useBoardStore.getState().clearFocusedNodes()
           ;(window as any).__focusedNodeIds = []
+          clearConnecting()
         }}
         onPaneContextMenu={(event) => {
           event.preventDefault();

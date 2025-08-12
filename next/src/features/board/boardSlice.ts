@@ -19,6 +19,7 @@ const initialState: BoardState = {
   tasks: [],
   freeChatMode: false, // Add default value
   topbarHeight: 49, // Default, can be updated dynamically
+  connectingSourceId: null,
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -39,6 +40,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   clearFocusedNodes: () => void
   toggleFocusOnNode: (id: string, includeNeighbors?: boolean) => void
   getFirstDegreeNeighbors: (id: string) => string[]
+  setConnectingSource: (id: string | null) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -209,4 +211,5 @@ export const useBoardStore = create<BoardState & BoardActions & {
   },
   setFreeChatMode: (free) => set({ freeChatMode: free }),
   setTopbarHeight: (height) => set({ topbarHeight: height }),
+  setConnectingSource: (id) => set({ connectingSourceId: id }),
 })) 

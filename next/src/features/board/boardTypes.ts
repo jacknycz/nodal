@@ -70,6 +70,8 @@ export interface BoardState {
   tasks?: Task[]
   freeChatMode?: boolean
   topbarHeight: number
+  // When dragging from a handle, source id indicates connection mode
+  connectingSourceId?: string | null
 }
 
 export interface BoardActions {
@@ -91,4 +93,5 @@ export interface BoardActions {
   addSelectedNode: (id: string) => void
   removeSelectedNode: (id: string) => void
   clearSelectedNodes: () => void
+  setConnectingSource: (id: string | null) => void
 } 
