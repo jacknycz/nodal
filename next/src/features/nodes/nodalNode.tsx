@@ -159,29 +159,57 @@ export default function NodalNode({
   }
 
   const focusedNodeIds = useBoardStore((s) => s.focusedNodeIds || [])
+  const focusAnchorIds = useBoardStore((s: any) => s.focusAnchorIds || [])
+  const storeEdges = useBoardStore((s: any) => s.edges || [])
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const toggleFocusOnNode = useBoardStore((s) => s.toggleFocusOnNode)
   const hasFocus = Array.isArray(focusedNodeIds) && focusedNodeIds.length > 0
-  const isFocused = hasFocus ? focusedNodeIds.includes(id) : false
+  const isFocusedBase = hasFocus ? focusedNodeIds.includes(id) : false
+  const isAdjacentToAnchor = Array.isArray(focusAnchorIds) && focusAnchorIds.length > 0
+    ? (storeEdges || []).some((e: any) => {
+        const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
+        const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
+        return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
+      })
+    : false
+  const isFocused = isFocusedBase || isAdjacentToAnchor
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
   const glowClass = isFocused
     ? 'border-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.2)]'
     : selected
-    ? 'border-blue-500'
-    : isLocked && !isLockedByMe
-    ? 'border-red-500'
-    : 'border-gray-200 dark:border-gray-700'
+      ? 'border-blue-500'
+      : isLocked && !isLockedByMe
+        ? 'border-red-500'
+        : 'border-gray-200 dark:border-gray-700'
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${hasFocus && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-tertiary-400/60 bg-tertiary-50/40 dark:bg-tertiary-900/10' : ''}`}
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
     >
       <Handle
         type="target"
         position={Position.Top}
         className="rf-handle-hit-32"
       />
+
+      <IconButton
+        variant="default"
+        size="sm"
+        aria-label="Focus node"
+        className="absolute -top-2 -right-2"
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          if (typeof toggleFocusOnNode === 'function') {
+            toggleFocusOnNode(id)
+          } else if ((window as any).__toggleFocusOnNode) {
+            (window as any).__toggleFocusOnNode(id)
+          }
+        }}
+      >
+        <Focus size={14} />
+      </IconButton>
 
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-1">
@@ -208,22 +236,6 @@ export default function NodalNode({
         <IconButton
           variant="default"
           size="sm"
-          aria-label="Focus node"
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            if (typeof toggleFocusOnNode === 'function') {
-              toggleFocusOnNode(id)
-            } else if ((window as any).__toggleFocusOnNode) {
-              (window as any).__toggleFocusOnNode(id)
-            }
-          }}
-        >
-          <Focus size={14} />
-        </IconButton>
-        <IconButton
-          variant="default"
-          size="sm"
           aria-label="Edit node"
           onClick={handleEdit}
           disabled={isLocked && !isLockedByMe || showEditModal}
@@ -242,8 +254,8 @@ export default function NodalNode({
       </div>
 
       {/* Modals */}
-      <Modal 
-        open={showDeleteModal} 
+      <Modal
+        open={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         title="Delete Node"
         description="Are you sure you want to delete this node? This action cannot be undone."

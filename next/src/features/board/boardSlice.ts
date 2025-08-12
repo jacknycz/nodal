@@ -7,6 +7,7 @@ const initialState: BoardState = {
   edges: [],
   selectedNodeIds: [], // Change from selectedNodeId to selectedNodeIds array
   focusedNodeIds: [],
+  focusAnchorIds: [],
   viewport: {
     x: 0,
     y: 0,
@@ -41,6 +42,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   toggleFocusOnNode: (id: string, includeNeighbors?: boolean) => void
   getFirstDegreeNeighbors: (id: string) => string[]
   setConnectingSource: (id: string | null) => void
+  setFocusAnchors: (ids: string[]) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -138,10 +140,10 @@ export const useBoardStore = create<BoardState & BoardActions & {
     set((state) => {
       const isFocused = (state.focusedNodeIds || []).includes(id)
       if (isFocused) {
-        return { focusedNodeIds: [] }
+        return { focusedNodeIds: [], focusAnchorIds: [] }
       }
       if (!includeNeighbors) {
-        return { focusedNodeIds: [id] }
+        return { focusedNodeIds: [id], focusAnchorIds: [id] }
       }
       // Compute first-degree neighbors
       const neighborIds = new Set<string>([id])
@@ -151,7 +153,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
         if (source === id && target) neighborIds.add(target)
         if (target === id && source) neighborIds.add(source)
       })
-      return { focusedNodeIds: Array.from(neighborIds) }
+      return { focusedNodeIds: Array.from(neighborIds), focusAnchorIds: [id] }
     })
   },
   getFirstDegreeNeighbors: (id) => {
@@ -212,4 +214,5 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setFreeChatMode: (free) => set({ freeChatMode: free }),
   setTopbarHeight: (height) => set({ topbarHeight: height }),
   setConnectingSource: (id) => set({ connectingSourceId: id }),
+  setFocusAnchors: (ids) => set({ focusAnchorIds: ids }),
 })) 

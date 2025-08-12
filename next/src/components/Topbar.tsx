@@ -11,6 +11,7 @@ import { House } from 'lucide-react';
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
+import Menu from './ui/Menu'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -135,7 +136,11 @@ export default function Topbar({
         .select('*')
         .eq('board_id', currentBoardId)
         .order('last_seen', { ascending: false })
-      setPresentUsers(data || [])
+      const typed = (data || []).map((row: any) => ({
+        user_id: String(row.user_id),
+        last_seen: String(row.last_seen),
+      }))
+      setPresentUsers(typed)
     }
     fetchPresence()
     return () => { supabase.removeChannel(channel) }
@@ -161,9 +166,9 @@ export default function Topbar({
   return (
     <>
       <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[60] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="grid grid-cols-3 items-center px-4 py-1">
+        <div className="grid grid-cols-3 items-center px-3 sm:px-4 py-1 gap-2">
           {/* Left - Logo */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             {/* <button
               onClick={onOpenBoardRoom}
               className={`focus:outline-none cursor-pointer flex items-center gap-2 rounded-full p-1 ${
@@ -184,39 +189,42 @@ export default function Topbar({
               <Image
                 src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"}
                 alt="Nodal Logo"
-                width={48}
-                height={48}
-                className="h-8 w-auto"
+                width={40}
+                height={40}
+                className="h-7 sm:h-8 w-auto"
                 // style={{ width: 'auto', height: 'auto' }}
                 priority
               />
             </button>
 
-            <ShareMenu
-              onShareBoard={handleShareBoard}
-              onCopyLink={handleCopyLink}
-              onShowFeedback={() => setShowFeedback(true)}
-            />
+            <div className="hidden sm:block">
+              <ShareMenu
+                onShareBoard={handleShareBoard}
+                onCopyLink={handleCopyLink}
+                onShowFeedback={() => setShowFeedback(true)}
+              />
+            </div>
             {linkCopied && (
               <span className="ml-2 text-green-600 text-xs">Link copied!</span>
             )}
           </div>
 
           {/* Center - Board Info (truly centered) */}
-          <div className="flex justify-center">
+          <div className="flex justify-center min-w-0">
             {isBoardView && currentBoardName && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  <span className="font-medium text-gray-900 dark:text-white" title={currentBoardName}>
-                    {currentBoardName}
-                  </span>
+                  <span className="font-medium text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
+                </div>
+                <div className="sm:hidden min-w-0">
+                  <span className="font-medium text-gray-900 dark:text-white truncate max-w-[50vw]" title={currentBoardName}>{currentBoardName}</span>
                 </div>
                 
                 {/* Save Status */}
-                <div className="flex items-center gap-2 text-xs">
+                <div className="hidden sm:flex items-center gap-2 text-xs">
                   {saveStatus === 'saving' && (
                     <div className="flex items-center text-blue-600 dark:text-blue-400">
                       <div className="w-2 h-2 mr-2 bg-blue-600 rounded-full animate-pulse"></div>
@@ -255,7 +263,7 @@ export default function Topbar({
                 </div>
                 {/* Presence Avatars */}
                 {presentUsers.length > 0 && (
-                  <div className="flex items-center ml-4 gap-1">
+                  <div className="hidden sm:flex items-center ml-4 gap-1">
                     {presentUsers.map((u) => (
                       <span key={u.user_id} title={u.user_id}>
                         {getPresenceAvatar(u.user_id)}
@@ -269,16 +277,31 @@ export default function Topbar({
           </div>
 
           {/* Right - Controls */}
-          <div className="flex items-center gap-3 justify-end">
+          <div className="flex items-center gap-2 sm:gap-3 justify-end">
             {isBoardView && (
               <>
-                <AISettingsMenu 
-                  isTestMode={isTestMode}
-                  onToggleTestMode={onToggleTestMode}
-                />
-                <DocumentsMenu 
-                  onDeleteNode={onDeleteNode}
-                />
+                <div className="hidden sm:flex items-center gap-3">
+                  <AISettingsMenu 
+                    isTestMode={isTestMode}
+                    onToggleTestMode={onToggleTestMode}
+                  />
+                  <DocumentsMenu 
+                    onDeleteNode={onDeleteNode}
+                  />
+                </div>
+                {/* Mobile More menu */}
+                <div className="sm:hidden">
+                  <Menu
+                    trigger={<button className="px-2 py-1 rounded-md border border-gray-200 dark:border-gray-700 text-sm">More</button>}
+                    align="right"
+                    items={[
+                      { label: 'AI Settings', onClick: () => onToggleTestMode?.() },
+                      { label: 'Share board', onClick: () => handleShareBoard() },
+                      { label: 'Copy link', onClick: () => handleCopyLink() },
+                      { label: 'Feedback', onClick: () => setShowFeedback(true) },
+                    ]}
+                  />
+                </div>
               </>
             )}
             <AvatarMenu

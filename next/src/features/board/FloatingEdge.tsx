@@ -44,10 +44,12 @@ export default function FloatingEdge({
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
+  const focusAnchorIds: string[] = useBoardStore((s: any) => s.focusAnchorIds || [])
   const isInConnectionMode = !!connectingSourceId
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
-  const hasSelection = Array.isArray(selectedNodeIds) && selectedNodeIds.length > 0
-  const isRelatedToSelection = hasSelection && (selectedNodeIds.includes(source as string) || selectedNodeIds.includes(target as string))
+  const contextIds = Array.from(new Set([...(selectedNodeIds || []), ...(focusAnchorIds || [])]))
+  const hasContext = contextIds.length > 0
+  const isRelatedToContext = hasContext && (contextIds.includes(source as string) || contextIds.includes(target as string))
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -67,11 +69,9 @@ export default function FloatingEdge({
 
   // Dynamic styling based on edge type and state
   const getEdgeStyle = () => {
-    const opacity = isInConnectionMode
-      ? (isRelatedToSource ? 1 : 0.2)
-      : hasSelection
-        ? (isRelatedToSelection ? 1 : 0.2)
-        : 1
+    const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)
+
+    const opacity = isHighlighted ? 1 : 0.2
 
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
@@ -85,20 +85,20 @@ export default function FloatingEdge({
           ...baseStyle,
           stroke: '#3b82f6',
           strokeDasharray: animated ? '5,5' : 'none',
-          filter: selected && (!isInConnectionMode || isRelatedToSource) ? 'drop-shadow(0 0 8px #3b82f6)' : 'none',
+          filter: selected && isHighlighted ? 'drop-shadow(0 0 8px #3b82f6)' : 'none',
         }
       case 'focus':
         return {
           ...baseStyle,
           stroke: '#10b981',
           strokeWidth: selected ? 5 : 3,
-          filter: selected && (!isInConnectionMode || isRelatedToSource) ? 'drop-shadow(0 0 8px #10b981)' : 'none',
+          filter: selected && isHighlighted ? 'drop-shadow(0 0 8px #10b981)' : 'none',
         }
       default:
         return {
           ...baseStyle,
           stroke: '#6b7280',
-          filter: selected && (!isInConnectionMode || isRelatedToSource) ? 'drop-shadow(0 0 8px #6b7280)' : 'none',
+          filter: selected && isHighlighted ? 'drop-shadow(0 0 8px #6b7280)' : 'none',
         }
     }
   }
