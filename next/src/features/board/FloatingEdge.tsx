@@ -43,8 +43,11 @@ export default function FloatingEdge({
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
+  const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
   const isInConnectionMode = !!connectingSourceId
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
+  const hasSelection = Array.isArray(selectedNodeIds) && selectedNodeIds.length > 0
+  const isRelatedToSelection = hasSelection && (selectedNodeIds.includes(source as string) || selectedNodeIds.includes(target as string))
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -64,10 +67,16 @@ export default function FloatingEdge({
 
   // Dynamic styling based on edge type and state
   const getEdgeStyle = () => {
+    const opacity = isInConnectionMode
+      ? (isRelatedToSource ? 1 : 0.2)
+      : hasSelection
+        ? (isRelatedToSelection ? 1 : 0.2)
+        : 1
+
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
       transition: 'all 0.2s ease',
-      opacity: isInConnectionMode ? (isRelatedToSource ? 1 : 0.2) : 1,
+      opacity,
     } as React.CSSProperties
 
     switch (data?.type) {
