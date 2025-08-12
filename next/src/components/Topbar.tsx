@@ -186,13 +186,22 @@ export default function Topbar({
               className="focus:outline-none cursor-pointer flex items-center gap-2"
               aria-label="Go to Board Room"
             >
+              {/* Mobile: symbol-only logo */}
               <Image
-                src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"}
+                src="/nodal.svg"
                 alt="Nodal Logo"
                 width={40}
                 height={40}
-                className="h-7 sm:h-8 w-auto"
-                // style={{ width: 'auto', height: 'auto' }}
+                className="h-7 w-auto sm:hidden"
+                priority
+              />
+              {/* Desktop/tablet: wordmark with dark/light */}
+              <Image
+                src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"}
+                alt="Nodal Logo"
+                width={48}
+                height={48}
+                className="hidden sm:block h-8 w-auto"
                 priority
               />
             </button>
