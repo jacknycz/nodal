@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position } from '@xyflow/react'
 import { X } from 'lucide-react'
+import { useBoardStore } from './boardSlice'
 
 interface FloatingEdgeProps {
   id: string
@@ -41,6 +42,10 @@ export default function FloatingEdge({
 }: FloatingEdgeProps) {
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
+  const isInConnectionMode = !!connectingSourceId
+  const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
+
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -62,6 +67,7 @@ export default function FloatingEdge({
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
       transition: 'all 0.2s ease',
+      opacity: isInConnectionMode ? (isRelatedToSource ? 1 : 0.2) : 1,
     } as React.CSSProperties
 
     switch (data?.type) {
@@ -70,20 +76,20 @@ export default function FloatingEdge({
           ...baseStyle,
           stroke: '#3b82f6',
           strokeDasharray: animated ? '5,5' : 'none',
-          filter: selected ? 'drop-shadow(0 0 8px #3b82f6)' : 'none',
+          filter: selected && (!isInConnectionMode || isRelatedToSource) ? 'drop-shadow(0 0 8px #3b82f6)' : 'none',
         }
       case 'focus':
         return {
           ...baseStyle,
           stroke: '#10b981',
           strokeWidth: selected ? 5 : 3,
-          filter: selected ? 'drop-shadow(0 0 8px #10b981)' : 'none',
+          filter: selected && (!isInConnectionMode || isRelatedToSource) ? 'drop-shadow(0 0 8px #10b981)' : 'none',
         }
       default:
         return {
           ...baseStyle,
           stroke: '#6b7280',
-          filter: selected ? 'drop-shadow(0 0 8px #6b7280)' : 'none',
+          filter: selected && (!isInConnectionMode || isRelatedToSource) ? 'drop-shadow(0 0 8px #6b7280)' : 'none',
         }
     }
   }
