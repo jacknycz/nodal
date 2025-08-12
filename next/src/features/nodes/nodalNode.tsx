@@ -175,7 +175,7 @@ export default function NodalNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${hasFocus && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${hasFocus && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-tertiary-400/60 bg-tertiary-50/40 dark:bg-tertiary-900/10' : ''}`}
     >
       <Handle
         type="target"
