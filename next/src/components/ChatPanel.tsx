@@ -260,7 +260,7 @@ export default function ChatPanel({
       }))
 
       // Use our intelligent placement system
-      const result = await placeGeneratedNodes(nodesToPlace, selectedNodes[0].id)
+      const result = await placeGeneratedNodes(nodesToPlace)
       
       if (result.success && result.placements.length > 0) {
         // Create nodes using the callback with intelligent positioning
@@ -340,7 +340,7 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="fixed top-12 right-0 z-40 w-96 h-[calc(100vh-48px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div className="fixed top-12 right-0 z-60 w-96 h-[calc(100dvh-48px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-2">
@@ -544,7 +544,7 @@ export default function ChatPanel({
       )}
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <textarea
