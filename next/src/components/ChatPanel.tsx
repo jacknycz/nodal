@@ -331,7 +331,7 @@ export default function ChatPanel({
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed top-16 right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-colors"
+        className="fixed right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-colors bottom-4 sm:bottom-auto sm:top-16"
         title="Open Chat"
       >
         <MessageSquare className="w-5 h-5" />

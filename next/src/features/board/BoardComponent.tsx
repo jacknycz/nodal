@@ -1538,10 +1538,14 @@ function BoardContent({
       >
         {renderRemoteCursors()}
         <Background />
-        <Controls />
-        <MiniMap />
+        <div className="hidden sm:block">
+          <Controls />
+        </div>
+        <div className="hidden sm:block">
+          <MiniMap />
+        </div>
 
-        <div className="absolute bottom-4 left-16 z-10">
+        <div className="hidden sm:block absolute bottom-4 left-16 z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               💡 Tip: Drag & drop documents and images here
