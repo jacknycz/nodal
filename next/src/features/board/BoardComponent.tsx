@@ -21,6 +21,7 @@ import { useBoard } from './useBoard'
 import { usePlacement } from './usePlacement'
 import { boardStorage } from '../storage/storage'
 import DocumentNode from '../nodes/DocumentNode'
+import ImageNode from '../nodes/ImageNode'
 import NodalNode from '../nodes/nodalNode'
 import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
@@ -94,6 +95,7 @@ const stableHandlers: any = {};
 export const nodeTypes = {
   default: (props: any) => <NodalNode {...props} {...stableHandlers} />,
   document: (props: any) => <DocumentNode {...props} {...stableHandlers} />,
+  image: (props: any) => <ImageNode {...props} {...stableHandlers} />,
 };
 
 export const edgeTypes = {
@@ -1131,13 +1133,14 @@ function BoardContent({
       
       // Create the node with file metadata (no File object)
       const signedUrl = await supabaseStorage.getSignedUrl(documentId);
-      const newNode = {
+      const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
+      const newNode: any = {
         id: nodeId,
-        type: 'document' as const,
+        type: isImage ? 'image' : 'document',
         position: dropPosition,
         data: {
           title: file.name,
-          type: 'document',
+          type: isImage ? 'image' : 'document',
           fileName: file.name,
           fileType: file.type || 'unknown',
           fileSize: file.size,
@@ -1213,13 +1216,14 @@ function BoardContent({
     } catch (error) {
       // console.error('❌ Failed to upload file to Supabase:', error)
       // Create node with error status
-      const newNode = {
+      const isImage2 = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
+      const newNode: any = {
         id: nodeId,
-        type: 'document' as const,
+        type: isImage2 ? 'image' : 'document',
         position: dropPosition,
         data: {
           title: file.name,
-          type: 'document',
+          type: isImage2 ? 'image' : 'document',
           fileName: file.name,
           fileType: file.type || 'unknown',
           fileSize: file.size,

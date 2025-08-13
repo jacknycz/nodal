@@ -66,7 +66,7 @@ export default function DocumentNode({
   const isImage = data.fileType?.startsWith('image/') || 
     data.fileName?.match(/\.(png|jpg|jpeg|gif|webp)$/i)
 
-  console.log('🖼️ DocumentNode render - isImage:', isImage, 'imageUrl:', data.previewUrl, 'showPreview:', showPreview, 'isLoading:', false)
+  // console.log('🖼️ DocumentNode render - isImage:', isImage, 'imageUrl:', data.previewUrl)
 
   const isPDF = data.fileType?.includes('pdf') || data.fileName?.match(/\.pdf$/i)
 
