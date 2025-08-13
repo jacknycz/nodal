@@ -887,7 +887,7 @@ function BoardContent({
     }
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
-  const { placeBoardNodes, placeManualNode, findBestPosition } = usePlacement()
+  const { placeAINodes, placeBoardNodes, placeManualNode, findBestPosition } = usePlacement()
   
   // Initialize board
   useEffect(() => {
@@ -1506,6 +1506,7 @@ function BoardContent({
 
   const [showAddNodeModal, setShowAddNodeModal] = useState(false)
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null)
+  const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
 
   return (
     <div 
@@ -1533,6 +1534,15 @@ function BoardContent({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+          onNodeContextMenu={(event: React.MouseEvent, node: any) => {
+            event.preventDefault()
+            event.stopPropagation()
+            setPendingSourceNodeId(node?.id || null)
+            setContextMenu({
+              isOpen: true,
+              position: { x: event.clientX, y: event.clientY }
+            })
+          }}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
         onSelectionChange={handleSelectionChange}
@@ -1545,10 +1555,12 @@ function BoardContent({
         }}
         onPaneContextMenu={(event) => {
           event.preventDefault();
-          setContextMenu({ 
-            isOpen: true, 
-            position: { x: event.clientX, y: event.clientY } 
-          });
+          // Right-click on empty pane (not a node)
+          setPendingSourceNodeId(null)
+          setContextMenu({
+            isOpen: true,
+            position: { x: event.clientX, y: event.clientY }
+          })
         }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -1642,6 +1654,19 @@ function BoardContent({
         isOpen={contextMenu.isOpen}
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
+        nodeId={pendingSourceNodeId}
+        onAddConnectedNodes={(nodeId: string) => {
+          if (contextMenu.position) {
+            const flowPosition = reactFlowInstance.screenToFlowPosition({
+              x: contextMenu.position.x,
+              y: contextMenu.position.y,
+            })
+            setPendingNodePosition(flowPosition)
+          }
+          setPendingSourceNodeId(nodeId)
+          setShowAddNodeModal(true)
+          setContextMenu({ isOpen: false, position: null })
+        }}
         onAddBlankNode={() => {
           // Store the position and show the modal instead of creating a blank node
           if (contextMenu.position) {
@@ -1650,8 +1675,9 @@ function BoardContent({
               y: contextMenu.position.y,
             });
             setPendingNodePosition(flowPosition);
-            setShowAddNodeModal(true);
           }
+          setPendingSourceNodeId(null)
+          setShowAddNodeModal(true);
           setContextMenu({ isOpen: false, position: null });
         }}
         onGenerateAINode={handleOpenAINodeGenerator}
@@ -1727,10 +1753,35 @@ function BoardContent({
           onClose={() => {
             setShowAddNodeModal(false)
             setPendingNodePosition(null)
+            setPendingSourceNodeId(null)
           }}
           onSubmit={async ({ titles, description }) => {
             const center = pendingNodePosition || getViewportCenter()
-            if (titles.length === 1) {
+            // If we have a parent (right-clicked node), use AI fan placement centered under parent
+            if (pendingSourceNodeId) {
+              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? description : '', type: 'default' as const }))
+              try {
+                const result = await placeAINodes(nodesToPlace, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40 })
+                if (result.success && result.placements.length > 0) {
+                  const newNodes: Node[] = result.placements.map(p => ({
+                    id: p.node.id,
+                    type: p.node.type,
+                    position: p.position,
+                    data: { ...p.node.data },
+                  }))
+                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                  if (result.connections.length > 0) {
+                    const newEdges: Edge[] = result.connections.map(c => ({
+                      id: c.edge.id,
+                      source: c.edge.source,
+                      target: c.edge.target,
+                      type: c.edge.type || 'floating',
+                    }))
+                    setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                  }
+                }
+              } catch {}
+            } else if (titles.length === 1) {
               // Single node: honor click by finding best position near the pending point
               const target = pendingNodePosition || center
               const finalPos = await findBestPosition(target, titles[0], description, { avoidOverlap: true, minDistance: 50 })
@@ -1742,17 +1793,27 @@ function BoardContent({
               }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             } else {
-              // Multiple nodes: if we have a click position, arrange around it; otherwise use placement engine
+              // Multiple nodes: if we have a click position, place each near the click using manual placement
               if (pendingNodePosition) {
                 const radius = 220
                 const angleStep = (2 * Math.PI) / titles.length
-                const arranged: Node[] = titles.map((t, i) => ({
-                  id: `node-${Date.now()}-${i}`,
-                  type: 'default',
-                  position: { x: pendingNodePosition.x + Math.cos(i * angleStep) * radius, y: pendingNodePosition.y + Math.sin(i * angleStep) * radius },
-                  data: { title: t, content: '' },
-                }))
-                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...arranged] : [...arranged]))
+                const created: Node[] = []
+                for (let i = 0; i < titles.length; i++) {
+                  const t = titles[i]
+                  const base = {
+                    x: pendingNodePosition.x + Math.cos(i * angleStep) * radius,
+                    y: pendingNodePosition.y + Math.sin(i * angleStep) * radius,
+                  }
+                  const result = await findBestPosition(base, t, '', { avoidOverlap: true, minDistance: 50 })
+                  const node: Node = {
+                    id: `node-${Date.now()}-${i}`,
+                    type: 'default',
+                    position: result,
+                    data: { title: t, content: '' },
+                  }
+                  created.push(node)
+                }
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
               } else {
                 const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
                 try {
@@ -1779,6 +1840,7 @@ function BoardContent({
             }
             setShowAddNodeModal(false)
             setPendingNodePosition(null)
+            setPendingSourceNodeId(null)
           }}
         />
       )}

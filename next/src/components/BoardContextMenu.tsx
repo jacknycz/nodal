@@ -9,6 +9,8 @@ interface BoardContextMenuProps {
   onClose: () => void
   onAddBlankNode: () => void
   onGenerateAINode: () => void
+  nodeId?: string | null
+  onAddConnectedNodes?: (nodeId: string) => void
 }
 
 export default function BoardContextMenu({
@@ -17,6 +19,8 @@ export default function BoardContextMenu({
   onClose,
   onAddBlankNode,
   onGenerateAINode,
+  nodeId,
+  onAddConnectedNodes,
 }: BoardContextMenuProps) {
   if (!isOpen || !position) return null
 
@@ -41,12 +45,22 @@ export default function BoardContextMenu({
           top: position.y,
         }}
       >
+        {nodeId && onAddConnectedNodes && (
+          <button
+            onClick={() => handleAction(() => onAddConnectedNodes(nodeId))}
+            className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add connected node(s)
+          </button>
+        )}
+
         <button
           onClick={() => handleAction(onAddBlankNode)}
           className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Add a Blank Node
+          Add node(s)
         </button>
         
         <button
