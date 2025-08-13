@@ -1553,73 +1553,65 @@ function BoardContent({
           </div>
         </div>
         
-        {isBoardView && (
-          <>
-            <FloatingActionButton
-              onAddNode={() => {
-                setShowAddNodeModal(true)
-              }}
-              onAIGenerate={handleOpenAINodeGenerator}
-              onUploadDocument={() => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
-                input.onchange = (e) => {
-                  const file = (e.target as HTMLInputElement).files?.[0]
-                  if (file) {
-                    // Use viewport center for manual uploads
-                    const viewportCenter = getViewportCenter()
-                    handleDocumentUpload(file, viewportCenter)
-                  }
-                }
-                input.click()
-              }}
-              onReorganize={() => setShowReorganizeMenu(true)}
-              aiInitialized={aiInitialized}
-              nodeCount={nodes.length}
-            />
-            
-            <ChatPanel
-              nodes={nodes} // Add this line to pass the nodes
-              onGenerateNode={(nodeData: { 
-                id: string,
-                label: string, 
-                content?: string, 
-                position: { x: number, y: number }, // Now required since it's absolute
-                referenceNode?: { id: string, title: string }
-              }) => {
-                // Create the new node with the absolute position
-                const newNode = {
-                  id: nodeData.id,
-                  type: 'default',
-                  position: nodeData.position, // Use the absolute position directly
-                  data: { 
-                    title: nodeData.label,
-                    content: nodeData.content,
-                    aiGenerated: true
-                  },
-                }
-                
-                // Add the node
-                handleAddNodeToStore(newNode)
-                
-                // If we have a reference node, create an edge
-                if (nodeData.referenceNode) {
-                  const newEdge: Edge = {
-                    id: `edge-${Date.now()}`,
-                    source: nodeData.referenceNode.id,
-                    target: nodeData.id,
-                    type: 'floating',
-                  }
-                  
-                  // Add the edge
-                  setEdges(eds => [...eds, newEdge])
-                }
-              }}
-            />
-          </>
-        )}
+        {/** Removed FAB and ChatPanel from inside ReactFlow to avoid stacking context issues */}
       </ReactFlow>
+      {isBoardView && (
+        <FloatingActionButton
+          onAddNode={() => {
+            setShowAddNodeModal(true)
+          }}
+          onAIGenerate={handleOpenAINodeGenerator}
+          onUploadDocument={() => {
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
+            input.onchange = (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0]
+              if (file) {
+                const viewportCenter = getViewportCenter()
+                handleDocumentUpload(file, viewportCenter)
+              }
+            }
+            input.click()
+          }}
+          onReorganize={() => setShowReorganizeMenu(true)}
+          aiInitialized={aiInitialized}
+          nodeCount={nodes.length}
+        />
+      )}
+      {isBoardView && (
+        <ChatPanel
+          nodes={nodes}
+          onGenerateNode={(nodeData: {
+            id: string,
+            label: string,
+            content?: string,
+            position: { x: number, y: number },
+            referenceNode?: { id: string, title: string }
+          }) => {
+            const newNode = {
+              id: nodeData.id,
+              type: 'default',
+              position: nodeData.position,
+              data: {
+                title: nodeData.label,
+                content: nodeData.content,
+                aiGenerated: true
+              },
+            }
+            handleAddNodeToStore(newNode)
+            if (nodeData.referenceNode) {
+              const newEdge: Edge = {
+                id: `edge-${Date.now()}`,
+                source: nodeData.referenceNode.id,
+                target: nodeData.id,
+                type: 'floating',
+              }
+              setEdges(eds => [...eds, newEdge])
+            }
+          }}
+        />
+      )}
       
       {/* Context Menu */}
       <BoardContextMenu

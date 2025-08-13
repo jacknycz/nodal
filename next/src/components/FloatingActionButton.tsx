@@ -23,7 +23,7 @@ export default function FloatingActionButton({
   const [isOpen, setIsOpen] = useState(false)
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30">
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10">
       <div className={`flex flex-col gap-2 transition-all duration-200 ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0 pointer-events-none'}`}>
         <button
           onClick={onAddNode}
