@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Download, Maximize2, Trash2, CheckCircle, AlertCircle, Loader2, Focus } from 'lucide-react'
+import { Download, Maximize2, Minimize2, Trash2, CheckCircle, AlertCircle, Loader2, Focus } from 'lucide-react'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -110,9 +110,11 @@ export default function ImageNode({
     } catch {}
   }
 
+  const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
+
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group w-[260px] ${
+      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${containerWidthClass} ${
         isFocused
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
           : selected
@@ -124,93 +126,116 @@ export default function ImageNode({
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
-      <div className="nodal-drag-handle cursor-move">
-        {/* Image preview */}
+      <div className="relative nodal-drag-handle cursor-move">
+        {/* Image content */}
         <div className="relative w-full">
           {data.previewUrl ? (
             <img
               src={data.previewUrl}
               alt={data.fileName || data.title || 'Image'}
               className="w-full h-auto rounded-md object-contain"
-              style={{ maxWidth: 240 }}
+              style={{ maxWidth: expanded ? 800 : 240 }}
             />
           ) : (
-            <div className="w-full h-[180px] rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm">
+            <div className={`rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm ${expanded ? 'w-[800px] h-[400px]' : 'w-full h-[180px]'}`}>
               No preview
             </div>
           )}
-        </div>
 
-        {/* Filename and actions */}
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {data.fileName || data.title || 'Image'}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <IconButton
-              variant="default"
-              size="sm"
-              aria-label="Focus node"
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                toggleFocusOnNode(id, true)
-              }}
-            >
-              <Focus size={14} />
-            </IconButton>
-            <IconButton
-              variant="default"
-              size="sm"
-              aria-label="Expand image"
-              onClick={(e) => {
-                e.stopPropagation()
-                setExpanded(true)
-              }}
-              disabled={isLocked && !isLockedByMe}
-            >
-              <Maximize2 size={14} />
-            </IconButton>
+          {/* Minimize/Expand control overlay */}
+          <div className="absolute top-1 right-1">
+            {expanded ? (
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Minimize image"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpanded(false)
+                }}
+              >
+                <Minimize2 size={14} />
+              </IconButton>
+            ) : (
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Expand image"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpanded(true)
+                }}
+                disabled={isLocked && !isLockedByMe}
+              >
+                <Maximize2 size={14} />
+              </IconButton>
+            )}
           </div>
         </div>
 
-        {/* Status indicator (optional) */}
-        {data.status && (
-          <div className="mt-2 flex items-center gap-2">
-            {getStatusIcon()}
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              {data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
-            </span>
-          </div>
+        {/* Filename, focus, and status - hidden when expanded */}
+        {!expanded && (
+          <>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {data.fileName || data.title || 'Image'}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <IconButton
+                  variant="default"
+                  size="sm"
+                  aria-label="Focus node"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    toggleFocusOnNode(id, true)
+                  }}
+                >
+                  <Focus size={14} />
+                </IconButton>
+              </div>
+            </div>
+
+            {data.status && (
+              <div className="mt-2 flex items-center gap-2">
+                {getStatusIcon()}
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  {data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+                </span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Hover actions */}
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-2">
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Download image"
-          onClick={handleDownload}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Download size={14} />
-        </IconButton>
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete image"
-          onClick={handleDelete}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Trash2 size={14} />
-        </IconButton>
-      </div>
+      {/* Hover actions - hidden when expanded */}
+      {!expanded && (
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-2">
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Download image"
+            onClick={handleDownload}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Download size={14} />
+          </IconButton>
+          <IconButton
+            variant="danger"
+            size="sm"
+            aria-label="Delete image"
+            onClick={handleDelete}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Trash2 size={14} />
+          </IconButton>
+        </div>
+      )}
 
       {/* Delete Modal */}
       <Modal
@@ -229,29 +254,6 @@ export default function ImageNode({
           </>
         }
       />
-
-      {/* Expanded Image Modal */}
-      <Modal
-        open={expanded}
-        onClose={() => setExpanded(false)}
-        title={data.fileName || data.title || 'Image'}
-        className="max-w-[820px]"
-      >
-        <div className="w-full flex items-center justify-center">
-          {data.previewUrl ? (
-            <img
-              src={data.previewUrl}
-              alt={data.fileName || data.title || 'Image'}
-              className="rounded-md"
-              style={{ maxWidth: 800, height: 'auto' }}
-            />
-          ) : (
-            <div className="w-full h-[400px] rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">
-              No preview available
-            </div>
-          )}
-        </div>
-      </Modal>
 
       <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
     </div>
