@@ -887,7 +887,7 @@ function BoardContent({
     }
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
-  const { placeBoardNodes, placeManualNode } = usePlacement()
+  const { placeBoardNodes, placeManualNode, findBestPosition } = usePlacement()
   
   // Initialize board
   useEffect(() => {
@@ -1731,14 +1731,9 @@ function BoardContent({
           onSubmit={async ({ titles, description }) => {
             const center = pendingNodePosition || getViewportCenter()
             if (titles.length === 1) {
-              // Single node: allow optional description; use placement engine
-              const result = await placeManualNode(
-                { title: titles[0], content: description },
-                center,
-                { avoidOverlap: true, minDistance: 50 },
-                nodes
-              )
-              const finalPos = result.placements[0]?.position || center
+              // Single node: honor click by finding best position near the pending point
+              const target = pendingNodePosition || center
+              const finalPos = await findBestPosition(target, titles[0], description, { avoidOverlap: true, minDistance: 50 })
               const newNode: Node = {
                 id: `node-${Date.now()}`,
                 type: 'default',
@@ -1747,39 +1742,39 @@ function BoardContent({
               }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             } else {
-              // Multiple nodes: create around center using placement engine "fan" via placeBoardNodes
-              const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
-              try {
-                const placementResult = await placeBoardNodes(nodesToPlace)
-                if (placementResult.success && placementResult.placements.length > 0) {
-                  const newNodes: Node[] = placementResult.placements.map(p => ({
-                    id: p.node.id,
-                    type: p.node.type,
-                    position: p.position,
-                    data: { ...p.node.data },
-                  }))
-                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-                } else {
-                  // Fallback: simple radial placement around center
-                  const radius = 200
-                  const angleStep = (2 * Math.PI) / titles.length
+              // Multiple nodes: if we have a click position, arrange around it; otherwise use placement engine
+              if (pendingNodePosition) {
+                const radius = 220
+                const angleStep = (2 * Math.PI) / titles.length
+                const arranged: Node[] = titles.map((t, i) => ({
+                  id: `node-${Date.now()}-${i}`,
+                  type: 'default',
+                  position: { x: pendingNodePosition.x + Math.cos(i * angleStep) * radius, y: pendingNodePosition.y + Math.sin(i * angleStep) * radius },
+                  data: { title: t, content: '' },
+                }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...arranged] : [...arranged]))
+              } else {
+                const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
+                try {
+                  const placementResult = await placeBoardNodes(nodesToPlace)
+                  if (placementResult.success && placementResult.placements.length > 0) {
+                    const newNodes: Node[] = placementResult.placements.map(p => ({
+                      id: p.node.id,
+                      type: p.node.type,
+                      position: p.position,
+                      data: { ...p.node.data },
+                    }))
+                    setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                  }
+                } catch {
                   const fallbackNodes: Node[] = titles.map((t, i) => ({
                     id: `node-${Date.now()}-${i}`,
                     type: 'default',
-                    position: { x: center.x + Math.cos(i * angleStep) * radius, y: center.y + Math.sin(i * angleStep) * radius },
+                    position: { x: center.x + i * 60, y: center.y + 150 },
                     data: { title: t, content: '' },
                   }))
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
                 }
-              } catch {
-                // Minimal fallback
-                const fallbackNodes: Node[] = titles.map((t, i) => ({
-                  id: `node-${Date.now()}-${i}`,
-                  type: 'default',
-                  position: { x: center.x + i * 60, y: center.y + 150 },
-                  data: { title: t, content: '' },
-                }))
-                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
               }
             }
             setShowAddNodeModal(false)
