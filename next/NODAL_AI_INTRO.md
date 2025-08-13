@@ -32,7 +32,6 @@
 - **Supabase** (auth, database, file storage, thumbnail storage)
 - **Framer Motion** (UI animation)
 - **OpenAI API** (AI features, user-provided keys)
-- **Lucide React** (icon library)
 - **Date-fns** (date manipulation)
 - **Canvas API** (client-side thumbnail generation)
 - **TipTap** (rich text editing for node content)
@@ -142,6 +141,9 @@ next/src/
 - **Edge Interactions**: Hover effects, delete buttons with animations, and improved visibility
 - **Floating Action Button**: Moved to bottom-center for better accessibility
 - **Theme Toggle**: Relocated to AvatarMenu for cleaner topbar
+- **Mobile Topbar** (new): mobile-first flex layout; left/right areas shrink; center fills leftover width and truncates title; mobile symbol-only logo; More menu is a Plus icon
+- **Mobile Polish** (new): hide MiniMap/Zoom Controls/Tips on mobile; chat toggle at bottom-right; chat defaults closed on mobile
+- **Viewport/Keyboard** (new): viewport meta disables zoom; chat height uses `100dvh` with safe-area bottom padding; blurs input on send to close keyboard
 
 ---
 
@@ -152,8 +154,6 @@ next/src/
 - **AI Chat Integration**: Selected node content is automatically included in AI chat context
 - **Dynamic UI Notifications**: Chat panel shows "Selected: [node title]" or "Selected: X nodes"
 - **Contextual Messaging**: User messages are prefixed with selected node context for AI awareness
-- **Smart Placeholders**: Chat input placeholder changes based on node selection state
-- **XYFlow Native Selection**: Leverages XYFlow's built-in selection system for reliability
 
 ---
 
@@ -164,6 +164,8 @@ next/src/
 - **Delete Functionality**: Animated delete buttons that appear on edge hover
 - **Connection Line**: Enhanced dragging connection line with better visibility and styling
 - **Edge Types**: Custom floating edge component with interactive elements
+- **Connection Mode** (new): start from any handle, then drop on entire node surface to connect; unrelated edges fade while connecting
+- **Handle Hitbox** (new): visual 16x16 handles with 32x32 click/touch target for easier interactions
 
 ---
 
@@ -175,30 +177,58 @@ next/src/
 - **Toggle Component**: Reusable toggle switch with proper ARIA attributes
 - **Menu Component**: Unified dropdown menu system with support for custom content, notifications, and consistent hover behavior
 - **Consistent Styling**: All components support dark/light themes and responsive design
-
-### Newly added/updated components
-
-- **TextInput Component**: Design-system input with label, description, error, left/right icons, sizes (sm|md|lg), variants (default|unstyled), and `fullWidth` support.
-  - Class hooks: `className` for the input, uses Tailwind focus rings and dark theme tokens.
-- **Checkbox Component**: Accessible checkbox built around a native `input type="checkbox"` with a visually styled control.
-  - Props: `label`, `description`, `error`, `size` (sm|md|lg), `variant` (default|unstyled), `indeterminate`, `checked`, `defaultChecked`.
-  - Events: `onChange(checked: boolean, e)`.
-  - Class hooks: `className` (root label), `inputClassName` (hidden input), `controlClassName` (box), `labelTextClassName`, `descriptionClassName`.
-  - Accessibility: The native input remains in the DOM (sr-only) for proper focus and screen reader support.
-  - Usage example: `BoardRoom.tsx` “Show shared only” filter.
-- **Button/IconButton cursor behavior**: Base classes include `cursor-pointer` and proper disabled states.
+- **TextInput Component**: Design-system input with label, description, error, left/right icons, sizes (sm|md|lg), variants (default|unstyled), and `fullWidth` support
+- **Checkbox Component**: Accessible checkbox with native input preserved (sr-only)
 
 ---
 
-## Rich Text Editing (TipTap Integration)
+## Z-Index & Layering (updated)
 
-- **TipTap Editor**: Full-featured WYSIWYG editor for node content
-- **Formatting Options**: Bold, italic, bullet lists, numbered lists, and more
-- **Node Edit Modal**: Dedicated modal for editing node title and content
-- **Content Rendering**: Rich text content displayed with proper styling and prose classes
-- **Toolbar Interface**: Clean toolbar with formatting buttons and visual feedback
-- **Image Support**: Basic image upload and display functionality
-- **Theme Integration**: Editor supports both light and dark themes
+- **Topbar menus above overlays**: Topbar uses higher z-index than chat so menus always render above
+- **Chat/FAB stacking**: Chat is rendered as a sibling overlay above ReactFlow; FAB is also a sibling with lower z-index
+- **Modal layering**: Modal/backdrop use high z-index and stop click-through
+
+---
+
+## Recent Improvements (Latest Session)
+
+- **Connection & Focus/Selection UX**
+  - Entire-node drop targets when connecting; enlarged handle hit area for easier grabs
+  - Edge fading prioritization: connection mode > unified context (selection ∪ focus anchors)
+  - Focus anchors drive edge highlighting; nodes adjacent to anchors are also considered focused
+- **Mobile UX & Layout**
+  - Topbar: flex layout on mobile; left/right shrink, center fills/truncates; symbol-only mobile logo; Plus icon for More menu
+  - Hide MiniMap/Zoom Controls/Tips on mobile; move chat toggle bottom-right; chat defaults closed on mobile
+  - Viewport meta disables zoom; chat height uses `100dvh` + safe-area padding; blur input on send to close keyboard
+- **Overlay/Stacking**
+  - Moved Chat and FAB outside ReactFlow for reliable z-index ordering
+  - Raised Topbar z-index so menus always overlay chat
+- **Handle/Hit Regions**
+  - 16x16 visual handle with 32x32 interactive region implemented via CSS pseudo-element
+
+---
+
+## Best Practices for Next.js Nodal
+
+- **AI Response Handling**: Parse and generate nodes from structured AI responses with proper layout and connections
+- **Modal UX**: Use smooth animations, auto-focus, and keyboard shortcuts for better interaction
+- **Document Preview**: Handle PDF previews client-side with proper error states and loading indicators
+
+- **Atomic Components**: Keep components small, focused, and reusable.
+- **Strict Typing**: Use TypeScript everywhere, with strictest settings.
+- **Error Boundaries**: Handle errors gracefully, especially in async AI and storage flows.
+- **Accessibility**: All interactive elements must be keyboard-accessible and theme-aware.
+- **Cloud-First**: All board and document data is stored in Supabase; no local storage or legacy fallback.
+- **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
+- **UI Simplification**: Remove unused features to keep the interface clean and focused.
+- **Design System**: Use established UI components for consistency and maintainability.
+- **Inputs on iOS** (new): Avoid auto-zoom by ensuring effective 16px font-size (e.g., `text-base scale-[0.875] origin-top-left`).
+- **XYFlow Coordinates**: Use XYFlow utilities like `screenToFlowPosition` for converting pointer/screen coordinates to flow space. Avoid manual math where XYFlow provides helpers.
+- **Node Dimensions**: Prefer actual `node.width`/`node.height` when available; only fall back to estimations when necessary.
+- **Placement Tuning**: Centralize tweak points for node placement (radius, offsets, minDistance) to enable quick UX iteration.
+- **Node Selection**: Leverage XYFlow's native selection capabilities for reliability.
+- **Rich Text Editing**: Use TipTap for consistent, accessible rich text editing across the app.
+- **Build Optimization**: Configure ESLint and TypeScript settings appropriately for development vs production.
 
 ---
 
