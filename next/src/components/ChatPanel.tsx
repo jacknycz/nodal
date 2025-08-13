@@ -6,6 +6,8 @@ import { useAIContext } from '../features/ai/aiContext'
 import { useBoardStore } from '../features/board/boardSlice'
 import { useAIPlacement } from '../features/board/usePlacement'
 import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key, Target } from 'lucide-react'
+import TextArea from './ui/TextArea'
+import Button from './ui/Button'
 import type { BoardNode } from '../features/board/boardTypes'
 import type { NodeToPlace } from '../features/board/placementTypes'
 
@@ -397,12 +399,13 @@ export default function ChatPanel({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Generate Nodes
               </label>
-              <textarea
+              <TextArea
                 value={nodePrompt}
                 onChange={(e) => setNodePrompt(e.target.value)}
                 placeholder="Describe the nodes you want to generate..."
-                className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
                 rows={2}
+                fullWidth
+                className="resize-none"
               />
             </div>
             <div className="flex items-center space-x-3">
@@ -420,23 +423,15 @@ export default function ChatPanel({
                   ))}
                 </select>
               </div>
-              <button
+              <Button
                 onClick={handleGenerateNodes}
                 disabled={!nodePrompt.trim() || isGeneratingNodes}
-                className="flex-1 bg-slate-600 text-white px-3 py-1 rounded-md text-sm hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                loading={isGeneratingNodes}
+                className="flex-1 h-10"
               >
-                {isGeneratingNodes ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-1" />
-                    Generate
-                  </>
-                )}
-              </button>
+                <Sparkles className="w-4 h-4 mr-1" />
+                Generate
+              </Button>
             </div>
           </div>
         </div>
@@ -478,16 +473,16 @@ export default function ChatPanel({
                 
                 {/* Add Generate Nodes button for AI responses with structured content */}
                 {message.role === 'assistant' && hasStructuredContent(message.content) && selectedNodes.length > 0 && (
-                  <button
+                  <Button
                     onClick={() => {
                       const points = extractPoints(message.content)
                       handleGenerateNodesFromMessage(points)
                     }}
-                    className="mt-2 text-xs bg-primary-600 text-white px-2 py-1 rounded hover:bg-primary-700 transition-colors flex items-center gap-1"
+                    className="mt-2 text-xs px-2 py-1 flex items-center gap-1"
                   >
                     <Sparkles className="w-3 h-3" />
                     Generate {extractPoints(message.content).length} Connected Nodes
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -550,10 +545,10 @@ export default function ChatPanel({
       )}
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-end gap-2">
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex items-stretch gap-2">
           <div className="flex-1">
-            <textarea
+            <TextArea
               ref={inputRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
@@ -563,26 +558,27 @@ export default function ChatPanel({
                   ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
                   : "Ask Nodal AI anything..."
               }
-              className="w-full text-base scale-[0.875] origin-top-left px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
               rows={1}
-              style={{ minHeight: '40px', maxHeight: '120px' }}
+              fullWidth
+              className="text-base md:text-sm w-full min-h-[40px] max-h-[120px]"
             />
           </div>
           {isStreaming ? (
-            <button
+            <Button
               onClick={cancelStreaming}
-              className="h-10 px-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+              variant="danger"
+              className="self-stretch px-3 text-sm"
             >
               Stop
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading || isStreaming}
-              className="h-10 px-4 bg-primary-700 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="self-stretch px-4 max-h-10 flex items-center justify-center"
             >
               <Send className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
