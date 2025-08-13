@@ -34,7 +34,7 @@ import ChatPanel from '../../components/ChatPanel'
 import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
 import type { BoardBrief } from './boardTypes'
-import NodeSetupModal from '../../components/NodeSetupModal'
+import NodeAddModal from '../../components/NodeAddModal'
 import BoardContextMenu from '../../components/BoardContextMenu'
 // import { supabase } from '../auth/supabaseClient'; // Using getSupabaseClient instead
 import type { BoardNode } from './boardTypes';
@@ -1429,6 +1429,29 @@ function BoardContent({
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
   }, [setEdges])
 
+  // Shift+Click connect: connect from the single selected node to clicked node
+  const handleShiftClickConnect = useCallback((targetId: string) => {
+    const selected = useBoardStore.getState().selectedNodeIds || []
+    const sourceId = selected.length === 1 ? selected[0] : null
+    if (!sourceId || sourceId === targetId) return
+
+    setEdges((eds) => {
+      const list = Array.isArray(eds) ? eds : []
+      const exists = list.some((e: any) => (
+        (e.source === sourceId && e.target === targetId) ||
+        (e.source === targetId && e.target === sourceId)
+      ))
+      if (exists) return eds
+      const newEdge: Edge = {
+        id: `edge-${Date.now()}`,
+        source: sourceId,
+        target: targetId,
+        type: 'floating',
+      }
+      return [...list, newEdge]
+    })
+  }, [setEdges])
+
   // Memoize handlers object for node/edge types
   const handlers = useMemo(() => {
     // console.log('[BoardComponent] Creating handlers, user:', user, 'user?.id:', user?.id)
@@ -1450,6 +1473,7 @@ function BoardContent({
         setNodes((nds) => Array.isArray(nds) ? [...nds] : nds)
       },
       currentUser: user, // Add current user to handlers
+      onNodeShiftClickConnect: handleShiftClickConnect,
     }
     
     // Force update stableHandlers immediately
@@ -1698,40 +1722,69 @@ function BoardContent({
         </>
       )}
       {showAddNodeModal && (
-        <NodeEditModal
+        <NodeAddModal
           open={showAddNodeModal}
           onClose={() => {
-            setShowAddNodeModal(false);
-            setPendingNodePosition(null);
+            setShowAddNodeModal(false)
+            setPendingNodePosition(null)
           }}
-          onSave={async (title: string, content: string) => {
-            const preferred = pendingNodePosition || getViewportCenter()
-            // Use placement engine with current XYFlow nodes to avoid race conditions
-            const result = await placeManualNode(
-              { title: title || 'New Node', content },
-              preferred,
-              { avoidOverlap: true, minDistance: 50 },
-              nodes
-            )
-            const finalPos = result.placements[0]?.position || preferred
-            const newNode: Node = {
-              id: `node-${Date.now()}`,
-              type: 'default',
-              position: finalPos,
-              data: { 
-                title: title || 'New Node',
-                content: content
-              },
-            };
-            setNodes((nds) => {
-              if (!Array.isArray(nds)) return [newNode];
-              return [...nds, newNode];
-            });
-            setShowAddNodeModal(false);
-            setPendingNodePosition(null);
+          onSubmit={async ({ titles, description }) => {
+            const center = pendingNodePosition || getViewportCenter()
+            if (titles.length === 1) {
+              // Single node: allow optional description; use placement engine
+              const result = await placeManualNode(
+                { title: titles[0], content: description },
+                center,
+                { avoidOverlap: true, minDistance: 50 },
+                nodes
+              )
+              const finalPos = result.placements[0]?.position || center
+              const newNode: Node = {
+                id: `node-${Date.now()}`,
+                type: 'default',
+                position: finalPos,
+                data: { title: titles[0], content: description },
+              }
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+            } else {
+              // Multiple nodes: create around center using placement engine "fan" via placeBoardNodes
+              const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
+              try {
+                const placementResult = await placeBoardNodes(nodesToPlace)
+                if (placementResult.success && placementResult.placements.length > 0) {
+                  const newNodes: Node[] = placementResult.placements.map(p => ({
+                    id: p.node.id,
+                    type: p.node.type,
+                    position: p.position,
+                    data: { ...p.node.data },
+                  }))
+                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                } else {
+                  // Fallback: simple radial placement around center
+                  const radius = 200
+                  const angleStep = (2 * Math.PI) / titles.length
+                  const fallbackNodes: Node[] = titles.map((t, i) => ({
+                    id: `node-${Date.now()}-${i}`,
+                    type: 'default',
+                    position: { x: center.x + Math.cos(i * angleStep) * radius, y: center.y + Math.sin(i * angleStep) * radius },
+                    data: { title: t, content: '' },
+                  }))
+                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
+                }
+              } catch {
+                // Minimal fallback
+                const fallbackNodes: Node[] = titles.map((t, i) => ({
+                  id: `node-${Date.now()}-${i}`,
+                  type: 'default',
+                  position: { x: center.x + i * 60, y: center.y + 150 },
+                  data: { title: t, content: '' },
+                }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
+              }
+            }
+            setShowAddNodeModal(false)
+            setPendingNodePosition(null)
           }}
-          initialTitle=""
-          initialContent=""
         />
       )}
       

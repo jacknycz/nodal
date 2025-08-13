@@ -33,6 +33,7 @@ interface NodalNodeProps {
   // Focus props injected via stable handlers
   focusedNodeIds?: string[]
   toggleFocusOnNode?: (nodeId: string) => void
+  onNodeShiftClickConnect?: (targetId: string) => void
 }
 
 export default function NodalNode({
@@ -46,7 +47,8 @@ export default function NodalNode({
   isNodeLocked,
   getNodeLockOwner,
   isNodeLockedByMe,
-  nodeLocks
+  nodeLocks,
+  onNodeShiftClickConnect
 }: NodalNodeProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -186,6 +188,13 @@ export default function NodalNode({
   return (
     <div
       className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      onClick={(e) => {
+        if (e.shiftKey) {
+          e.preventDefault()
+          e.stopPropagation()
+          onNodeShiftClickConnect?.(id)
+        }
+      }}
     >
       <Handle
         type="target"
