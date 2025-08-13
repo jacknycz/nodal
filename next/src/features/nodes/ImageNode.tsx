@@ -48,6 +48,13 @@ export default function ImageNode({
 }: ImageNodeProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [scale, setScale] = useState(1)
+  const [translate, setTranslate] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const panStartRef = React.useRef<{ x: number; y: number } | null>(null)
+  const pointerCacheRef = React.useRef<Map<number, { x: number; y: number }>>(new Map())
+  const pinchStartRef = React.useRef<{ distance: number; center: { x: number; y: number }; scale: number; translate: { x: number; y: number } } | null>(null)
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -126,15 +133,123 @@ export default function ImageNode({
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
-      <div className="relative nodal-drag-handle cursor-move">
+      <div className="relative cursor-default">
         {/* Image content */}
-        <div className="relative w-full">
+        <div
+          className="relative w-full select-none"
+          onDoubleClick={(e) => {
+            e.stopPropagation()
+            setExpanded(!expanded)
+            // Reset view on minimize
+            if (expanded) {
+              setScale(1)
+              setTranslate({ x: 0, y: 0 })
+            }
+          }}
+          onMouseDown={(e) => {
+            if (!expanded) return
+            e.stopPropagation()
+            setIsPanning(true)
+            panStartRef.current = { x: e.clientX - translate.x, y: e.clientY - translate.y }
+          }}
+          onMouseMove={(e) => {
+            if (!expanded || !isPanning || !panStartRef.current) return
+            e.preventDefault()
+            const x = e.clientX - panStartRef.current.x
+            const y = e.clientY - panStartRef.current.y
+            setTranslate({ x, y })
+          }}
+          onMouseUp={() => {
+            if (!expanded) return
+            setIsPanning(false)
+            panStartRef.current = null
+          }}
+          onMouseLeave={() => {
+            if (!expanded) return
+            setIsPanning(false)
+            panStartRef.current = null
+          }}
+          onWheel={(e) => {
+            if (!expanded) return
+            e.preventDefault()
+            const delta = -e.deltaY
+            const zoomFactor = Math.exp(delta * 0.001)
+            const newScale = Math.min(4, Math.max(1, scale * zoomFactor))
+            // Zoom towards cursor
+            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+            const cx = e.clientX - rect.left
+            const cy = e.clientY - rect.top
+            const dx = (cx - translate.x) / scale
+            const dy = (cy - translate.y) / scale
+            const nx = cx - dx * newScale
+            const ny = cy - dy * newScale
+            setScale(newScale)
+            setTranslate({ x: nx, y: ny })
+          }}
+          onPointerDown={(e) => {
+            if (!expanded) return
+            ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+            pointerCacheRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+            if (pointerCacheRef.current.size === 2) {
+              const pts = Array.from(pointerCacheRef.current.values())
+              const dx = pts[0].x - pts[1].x
+              const dy = pts[0].y - pts[1].y
+              const distance = Math.hypot(dx, dy)
+              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+              const center = { x: (pts[0].x + pts[1].x) / 2 - rect.left, y: (pts[0].y + pts[1].y) / 2 - rect.top }
+              pinchStartRef.current = { distance, center, scale, translate }
+            }
+          }}
+          onPointerMove={(e) => {
+            if (!expanded) return
+            if (!pointerCacheRef.current.has(e.pointerId)) return
+            pointerCacheRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+            if (pointerCacheRef.current.size === 2 && pinchStartRef.current) {
+              const pts = Array.from(pointerCacheRef.current.values())
+              const dx = pts[0].x - pts[1].x
+              const dy = pts[0].y - pts[1].y
+              const distance = Math.hypot(dx, dy)
+              const factor = distance / pinchStartRef.current.distance
+              const newScale = Math.min(4, Math.max(1, pinchStartRef.current.scale * factor))
+              // Zoom towards pinch center
+              const cx = pinchStartRef.current.center.x
+              const cy = pinchStartRef.current.center.y
+              const dx0 = (cx - pinchStartRef.current.translate.x) / pinchStartRef.current.scale
+              const dy0 = (cy - pinchStartRef.current.translate.y) / pinchStartRef.current.scale
+              const nx = cx - dx0 * newScale
+              const ny = cy - dy0 * newScale
+              setScale(newScale)
+              setTranslate({ x: nx, y: ny })
+            }
+          }}
+          onPointerUp={(e) => {
+            if (!expanded) return
+            pointerCacheRef.current.delete(e.pointerId)
+            if (pointerCacheRef.current.size < 2) {
+              pinchStartRef.current = null
+            }
+          }}
+          onPointerCancel={(e) => {
+            if (!expanded) return
+            pointerCacheRef.current.delete(e.pointerId)
+            pinchStartRef.current = null
+          }}
+        >
           {data.previewUrl ? (
             <img
               src={data.previewUrl}
               alt={data.fileName || data.title || 'Image'}
-              className="w-full h-auto rounded-md object-contain"
-              style={{ maxWidth: expanded ? 800 : 240 }}
+              className={`w-full h-auto rounded-md object-contain ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
+              style={{
+                maxWidth: expanded ? 800 : 240,
+                transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
+                transformOrigin: '0 0',
+              }}
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setIsLoaded(true)}
+              draggable={false}
+              onDragStart={(e) => e.preventDefault()}
             />
           ) : (
             <div className={`rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm ${expanded ? 'w-[800px] h-[400px]' : 'w-full h-[180px]'}`}>
@@ -152,6 +267,8 @@ export default function ImageNode({
                 onClick={(e) => {
                   e.stopPropagation()
                   setExpanded(false)
+                  setScale(1)
+                  setTranslate({ x: 0, y: 0 })
                 }}
               >
                 <Minimize2 size={14} />
