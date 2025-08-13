@@ -556,7 +556,7 @@ export default function ChatPanel({
                   ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
                   : "Ask Nodal AI anything..."
               }
-              className="w-full text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+              className="w-full ttext-base scale-[0.875] origin-top-left px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
               rows={1}
               style={{ minHeight: '40px', maxHeight: '120px' }}
             />
