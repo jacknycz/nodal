@@ -121,7 +121,7 @@ export default function ImageNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${containerWidthClass} ${
+      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${
         isFocused
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
           : selected
@@ -239,7 +239,7 @@ export default function ImageNode({
             <img
               src={data.previewUrl}
               alt={data.fileName || data.title || 'Image'}
-              className={`w-full h-auto rounded-md object-contain ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
+              className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
               style={{
                 maxWidth: expanded ? 800 : 240,
                 transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
@@ -293,7 +293,7 @@ export default function ImageNode({
         {/* Filename, focus, and status - hidden when expanded */}
         {!expanded && (
           <>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2 cursor-move">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {data.fileName || data.title || 'Image'}
