@@ -75,30 +75,31 @@ export default function FloatingEdge({
 
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
-      transition: 'all 0.2s ease',
+      transition: 'all 0.2s ease, filter 0.3s ease',
       opacity,
+      willChange: 'filter, opacity',
     } as React.CSSProperties
 
     switch (data?.type) {
       case 'ai':
         return {
           ...baseStyle,
-          stroke: '#3b82f6',
+          stroke: 'var(--edge-ai-color)',
           strokeDasharray: animated ? '5,5' : 'none',
-          filter: selected && isHighlighted ? 'drop-shadow(0 0 8px #3b82f6)' : 'none',
+          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-ai-glow))` : 'none',
         }
       case 'focus':
         return {
           ...baseStyle,
-          stroke: '#10b981',
+          stroke: 'var(--edge-focus-color)',
           strokeWidth: selected ? 5 : 3,
-          filter: selected && isHighlighted ? 'drop-shadow(0 0 8px #10b981)' : 'none',
+          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-focus-glow))` : 'none',
         }
       default:
         return {
           ...baseStyle,
-          stroke: '#6b7280',
-          filter: selected && isHighlighted ? 'drop-shadow(0 0 8px #6b7280)' : 'none',
+          stroke: 'var(--edge-default-color)',
+          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-default-glow))` : 'none',
         }
     }
   }

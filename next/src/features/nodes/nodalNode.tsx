@@ -178,9 +178,9 @@ export default function NodalNode({
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
   const glowClass = isFocused
-    ? 'border-blue-500 shadow-[0_0_0_3px_rgba(59,130,246,0.2)]'
+    ? 'border-primary-500 shadow-[0_0_0_3px_rgba(59,130,246,0.2)]'
     : selected
-      ? 'border-blue-500'
+      ? 'border-primary-500'
       : isLocked && !isLockedByMe
         ? 'border-red-500'
         : 'border-gray-200 dark:border-gray-700'

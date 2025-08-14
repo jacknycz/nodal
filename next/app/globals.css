@@ -100,6 +100,35 @@ body {
   filter: drop-shadow(0 0 4px currentColor);
 }
 
+/* CSS Custom Properties for edge colors */
+:root {
+  --edge-default-color: #999;
+  --edge-ai-color: #3b82f6;
+  --edge-focus-color: #10b981;
+  --edge-default-glow: #6b7280;
+  --edge-ai-glow: #3b82f6;
+  --edge-focus-glow: #10b981;
+  --connection-outline: #ffffff;
+  --connection-outline-glow: rgba(255, 255, 255, 0.8);
+}
+
+.dark {
+  --edge-default-color: #474c55;
+  --edge-ai-color: #60a5fa;
+  --edge-focus-color: #34d399;
+  --edge-default-glow: #9ca3af;
+  --edge-ai-glow: #60a5fa;
+  --edge-focus-glow: #34d399;
+  --connection-outline: #1f2937;
+  --connection-outline-glow: rgba(31, 41, 55, 0.8);
+}
+
+/* Ensure smooth filter transitions for all edges */
+.react-flow__edge {
+  transition: filter 0.3s ease, opacity 0.2s ease, stroke-width 0.2s ease;
+  will-change: filter, opacity;
+}
+
 /* Delete button animations */
 .edge-delete-button {
   opacity: 0;
@@ -207,8 +236,8 @@ body {
 /* Enlarged hit area for React Flow handles: 32x32 clickable with 16x16 visual dot */
 .rf-handle-hit-32 {
   position: relative;
-  width: 32px !important;
-  height: 32px !important;
+  width: 16px !important;
+  height: 16px !important;
   background: transparent !important;
   border: none !important;
   border-radius: 9999px !important;
@@ -226,10 +255,21 @@ body {
   height: 16px;
   border-radius: 9999px;
   background: #f3f4f6; /* gray-100 */
-  border: 1px solid #e5e7eb; /* gray-200 */
+  border: 2px solid #e5e7eb; /* gray-200 */
+  transition: all 0.2s ease;
 }
 
 .dark .rf-handle-hit-32::after {
-  background: #6b7280; /* gray-500 */
-  border-color: #374151; /* gray-700 */
+  background: #474c55; /* gray-500 */
+  border-color: #818893; /* gray-700 */
+}
+
+.rf-handle-hit-32:hover::after {
+  background: #f3f4f6; /* gray-100 */
+  border-color: #e5e7eb; /* gray-200 */
+}
+
+.dark .rf-handle-hit-32:hover::after {
+  background: #474c55; /* gray-500 */
+  border-color: #ffffff; /* gray-700 */
 }
