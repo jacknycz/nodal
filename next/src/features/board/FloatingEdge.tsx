@@ -99,7 +99,7 @@ export default function FloatingEdge({
         return {
           ...baseStyle,
           stroke: 'var(--edge-default-color)',
-          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-default-glow))` : 'none',
+          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-default-glow))` : 'drop-shadow(0 0 8px var(--edge-default-glow))',
         }
     }
   }

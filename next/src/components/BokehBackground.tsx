@@ -15,11 +15,11 @@ interface ParticleStyles {
 const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
   light: {
     count: 30,
-    sizeRange: [3, 8], // Larger dots
+    sizeRange: [3, 80], // Larger dots
     speedRange: [-0.3, 0.3], // Slightly slower movement
-    opacityRange: [0.05, 0.15], // More subtle opacity
+    opacityRange: [0.01, 0.03], // More subtle opacity
     color: '0, 0, 0', // Black dots
-    background: 'rgba(248, 250, 252, 0.8)' // Light gray background with some transparency
+    background: '#f9f9f9' // Light gray background with some transparency
   },
   dark: {
     count: 50,

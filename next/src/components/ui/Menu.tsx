@@ -77,7 +77,7 @@ export default function Menu({
       {/* Dropdown */}
       <div
         className={`
-          absolute z-50 ${width || 'w-56'} rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none
+          absolute z-50 ${width || 'w-56'} rounded-2xl bg-white dark:bg-gray-800 shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none
           transition-all duration-200 ease-out
           ${align === 'right' ? 'right-0' : 'left-0'}
           ${isOpen 

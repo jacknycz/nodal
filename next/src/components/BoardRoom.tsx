@@ -121,7 +121,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
 
   return (
     <div
-      className="group relative border-transparent bg-white/80 dark:bg-gray-950/50 hover:border-gray-300 dark:hover:border-primary-600/50 p-4 rounded-3xl border transition-all duration-200 hover:shadow-md cursor-pointer"
+      className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200 cursor-pointer"
       onClick={handleCardClick}
     >
 
@@ -198,12 +198,12 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           {/* Board Stats */}
           <div className="flex flex space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <div className="flex items-center gap-1">
-              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium bg-primary-100 dark:bg-primary-900 rounded-full text-primary-500 dark:text-primary-200">{board.nodeCount}</span>
-              <span className="">nodes</span>
+              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{board.nodeCount}</span>
+              <span className="font-medium">nodes</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium bg-primary-100 dark:bg-primary-900 rounded-full text-primary-500 dark:text-primary-200">{board.edgeCount}</span>
-              <span className="">connections</span>
+              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{board.edgeCount}</span>
+              <span className="font-medium">connections</span>
             </div>
           </div>
           {/* Last Modified */}
@@ -578,42 +578,46 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   })()
 
   return (
-    <div className="relative min-h-screen pt-16 flex flex-col">
+    <div className="relative min-h-screen pt-16">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
       </div>
-      <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-        {/* Welcome + Stats Open */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="col-span-1 rounded-xl ">
-            <h1 className="mb-4 text-xl md:text-5xl font-fredoka font-medium text-gray-900 dark:text-white">
-              <span className="font-normal">Welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
-            </h1>
-            <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">
-              Pick up where you left off or create something new.
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
-              <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
-                <CircuitBoard size={32} />
-              </div>
-              <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
-              <div className="text-4xl font-medium text-gray-900 dark:text-white">{boards.length}</div>
+      
+      {/* Sticky Welcome Section */}
+      <div className="sticky top-16 z-10 pb-8">
+        <div className="w-full mx-auto py-10 px-4 sm:px-6 lg:px-8">
+          {/* Welcome + Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-1 rounded-xl">
+              <h1 className="mb-4 text-xl md:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
+                <span className="font-normal">welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
+              </h1>
+              <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">
+                Pick up where you left off or create something new.
+              </p>
             </div>
-            <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
-              <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
-                <Users size={32} />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="relative rounded-4xl px-6 py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
+                <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
+                  <CircuitBoard size={32} />
+                </div>
+                <div className="font-fredoka font-medium lowercase tracking-wide text-gray-500 dark:text-gray-400">boards</div>
+                <div className="text-4xl font-medium text-gray-900 dark:text-white">{boards.length}</div>
               </div>
-              <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
-              <div className="text-4xl font-medium text-gray-900 dark:text-white">{sharedBoards.length}</div>
-            </div>
-            <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
-              <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
-                <FileText size={32} />
+              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
+                <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
+                  <Users size={32} />
+                </div>
+                <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
+                <div className="text-4xl font-medium text-gray-900 dark:text-white">{sharedBoards.length}</div>
               </div>
-              <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
-              <div className="text-4xl font-medium text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
+              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
+                <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
+                  <FileText size={32} />
+                </div>
+                <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
+                <div className="text-4xl font-medium text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -623,62 +627,65 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         ANNOYINGLY LARGE SEPERATOR (ALS) BETWEEN WELCOME AND BOARD CARDS JUST LIKE THE UI YEEEEAAAAHHHHH
       */}
 
-      <div className="w-full mx-auto border-t rounded-t-4xl border-t-gray-950 dark:bg-gray-950/50 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">Your Boards</h2>
+      {/* Scrollable Boards Section */}
+      <div className="relative z-20 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">your boards</h2>
 
-          <Button onClick={handleNewBoardClick} className="flex items-center gap-2 bg-tertiary-500 hover:bg-tertiary-600 text-white">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>New Board</span>
-          </Button>
-        </div>
-
-        <div className="mb-6 flex items-center gap-4">
-          <input
-            type="text"
-            placeholder="Search boards..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full max-w-md px-4 py-2 rounded-4xl bg-white/80 border-0 dark:bg-gray-950/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-
-          <Checkbox
-            label="Show shared only"
-            checked={showSharedOnly}
-            onChange={(v) => setShowSharedOnly(v)}
-            labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
-          />
-        </div>
-        {error && (
-          <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
-        )}
-        {loading ? (
-          <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-            <Loader />
+            <Button onClick={handleNewBoardClick} className="flex items-center gap-2 bg-tertiary-500 hover:bg-tertiary-600 text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>New Board</span>
+            </Button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedBoards.length === 0 ? (
-              <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                No boards found. Create a new board to get started!
-              </div>
-            ) : (
-              sortedBoards.map(board => (
-                <BoardCard
-                  key={board.id}
-                  board={board}
-                  onLoad={() => onOpenBoard(board, undefined)}
-                  onRename={newName => handleRename(board.id, newName)}
-                  onDelete={() => handleDelete(board.id)}
-                  isPinned={pinnedBoardIds.includes(board.id)}
-                  onTogglePin={() => togglePin(board.id)}
-                />
-              ))
-            )}
+
+          <div className="mb-6 flex items-center gap-4">
+            <input
+              type="text"
+              placeholder="Search boards..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full max-w-md px-4 py-2 rounded-4xl bg-white/80 border-0 dark:bg-gray-950/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <Checkbox
+              label="Show shared only"
+              checked={showSharedOnly}
+              onChange={(v) => setShowSharedOnly(v)}
+              labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
+            />
           </div>
-        )}
+          {error && (
+            <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
+          )}
+          {loading ? (
+            <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+              <Loader />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sortedBoards.length === 0 ? (
+                <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+                  No boards found. Create a new board to get started!
+                </div>
+              ) : (
+                sortedBoards.map(board => (
+                  <BoardCard
+                    key={board.id}
+                    board={board}
+                    onLoad={() => onOpenBoard(board, undefined)}
+                    onRename={newName => handleRename(board.id, newName)}
+                    onDelete={() => handleDelete(board.id)}
+                    isPinned={pinnedBoardIds.includes(board.id)}
+                    onTogglePin={() => togglePin(board.id)}
+                  />
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Simple board name modal (fallback) */}

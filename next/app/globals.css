@@ -102,10 +102,10 @@ body {
 
 /* CSS Custom Properties for edge colors */
 :root {
-  --edge-default-color: #999;
+  --edge-default-color: #73e3f7;
   --edge-ai-color: #3b82f6;
   --edge-focus-color: #10b981;
-  --edge-default-glow: #6b7280;
+  --edge-default-glow: #ffffff;
   --edge-ai-glow: #3b82f6;
   --edge-focus-glow: #10b981;
   --connection-outline: #ffffff;
@@ -260,8 +260,8 @@ body {
 }
 
 .dark .rf-handle-hit-32::after {
-  background: #474c55; /* gray-500 */
-  border-color: #818893; /* gray-700 */
+  background: #374151; /* gray-700 */
+  border-color: #1f2937; /* gray-950 */
 }
 
 .rf-handle-hit-32:hover::after {
