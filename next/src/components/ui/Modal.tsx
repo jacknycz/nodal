@@ -73,7 +73,7 @@ const Modal: React.FC<ModalProps> = ({
       />
       {/* Modal content */}
       <div
-        className={`relative z-10 bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out ${
+        className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out ${
           isVisible 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-95 -translate-y-1'

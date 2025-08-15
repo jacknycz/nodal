@@ -67,7 +67,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   }
 
   const renderStep1 = () => (
-    <div className="space-y-4 mb-6">
+    <div className="space-y-6 mt-8 mb-12">
       <div>
         <TextInput
           value={boardTopic}
@@ -93,12 +93,10 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Starter nodes (optional)
-        </label>
         <div className="flex gap-2">
           <TextInput
             value={starterInput}
+            label="Starter nodes (optional)"
             onChange={(e) => setStarterInput((e.target as HTMLInputElement).value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -130,7 +128,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
             ))}
           </div>
         )}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-xs text-left text-gray-500 dark:text-gray-400 mt-1">
           Add any starting ideas. These will be created as nodes on your new board.
         </p>
       </div>
@@ -138,7 +136,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   )
 
   const renderStep2 = () => (
-    <div className="space-y-4 mb-6">
+    <div className="space-y-4 mt-8 mb-12">
       <div>
         <TextInput
           label="Title"
@@ -210,7 +208,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       onClose={onClose}
       title={currentStep === 1 ? "Set Up Your Board" : "Save Your Board"}
       description={currentStep === 1 ? "Tell us about what you want to work on" : "Give your board a name"}
-      className="max-w-2xl"
+      className="max-w-2xl text-center"
       currentStep={currentStep - 1} // 0-indexed for the step indicator
       totalSteps={2}
     >
