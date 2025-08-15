@@ -580,7 +580,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   return (
     <div className="relative min-h-screen pt-16 flex flex-col">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
       </div>
       <div className="w-full max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         {/* Welcome + Stats Open */}
@@ -617,9 +617,15 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center justify-between mb-4 mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Your Boards</h2>
+      {/*
+        ANNOYINGLY LARGE SEPERATOR (ALS) BETWEEN WELCOME AND BOARD CARDS JUST LIKE THE UI YEEEEAAAAHHHHH
+      */}
+
+      <div className="w-full mx-auto border-t rounded-t-4xl border-t-gray-950 dark:bg-gray-950/50 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">Your Boards</h2>
 
           <Button onClick={handleNewBoardClick} className="flex items-center gap-2 bg-tertiary-500 hover:bg-tertiary-600 text-white">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -653,7 +659,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             <Loader />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {sortedBoards.length === 0 ? (
               <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
                 No boards found. Create a new board to get started!

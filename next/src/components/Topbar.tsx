@@ -167,7 +167,7 @@ export default function Topbar({
 
   return (
     <>
-      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[80] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
+      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[80] bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-2">
           {/* Left - Logo */}
           <div className="flex-shrink-0 flex items-center gap-3 sm:gap-6">
