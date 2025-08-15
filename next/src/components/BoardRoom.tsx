@@ -11,7 +11,7 @@ import TextInput from './ui/TextInput'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
-import { CircuitBoard, FileText, Users, PencilIcon, PinIcon } from 'lucide-react'
+import { CircuitBoard, FileText, Users, PencilIcon, PinIcon, CheckIcon } from 'lucide-react'
 // Gradient background only (no external images)
 
 interface BoardRoomProps {
@@ -121,7 +121,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
 
   return (
     <div
-      className="group relative border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-950/50 hover:border-gray-300 dark:hover:bg-gray-600 p-4 rounded-3xl border transition-all duration-200 hover:shadow-md cursor-pointer"
+      className="group relative border-transparent bg-white/80 dark:bg-gray-950/50 hover:border-gray-300 dark:hover:border-primary-600/50 p-4 rounded-3xl border transition-all duration-200 hover:shadow-md cursor-pointer"
       onClick={handleCardClick}
     >
 
@@ -134,34 +134,47 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         <PinIcon className="w-4 h-4" />
       </IconButton>
 
-      <div className="flex justify-between">
-        {/* Title row (full width) */}
-        <div className="col-span-2 mb-2 pr-6 flex items-center justify-between gap-1 max-w-full" onClick={e => e.stopPropagation()}>
+      <div className="mb-4">
+        {/* Clean title with hover-to-edit */}
+        <div className="group relative">
           {isEditingTitle ? (
-            <TextInput
-              ref={titleInputRef}
-              type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
-                if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
-              }}
-              onBlur={commitTitleEdit}
-              size="md"
-              fullWidth
-              maxLength={50}
-            />
+            <div className="flex items-center gap-2">
+              <TextInput
+                ref={titleInputRef}
+                type="text"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
+                  if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
+                }}
+                onBlur={commitTitleEdit}
+                size="md"
+                maxLength={50}
+                className="flex-1"
+              />
+              <IconButton
+                variant="primary"
+                aria-label="Save title"
+                onClick={(e) => { e.stopPropagation(); commitTitleEdit() }}
+                className="ml-2"
+              >
+                <CheckIcon className="w-4 h-4" />
+              </IconButton>
+            </div>
           ) : (
-            <h3 className="w-full text-xl font-thin text-gray-900 dark:text-white truncate">{newName}</h3>
-          )}
-          {!isEditingTitle && (
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-2 group">
+              <h3 
+                className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
+              >
+                {newName}
+              </h3>
               <IconButton
                 variant="primaryGhost"
                 aria-label="Edit title"
                 onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
-                className="ml-1"
+                className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
               >
                 <PencilIcon className="w-4 h-4" />
               </IconButton>
@@ -170,9 +183,9 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         </div>
       </div>
 
-      <div className="grid grid-cols-2">
-        {/* Board Info (left column) */}
-        <div className="flex flex-col items-start">
+      <div className="flex space-x-6 items-center">
+        {/* Board Info (right column) */}
+        <div className="flex flex-col flex-1 w-full items-start">
           {/* Shared with/by info */}
           <div className="mb-2 flex items-center gap-2">
             {board.shared && (
@@ -183,14 +196,14 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
             <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
           )}
           {/* Board Stats */}
-          <div className="flex flex-col text-sm text-gray-500 dark:text-gray-400 mb-2">
-            <div className="flex flex-col">
-              <span className="text-2xl font-thin">{board.nodeCount}</span>
-              <span className="text-xs">nodes</span>
+          <div className="flex flex space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
+            <div className="flex items-center gap-1">
+              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium bg-primary-100 dark:bg-primary-900 rounded-full text-primary-500 dark:text-primary-200">{board.nodeCount}</span>
+              <span className="">nodes</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-thin">{board.edgeCount}</span>
-              <span className="text-xs">connections</span>
+            <div className="flex items-center gap-1">
+              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium bg-primary-100 dark:bg-primary-900 rounded-full text-primary-500 dark:text-primary-200">{board.edgeCount}</span>
+              <span className="">connections</span>
             </div>
           </div>
           {/* Last Modified */}
@@ -200,30 +213,28 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         </div>
 
         {/* Board Thumbnail */}
-        <div className="mb-2 w-full flex justify-center items-center">
+        <div className="mb-2 flex flex-col justify-items-start">
           {loading && (
-            <div className="flex items-center justify-center w-32 h-32 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
+            <div className="flex justify-center w-16 h-16 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
               <span className="text-gray-400 text-xs">Generating...</span>
             </div>
           )}
           {!loading && !imgError && thumbnailUrl ? (
-            <picture>
+            <div className="w-16 h-16 rounded-xl shadow overflow-hidden bg-gray-100 dark:bg-gray-900">
               <img
                 src={thumbnailUrl}
                 alt="Board thumbnail"
-                className="rounded shadow max-h-32 max-w-full object-cover bg-gray-100 dark:bg-gray-900"
-                style={{ minHeight: 64, minWidth: 64, background: '#f3f4f6' }}
+                className="w-full h-full object-cover"
                 onError={() => {
                   setImgError(true);
                 }}
               />
-            </picture>
+            </div>
           ) : (
             <div
-              className="w-32 h-32 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
-              style={{ minHeight: 64, minWidth: 64 }}
+              className="w-16 h-16 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
             >
-              <span className="text-lg font-semibold text-gray-700 dark:text-gray-200 select-none">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none">
                 {(board.name || '')
                   .trim()
                   .split(/\s+/)
@@ -582,25 +593,25 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               Pick up where you left off or create something new.
             </p>
           </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
               <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
                 <CircuitBoard size={32} />
               </div>
               <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
               <div className="text-4xl font-medium text-gray-900 dark:text-white">{boards.length}</div>
             </div>
-              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
-                  <Users size={32} />
-                </div>
+            <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
+              <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
+                <Users size={32} />
+              </div>
               <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
               <div className="text-4xl font-medium text-gray-900 dark:text-white">{sharedBoards.length}</div>
             </div>
-              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
-                  <FileText size={32} />
-                </div>
+            <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
+              <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
+                <FileText size={32} />
+              </div>
               <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
               <div className="text-4xl font-medium text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
             </div>
