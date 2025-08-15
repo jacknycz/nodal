@@ -9,9 +9,24 @@ interface ModalProps {
   children?: React.ReactNode
   actions?: React.ReactNode
   className?: string
+  // Multi-step support
+  currentStep?: number
+  totalSteps?: number
+  onStepChange?: (step: number) => void
 }
 
-const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, children, actions, className }) => {
+const Modal: React.FC<ModalProps> = ({ 
+  open, 
+  onClose, 
+  title, 
+  description, 
+  children, 
+  actions, 
+  className,
+  currentStep,
+  totalSteps,
+  onStepChange
+}) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
 
@@ -67,6 +82,26 @@ const Modal: React.FC<ModalProps> = ({ open, onClose, title, description, childr
         aria-modal="true"
         onClick={e => e.stopPropagation()}
       >
+        {/* Step indicator */}
+        {totalSteps && totalSteps > 1 && (
+          <div className="flex items-center justify-center mb-4">
+            <div className="flex space-x-2">
+              {Array.from({ length: totalSteps }, (_, i) => (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                    i < (currentStep || 0) 
+                      ? 'bg-primary-200' 
+                      : i === (currentStep || 0) 
+                        ? 'bg-primary-500' 
+                        : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {title && <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{title}</h2>}
         {description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{description}</p>}
         <div className="flex-1">{children}</div>

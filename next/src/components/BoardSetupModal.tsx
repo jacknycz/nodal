@@ -15,6 +15,7 @@ interface BoardSetupModalProps {
 }
 
 export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSetupModalProps) {
+  const [currentStep, setCurrentStep] = useState(1)
   const [boardName, setBoardName] = useState('')
   const [boardTopic, setBoardTopic] = useState('')
   const [description, setDescription] = useState('')
@@ -26,10 +27,29 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   React.useEffect(() => {
     if (isOpen) {
       setBoardId(uuidv4())
+      setCurrentStep(1)
+      // Reset form when opening
+      setBoardName('')
+      setBoardTopic('')
+      setDescription('')
+      setStarterInput('')
+      setStarterNodes([])
     }
   }, [isOpen])
 
-  const handleStartWithAI = () => {
+  const handleNextStep = () => {
+    if (currentStep === 1 && boardTopic.trim()) {
+      setCurrentStep(2)
+    }
+  }
+
+  const handlePreviousStep = () => {
+    if (currentStep === 2) {
+      setCurrentStep(1)
+    }
+  }
+
+  const handleCreateBoard = () => {
     if (boardName.trim()) {
       onComplete({
         id: boardId,
@@ -42,16 +62,145 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
     }
   }
 
-  const handleCreateBlank = () => {
-    if (boardName.trim()) {
-      onComplete({
-        id: boardId,
-        boardName: boardName.trim(),
-        boardTopic: boardTopic.trim(),
-        description: description.trim(),
-        startWithAI: false,
-        starterNodes,
-      })
+  const handleCancel = () => {
+    onClose()
+  }
+
+  const renderStep1 = () => (
+    <div className="space-y-4 mb-6">
+      <div>
+        <TextInput
+          value={boardTopic}
+          onChange={(e) => setBoardTopic((e.target as HTMLInputElement).value)}
+          placeholder="e.g., AI and productivity, Personal projects..."
+          label="Topic"
+          description="This helps the AI understand the context of your board. It can be changed later."
+          fullWidth
+          required
+        />
+      </div>
+      
+      <div>
+        <TextArea
+          value={description}
+          onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
+          placeholder="Tell us more about what you want to work on, your goals, or any specific ideas..."
+          label="Description (optional)"
+          rows={3}
+          fullWidth
+          description="This provides additional context for AI-generated starter nodes."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Starter nodes (optional)
+        </label>
+        <div className="flex gap-2">
+          <TextInput
+            value={starterInput}
+            onChange={(e) => setStarterInput((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                const val = starterInput.trim()
+                if (val && !starterNodes.includes(val)) {
+                  setStarterNodes(prev => [...prev, val])
+                  setStarterInput('')
+                }
+              }
+            }}
+            placeholder="Type a node title and press Enter"
+            fullWidth
+          />
+        </div>
+        {starterNodes.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {starterNodes.map((title) => (
+              <span key={title} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
+                {title}
+                <button
+                  onClick={() => setStarterNodes(prev => prev.filter(t => t !== title))}
+                  className="ml-1 text-gray-500 hover:text-gray-800 dark:hover:text-white"
+                  aria-label={`Remove ${title}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Add any starting ideas. These will be created as nodes on your new board.
+        </p>
+      </div>
+    </div>
+  )
+
+  const renderStep2 = () => (
+    <div className="space-y-4 mb-6">
+      <div>
+        <TextInput
+          label="Title"
+          value={boardName}
+          onChange={(e) => setBoardName((e.target as HTMLInputElement).value)}
+          placeholder="e.g., My Project Ideas, Research Notes..."
+          fullWidth
+          required
+          description="This is the name of your board and how it appears in your board list."
+        />
+      </div>
+      
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Board Summary</h3>
+        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+          <div><strong>Topic:</strong> {boardTopic || 'Not specified'}</div>
+          <div><strong>Description:</strong> {description || 'Not specified'}</div>
+          <div><strong>Starter nodes:</strong> {starterNodes.length > 0 ? starterNodes.join(', ') : 'None'}</div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderActions = () => {
+    if (currentStep === 1) {
+      return (
+        <div className="flex justify-between space-x-3">
+          <Button
+            variant="secondary"
+            onClick={handleCancel}
+          >
+            Cancel
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleNextStep}
+            disabled={!boardTopic.trim()}
+          >
+            Next
+          </Button>
+        </div>
+      )
+    } else {
+      return (
+        <div className="flex justify-between space-x-3">
+          <Button
+            variant="secondary"
+            onClick={handlePreviousStep}
+          >
+            Back
+          </Button>
+          
+          <Button
+            variant="primary"
+            onClick={handleCreateBoard}
+            disabled={!boardName.trim()}
+          >
+            Create Board
+          </Button>
+        </div>
+      )
     }
   }
 
@@ -59,115 +208,14 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
     <Modal
       open={isOpen}
       onClose={onClose}
-      title="Create New Board"
+      title={currentStep === 1 ? "Set Up Your Board" : "Save Your Board"}
+      description={currentStep === 1 ? "Tell us about what you want to work on" : "Give your board a name"}
       className="max-w-2xl"
+      currentStep={currentStep - 1} // 0-indexed for the step indicator
+      totalSteps={2}
     >
-      <div className="space-y-4">
-        <div>
-          <TextInput
-            label="Title"
-            value={boardName}
-            onChange={(e) => setBoardName((e.target as HTMLInputElement).value)}
-            placeholder="e.g., My Project Ideas, Research Notes..."
-            fullWidth
-            required
-            description="This is the name of your board and how it appears in your board list."
-          />
-        </div>
-        
-        <div>
-          <TextInput
-            value={boardTopic}
-            onChange={(e) => setBoardTopic((e.target as HTMLInputElement).value)}
-            placeholder="e.g., AI and productivity, Personal projects..."
-            label="Topic (optional)"
-            description="This helps the AI understand the context of your board. It can be changed later."
-            fullWidth
-          />
-        </div>
-        
-        <div>
-          <TextArea
-            value={description}
-            onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
-            placeholder="Tell us more about what you want to work on, your goals, or any specific ideas..."
-            label="Description (optional)"
-            rows={3}
-            fullWidth
-            description="This provides additional context for AI-generated starter nodes."
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Starter nodes (optional)
-          </label>
-          <div className="flex gap-2">
-            <TextInput
-              value={starterInput}
-              onChange={(e) => setStarterInput((e.target as HTMLInputElement).value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const val = starterInput.trim()
-                  if (val && !starterNodes.includes(val)) {
-                    setStarterNodes(prev => [...prev, val])
-                    setStarterInput('')
-                  }
-                }
-              }}
-              placeholder="Type a node title and press Enter"
-              fullWidth
-            />
-          </div>
-          {starterNodes.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {starterNodes.map((title) => (
-                <span key={title} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
-                  {title}
-                  <button
-                    onClick={() => setStarterNodes(prev => prev.filter(t => t !== title))}
-                    className="ml-1 text-gray-500 hover:text-gray-800 dark:hover:text-white"
-                    aria-label={`Remove ${title}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Add any starting ideas. These will be created as nodes on your new board.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-between space-x-3 mt-6">
-        <Button
-          variant="secondary"
-          onClick={onClose}
-        >
-          Cancel
-        </Button>
-        
-        <div className="flex space-x-3">
-          <Button
-            variant="secondary"
-            onClick={handleCreateBlank}
-            disabled={!boardName.trim()}
-          >
-            Create Blank Board
-          </Button>
-          
-          <Button
-            variant="primary"
-            onClick={handleStartWithAI}
-            disabled={!boardName.trim()}
-          >
-            Start with AI
-          </Button>
-        </div>
-      </div>
+      {currentStep === 1 ? renderStep1() : renderStep2()}
+      {renderActions()}
     </Modal>
   )
 } 
