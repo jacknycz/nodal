@@ -359,7 +359,7 @@ export default function ChatPanel({
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between py-2 px-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between py-2 px-4 rounded-t-4xl bg-white/50 dark:bg-gray-900/80 shadow-lg shadow-gray-400/20 dark:shadow-none">
           <div className="flex items-center space-x-2">
             <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
             {/* <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3> */}
