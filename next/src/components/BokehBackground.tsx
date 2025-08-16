@@ -73,7 +73,15 @@ export default function BokehBackground() {
     
     function animate() {
       if (!canvas || !ctx) return
+      
+      // Clear the canvas properly
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      // Draw background if not transparent
+      if (styles.background !== 'transparent') {
+        ctx.fillStyle = styles.background
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+      }
       
       particles.forEach((particle) => {
         particle.x += particle.speedX

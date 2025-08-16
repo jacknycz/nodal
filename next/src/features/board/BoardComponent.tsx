@@ -1573,11 +1573,12 @@ function BoardContent({
         fitViewOptions={{ padding: 0.2, minZoom: 0.5, maxZoom: 2 }}
         proOptions={{ hideAttribution: true }}
         className={`${theme === 'dark' ? 'dark' : ''}`}
+        style={{ background: 'transparent' }} // Make ReactFlow background transparent
         multiSelectionKeyCode="Meta"
         deleteKeyCode="Delete"
       >
         {renderRemoteCursors()}
-        <Background />
+        {/* Remove the Background component - BokehBackground will handle the background */}
         <div className="hidden sm:block">
           <Controls />
         </div>

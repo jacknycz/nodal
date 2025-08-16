@@ -335,253 +335,233 @@ export default function ChatPanel({
     }
   }
 
-  if (!isOpen) {
-    return (
+  return (
+    <>
+      {/* Toggle Button - Always rendered */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-colors bottom-4 sm:bottom-auto sm:top-16"
+        className={`fixed right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${
+          isOpen 
+            ? 'opacity-0 scale-95 pointer-events-none' 
+            : 'opacity-100 scale-100'
+        }`}
         title="Open Chat"
       >
         <MessageSquare className="w-5 h-5" />
       </button>
-    )
-  }
 
-  return (
-    <div className="fixed top-12 right-0 z-60 w-96 h-[calc(100dvh-48px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-2">
-          <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
-          {/* <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3> */}
-        </div>
-        
-        {/* AI Status Indicator */}
-        <div className="flex items-center space-x-4">
-          {aiInitialized ? (
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-yellow-600 dark:text-yellow-400">Connecting...</span>
-            </div>
-          )}
-          
-          <button
-            onClick={() => setIsOpen(false)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* AI Status Banner (when not initialized) */}
-      {!aiInitialized && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
+      {/* Chat Panel - Always rendered with animation */}
+      <div 
+        className={`fixed top-16 right-4 rounded-4xl z-60 w-96 h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${
+          isOpen 
+            ? 'opacity-100 scale-100 translate-y-0' 
+            : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between py-2 px-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-2">
-            <Key className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-            <p className="text-xs text-yellow-700 dark:text-yellow-300">
-              AI is initializing... Check console for status
-            </p>
+            <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
+            {/* <h3 className="font-semibold text-gray-900 dark:text-gray-100">Nodal AI</h3> */}
+          </div>
+          
+          {/* AI Status Indicator */}
+          <div className="flex items-center space-x-4">
+            {aiInitialized ? (
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                <span className="text-xs text-yellow-600 dark:text-yellow-400">Connecting...</span>
+              </div>
+            )}
+            
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Node Generator */}
-      {showNodeGenerator && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Generate Nodes
-              </label>
-              <TextArea
-                value={nodePrompt}
-                onChange={(e) => setNodePrompt(e.target.value)}
-                placeholder="Describe the nodes you want to generate..."
-                rows={2}
-                fullWidth
-                className="resize-none"
-              />
+        {/* AI Status Banner (when not initialized) */}
+        {!aiInitialized && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 px-4 py-2">
+            <div className="flex items-center space-x-2">
+              <Key className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+              <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                AI is initializing... Check console for status
+              </p>
             </div>
-            <div className="flex items-center space-x-3">
+          </div>
+        )}
+
+        {/* Node Generator */}
+        {showNodeGenerator && (
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+            <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Count
+                  Generate Nodes
                 </label>
-                <select
-                  value={nodeCount}
-                  onChange={(e) => setNodeCount(Number(e.target.value))}
-                  className="p-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                >
-                  {[1, 2, 3, 4, 5].map(num => (
-                    <option key={num} value={num}>{num}</option>
-                  ))}
-                </select>
+                <TextArea
+                  value={nodePrompt}
+                  onChange={(e) => setNodePrompt(e.target.value)}
+                  placeholder="Describe the nodes you want to generate..."
+                  rows={2}
+                  fullWidth
+                  className="resize-none"
+                />
               </div>
-              <Button
-                onClick={handleGenerateNodes}
-                disabled={!nodePrompt.trim() || isGeneratingNodes}
-                loading={isGeneratingNodes}
-                className="flex-1 h-10"
-              >
-                <Sparkles className="w-4 h-4 mr-1" />
-                Generate
-              </Button>
+              <div className="flex items-center space-x-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Count
+                  </label>
+                  <select
+                    value={nodeCount}
+                    onChange={(e) => setNodeCount(Number(e.target.value))}
+                    className="p-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    {[1, 2, 3, 4, 5].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  onClick={handleGenerateNodes}
+                  disabled={!nodePrompt.trim() || isGeneratingNodes}
+                  loading={isGeneratingNodes}
+                  className="flex-1 h-10"
+                >
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  Generate
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {!aiContext.isInitialized ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            <Key className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm font-medium mb-2">AI Not Configured</p>
-            <p className="text-xs mb-4">Set up your OpenAI API key to start using AI features</p>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-            <img src="/nobot.svg" alt="Nodal" width={32} height={32} className="mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Start a conversation with Nodal AI</p>
-            <p className="text-xs mt-1">Ask questions, generate nodes, or get help with your board</p>
-          </div>
-        ) : (
-          messages.map((message) => (
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message, index) => (
             <div
-              key={message.id}
+              key={index}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                   message.role === 'user'
-                    ? 'bg-indigo-500 dark:bg-indigo-700 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                 }`}
               >
-                <div className="whitespace-pre-wrap">{message.role === 'assistant' ? sanitizeForDisplay(message.content) : message.content}</div>
-                <div className={`text-xs mt-1 ${
-                  message.role === 'user' ? 'text-primary-100' : 'text-gray-500 dark:text-gray-400'
-                }`}>
-                  {message.timestamp.toLocaleTimeString()}
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              </div>
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                  <span className="text-sm text-gray-500">Thinking...</span>
                 </div>
-                
-                {/* Add Generate Nodes button for AI responses with structured content */}
-                {message.role === 'assistant' && hasStructuredContent(message.content) && selectedNodes.length > 0 && (
-                  <Button
-                    onClick={() => {
-                      const points = extractPoints(message.content)
-                      handleGenerateNodesFromMessage(points)
-                    }}
-                    className="mt-2 text-xs px-2 py-1 flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    Generate {extractPoints(message.content).length} Connected Nodes
-                  </Button>
-                )}
               </div>
             </div>
-          ))
-        )}
-        
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 rounded-lg text-sm">
+          )}
+          
+          {error && (
+            <div className="flex justify-start">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl px-4 py-2">
+                <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+                <button
+                  onClick={clearError}
+                  className="text-xs text-red-600 dark:text-red-400 hover:underline mt-1"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Selected Nodes Banner - Moved to right above input area */}
+        {selectedNodes.length > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800 px-4 py-2">
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>AI is thinking...</span>
+                <Target className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  {selectedNodes.length === 1 
+                    ? `Selected: "${selectedNodes[0].data.title || 'Untitled Node'}"`
+                    : `Selected: ${selectedNodes.length} nodes`
+                  }
+                </p>
               </div>
+              <button
+                onClick={() => {
+                  clearSelectedNodes()
+                  clearFocusedNodes()
+                }}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+              >
+                <X className="w-3 h-3" />
+              </button>
             </div>
           </div>
         )}
-        
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Error Display */}
-      {error && (
-        <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-red-600 dark:text-red-400">{error}</span>
-            <button
-              onClick={clearError}
-              className="text-red-400 hover:text-red-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Selection/Focus Notification */}
-      {selectedNodes.length > 0 && (
-        <div className="px-4 py-2 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-200 dark:border-primary-800">
-          <div className="flex items-center justify-between text-sm text-primary-700 dark:text-primary-300">
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              <span className="text-xs">
-                {selectedNodes.length === 1 
-                  ? `Selected: ${selectedNodes[0].data.title || 'Untitled Node'}`
-                  : `Selected: ${selectedNodes.length} nodes`}
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                clearSelectedNodes()
-                clearFocusedNodes()
-              }}
-              className="text-primary-400 hover:text-primary-600 dark:hover:text-primary-200"
-              aria-label="Clear selection"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Input Area */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-stretch gap-2">
-          <div className="flex-1">
+        {/* Input */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex space-x-2">
             <TextArea
               ref={inputRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSendMessage()
+                }
+              }}
               placeholder={
-                selectedNodes.length > 0 
+                selectedNodes.length > 0
                   ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
-                  : "Ask Nodal AI anything..."
+                  : "Ask me anything about your board..."
               }
               rows={1}
               fullWidth
-              className="text-base md:text-sm w-full min-h-[40px] max-h-[120px]"
+              className="resize-none"
             />
-          </div>
-          {isStreaming ? (
-            <Button
-              onClick={cancelStreaming}
-              variant="danger"
-              className="self-stretch px-3 text-sm"
-            >
-              Stop
-            </Button>
-          ) : (
             <Button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading || isStreaming}
-              className="self-stretch px-4 max-h-10 flex items-center justify-center"
+              loading={isLoading || isStreaming}
+              className="px-4"
             >
               <Send className="w-4 h-4" />
             </Button>
-          )}
+          </div>
+          
+          {/* Node Generator Toggle */}
+          <div className="mt-2 flex justify-center">
+            <button
+              onClick={() => setShowNodeGenerator(!showNodeGenerator)}
+              className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              {showNodeGenerator ? 'Hide' : 'Show'} Node Generator
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
