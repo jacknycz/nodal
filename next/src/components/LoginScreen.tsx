@@ -4,8 +4,10 @@ import { Chrome, Loader2, Sparkles, Users, Zap } from 'lucide-react'
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../features/auth/authUtils'
 import { useTheme } from '../contexts/ThemeContext'
 import AnimatedBackground from './AnimatedBackground'
-import Image from 'next/image';
+import Image from 'next/image'
 import Tag from './ui/Tag'
+import Button from './ui/Button'
+import TextInput from './ui/TextInput'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -63,27 +65,25 @@ export default function LoginScreen() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
-          <div className="flex mb-6">
+          <div className="flex items-center justify-center mb-6">
             <Image 
               src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"} 
               alt="Nodal" 
-              width={48}
-              height={48}
-              className="h-12 mx-auto"
+              width={32}
+              height={32}
+              className="h-8 w-auto"
               priority
             />
-            <Tag variant="beta" className="ml-2">
-                BETA
-              </Tag>
+            <Tag variant="beta" className="ml-3">
+              BETA
+            </Tag>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Collaborative mind mapping with AI
-          </p>
         </div>
+
         {/* Auth Card */}
-        <div className="bg-white/90 dark:bg-gray-800/30 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/50 p-8">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 dark:border-gray-700/50 p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
               {mode === 'signin' ? 'Welcome back' : 'Create your account'}
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
@@ -93,134 +93,98 @@ export default function LoginScreen() {
               }
             </p>
           </div>
+
           {/* Google Sign In Button */}
-          <button
+          <Button
             onClick={handleGoogleAuth}
             disabled={isLoading}
-            className="w-full h-12 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-white dark:hover:bg-gray-700 transition-all duration-200 flex items-center justify-center space-x-3 mb-6 rounded-lg font-medium"
-            type="button"
+            loading={isLoading}
+            variant="secondary"
+            fullWidth
+            className="mb-6 h-12"
           >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Chrome className="w-5 h-5" />
-            )}
-            <span className="font-medium">
-              {isLoading ? 'Signing in...' : `Continue with Google`}
-            </span>
-          </button>
+            <Chrome className="w-5 h-5 mr-2" />
+            {isLoading ? 'Signing in...' : 'Continue with Google'}
+          </Button>
+
           {/* Divider */}
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300 dark:border-gray-600" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white/90 dark:bg-gray-800/90 text-gray-500">or</span>
+              <span className="px-3 bg-white/90 dark:bg-gray-900/90 text-gray-500">or</span>
             </div>
           </div>
+
           {/* Email/Password Form */}
           <form onSubmit={handleEmailAuth} className="space-y-4">
-            <div>
-              <div className="relative">
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your email"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your password"
-                disabled={isLoading}
-                required
-                minLength={6}
-              />
-            </div>
+            <TextInput
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              disabled={isLoading}
+              required
+              fullWidth
+              label="Email"
+            />
+            
+            <TextInput
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={isLoading}
+              required
+              minLength={6}
+              fullWidth
+              label="Password"
+            />
+
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50/80 dark:bg-red-900/20 backdrop-blur-sm border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="p-4 bg-red-50/80 dark:bg-red-900/20 backdrop-blur-sm border border-red-200 dark:border-red-800 rounded-2xl">
                 <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
               </div>
             )}
+
             {/* Submit Button */}
-            <button
+            <Button
               type="submit"
               disabled={isLoading || !isFormValid}
-              className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200"
+              loading={isLoading}
+              fullWidth
+              className="h-12"
             >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                mode === 'signin' ? 'Sign In' : 'Create Account'
-              )}
-            </button>
+              {mode === 'signin' ? 'Sign In' : 'Create Account'}
+            </Button>
           </form>
+
           {/* Mode Toggle */}
           <div className="text-center mt-6">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {mode === 'signin' ? "Don't have an account?" : "Already have an account?"}{' '}
               <button
                 onClick={toggleMode}
-                className="text-tertiary-600 dark:text-tertiary-400 hover:underline font-medium cursor-pointer"
+                className="text-tertiary-600 dark:text-tertiary-400 hover:text-tertiary-700 dark:hover:text-tertiary-300 hover:underline font-medium cursor-pointer transition-colors"
                 type="button"
               >
                 {mode === 'signin' ? 'Sign up' : 'Sign in'}
               </button>
             </p>
           </div>
-          {/* Features Preview */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-              What you&apos;ll get:
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  AI-powered brainstorming
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                  <Users className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                </div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Collaborative mind mapping
-                </span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                  <Zap className="w-3 h-3 text-green-600 dark:text-green-400" />
-                </div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Lightning-fast interactions
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
+
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-xs text-gray-500 dark:text-gray-500">
             By signing in, you agree to our{' '}
-            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
+            <a href="#" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">
+            <a href="#" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors">
               Privacy Policy
             </a>
           </p>
