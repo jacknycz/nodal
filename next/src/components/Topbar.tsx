@@ -13,6 +13,7 @@ import { useSupabaseUser } from '../features/auth/authUtils'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
+import Tag from './ui/Tag'
 import { Plus } from 'lucide-react'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
@@ -206,7 +207,13 @@ export default function Topbar({
                 className="hidden sm:block h-8 w-auto"
                 priority
               />
+
+              <Tag variant="beta" className="ml-2">
+                BETA
+              </Tag>
             </button>
+
+
 
             <div className="hidden sm:block">
               <ShareMenu

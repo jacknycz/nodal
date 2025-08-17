@@ -5,6 +5,7 @@ import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../features/
 import { useTheme } from '../contexts/ThemeContext'
 import AnimatedBackground from './AnimatedBackground'
 import Image from 'next/image';
+import Tag from './ui/Tag'
 
 type AuthMode = 'signin' | 'signup'
 
@@ -62,7 +63,7 @@ export default function LoginScreen() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo and Brand */}
         <div className="text-center mb-8">
-          <div className="mb-6">
+          <div className="flex mb-6">
             <Image 
               src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"} 
               alt="Nodal" 
@@ -71,6 +72,9 @@ export default function LoginScreen() {
               className="h-12 mx-auto"
               priority
             />
+            <Tag variant="beta" className="ml-2">
+                BETA
+              </Tag>
           </div>
           <p className="text-gray-600 dark:text-gray-400">
             Collaborative mind mapping with AI
