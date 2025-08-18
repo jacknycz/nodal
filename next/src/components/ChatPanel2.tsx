@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
-import { Send, X, MessageSquare, Loader2, Key } from 'lucide-react'
+import { useBoardStore } from '../features/board/boardSlice'
+import { Send, X, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 
@@ -30,16 +31,40 @@ export default function ChatPanel2() {
 
   const ai = useAIContext()
 
+  // Selection/focus awareness
+  const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
+  const focusedNodeIds = useBoardStore((s) => s.focusedNodeIds || [])
+  const clearSelectedNodes = useBoardStore((s) => s.clearSelectedNodes)
+  const clearFocusedNodes = useBoardStore((s) => s.clearFocusedNodes)
+  const storeNodes = useBoardStore((s) => s.nodes)
+  const contextIds = (focusedNodeIds && focusedNodeIds.length > 0) ? focusedNodeIds : selectedNodeIds
+  const selectedNodes = (storeNodes || []).filter((n: any) => contextIds.includes(n.id))
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || isStreaming) return
-    const msg = inputValue.trim()
+    const userText = inputValue.trim()
     setInputValue('')
     if (inputRef.current) inputRef.current.blur()
-    await sendMessageStream(msg)
+
+    // Build contextual message with selected/focused nodes
+    let contextualMessage = userText
+    if (selectedNodes.length > 0) {
+      const nodeContext = selectedNodes.map((n: any) => {
+        const title = n?.data?.title || 'Untitled Node'
+        const content = (n?.data?.content || '').toString().trim()
+        const clipped = content.length > 1000 ? content.slice(0, 1000) + '…' : content
+        return `Node: "${title}"${clipped ? `\nContent: ${clipped}` : ''}`
+      }).join('\n\n')
+
+      const label = `Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}`
+      contextualMessage = `Context - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
+    }
+
+    await sendMessageStream(contextualMessage)
   }
 
   return (
@@ -128,6 +153,28 @@ export default function ChatPanel2() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Selected Nodes Banner */}
+        {selectedNodes.length > 0 && (
+          <div className="bg-blue-50 dark:bg-primary-900/20 px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Target className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                <p className="text-xs text-primary-700 dark:text-primary-300">
+                  {selectedNodes.length === 1
+                    ? `Selected: "${selectedNodes[0].data?.title || 'Untitled Node'}"`
+                    : `Selected: ${selectedNodes.length} nodes`}
+                </p>
+              </div>
+              <button
+                onClick={() => { clearSelectedNodes(); clearFocusedNodes() }}
+                className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Input */}
         <div className="p-4">
           <div className="flex space-x-2">
@@ -141,7 +188,9 @@ export default function ChatPanel2() {
                   handleSend()
                 }
               }}
-              placeholder={"Chat with Nodal..."}
+              placeholder={selectedNodes.length > 0
+                ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
+                : 'Chat with Nodal...'}
               rows={1}
               fullWidth
               className="resize-none"
