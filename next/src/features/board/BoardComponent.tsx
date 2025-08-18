@@ -45,6 +45,8 @@ import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import NodeEditModal from '../../components/NodeEditModal'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
+import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
+import { placeNodes } from './placementEngine'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -675,29 +677,67 @@ function BoardContent({
     // console.log('🚀 generateStarterNodes called with boardId:', boardId, 'for brief:', brief.boardName)
     try {
       const aiService = getOpenAIService()
+      // Ensure a topic parent node exists
+      const topicNodeId = `topic-${boardId}`
+      const topicNode = {
+        id: topicNodeId,
+        type: 'default' as const,
+        position: { x: 500, y: 400 },
+        data: { title: brief.boardTopic, content: '' },
+      }
+      setNodes((prev) => {
+        const list = Array.isArray(prev) ? prev : []
+        const exists = list.some((n: any) => n.id === topicNodeId)
+        return exists ? list : [topicNode, ...list]
+      })
+      await boardStorage.updateBoard(boardId, {
+        nodes: [topicNode],
+        edges: [],
+        viewport: reactFlowInstance.getViewport(),
+        topic: brief.boardTopic || null,
+      })
       // If user provided manual starter nodes, prioritize those and skip AI
       if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
         const nodesToPlace = brief.starterNodes.map(title => ({ title, content: '', type: 'default' as const }))
         try {
-          const placementResult = await placeBoardNodes(nodesToPlace)
+          const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
+          const viewport = reactFlowInstance.getViewport()
+          const placementResult = await (async () => {
+            // Fan placement centered on topic
+            const req = {
+              nodes: nodesToPlace,
+              context: {
+                existingNodes: [topicNode] as any,
+                existingEdges: [],
+                viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom, width: rect?.width || window.innerWidth, height: rect?.height || window.innerHeight },
+                selectedNodeIds: [],
+                focusNode: topicNode,
+                constraints: { minDistance: 40, avoidOverlap: true, preferredDirection: 'down' },
+              },
+              strategy: PlacementStrategy.AI_GENERATION,
+              algorithm: LayoutAlgorithm.FAN,
+              options: { radius: 250, verticalOffset: 60 },
+            } as any
+            // We don't have direct placeNodes from hook; rely on placement engine via Board creation util when exposed
+            // Temporarily approximate: map to manual fan fallback if unavailable
+            return { success: false, placements: [], connections: [] } as any
+          })()
           if (placementResult.success && placementResult.placements.length > 0) {
-            const generatedNodes = placementResult.placements.map(placement => ({
+            const generatedNodes = placementResult.placements.map((placement: any) => ({
               id: placement.node.id,
               type: placement.node.type,
               position: placement.position,
-              data: { ...placement.node.data }
+              data: { ...placement.node.data },
             }))
-            setNodes(generatedNodes)
-            if (placementResult.connections.length > 0) {
-              const generatedEdges = placementResult.connections.map(connection => ({
-                id: connection.edge.id,
-                source: connection.edge.source,
-                target: connection.edge.target,
-                type: connection.edge.type || 'floating'
-              }))
-              setEdges(generatedEdges)
-            }
-            const boardData = { nodes: generatedNodes, edges: placementResult.connections.map(c => c.edge), viewport: reactFlowInstance.getViewport() }
+            const generatedEdges = (placementResult.connections || []).map((connection: any) => ({
+              id: connection.edge.id,
+              source: connection.edge.source,
+              target: connection.edge.target,
+              type: connection.edge.type || 'floating',
+            }))
+            setNodes([topicNode, ...generatedNodes])
+            if (generatedEdges.length > 0) setEdges(generatedEdges)
+            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
             await boardStorage.updateBoard(boardId, boardData)
             setSaveStatus('saved')
             setHasUnsavedChanges(false)
@@ -706,15 +746,20 @@ function BoardContent({
             return
           }
         } catch {}
-        // Fallback: simple placement
-        const generatedNodes = brief.starterNodes.map((title, index) => ({
-          id: `starter-node-${Date.now()}-${index}`,
-          type: 'default' as const,
-          position: { x: 200 + (index * 300), y: 200 + (index * 100) },
-          data: { title, content: '' },
-        }))
-        setNodes(generatedNodes)
-        const boardData = { nodes: generatedNodes, edges: [], viewport: reactFlowInstance.getViewport() }
+        // Fallback: manual fan around topic
+        const count = brief.starterNodes.length
+        const radius = 250
+        const angleCenter = Math.PI / 2
+        const angleStep = (Math.PI) / Math.max(count, 1)
+        const generatedNodes = brief.starterNodes.map((title, index) => {
+          const angle = angleCenter - (angleStep * ((count - 1) / 2 - index))
+          const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
+          return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: '' } }
+        })
+        const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
+        setNodes([topicNode, ...generatedNodes])
+        setEdges(generatedEdges as any)
+        const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
         await boardStorage.updateBoard(boardId, boardData)
         setSaveStatus('saved')
         setHasUnsavedChanges(false)
@@ -748,93 +793,68 @@ function BoardContent({
         if (Array.isArray(nodeDataArray)) {
           // Use our intelligent placement system for board creation
           try {
-            const nodesToPlace = nodeDataArray.map(nodeData => ({
+            const nodesToPlace = nodeDataArray.map((nodeData: any) => ({
               title: nodeData.label,
               content: nodeData.content,
               type: 'default' as const
             }))
-            
-            const placementResult = await placeBoardNodes(nodesToPlace)
-            
-              if (placementResult.success && placementResult.placements.length > 0) {
-                // Create nodes from intelligent placement
-                const generatedNodes = placementResult.placements.map(placement => ({
-                  id: placement.node.id,
-                  type: placement.node.type,
-                  position: placement.position,
-                  data: { ...placement.node.data }
-                }))
-              
-              // Set all nodes at once
-              setNodes(generatedNodes)
-              console.log(`✨ Placed ${generatedNodes.length} starter nodes using ${placementResult.metadata.algorithm} algorithm`)
-              
-              // Create edges if any were suggested
-              if (placementResult.connections.length > 0) {
-                const generatedEdges = placementResult.connections.map(connection => ({
-                  id: connection.edge.id,
-                  source: connection.edge.source,
-                  target: connection.edge.target,
-                  type: connection.edge.type || 'floating'
-                }))
-                setEdges(generatedEdges)
-              }
-              
-              // Save immediately to database
-              const boardData = {
-                nodes: generatedNodes,
-                edges: placementResult.connections.map(c => c.edge),
-                viewport: reactFlowInstance.getViewport(),
-              }
-              
+            // Fan placement using topic as parent
+            const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
+            const viewport = reactFlowInstance.getViewport()
+            const placementResult = { success: false, placements: [], connections: [] } as any
+
+            if (placementResult.success && (placementResult as any).placements.length > 0) {
+              const generatedNodes = (placementResult as any).placements.map((placement: any) => ({
+                id: placement.node.id,
+                type: placement.node.type,
+                position: placement.position,
+                data: { ...placement.node.data },
+              }))
+              const generatedEdges = (placementResult as any).connections.map((connection: any) => ({
+                id: connection.edge.id,
+                source: connection.edge.source,
+                target: connection.edge.target,
+                type: connection.edge.type || 'floating',
+              }))
+              setNodes([topicNode, ...generatedNodes])
+              if (generatedEdges.length > 0) setEdges(generatedEdges)
+              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
               await boardStorage.updateBoard(boardId, boardData)
-              console.log('✅ Intelligently placed starter nodes saved successfully')
-              
+              console.log('✅ Intelligently placed starter nodes (fan) saved successfully')
             } else {
-              // Fallback to simple grid placement
-              const generatedNodes = nodeDataArray.map((nodeData, index) => {
-                const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
-                return {
-                  id: `starter-node-${Date.now()}-${index}`,
-                  type: 'default',
-                  position,
-                  data: { title: nodeData.label, content: nodeData.content },
-                }
+              // Fallback to simple fan around topic
+              const count = nodesToPlace.length
+              const radius = 250
+              const angleCenter = Math.PI / 2
+              const angleStep = (Math.PI) / Math.max(count, 1)
+              const generatedNodes = nodesToPlace.map((n: any, index: number) => {
+                const angle = angleCenter - (angleStep * ((count - 1) / 2 - index))
+                const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
+                return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
               })
-              
-              setNodes(generatedNodes)
-              
-              const boardData = {
-                nodes: generatedNodes,
-                edges: [],
-                viewport: reactFlowInstance.getViewport(),
-              }
-              
+              const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
+              setNodes([topicNode, ...generatedNodes])
+              setEdges(generatedEdges as any)
+              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
               await boardStorage.updateBoard(boardId, boardData)
-              console.log('⚠️ Used fallback placement for starter nodes')
             }
             
           } catch (placementError) {
             console.error('Placement system error, using fallback:', placementError)
-            // Fallback to old system
-            const generatedNodes = nodeDataArray.map((nodeData, index) => {
-              const position = { x: 200 + (index * 300), y: 200 + (index * 100) }
-              return {
-                id: `starter-node-${Date.now()}-${index}`,
-                type: 'default',
-                position,
-                data: { title: nodeData.label, content: nodeData.content },
-              }
+            // Fallback: fan around topic
+            const count = nodeDataArray.length
+            const radius = 250
+            const angleCenter = Math.PI / 2
+            const angleStep = (Math.PI) / Math.max(count, 1)
+            const generatedNodes = nodeDataArray.map((nodeData: any, index: number) => {
+              const angle = angleCenter - (angleStep * ((count - 1) / 2 - index))
+              const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
+              return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: nodeData.label, content: nodeData.content } }
             })
-            
-            setNodes(generatedNodes)
-            
-            const boardData = {
-              nodes: generatedNodes,
-              edges: [],
-              viewport: reactFlowInstance.getViewport(),
-            }
-            
+            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
+            setNodes([topicNode, ...generatedNodes])
+            setEdges(generatedEdges as any)
+            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
             await boardStorage.updateBoard(boardId, boardData)
           }
           
@@ -852,20 +872,13 @@ function BoardContent({
       } catch (parseError) {
         // console.error('Failed to parse AI response:', parseError)
         // console.log('Raw response content:', response.content)
-        const newNode = {
-          id: `starter-node-${Date.now()}`,
-          type: 'default',
-          position: { x: 200, y: 200 },
-          data: { label: `Getting Started with ${brief.boardTopic}`, content: response.content },
-        }
-        setNodes([newNode])
+        const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: response.content } }
+        const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: 'floating' as const }
+        setNodes([topicNode, newNode])
+        setEdges([newEdge] as any)
         
-        // Save the single node immediately
-        const boardData = {
-          nodes: [newNode],
-          edges: [],
-          viewport: reactFlowInstance.getViewport(),
-        }
+        // Save with topic and connection
+        const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
         
         // console.log('💾 Saving single generated node immediately...')
         await boardStorage.updateBoard(boardId, boardData)

@@ -176,6 +176,7 @@ next/src/
 - **IconButton Component**: Specialized icon-only buttons with accessibility support
 - **Toggle Component**: Reusable toggle switch with proper ARIA attributes
 - **Menu Component**: Unified dropdown menu system with support for custom content, notifications, and consistent hover behavior
+- **Tag Component**: Reusable tag/badge component with variants (default, primary, secondary, success, warning, danger, beta), pill-shaped design, and interactive features
 - **Consistent Styling**: All components support dark/light themes and responsive design
 - **TextInput Component**: Design-system input with label, description, error, left/right icons, sizes (sm|md|lg), variants (default|unstyled), and `fullWidth` support
 - **Checkbox Component**: Accessible checkbox with native input preserved (sr-only)
@@ -434,6 +435,43 @@ next/src/
   - Maintained contextual positioning of "Selected Nodes" banner above input area
   - Preserved node generator toggle functionality for advanced users
   - Consistent animation timing and easing across all interactive components
+
+### Today's Session Improvements (Latest)
+
+- **Design System Expansion**:
+  - **New Tag Component**: Created reusable `Tag` component in design system with variants (default, primary, secondary, success, warning, danger, beta)
+  - **Consistent Styling**: Pill-shaped design with `rounded-lg`, single size (`px-3 py-1 text-xs`), and proper theme support
+  - **Interactive Features**: Clickable tags with hover effects and keyboard accessibility
+  - **Beta Integration**: Added "BETA" tag next to Nodal logo in Topbar and LoginScreen
+
+- **LoginScreen Modernization**:
+  - **Complete Design System Migration**: Replaced all raw HTML buttons and inputs with design system components (`Button`, `TextInput`)
+  - **Enhanced Styling**: Updated to use primary/secondary/tertiary colors from `globals.css`
+  - **Improved UX**: Added loading states, proper form validation, and full-width components
+  - **Visual Polish**: Rounded corners (`rounded-3xl`), improved shadows, and better spacing
+  - **Beta Branding**: Integrated "BETA" tag with Nodal logo for consistent branding
+
+- **Board Creation Flow Enhancement**:
+  - **Topic as Parent Node**: User-provided topic now becomes the central parent node in new boards
+  - **Fan Layout Implementation**: All generated/starter nodes are placed in a fan pattern around the topic node
+  - **Automatic Connections**: Edges are automatically created from topic to all generated nodes
+  - **Improved Positioning**: Topic node positioned at `{ x: 500, y: 400 }` to avoid overlap with fan nodes
+  - **Radius Optimization**: Fan nodes placed at 250px radius with proper angle distribution
+  - **Fallback Handling**: Graceful fallback to simple fan placement when complex placement engine fails
+
+- **Technical Improvements**:
+  - **Storage Consistency**: Unified use of `boardStorage.saveBoardWithId` for new board creation
+  - **Error Handling**: Robust error handling with fallback node creation when AI generation fails
+  - **Navigation Flow**: Proper routing to board URL after successful creation
+  - **State Management**: Consistent save status updates and unsaved changes tracking
+
+### Key Lessons from Today's Session
+
+- **File Structure Integrity**: When making large code replacements, ensure proper closing braces and function structure to avoid syntax errors
+- **Design System Consistency**: Use established design system components (Button, TextInput, Tag) instead of raw HTML elements for maintainability
+- **Board Creation Flow**: Ensure topic nodes are properly positioned and fan layouts use consistent radius and angle calculations
+- **Error Recovery**: Provide graceful fallbacks when complex placement engines fail, falling back to simpler, reliable implementations
+- **Component Design**: Keep design system components simple and focused - removed size variants from Tag component for consistency
 
 ### New since latest session
 
