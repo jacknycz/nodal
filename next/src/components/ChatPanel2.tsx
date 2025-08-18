@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
+import { Node, Edge, useReactFlow } from '@xyflow/react'
 import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
 import { useBoardStore } from '../features/board/boardSlice'
@@ -10,6 +11,7 @@ import Button from './ui/Button'
 import Modal from './ui/Modal'
 import Checkbox from './ui/Checkbox'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
+import { useAIPlacement } from '../features/board/usePlacement'
 
 export default function ChatPanel2() {
   const [isOpen, setIsOpen] = useState(() => {
@@ -34,6 +36,8 @@ export default function ChatPanel2() {
 
   const ai = useAIContext()
   const { generateFromTopic } = useChatNodeGen2()
+  const { setNodes, setEdges } = useReactFlow()
+  const { placeGeneratedNodes } = useAIPlacement()
 
   // Selection/focus awareness
   const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
@@ -273,13 +277,46 @@ export default function ChatPanel2() {
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="secondary" onClick={() => { setShowCreate(false); setPendingPoints([]) }}>Cancel</Button>
             <Button
-              onClick={() => {
-                // For now: just send a friendly confirmation to chat; actual placement comes next step
-                const count = pendingPoints.filter(n => n.selected).length
-                setShowCreate(false)
-                setPendingPoints([])
-                if (count > 0) {
-                  sendMessage(`Queued ${count} node(s) for creation.`)
+              onClick={async () => {
+                const selected = pendingPoints.filter(n => n.selected)
+                if (selected.length === 0) {
+                  setShowCreate(false)
+                  setPendingPoints([])
+                  return
+                }
+
+                try {
+                  const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
+                  const result = await placeGeneratedNodes(nodesToPlace)
+
+                  if (result && result.success && result.placements.length > 0) {
+                    const newNodes: Node[] = result.placements.map(p => ({
+                      id: p.node.id,
+                      type: (p.node as any).type || 'default',
+                      position: p.position,
+                      data: { ...(p.node as any).data },
+                    }))
+                    setNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+
+                    if (result.connections && result.connections.length > 0) {
+                      const newEdges: Edge[] = result.connections.map(c => ({
+                        id: c.edge.id,
+                        source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id,
+                        target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id,
+                        type: (c.edge as any).type || 'floating',
+                      }))
+                      setEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                    }
+
+                    sendMessage(`Created ${newNodes.length} node(s).`)
+                  } else {
+                    sendMessage('No nodes were created.')
+                  }
+                } catch (err) {
+                  sendMessage('Failed to create nodes.')
+                } finally {
+                  setShowCreate(false)
+                  setPendingPoints([])
                 }
               }}
             >
