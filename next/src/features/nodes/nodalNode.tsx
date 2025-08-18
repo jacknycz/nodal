@@ -187,7 +187,7 @@ export default function NodalNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-lg shadow-gray-400/20 dark:shadow-none group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent dark:border-transparent rounded-lg shadow-lg shadow-gray-400/20 dark:shadow-none group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
