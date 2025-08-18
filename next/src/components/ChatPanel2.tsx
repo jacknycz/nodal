@@ -7,6 +7,9 @@ import { useBoardStore } from '../features/board/boardSlice'
 import { Send, X, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
+import Modal from './ui/Modal'
+import Checkbox from './ui/Checkbox'
+import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 
 export default function ChatPanel2() {
   const [isOpen, setIsOpen] = useState(() => {
@@ -30,6 +33,7 @@ export default function ChatPanel2() {
   } = useUnifiedAI2()
 
   const ai = useAIContext()
+  const { generateFromTopic } = useChatNodeGen2()
 
   // Selection/focus awareness
   const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
@@ -65,6 +69,40 @@ export default function ChatPanel2() {
     }
 
     await sendMessageStream(contextualMessage)
+  }
+
+  // Node creation intent + confirm modal
+  const [showCreate, setShowCreate] = useState(false)
+  const [pendingPoints, setPendingPoints] = useState<{ title: string; content: string; selected: boolean }[]>([])
+
+  const parseCreateIntent = (text: string) => /^(create|add)\b/i.test(text)
+  const extractTitles = (text: string): string[] | null => {
+    const m = text.match(/nodes?:\s*(.*)$/i)
+    if (!m) return null
+    return m[1].split(/[\n,]/).map(s => s.trim()).filter(Boolean)
+  }
+
+  const handleCreate = async () => {
+    const msg = inputValue.trim()
+    if (!msg) return
+    setInputValue('')
+    if (inputRef.current) inputRef.current.blur()
+
+    // Parse explicit list first
+    const list = extractTitles(msg)
+    let points: { title: string; content: string }[] = []
+    if (list && list.length) {
+      points = list.map(t => ({ title: t, content: '' }))
+    } else if (selectedNodes.length > 0) {
+      // Default to selected node title as topic
+      const topic = selectedNodes[0]?.data?.title || 'topic'
+      points = await generateFromTopic(topic, 5, storeNodes as any)
+    }
+
+    if (points.length) {
+      setPendingPoints(points.slice(0, 10).map(p => ({ ...p, selected: true })))
+      setShowCreate(true)
+    }
   }
 
   return (
@@ -185,7 +223,11 @@ export default function ChatPanel2() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  handleSend()
+                  if (parseCreateIntent(inputValue)) {
+                    handleCreate()
+                  } else {
+                    handleSend()
+                  }
                 }
               }}
               placeholder={selectedNodes.length > 0
@@ -195,7 +237,7 @@ export default function ChatPanel2() {
               fullWidth
               className="resize-none"
             />
-            <Button onClick={handleSend} disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} className="px-4">
+            <Button onClick={() => (parseCreateIntent(inputValue) ? handleCreate() : handleSend())} disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} className="px-4">
               <Send className="w-4 h-4" />
             </Button>
           </div>
@@ -206,6 +248,45 @@ export default function ChatPanel2() {
             )}
           </div>
         </div>
+
+        {/* Confirm Modal */}
+        <Modal
+          open={showCreate}
+          onClose={() => { setShowCreate(false); setPendingPoints([]) }}
+          title="Create nodes"
+          description="Review and confirm the nodes to create."
+        >
+          <div className="max-h-64 overflow-auto mt-2 space-y-2">
+            {pendingPoints.map((p, idx) => (
+              <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={p.selected}
+                    onChange={(checked) => setPendingPoints(prev => prev.map((n, i) => i === idx ? { ...n, selected: !!checked } : n))}
+                    label={p.title || '(untitled)'}
+                    labelTextClassName="text-sm"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="secondary" onClick={() => { setShowCreate(false); setPendingPoints([]) }}>Cancel</Button>
+            <Button
+              onClick={() => {
+                // For now: just send a friendly confirmation to chat; actual placement comes next step
+                const count = pendingPoints.filter(n => n.selected).length
+                setShowCreate(false)
+                setPendingPoints([])
+                if (count > 0) {
+                  sendMessage(`Queued ${count} node(s) for creation.`)
+                }
+              }}
+            >
+              Create {pendingPoints.filter(n => n.selected).length} nodes
+            </Button>
+          </div>
+        </Modal>
       </div>
     </>
   )
