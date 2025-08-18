@@ -31,7 +31,7 @@ import AINodeGenerator from '../../components/AINodeGenerator'
 import { useAIContext } from '../ai/aiContext'
 import { getOpenAIService } from '../ai/aiService'
 import BokehBackground from '../../components/BokehBackground'
-import ChatPanel from '../../components/ChatPanel'
+import ChatPanel2 from '../../components/ChatPanel2'
 import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
 import type { BoardBrief } from './boardTypes'
@@ -1634,37 +1634,7 @@ function BoardContent({
         />
       )}
       {isBoardView && (
-        <ChatPanel
-          nodes={nodes}
-          onGenerateNode={(nodeData: {
-            id: string,
-            label: string,
-            content?: string,
-            position: { x: number, y: number },
-            referenceNode?: { id: string, title: string }
-          }) => {
-            const newNode = {
-              id: nodeData.id,
-              type: 'default',
-              position: nodeData.position,
-              data: {
-                title: nodeData.label,
-                content: nodeData.content,
-                aiGenerated: true
-              },
-            }
-            handleAddNodeToStore(newNode)
-            if (nodeData.referenceNode) {
-              const newEdge: Edge = {
-                id: `edge-${Date.now()}`,
-                source: nodeData.referenceNode.id,
-                target: nodeData.id,
-                type: 'floating',
-              }
-              setEdges(eds => [...eds, newEdge])
-            }
-          }}
-        />
+        <ChatPanel2 />
       )}
       
       {/* Context Menu */}

@@ -182,15 +182,7 @@ export function useUnifiedAI(): UseUnifiedAIResult {
         prompt: content,
         systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.
 
-Strictly avoid repeating content or restating prior sentences. Do not re-list items already listed. End your final response with the token: END_OF_RESPONSE
-
-Your role is to help users:
-- Understand and organize their thoughts
-- Generate relevant nodes and connections
-- Provide insights and suggestions
-- Answer questions about their board content
-
-Be helpful, concise, and focused on the user's current context.`,
+Be helpful and context-aware. When the user asks to create or add nodes, return structured, non-repetitive content. Do not include sentinel tokens or artificial endings.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -255,7 +247,7 @@ Be helpful, concise, and focused on the user's current context.`,
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nStrictly avoid repeating content or restating prior sentences. Do not re-list items already listed. End your final response with the token: END_OF_RESPONSE\n\nBe helpful, concise, and focused on the user's current context.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nBe helpful and context-aware. Avoid repetition. Do not include sentinel tokens or artificial endings.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -321,12 +313,12 @@ Be helpful, concise, and focused on the user's current context.`,
       }
       abortControllerRef.current = new AbortController()
 
-      const { prompt, count = 3, position, context } = request
+      const { prompt, count = 5, position, context } = request
 
       // Build system prompt for node generation
       const systemPrompt = `You are an AI assistant that generates nodes for a visual thinking application.
 
-Generate ${count} relevant nodes based on the user's prompt and context.
+Generate ${count} relevant nodes based on the user's prompt and context. Do not be concise unless asked. Provide clear titles and optional content.
 
 Each node should have:
 - A clear, concise title (max 50 characters)
@@ -379,67 +371,142 @@ Consider the existing context and create nodes that build upon or relate to what
       })
 
       // Parse response
-      let parsedResponse
+      let parsedResponse: any
       try {
         // Prefer fenced code block with json
         const fenced = response.content.match(/```json\s*([\s\S]*?)\s*```/i)
         if (fenced) {
           parsedResponse = JSON.parse(fenced[1])
         } else {
-          // Fallback: try to extract first balanced JSON object
-          const jsonMatch = response.content.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            parsedResponse = JSON.parse(jsonMatch[0])
+          // Try extract explicit nodes array
+          const nodesArrayMatch = response.content.match(/"nodes"\s*:\s*(\[\s*[\s\S]*?\])/i)
+          if (nodesArrayMatch) {
+            const arr = JSON.parse(nodesArrayMatch[1])
+            parsedResponse = { nodes: arr, connections: [], explanation: undefined }
           } else {
-            throw new Error('No JSON found in response')
+            // Fallback: try to extract first balanced JSON object
+            const jsonMatch = response.content.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              parsedResponse = JSON.parse(jsonMatch[0])
+            } else {
+              throw new Error('No JSON found in response')
+            }
           }
         }
       } catch (parseError) {
-        // Fallback: create nodes from list-like content using simple extraction
-        const lines = response.content.split('\n').filter((line: string) => line.trim())
-        const bulletLike = lines
-          .map(line => line.replace(/^\s*(\d+\.|[\-*•])\s+/, '').trim())
-          .filter(Boolean)
+        // Fallback: robust parse from formatted text
+        const raw = response.content
+          .replace(/```[a-zA-Z]*[\s\S]*?```/g, '') // strip code fences entirely
+        const lines = raw
+          .split('\n')
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0)
+          .filter((line: string) => !/^\{|\}|\[|\]|,$/.test(line))
+          .filter((line: string) => !/^"?(nodes|connections|explanation|title|content|type|position|source|target)"?\s*:/.test(line))
+          .filter((line: string) => !/^Sure!\b/i.test(line))
 
-        const nodes: BoardNode[] = bulletLike.slice(0, count).map((text: string, index: number) => {
-          // Split at colon to get title/content if available
-          const m = text.match(/^([^:]{1,80})\s*:\s*(.*)$/)
-          const title = (m ? m[1] : text).slice(0, 50).trim()
-          const contentText = m ? m[2] : ''
-          return {
-            id: `fallback-${Date.now()}-${index}`,
-            type: 'default',
-            position: position || { x: 100 + index * 200, y: 100 + index * 100 },
-            data: {
-              title,
-              content: contentText || text,
-              type: 'default',
-              aiGenerated: true
+        const results: { title: string; content: string }[] = []
+        let current: { title: string; content: string } | null = null
+
+        const pushCurrent = () => {
+          if (current && current.title) results.push(current)
+          current = null
+        }
+
+        for (const line of lines) {
+          // Numbered header e.g., "1. Habitat"
+          const num = line.match(/^\d+\.\s+(.+)/)
+          if (num) {
+            pushCurrent()
+            const text = num[1]
+            // Bold title with optional separator
+            const bold = text.match(/^\*\*(.+?)\*\*\s*[:—–-]?\s*(.*)$/)
+            if (bold) {
+              current = { title: bold[1].trim(), content: (bold[2] || '').trim() }
+            } else {
+              // Split on common separators
+              const sep = text.match(/^([^:—–-]{1,120})\s*[:—–-]\s*(.*)$/)
+              current = { title: (sep ? sep[1] : text).trim(), content: (sep ? sep[2] : '').trim() }
             }
+            continue
           }
+
+          // Bold header without number
+          const boldHeader = line.match(/^\*\*(.+?)\*\*\s*[:—–-]?\s*(.*)$/)
+          if (boldHeader) {
+            pushCurrent()
+            current = { title: boldHeader[1].trim(), content: (boldHeader[2] || '').trim() }
+            continue
+          }
+
+          // Sub-bullets: append to current content
+          if (/^[\-•\*]\s+/.test(line)) {
+            const detail = line.replace(/^[\-•\*]\s+/, '').trim()
+            if (current) {
+              current.content = current.content ? `${current.content}\n- ${detail}` : detail
+            }
+            continue
+          }
+
+          // Otherwise, plain text: if we have a current, treat as additional content
+          if (current) {
+            current.content = current.content ? `${current.content}\n${line}` : line
+          }
+        }
+        pushCurrent()
+
+        const trimmed = results
+          .map(r => ({ title: r.title.replace(/["'`]+/g, '').slice(0, 50), content: r.content }))
+          .filter(r => r.title && !/^(nodes|connections|explanation|title|content|label)$/i.test(r.title))
+
+        // Dedupe by normalized title
+        const seen = new Set<string>()
+        const unique = trimmed.filter(r => {
+          const key = r.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+          if (!key || seen.has(key)) return false
+          seen.add(key)
+          return true
         })
 
-        return {
-          nodes,
-          explanation: 'Generated nodes from non-JSON AI response'
-        }
+        const nodes: BoardNode[] = unique.slice(0, count).map((r, index) => ({
+          id: `fallback-${Date.now()}-${index}`,
+          type: 'default',
+          position: position || { x: 100 + index * 200, y: 100 + index * 100 },
+          data: {
+            title: r.title,
+            content: r.content || '',
+            type: 'default',
+            aiGenerated: true
+          }
+        }))
+
+        return { nodes, explanation: 'Generated nodes from formatted list' }
       }
 
       // Process generated nodes
-      const generatedNodes: BoardNode[] = (parsedResponse.nodes || []).map((node: { title?: string; content?: string; type?: string; position?: { x: number; y: number } }, index: number) => ({
+      let generatedNodes: BoardNode[] = (parsedResponse.nodes || []).map((node: { title?: string; label?: string; content?: string; type?: string; position?: { x: number; y: number } }, index: number) => ({
         id: `generated-${Date.now()}-${index}`,
         type: 'default',
         position: node.position || position || { x: 100 + index * 200, y: 100 + index * 100 },
         data: {
-          title: node.title || `Generated Node ${index + 1}`,
+          title: node.title || node.label || `Generated Node ${index + 1}`,
           content: node.content || '',
           type: node.type || 'default',
           aiGenerated: true
         }
       }))
 
+      // Dedupe by normalized title
+      const seenTitles = new Set<string>()
+      generatedNodes = generatedNodes.filter(n => {
+        const key = (n.data.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+        if (!key || seenTitles.has(key)) return false
+        seenTitles.add(key)
+        return true
+      })
+
       return {
-        nodes: generatedNodes,
+        nodes: generatedNodes.slice(0, count),
         connections: parsedResponse.connections || [],
         explanation: parsedResponse.explanation || 'Nodes generated successfully'
       }

@@ -8,6 +8,8 @@ import { useAIPlacement } from '../features/board/usePlacement'
 import { Send, X, Bot, Sparkles, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
+import Modal from './ui/Modal'
+import Checkbox from './ui/Checkbox'
 import type { BoardNode } from '../features/board/boardTypes'
 import type { NodeToPlace } from '../features/board/placementTypes'
 
@@ -70,6 +72,12 @@ export default function ChatPanel({
   
   // Use the new AI placement system
   const { placeGeneratedNodes } = useAIPlacement()
+  const setSelectedNodes = useBoardStore((state) => state.setSelectedNodes)
+
+  // Explicit create intent state
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false)
+  const [pendingCreateNodes, setPendingCreateNodes] = useState<{ title: string; content: string; selected: boolean }[]>([])
+  const [pendingParentId, setPendingParentId] = useState<string | null>(null)
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -89,6 +97,55 @@ export default function ChatPanel({
       document.activeElement.blur()
     }
     
+    // Detect explicit create intent
+    const intent = parseCreateIntent(message)
+
+    if (intent) {
+      // Resolve parent: selected node or by name
+      let parentId: string | null = null
+      if (intent.parent === 'this' && selectedNodes.length > 0) {
+        parentId = selectedNodes[0].id
+      } else if (intent.parentName) {
+        const match = nodes.find(n => (n.data.title || '').toLowerCase() === intent.parentName!.toLowerCase())
+        if (match) parentId = match.id
+      } else if (selectedNodes.length > 0) {
+        parentId = selectedNodes[0].id
+      }
+
+      // If still no parent, fall back to selected if available
+      if (!parentId && selectedNodes.length > 0) parentId = selectedNodes[0].id
+
+      // Build candidate nodes either from explicit list or via AI generation
+      let points: { title: string; content: string }[] = []
+      if (intent.titles && intent.titles.length > 0) {
+        points = intent.titles.map(t => ({ title: t, content: '' }))
+      } else {
+        // Default topic/count if not provided: use selected node title and a sensible count
+        const effectiveTopic = intent.topic || (selectedNodes[0]?.data?.title || undefined)
+        const effectiveCount = intent.count || 5
+        if (effectiveTopic) {
+        try {
+          const result = await generateNodes({
+            prompt: effectiveTopic,
+            count: effectiveCount,
+            context: { existingNodes: nodes }
+          })
+          points = (result.nodes || []).map((n: any) => ({ title: n.data?.title || 'New Node', content: n.data?.content || '' }))
+        } catch {
+          points = []
+        }
+        }
+      }
+
+      if (points.length > 0 && parentId) {
+        setPendingParentId(parentId)
+        setPendingCreateNodes(points.slice(0, 10).map(p => ({ ...p, selected: true })))
+        setShowCreateConfirm(true)
+        return
+      }
+      // If intent but insufficient info, fall through to normal chat
+    }
+
     // Add selected node context to the message
     let contextualMessage = message
     const contextNodes = selectedNodes
@@ -105,6 +162,50 @@ export default function ChatPanel({
     }
     
     await sendMessageStream(contextualMessage)
+  }
+
+  // Parse explicit create/add intent from user input
+  function parseCreateIntent(input: string): null | {
+    titles?: string[]
+    count?: number
+    topic?: string
+    parent?: 'this'
+    parentName?: string
+  } {
+    const text = input.trim()
+    const intentRegex = /^(create|add|help\s+me\s+add)\b/i
+    if (!intentRegex.test(text)) return null
+
+    // Look for explicit list after ':' or 'nodes:'
+    const listMatch = text.match(/(?:nodes?:)?\s*:(.*)$/i)
+    let titles: string[] | undefined
+    if (listMatch && listMatch[1]) {
+      titles = listMatch[1]
+        .split(/[,\n]/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 20)
+    }
+
+    // Count
+    const countMatch = text.match(/\b(\d{1,2})\b/)
+    const count = titles ? undefined : (countMatch ? Number(countMatch[1]) : undefined)
+
+    // Parent
+    let parent: 'this' | undefined
+    let parentName: string | undefined
+    const underThis = /\bunder\s+(this)\b/i
+    const underName = /\bunder\s+"?([^"\n]+?)"?\b/i
+    if (underThis.test(text)) parent = 'this'
+    const nameMatch = text.match(underName)
+    if (nameMatch && nameMatch[1] && nameMatch[1].toLowerCase() !== 'this') parentName = nameMatch[1].trim()
+
+    // Topic (fallback): try to extract phrase after 'about' or after the verb
+    let topic: string | undefined
+    const aboutMatch = text.match(/\babout\s+([^:]+?)(?:\s+under\b|$)/i)
+    if (aboutMatch && aboutMatch[1]) topic = aboutMatch[1].trim()
+
+    return { titles, count, topic, parent, parentName }
   }
 
   // Handle node generation
@@ -149,32 +250,43 @@ export default function ChatPanel({
     // Use multiline anchors to detect list markers at the beginning of lines
     const hasNumberedList = /^\s*\d+\.\s+/m.test(content)
     const hasBulletPoints = /^\s*[•\-*]\s+/m.test(content)
-    return hasNumberedList || hasBulletPoints
+    const hasHeaders = /\*\*(.+?)\*\*\s*(\-|—|–|:)\s*/m.test(content)
+    return hasNumberedList || hasBulletPoints || hasHeaders
   }
 
   // Extract points from content (supports inline "Title: content" on same line)
   const extractPoints = (content: string): { title: string; content: string }[] => {
-    // Normalize: ensure a newline before the first numbered list if glued to text
-    const normalized = content.replace(/([^\n])\s*(\d+\.\s)/g, '$1\n\n$2')
+    // Normalize: ensure a newline before the first numbered list if glued to previous text
+    let normalized = content.replace(/([^\n])\s*(\d+\.\s)/g, '$1\n\n$2')
+    // Fix glued words like "Magellanic PenguinYou" → "Magellanic Penguin You"
+    normalized = normalized.replace(/([a-z])([A-Z])/g, '$1 $2')
+
+    // Remove repeated intro lines like "Sure! Here are ..."
+    normalized = normalized
+      .split('\n')
+      .filter(line => !/^\s*Sure!\b/i.test(line))
+      .join('\n')
+
     const points: { title: string; content: string }[] = []
     const lines = normalized.split('\n')
     let currentPoint: { title: string; content: string } | null = null
 
-    for (const line of lines) {
+    for (const rawLine of lines) {
+      const line = rawLine.trim()
       // New point lines: "1. ..." or "* ..." or "- ..." or "• ..."
       const pointMatch = line.match(/^(\d+\.|[\*\-•])\s+(.+)/)
       if (pointMatch) {
-        // Push previous accumulated point
         if (currentPoint) points.push(currentPoint)
 
-        const rest = pointMatch[2].trim()
+        const restOriginal = pointMatch[2].trim()
+        const rest = restOriginal.replace(/([a-z])([A-Z])/g, '$1 $2')
 
-        // Try to split "**Title**: content" or "Title: content"
+        // Try to split "**Title**: content" or "Title: content" or "**Title** — content"
         let title = rest.replace(/\*\*/g, '').trim()
         let inlineContent = ''
 
-        const boldInline = rest.match(/^\*\*(.+?)\*\*\s*:?\s*(.*)$/)
-        const plainInline = !boldInline && rest.match(/^([^:]+):\s*(.*)$/)
+        const boldInline = rest.match(/^\*\*(.+?)\*\*\s*[:—–-]?\s*(.*)$/)
+        const plainInline = !boldInline && rest.match(/^([^:—–-]+)\s*[:—–-]\s*(.*)$/)
 
         if (boldInline) {
           title = boldInline[1].trim()
@@ -182,18 +294,28 @@ export default function ChatPanel({
         } else if (plainInline) {
           title = plainInline[1].replace(/\*\*/g, '').trim()
           inlineContent = (plainInline[2] || '').trim()
+        } else {
+          // If commentary begins (e.g., "You can ..."), strip it from the title
+          const commentaryIdx = rest.search(/\b(You|Each|These|This|They)\b/)
+          if (commentaryIdx > 0) {
+            title = rest.slice(0, commentaryIdx).trim()
+          }
         }
 
-        // Remove optional Node: prefix and quotes
-        title = title.replace(/^Node:\s*"?|"?$/g, '').trim()
+        // Remove optional Node: prefix/quotes and trailing punctuation
+        title = title.replace(/^Node:\s*"?|"?$/g, '').replace(/[.,;:]+$/, '').trim()
 
         currentPoint = { title, content: inlineContent }
         continue
       }
 
-      // Accumulate additional description lines for the current point
+      // Accumulate description lines; skip generic commentary lines
       if (currentPoint) {
-        const cleanedLine = line
+        const trimmed = line.trim()
+        if (/^(You can|Each of|These|This|They)\b/i.test(trimmed)) {
+          continue
+        }
+        const cleanedLine = trimmed
           .replace(/^\s*-\s*\*\*Connection:\*\*.*$/i, '')
           .replace(/^\s*-\s*\*\*Content:\*\*\s*/i, '')
           .replace(/\*\*/g, '')
@@ -460,7 +582,7 @@ export default function ChatPanel({
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.role === 'assistant' ? sanitizeForDisplay(message.content) : message.content}</p>
               </div>
             </div>
           ))}
@@ -492,6 +614,49 @@ export default function ChatPanel({
           
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Explicit create confirmation modal */}
+        <Modal
+          open={showCreateConfirm}
+          onClose={() => { setShowCreateConfirm(false); setPendingCreateNodes([]); setPendingParentId(null) }}
+          title="Create nodes"
+          description={pendingParentId ? 'Review and confirm the nodes to create.' : 'Select a parent node and confirm.'}
+        >
+          <div className="max-h-64 overflow-auto mt-2 space-y-2">
+            {pendingCreateNodes.map((p, idx) => (
+              <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={p.selected}
+                    onChange={(checked) => {
+                      setPendingCreateNodes(prev => prev.map((n, i) => i === idx ? { ...n, selected: !!checked } : n))
+                    }}
+                    label={p.title || '(untitled)'}
+                    labelTextClassName="text-sm"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="secondary" onClick={() => { setShowCreateConfirm(false); setPendingCreateNodes([]); setPendingParentId(null) }}>Cancel</Button>
+            <Button
+              onClick={() => {
+                const toCreate = pendingCreateNodes.filter(n => n.selected).map(n => ({ title: n.title, content: n.content }))
+                if (toCreate.length > 0 && pendingParentId) {
+                  // Ensure placement uses the intended parent
+                  setSelectedNodes([pendingParentId])
+                  handleGenerateNodesFromMessage(toCreate)
+                }
+                setShowCreateConfirm(false)
+                setPendingCreateNodes([])
+                setPendingParentId(null)
+              }}
+            >
+              Create {pendingCreateNodes.filter(n => n.selected).length} nodes
+            </Button>
+          </div>
+        </Modal>
 
         {/* Selected Nodes Banner - Moved to right above input area */}
         {selectedNodes.length > 0 && (
