@@ -8,7 +8,7 @@ interface ParticleStyles {
   sizeRange: [number, number]
   speedRange: [number, number]
   opacityRange: [number, number]
-  color: string
+  colors: string[]
   background: string
   glowIntensity: number
   glowOpacity: number
@@ -17,11 +17,11 @@ interface ParticleStyles {
 const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
   light: {
     count: 30,
-    sizeRange: [3, 80], // Larger dots
+    sizeRange: [3, 240], // Larger dots
     speedRange: [-0.3, 0.3], // Slightly slower movement
     opacityRange: [0.01, 0.03], // More subtle opacity
-    color: '0, 0, 0', // Black dots
-    background: '#f9f9f9', // Light gray background with some transparency
+    colors: ['0, 207, 245', '255, 222, 0', '255, 0, 168'], // Primary, Secondary, Tertiary-500
+    background: '#ffffff', // Light gray background with some transparency
     glowIntensity: 0.3, // Subtle glow for light theme
     glowOpacity: 0.2 // Glow opacity multiplier
   },
@@ -30,7 +30,7 @@ const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
     sizeRange: [1, 80], // Smaller dots
     speedRange: [-0.05, 0.05], // Current speed
     opacityRange: [0.01, 0.02], // Current opacity
-    color: '255, 255, 255', // White dots
+    colors: ['0, 207, 245', '255, 222, 0', '255, 0, 168'], // Primary, Secondary, Tertiary-500
     background: 'transparent', // Transparent background
     glowIntensity: 0.8, // More pronounced glow for dark theme
     glowOpacity: 0.4 // Glow opacity multiplier
@@ -60,13 +60,19 @@ export default function BokehBackground() {
       speedX: number
       speedY: number
       opacity: number
+      color: string
     }> = []
     
     // Helper function to get random number in range
     const random = (min: number, max: number) => Math.random() * (max - min) + min
     
     // Initialize particles with theme-specific styles
+    const numColors = styles.colors.length
     for (let i = 0; i < styles.count; i++) {
+      // Evenly distribute colors across particles: partition by index
+      const colorIndex = Math.floor(i * numColors / styles.count)
+      const color = styles.colors[colorIndex % numColors]
+
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
@@ -74,6 +80,7 @@ export default function BokehBackground() {
         speedX: random(...styles.speedRange),
         speedY: random(...styles.speedRange),
         opacity: random(...styles.opacityRange),
+        color
       })
     }
     
@@ -96,13 +103,13 @@ export default function BokehBackground() {
         if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1
         if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1
         
-        // Set up glow effect
+        // Set up glow effect using particle-specific color
         ctx.shadowBlur = particle.size * styles.glowIntensity
-        ctx.shadowColor = `rgba(${styles.color}, ${particle.opacity * styles.glowOpacity})`
+        ctx.shadowColor = `rgba(${particle.color}, ${particle.opacity * styles.glowOpacity})`
         
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${styles.color}, ${particle.opacity})`
+        ctx.fillStyle = `rgba(${particle.color}, ${particle.opacity})`
         ctx.fill()
         
         // Reset shadow to prevent affecting other particles

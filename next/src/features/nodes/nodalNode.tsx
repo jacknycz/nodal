@@ -178,16 +178,21 @@ export default function NodalNode({
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
   const glowClass = isFocused
-    ? 'border-primary-500 shadow-[0_0_0_3px_rgba(59,130,246,0.2)]'
-    : selected
-      ? 'border-primary-500'
-      : isLocked && !isLockedByMe
-        ? 'border-red-500'
-        : 'border-gray-200 dark:border-gray-700'
+    ? 'shadow-[0_0_0_3px_rgba(59,130,246,0.2)]'
+    : isLocked && !isLockedByMe
+      ? 'shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
+      : ''
+
+  const borderClass = (() => {
+    if (isFocused) return '!border-primary-500'
+    if (selected) return '!border-primary-500'
+    if (isLocked && !isLockedByMe) return '!border-red-500'
+    return 'border-transparent dark:border-transparent'
+  })()
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${borderClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
