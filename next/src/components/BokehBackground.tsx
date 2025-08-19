@@ -10,6 +10,8 @@ interface ParticleStyles {
   opacityRange: [number, number]
   color: string
   background: string
+  glowIntensity: number
+  glowOpacity: number
 }
 
 const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
@@ -19,15 +21,19 @@ const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
     speedRange: [-0.3, 0.3], // Slightly slower movement
     opacityRange: [0.01, 0.03], // More subtle opacity
     color: '0, 0, 0', // Black dots
-    background: '#f9f9f9' // Light gray background with some transparency
+    background: '#f9f9f9', // Light gray background with some transparency
+    glowIntensity: 0.3, // Subtle glow for light theme
+    glowOpacity: 0.2 // Glow opacity multiplier
   },
   dark: {
     count: 50,
-    sizeRange: [1, 4], // Smaller dots
-    speedRange: [-0.5, 0.5], // Current speed
-    opacityRange: [0.1, 0.5], // Current opacity
+    sizeRange: [1, 80], // Smaller dots
+    speedRange: [-0.05, 0.05], // Current speed
+    opacityRange: [0.01, 0.02], // Current opacity
     color: '255, 255, 255', // White dots
-    background: 'transparent' // Transparent background
+    background: 'transparent', // Transparent background
+    glowIntensity: 0.8, // More pronounced glow for dark theme
+    glowOpacity: 0.4 // Glow opacity multiplier
   }
 }
 
@@ -90,10 +96,18 @@ export default function BokehBackground() {
         if (particle.x < 0 || particle.x > canvas.width) particle.speedX *= -1
         if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1
         
+        // Set up glow effect
+        ctx.shadowBlur = particle.size * styles.glowIntensity
+        ctx.shadowColor = `rgba(${styles.color}, ${particle.opacity * styles.glowOpacity})`
+        
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
         ctx.fillStyle = `rgba(${styles.color}, ${particle.opacity})`
         ctx.fill()
+        
+        // Reset shadow to prevent affecting other particles
+        ctx.shadowBlur = 0
+        ctx.shadowColor = 'transparent'
       })
       
       requestAnimationFrame(animate)

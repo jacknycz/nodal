@@ -76,7 +76,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Avoid repetition.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Avoid repetition. When the user says "this" or "it", interpret it as referring to the selected node context provided in the user message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -133,7 +133,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Avoid repetition.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Avoid repetition. When the user says "this" or "it", interpret it as referring to the selected node context provided in the user message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,

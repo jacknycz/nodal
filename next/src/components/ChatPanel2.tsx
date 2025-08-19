@@ -63,13 +63,12 @@ export default function ChatPanel2() {
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map((n: any) => {
         const title = n?.data?.title || 'Untitled Node'
-        const content = (n?.data?.content || '').toString().trim()
-        const clipped = content.length > 1000 ? content.slice(0, 1000) + '…' : content
-        return `Node: "${title}"${clipped ? `\nContent: ${clipped}` : ''}`
+        const content = (n?.data?.content || '').toString()
+        return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
 
       const label = `Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}`
-      contextualMessage = `Context - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
+      contextualMessage = `Context - ${label}:\n${nodeContext}\n\nNote: When the user says "this" or "it", it refers to the selected node context above.\n\nUser message: ${userText}`
     }
 
     await sendMessageStream(contextualMessage)
@@ -171,7 +170,9 @@ export default function ChatPanel2() {
       points = list.map(t => ({ title: t, content: '' }))
     } else if (generationTopic) {
       const nodeCount = count || 5
-      points = await generateFromTopic(generationTopic, nodeCount, storeNodes as any)
+      const selectedContent = selectedNodes.length > 0 ? (selectedNodes[0]?.data?.content || '').toString() : undefined
+      const topicWithContext = selectedContent ? `${generationTopic}\n\nContext from selected node:\n${selectedContent}` : generationTopic
+      points = await generateFromTopic(topicWithContext, nodeCount, storeNodes as any)
     }
 
     if (points.length) {

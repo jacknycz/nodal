@@ -474,14 +474,15 @@ export function useAIPlacement() {
    * Places AI-generated nodes with smart parent detection
    */
   const placeGeneratedNodes = useCallback(async (
-    generatedNodes: NodeToPlace[]
+    generatedNodes: NodeToPlace[],
+    parentNodeId?: string,
+    constraints?: Partial<PlacementConstraints>
   ): Promise<PlacementResult> => {
-    // Find the best parent node (most recently selected)
-    const parentNodeId = selectedNodeIds.length > 0 ? selectedNodeIds[0] : undefined
-    
-    return placeAINodes(generatedNodes, parentNodeId, {
-      minDistance: 40, // Slightly more space for AI nodes
-      preferredDirection: 'down' // AI nodes typically go below parent
+    const effectiveParent = parentNodeId ?? (selectedNodeIds.length > 0 ? selectedNodeIds[0] : undefined)
+    return placeAINodes(generatedNodes, effectiveParent, {
+      minDistance: 40,
+      preferredDirection: 'down',
+      ...constraints
     })
   }, [placeAINodes, selectedNodeIds])
 
