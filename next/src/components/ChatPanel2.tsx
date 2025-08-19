@@ -78,8 +78,56 @@ export default function ChatPanel2() {
   // Node creation intent + confirm modal
   const [showCreate, setShowCreate] = useState(false)
   const [pendingPoints, setPendingPoints] = useState<{ title: string; content: string; selected: boolean }[]>([])
+  const [pendingParentId, setPendingParentId] = useState<string | null>(null)
 
-  const parseCreateIntent = (text: string) => /^(create|add)\b/i.test(text)
+  // Enhanced intent parsing
+  const parseCreateIntent = (text: string) => {
+    const patterns = [
+      /^(create|add|generate)\b/i,
+      /^(create|add)\s+\d+\s+nodes?\b/i,
+      /^(create|add)\s+nodes?\s+(?:for|about|under)\b/i,
+      /^(create|add)\s+nodes?\s*:\s*\w/i
+    ]
+    return patterns.some(pattern => pattern.test(text))
+  }
+
+  // Extract count from commands like "create 5 nodes"
+  const extractCount = (text: string): number | null => {
+    const match = text.match(/(?:create|add|generate)\s+(\d+)\s+nodes?/i)
+    return match ? parseInt(match[1], 10) : null
+  }
+
+  // Extract topic from commands like "create nodes about <topic>"
+  const extractTopic = (text: string): string | null => {
+    const patterns = [
+      /(?:create|add|generate)\s+nodes?\s+(?:for|about)\s+(.+?)(?:\s|$)/i,
+      /(?:create|add|generate)\s+(\d+)\s+nodes?\s+(?:for|about)\s+(.+?)(?:\s|$)/i
+    ]
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern)
+      if (match && match[match.length - 1]) {
+        return match[match.length - 1].trim()
+      }
+    }
+    return null
+  }
+
+  // Extract parent name from commands like "create nodes under <parent>"
+  const extractParentName = (text: string): string | null => {
+    const match = text.match(/(?:create|add|generate)\s+nodes?\s+under\s+(.+?)(?:\s|$)/i)
+    return match ? match[1].trim() : null
+  }
+
+  // Find node by name (case-insensitive, partial match)
+  const findNodeByName = (name: string): any => {
+    const normalizedName = name.toLowerCase().trim()
+    return storeNodes.find((node: any) => 
+      node.data?.title?.toLowerCase().includes(normalizedName) ||
+      normalizedName.includes(node.data?.title?.toLowerCase())
+    )
+  }
+
   const extractTitles = (text: string): string[] | null => {
     const m = text.match(/nodes?:\s*(.*)$/i)
     if (!m) return null
@@ -92,18 +140,42 @@ export default function ChatPanel2() {
     setInputValue('')
     if (inputRef.current) inputRef.current.blur()
 
-    // Parse explicit list first
+    // Parse command components
     const list = extractTitles(msg)
+    const count = extractCount(msg)
+    const topic = extractTopic(msg)
+    const parentName = extractParentName(msg)
+    
+    // Determine parent node
+    let parentId: string | null = null
+    if (parentName) {
+      const parentNode = findNodeByName(parentName)
+      if (parentNode) {
+        parentId = parentNode.id
+      }
+    } else if (selectedNodes.length > 0) {
+      parentId = selectedNodes[0].id
+    }
+    
+    // Determine topic for generation
+    let generationTopic = topic
+    if (!generationTopic && selectedNodes.length > 0) {
+      generationTopic = selectedNodes[0]?.data?.title || 'topic'
+    }
+    if (!generationTopic && !list) {
+      generationTopic = 'general ideas'
+    }
+
     let points: { title: string; content: string }[] = []
     if (list && list.length) {
       points = list.map(t => ({ title: t, content: '' }))
-    } else if (selectedNodes.length > 0) {
-      // Default to selected node title as topic
-      const topic = selectedNodes[0]?.data?.title || 'topic'
-      points = await generateFromTopic(topic, 5, storeNodes as any)
+    } else if (generationTopic) {
+      const nodeCount = count || 5
+      points = await generateFromTopic(generationTopic, nodeCount, storeNodes as any)
     }
 
     if (points.length) {
+      setPendingParentId(parentId)
       setPendingPoints(points.slice(0, 10).map(p => ({ ...p, selected: true })))
       setShowCreate(true)
     }
@@ -282,12 +354,16 @@ export default function ChatPanel2() {
                 if (selected.length === 0) {
                   setShowCreate(false)
                   setPendingPoints([])
+                  setPendingParentId(null)
                   return
                 }
 
                 try {
                   const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
-                  const result = await placeGeneratedNodes(nodesToPlace)
+                  // Use specific parent if provided, otherwise use placement hook's default logic
+                  const result = pendingParentId 
+                    ? await placeGeneratedNodes(nodesToPlace, pendingParentId, { preferredDirection: 'down', minDistance: 40 })
+                    : await placeGeneratedNodes(nodesToPlace)
 
                   if (result && result.success && result.placements.length > 0) {
                     const newNodes: Node[] = result.placements.map(p => ({
@@ -317,6 +393,7 @@ export default function ChatPanel2() {
                 } finally {
                   setShowCreate(false)
                   setPendingPoints([])
+                  setPendingParentId(null)
                 }
               }}
             >

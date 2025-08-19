@@ -28,11 +28,11 @@ export const metadata: Metadata = {
         type: 'image/svg+xml',
       },
       {
-        url: '/favicon.ico',
-        sizes: 'any',
+        url: '/nodal.png', // or whatever you name it
+        type: 'image/png',
       },
     ],
-    apple: '/nodal.svg',
+    apple: '/nodal.png', // Safari specifically
   },
 };
 
