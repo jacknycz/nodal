@@ -7,13 +7,14 @@ import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
-import { House } from 'lucide-react';
+import { House, Info } from 'lucide-react';
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
+import ProductIntro from './ProductIntro'
 import Tag from './ui/Tag'
 import { Plus } from 'lucide-react'
 import { isAdmin } from '../features/auth/roles'
@@ -54,6 +55,7 @@ export default function Topbar({
 }: TopbarProps) {
   const { isDark } = useTheme()
   const [showFeedback, setShowFeedback] = useState(false)
+  const [showProductIntro, setShowProductIntro] = useState(false)
   const setTopbarHeight = useBoardStore(state => state.setTopbarHeight);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const user = useSupabaseUser()
@@ -353,6 +355,9 @@ export default function Topbar({
                 </div>
               </>
             )}
+            <IconButton aria-label="Product intro" size="md" variant="secondaryGhost" onClick={() => setShowProductIntro(true)}>
+              <Info className="w-4 h-4" />
+            </IconButton>
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}
@@ -364,6 +369,51 @@ export default function Topbar({
               onOpenSettings={onOpenSettings}
               onLoadBoard={onLoadBoard}
               isBoardView={isBoardView}
+            />
+            <ProductIntro
+              open={showProductIntro}
+              onClose={() => setShowProductIntro(false)}
+              slides={[
+                ({ next }) => (
+                  <div className="text-center">
+                    <h2 className="text-2xl font-semibold mb-4">Slide 1</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Welcome to Nodal — slide 1 content.</p>
+                    <div className="flex justify-center">
+                      <Button variant="primary" size="medium" onClick={next}>Next</Button>
+                    </div>
+                  </div>
+                ),
+                ({ next, prev }) => (
+                  <div className="text-center">
+                    <h2 className="text-2xl font-semibold mb-4">Slide 2</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Slide 2 content goes here.</p>
+                    <div className="flex justify-center gap-3">
+                      <Button variant="secondary" size="medium" onClick={prev}>Previous</Button>
+                      <Button variant="primary" size="medium" onClick={next}>Next</Button>
+                    </div>
+                  </div>
+                ),
+                ({ next, prev }) => (
+                  <div className="text-center">
+                    <h2 className="text-2xl font-semibold mb-4">Slide 3</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Slide 3 content goes here.</p>
+                    <div className="flex justify-center gap-3">
+                      <Button variant="secondary" size="medium" onClick={prev}>Previous</Button>
+                      <Button variant="primary" size="medium" onClick={next}>Next</Button>
+                    </div>
+                  </div>
+                ),
+                ({ prev, close }) => (
+                  <div className="text-center">
+                    <h2 className="text-2xl font-semibold mb-4">Slide 4</h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Final slide — you're ready!</p>
+                    <div className="flex justify-center gap-3">
+                      <Button variant="secondary" size="medium" onClick={prev}>Previous</Button>
+                      <Button variant="primary" size="medium" onClick={close}>Finish</Button>
+                    </div>
+                  </div>
+                ),
+              ]}
             />
           </div>
         </div>
