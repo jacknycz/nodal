@@ -35,7 +35,7 @@ export async function signOut() {
 }
 
 export function useSupabaseUser() {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null | undefined>(undefined)
 
   useEffect(() => {
     const getUser = async () => {

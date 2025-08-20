@@ -7,6 +7,7 @@ import Topbar from './Topbar'
 import BoardRoom from './BoardRoom'
 import BoardComponent from '../features/board/BoardComponent'
 import LoginScreen from './LoginScreen'
+import Loader from './ui/Loader'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
@@ -65,7 +66,12 @@ export default function BoardRoomPage() {
   return (
     <ThemeProvider>
       <AIProvider>
-        {user ? (
+        {user === undefined ? (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <Loader size="lg" className="mb-4" />
+            <div className="text-lg text-gray-600 dark:text-gray-300">Checking authentication...</div>
+          </div>
+        ) : user ? (
           <>
             <Topbar 
               currentBoardName={boardState.boardName} 
