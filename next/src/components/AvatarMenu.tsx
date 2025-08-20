@@ -11,7 +11,10 @@ import {
 } from 'lucide-react'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
-import { getUserRoleFromMetadata } from '../features/auth/roles'
+import { getUserRoleFromMetadata, isAdmin } from '../features/auth/roles'
+import TemplatePickerModal from './TemplatePickerModal'
+import { templateStorage } from '../features/storage/templateStorage'
+import { boardStorage } from '../features/storage/storage'
 import ThemeToggle from './ThemeToggle'
 import Image from 'next/image'
 import Menu from './ui/Menu'
@@ -46,6 +49,7 @@ export default function AvatarMenu({
   const user = useSupabaseUser()
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const [pendingInvites, setPendingInvites] = useState<any[]>([])
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false)
 
   // Load recent boards when menu opens
   const loadRecentBoards = async () => {
@@ -106,6 +110,7 @@ export default function AvatarMenu({
   }
 
   const roleLabel = getUserRoleFromMetadata(user)
+  const admin = isAdmin(user)
 
   // Get user avatar
   const getUserAvatar = () => {
@@ -118,6 +123,7 @@ export default function AvatarMenu({
   }
 
   return (
+    <>
     <Menu
       trigger={
         <button
@@ -256,6 +262,50 @@ export default function AvatarMenu({
             <span className="text-sm text-gray-900 dark:text-white">Settings</span>
           </button>
 
+          {/* Templates: available to all users for consumption */}
+          <div className="px-4 py-2">
+            <button
+              className="w-full px-2 py-2 text-left rounded bg-blue-600 text-white hover:bg-blue-700 text-sm"
+              onClick={() => setShowTemplatePicker(true)}
+            >
+              Use Template
+            </button>
+          </div>
+
+          {/* Admin: Templates */}
+          {admin && (
+            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Templates (Admin)</div>
+              <div className="flex gap-2">
+                <button
+                  className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  onClick={async () => {
+                    try {
+                      const name = window.prompt('Template name?')?.trim()
+                      if (!name) return
+                      // Build board data from store
+                      const state = (await import('../features/board/boardSlice')).useBoardStore.getState()
+                      const boardNodes = state.nodes || []
+                      const boardEdges = state.edges || []
+                      const data = {
+                        nodes: boardNodes,
+                        edges: boardEdges,
+                        viewport: { x: 0, y: 0, zoom: 1 },
+                        topic: state.currentBoardName || undefined
+                      }
+                      await templateStorage.saveTemplate(name, data as any)
+                      alert('Template saved')
+                    } catch (e) {
+                      alert('Failed to save template')
+                    }
+                  }}
+                >
+                  Save as Template
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Theme Toggle */}
           <div className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
             <ThemeToggle />
@@ -292,5 +342,24 @@ export default function AvatarMenu({
       }
       className={className}
     />
+    {showTemplatePicker && (
+      <TemplatePickerModal
+        open={showTemplatePicker}
+        onClose={() => setShowTemplatePicker(false)}
+        onUseTemplate={async (tpl) => {
+          try {
+            const newName = `${tpl.name} (copy)`
+            const id = await boardStorage.saveBoard(newName, tpl.data)
+            setShowTemplatePicker(false)
+            if (typeof window !== 'undefined') {
+              window.location.href = `/board/${id}`
+            }
+          } catch (e) {
+            alert('Failed to create board from template')
+          }
+        }}
+      />
+    )}
+    </>
   )
 }
