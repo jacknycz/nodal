@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
+import { getUserRoleFromMetadata } from '../features/auth/roles'
 import ThemeToggle from './ThemeToggle'
 import Image from 'next/image'
 import Menu from './ui/Menu'
@@ -104,6 +105,8 @@ export default function AvatarMenu({
     return 'User'
   }
 
+  const roleLabel = getUserRoleFromMetadata(user)
+
   // Get user avatar
   const getUserAvatar = () => {
     if (!user) return null
@@ -164,7 +167,7 @@ export default function AvatarMenu({
                   {getUserDisplayName()}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  Signed in as {user?.email || 'user'}
+                  {roleLabel} • {user?.email || 'user'}
                 </p>
               </div>
             </div>
