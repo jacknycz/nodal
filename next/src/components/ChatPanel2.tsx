@@ -28,6 +28,7 @@ export default function ChatPanel2() {
     sendMessageStream,
     cancelStreaming,
     clearChat,
+    addSystemMessage,
     isLoading,
     isStreaming,
     error,
@@ -385,12 +386,12 @@ export default function ChatPanel2() {
                       setEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                     }
 
-                    sendMessage(`Created ${newNodes.length} node(s).`)
+                    addSystemMessage(`Created ${newNodes.length} node(s).`)
                   } else {
-                    sendMessage('No nodes were created.')
+                    addSystemMessage('No nodes were created.')
                   }
                 } catch (err) {
-                  sendMessage('Failed to create nodes.')
+                  addSystemMessage('Failed to create nodes.')
                 } finally {
                   setShowCreate(false)
                   setPendingPoints([])

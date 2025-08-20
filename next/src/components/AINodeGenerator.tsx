@@ -8,6 +8,7 @@ import Checkbox from './ui/Checkbox'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useAIPlacement } from '../features/board/usePlacement'
 import { useReactFlow, type Node, type Edge } from '@xyflow/react'
+import { useBoardStore } from '../features/board/boardSlice'
 
 interface AINodeGeneratorProps {
   isOpen: boolean
@@ -27,6 +28,10 @@ export default function AINodeGenerator({
   const { generateFromTopic } = useChatNodeGen2()
   const { placeGeneratedNodes } = useAIPlacement()
   const { setNodes, setEdges } = useReactFlow()
+  // Board awareness
+  const storeNodes = useBoardStore((s) => s.nodes)
+  const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
+  const selectedNodes = (storeNodes || []).filter((n: any) => selectedNodeIds.includes(n.id))
 
   const [prompt, setPrompt] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
@@ -58,7 +63,19 @@ export default function AINodeGenerator({
     setIsLoading(true)
     setError(null)
     try {
-      const points = await generateFromTopic(prompt.trim(), 6)
+      // Include selected node context so "this" refers to the selection
+      const baseTopic = prompt.trim()
+      let topicForAI = baseTopic
+      if (selectedNodes.length > 0) {
+        const sel = selectedNodes[0]
+        const selTitle = sel?.data?.title || 'topic'
+        const selContent = (sel?.data?.content || '').toString()
+        topicForAI = baseTopic || selTitle
+        if (selContent) {
+          topicForAI = `${topicForAI}\n\nContext from selected node:\n${selContent}`
+        }
+      }
+      const points = await generateFromTopic(topicForAI, 6, storeNodes as any)
       const pending = (points || []).slice(0, 10).map(p => ({
         title: p.title || '',
         content: p.content || '',

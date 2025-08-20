@@ -17,6 +17,7 @@ interface UseUnifiedAI2Result {
   sendMessageStream: (content: string, context?: Partial<AIContextType>) => Promise<void>
   cancelStreaming: () => void
   clearChat: () => void
+  addSystemMessage: (content: string) => void
   isLoading: boolean
   isStreaming: boolean
   error: string | null
@@ -34,6 +35,16 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const clearError = useCallback(() => setError(null), [])
+
+  const addSystemMessage = useCallback((content: string) => {
+    const message: ChatMessage2 = {
+      id: Date.now().toString(),
+      role: 'system',
+      content,
+      timestamp: new Date(),
+    }
+    setMessages(prev => [...prev, message])
+  }, [])
 
   const sanitizeStreamContent = useCallback((text: string): string => {
     let s = text
@@ -181,6 +192,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
     sendMessageStream,
     cancelStreaming,
     clearChat,
+    addSystemMessage,
     isLoading,
     isStreaming,
     error,
