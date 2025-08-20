@@ -1069,8 +1069,16 @@ function BoardContent({
   // Handle adding nodes to store (for AI generation)
   const handleAddNodeToStore = useCallback((node: Node) => {
     setNodes((nds) => {
-      if (!Array.isArray(nds)) return [node]
-      return [...nds, node]
+      const list = Array.isArray(nds) ? nds : []
+      // Ensure unique ID to avoid React key collisions
+      let candidate = node
+      if (list.some((n: any) => n.id === node.id)) {
+        const uniqueId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? `node-${(crypto as any).randomUUID()}`
+          : `${node.id}-${Math.random().toString(36).slice(2,8)}`
+        candidate = { ...node, id: uniqueId }
+      }
+      return [...list, candidate]
     })
   }, [setNodes])
   
@@ -1691,7 +1699,9 @@ function BoardContent({
               onGenerate={(nodeData: { label: string; content?: string }) => {
                 const position = getViewportCenter()
                 const newNode = {
-                  id: `ai-node-${Date.now()}`,
+                  id: typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                    ? `ai-node-${crypto.randomUUID()}`
+                    : `ai-node-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
                   type: 'default',
                   position,
                   data: { ...nodeData },

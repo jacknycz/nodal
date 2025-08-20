@@ -419,7 +419,9 @@ export default function ChatPanel({
         points.forEach((point, index) => {
           setTimeout(() => {
             onGenerateNode?.({
-              id: `ai-node-${Date.now()}-${index}`,
+              id: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+                ? `ai-node-${crypto.randomUUID()}`
+                : `ai-node-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
               label: point.title,
               content: point.content,
               position: { 
@@ -440,7 +442,9 @@ export default function ChatPanel({
       points.forEach((point, index) => {
         setTimeout(() => {
           onGenerateNode?.({
-            id: `ai-node-${Date.now()}-${index}`,
+            id: (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+              ? `ai-node-${crypto.randomUUID()}`
+              : `ai-node-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
             label: point.title,
             content: point.content,
             position: { 
