@@ -13,8 +13,11 @@ import { useSupabaseUser } from '../features/auth/authUtils'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
+import Button from './ui/Button'
 import Tag from './ui/Tag'
 import { Plus } from 'lucide-react'
+import { isAdmin } from '../features/auth/roles'
+import { templateStorage } from '../features/storage/templateStorage'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -306,6 +309,30 @@ export default function Topbar({
                   <DocumentsMenu 
                     onDeleteNode={onDeleteNode}
                   />
+                  {isAdmin(user) && (
+                    <Button
+                      variant="secondaryGhost"
+                      className="text-sm px-2 py-1"
+                      onClick={async () => {
+                        const currentBoardId = useBoardStore.getState().currentBoardId
+                        const nodes = useBoardStore.getState().nodes || []
+                        const edges = useBoardStore.getState().edges || []
+                        const viewport = useBoardStore.getState().viewport || { x: 0, y: 0, zoom: 1 }
+                        const defaultName = currentBoardName || `Template ${new Date().toLocaleDateString()}`
+                        const name = window.prompt('Template name', defaultName)
+                        if (!name) return
+                        const description = window.prompt('Optional description', '') || undefined
+                        try {
+                          await templateStorage.saveTemplate(name, { nodes, edges, viewport }, description)
+                          alert('Template saved')
+                        } catch (err) {
+                          alert('Failed to save template')
+                        }
+                      }}
+                    >
+                      Save as new template
+                    </Button>
+                  )}
                 </div>
                 {/* Mobile More menu */}
                 <div className="sm:hidden">

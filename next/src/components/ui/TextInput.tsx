@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import clsx from 'clsx'
 
-export type TextInputSize = 'sm' | 'md' | 'lg'
+export type TextInputSize = 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large'
 
 interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string
@@ -15,8 +15,11 @@ interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement
 
 const sizeClasses: Record<TextInputSize, string> = {
   sm: 'px-3 py-2 text-sm',
+  small: 'px-3 py-2 text-sm',
   md: 'px-3 py-3 text-sm',
+  medium: 'px-3 py-3 text-sm',
   lg: 'px-3 py-3 text-base',
+  large: 'px-3 py-3 text-base',
 }
 
 const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
@@ -50,9 +53,9 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
             'focus-within:border-primary-500 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',
             error && 'border-red-500 dark:border-red-400 focus-within:border-red-500 dark:focus-within:border-red-400 focus-within:ring-red-500/20',
-            size === 'sm' && 'min-h-[40px]',
-            size === 'md' && 'min-h-[48px]',
-            size === 'lg' && 'min-h-[52px]'
+            size === 'sm' && 'h-[40px]',
+            size === 'md' && 'h-[48px]',
+            size === 'lg' && 'h-[52px]'
           )}
         >
           {/* Label inside container */}

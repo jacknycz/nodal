@@ -1,4 +1,5 @@
 import { supabaseStorage } from './supabaseStorage'
+import { templateStorage } from './templateStorage'
 import type { BoardNode, BoardEdge } from '../board/boardTypes'
 
 interface BoardData {
@@ -94,7 +95,19 @@ class BoardStorage {
 
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
-    return supabaseStorage.updateBoard(boardId, data)
+    const res = await supabaseStorage.updateBoard(boardId, data)
+    // Also propagate updates to a mapped template if present in localStorage
+    try {
+      if (typeof window !== 'undefined') {
+        const tplId = localStorage.getItem(`templateMapping:${boardId}`)
+        if (tplId) {
+          await templateStorage.updateTemplate(tplId, { data })
+        }
+      }
+    } catch (err) {
+      // ignore template update failures
+    }
+    return res
   }
 
   // Load a specific board

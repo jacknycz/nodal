@@ -5,7 +5,7 @@ export type IconButtonVariant = 'default' | 'primary' | 'danger' | 'primaryGhost
 
 interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: IconButtonVariant
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large'
   'aria-label': string // required for accessibility
 }
 
@@ -21,8 +21,11 @@ const variantClasses: Record<IconButtonVariant, string> = {
 
 const sizeClasses = {
   sm: 'w-6 h-6',
+  small: 'w-6 h-6',
   md: 'w-8 h-8',
-  lg: 'w-10 h-10',
+  medium: 'w-8 h-8',
+  lg: 'w-12 h-12',
+  large: 'w-12 h-12',
 }
 
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
@@ -38,7 +41,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type="button"
         className={clsx(
-          'inline-flex items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed',
+          'inline-flex flex-none items-center justify-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed',
           variantClasses[variant],
           sizeClasses[size],
           className

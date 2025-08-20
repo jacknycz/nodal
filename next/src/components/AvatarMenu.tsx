@@ -300,7 +300,7 @@ export default function AvatarMenu({
                     }
                   }}
                 >
-                  Save as Template
+                  Save as new template
                 </button>
               </div>
             </div>

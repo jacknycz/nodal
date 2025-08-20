@@ -6,13 +6,14 @@ import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
 import { templateStorage, type TemplateRecord } from '../features/storage/templateStorage'
+import { isAdmin } from '../features/auth/roles'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
-import { CircuitBoard, FileText, Users, PencilIcon, PinIcon, CheckIcon } from 'lucide-react'
+import { CircuitBoard, FileText, Users, PencilIcon, PinIcon, CheckIcon, Copy, Plus } from 'lucide-react'
 // Gradient background only (no external images)
 
 interface BoardRoomProps {
@@ -165,7 +166,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
             </div>
           ) : (
             <div className="flex items-center gap-2 group">
-              <h3 
+              <h3
                 className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
               >
@@ -184,7 +185,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         </div>
       </div>
 
-      
+
 
       <div className="flex space-x-6 items-center">
         {/* Board Info (right column) */}
@@ -254,8 +255,8 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       <div className="col-span-2 mt-4 flex items-center justify-between gap-2">
         <Button
           variant="secondary"
+          size="small"
           onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
-          className="text-xs px-2 py-1"
           title="Share board"
         >
           Share
@@ -263,8 +264,8 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         {/* Edit button removed; inline edit via title icon */}
         <Button
           variant="dangerGhost"
+          size="small"
           onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
-          className="text-xs px-2 py-1"
           title="Delete board"
         >
           Delete
@@ -281,10 +282,10 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         description={`Are you sure you want to delete "${newName}"? This action cannot be undone.`}
       >
         <div className="flex justify-end gap-2 mt-2">
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} className="text-sm px-3 py-1.5">
+          <Button variant="secondary" size="small" onClick={() => setShowDeleteModal(false)}>
             Cancel
           </Button>
-          <Button variant="danger" onClick={() => { setShowDeleteModal(false); onDelete() }} className="text-sm px-3 py-1.5">
+          <Button variant="danger" size="small" onClick={() => { setShowDeleteModal(false); onDelete() }}>
             Delete
           </Button>
         </div>
@@ -300,22 +301,21 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         <div className="space-y-4">
           {/* Share link */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Share link</label>
             <div className="flex gap-2">
-              <TextInput readOnly value={shareLink} fullWidth />
-              <Button variant="secondary" onClick={() => { navigator.clipboard.writeText(shareLink) }} className="text-sm px-3 py-2">
-                Copy
-              </Button>
+              <TextInput readOnly value={shareLink} fullWidth label="Share link" />
+              <IconButton aria-label="Copy share link" size="lg" variant="secondary" onClick={() => { navigator.clipboard.writeText(shareLink) }}>
+                <Copy className="w-4 h-4" />
+              </IconButton>
             </div>
           </div>
 
           {/* Share by email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Invite by email</label>
             <div className="flex gap-2">
               <TextInput
                 type="email"
                 placeholder="Add email and press Enter"
+                label="Invite by email"
                 value={shareInput}
                 onChange={e => setShareInput(e.target.value)}
                 onKeyDown={e => {
@@ -330,7 +330,9 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                 }}
                 fullWidth
               />
-              <Button
+              <IconButton
+                aria-label="Add email"
+                size="lg"
                 variant="secondary"
                 onClick={() => {
                   const email = shareInput.trim()
@@ -339,30 +341,35 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                     setShareInput('')
                   }
                 }}
-                className="text-sm px-3 py-2"
               >
-                Add
-              </Button>
+                <Plus className="w-4 h-4" />
+              </IconButton>
             </div>
             {shareEmails.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {shareEmails.map(email => (
                   <span key={email} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
                     {email}
-                    <button
+                    <IconButton
+                      aria-label={`Remove ${email}`}
+                      size="sm"
+                      variant="default"
+                      className="ml-1"
                       onClick={() => setShareEmails(prev => prev.filter(e => e !== email))}
-                      className="ml-1 text-gray-500 hover:text-gray-800 dark:hover:text-white"
                     >
                       ×
-                    </button>
+                    </IconButton>
                   </span>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setShowShareModal(false)} className="text-sm px-3 py-1.5">
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              variant="secondary"
+              onClick={() => setShowShareModal(false)}
+            >
               Close
             </Button>
             <Button
@@ -383,7 +390,6 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                 }
               }}
               disabled={shareEmails.length === 0}
-              className="text-sm px-3 py-1.5"
             >
               Send Invites
             </Button>
@@ -409,6 +415,10 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [templates, setTemplates] = useState<TemplateRecord[]>([])
   const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
+  const [editingTemplateName, setEditingTemplateName] = useState<string>('')
+  const [editingTemplateDescription, setEditingTemplateDescription] = useState<string>('')
+  const [editingTemplateLoading, setEditingTemplateLoading] = useState<boolean>(false)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -605,7 +615,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
         <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
       </div>
-      
+
       {/* Sticky Welcome Section */}
       <div className="sticky top-16 z-10 pb-8">
         <div className="w-full mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -731,45 +741,127 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                   No templates yet.
                 </div>
               ) : (
-                templates.map((t) => (
-                  <div key={t.id} className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200">
-                    <div className="mb-2">
-                      <div className="text-xl font-thin text-gray-900 dark:text-white truncate" title={t.name}>{t.name}</div>
-                    </div>
-                    <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400 mb-2">
-                      <div className="flex items-center gap-1">
-                        <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.nodeCount}</span>
-                        <span className="font-medium">nodes</span>
+                templates.map((t) => {
+                  const admin = isAdmin(user)
+                  const isEditing = editingTemplateId === t.id
+                  return (
+                    <div key={t.id} className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200">
+                      <div className="mb-2">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <TextInput
+                              type="text"
+                              value={editingTemplateName}
+                              onChange={(e) => setEditingTemplateName(e.target.value)}
+                              size="md"
+                              className="flex-1"
+                              maxLength={100}
+                            />
+                            <IconButton
+                              variant="primary"
+                              aria-label="Save title"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                try {
+                                  setEditingTemplateLoading(true)
+                                  const updated = await templateStorage.updateTemplate(t.id, { name: editingTemplateName, description: editingTemplateDescription })
+                                  setTemplates(prev => prev.map(p => p.id === t.id ? updated : p))
+                                  setEditingTemplateId(null)
+                                  setEditingTemplateName('')
+                                  setEditingTemplateDescription('')
+                                } catch (err) {
+                                  alert('Failed to update template')
+                                } finally {
+                                  setEditingTemplateLoading(false)
+                                }
+                              }}
+                            >
+                              <CheckIcon className="w-4 h-4" />
+                            </IconButton>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group">
+                            <h3
+                              className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                            >
+                              {t.name}
+                            </h3>
+                            <IconButton
+                              variant="primaryGhost"
+                              aria-label="Edit title"
+                              onClick={(e) => { e.stopPropagation(); setEditingTemplateId(t.id); setEditingTemplateName(t.name || ''); setEditingTemplateDescription(t.description || '') }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                            >
+                              <PencilIcon className="w-4 h-4" />
+                            </IconButton>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.edgeCount}</span>
-                        <span className="font-medium">connections</span>
+                      <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                        <div className="flex items-center gap-1">
+                          <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.nodeCount}</span>
+                          <span className="font-medium">nodes</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.edgeCount}</span>
+                          <span className="font-medium">connections</span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex justify-end gap-2">
+
+                        <>
+                          {admin && (
+                            <Button
+                              variant="secondaryGhost"
+                              size="small"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                try {
+                                  const { boardStorage } = await import('../features/storage/storage')
+                                  const id = await boardStorage.saveBoard(t.name, t.data)
+                                  // Persist mapping so autosave updates the template
+                                  try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
+                                  const newBoard = await boardStorage.loadBoard(id)
+                                  if (newBoard) {
+                                    onOpenBoard(newBoard, undefined)
+                                  } else if (typeof window !== 'undefined') {
+                                    window.location.href = `/board/${id}`
+                                  }
+                                } catch (err) {
+                                  alert('Failed to open template for editing')
+                                }
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                const newName = `${t.name} (copy)`
+                                const { boardStorage } = await import('../features/storage/storage')
+                                const id = await boardStorage.saveBoard(newName, t.data)
+                                const newBoard = await boardStorage.loadBoard(id)
+                                if (newBoard) {
+                                  onOpenBoard(newBoard, undefined)
+                                } else if (typeof window !== 'undefined') {
+                                  window.location.href = `/board/${id}`
+                                }
+                              } catch (e) {
+                                alert('Failed to use template')
+                              }
+                            }}
+                          >
+                            Use
+                          </Button>
+                        </>
                       </div>
                     </div>
-                    <div className="mt-3 flex justify-end">
-                      <button
-                        className="px-3 py-1.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 text-sm"
-                        onClick={async () => {
-                          try {
-                            const newName = `${t.name} (copy)`
-                            const { boardStorage } = await import('../features/storage/storage')
-                            const id = await boardStorage.saveBoard(newName, t.data)
-                            const newBoard = await boardStorage.loadBoard(id)
-                            if (newBoard) {
-                              onOpenBoard(newBoard, undefined)
-                            } else if (typeof window !== 'undefined') {
-                              window.location.href = `/board/${id}`
-                            }
-                          } catch (e) {
-                            alert('Failed to use template')
-                          }
-                        }}
-                      >
-                        Use
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           )}

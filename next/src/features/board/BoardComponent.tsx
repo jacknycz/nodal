@@ -20,6 +20,7 @@ import '@xyflow/react/dist/style.css'
 import { useBoard } from './useBoard'
 import { usePlacement } from './usePlacement'
 import { boardStorage } from '../storage/storage'
+import { templateStorage } from '../storage/templateStorage'
 import DocumentNode from '../nodes/DocumentNode'
 import ImageNode from '../nodes/ImageNode'
 import NodalNode from '../nodes/nodalNode'
@@ -497,6 +498,18 @@ function BoardContent({
         // })
         
         await boardStorage.updateBoard(localBoardIdRef.current, boardData)
+        // If this board was created from a template, autosave template data as well
+        try {
+          if (typeof window !== 'undefined') {
+            const tplId = localStorage.getItem(`templateMapping:${localBoardIdRef.current}`)
+            if (tplId) {
+              // Only update template data during autosave; avoid overwriting template name
+              await templateStorage.updateTemplate(tplId, { data: boardData })
+            }
+          }
+        } catch (err) {
+          // Don't block board save on template save failures
+        }
         
         // console.log('✅ Autosave completed successfully')
         setSaveStatus('saved')
