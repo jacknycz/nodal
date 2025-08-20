@@ -10,6 +10,7 @@ import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 import Modal from './ui/Modal'
 import Checkbox from './ui/Checkbox'
+import Loader from './ui/Loader'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useAIPlacement } from '../features/board/usePlacement'
 
@@ -79,6 +80,7 @@ export default function ChatPanel2() {
   const [showCreate, setShowCreate] = useState(false)
   const [pendingPoints, setPendingPoints] = useState<{ title: string; content: string; selected: boolean }[]>([])
   const [pendingParentId, setPendingParentId] = useState<string | null>(null)
+  const [isPlacing, setIsPlacing] = useState(false)
 
   // Enhanced intent parsing
   const parseCreateIntent = (text: string) => {
@@ -334,74 +336,87 @@ export default function ChatPanel2() {
           title="Create nodes"
           description="Review and confirm the nodes to create."
         >
-          <div className="max-h-64 overflow-auto mt-2 space-y-2">
-            {pendingPoints.map((p, idx) => (
-              <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={p.selected}
-                    onChange={(checked) => setPendingPoints(prev => prev.map((n, i) => i === idx ? { ...n, selected: !!checked } : n))}
-                    label={p.title || '(untitled)'}
-                    labelTextClassName="text-sm"
-                  />
+        {isPlacing ? (
+          <div className="flex flex-col items-center justify-center h-40">
+            <Loader size="md" />
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">Placing nodes...</p>
+          </div>
+        ) : (
+          <>
+            <div className="max-h-64 overflow-auto mt-2 space-y-2">
+              {pendingPoints.map((p, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={p.selected}
+                      onChange={(checked) => setPendingPoints(prev => prev.map((n, i) => i === idx ? { ...n, selected: !!checked } : n))}
+                      label={p.title || '(untitled)'}
+                      labelTextClassName="text-sm"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="secondary" onClick={() => { setShowCreate(false); setPendingPoints([]) }}>Cancel</Button>
-            <Button
-              onClick={async () => {
-                const selected = pendingPoints.filter(n => n.selected)
-                if (selected.length === 0) {
-                  setShowCreate(false)
-                  setPendingPoints([])
-                  setPendingParentId(null)
-                  return
-                }
-
-                try {
-                  const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
-                  // Use specific parent if provided, otherwise use placement hook's default logic
-                  const result = pendingParentId 
-                    ? await placeGeneratedNodes(nodesToPlace, pendingParentId, { preferredDirection: 'down', minDistance: 40 })
-                    : await placeGeneratedNodes(nodesToPlace)
-
-                  if (result && result.success && result.placements.length > 0) {
-                    const newNodes: Node[] = result.placements.map(p => ({
-                      id: p.node.id,
-                      type: (p.node as any).type || 'default',
-                      position: p.position,
-                      data: { ...(p.node as any).data },
-                    }))
-                    setNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-
-                    if (result.connections && result.connections.length > 0) {
-                      const newEdges: Edge[] = result.connections.map(c => ({
-                        id: c.edge.id,
-                        source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id,
-                        target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id,
-                        type: (c.edge as any).type || 'floating',
-                      }))
-                      setEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-                    }
-
-                    addSystemMessage(`Created ${newNodes.length} node(s).`)
-                  } else {
-                    addSystemMessage('No nodes were created.')
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" onClick={() => { if (!isPlacing) { setShowCreate(false); setPendingPoints([]) } }} disabled={isPlacing}>Cancel</Button>
+              <Button
+                loading={isPlacing}
+                disabled={isPlacing}
+                onClick={async () => {
+                  const selected = pendingPoints.filter(n => n.selected)
+                  if (selected.length === 0) {
+                    setShowCreate(false)
+                    setPendingPoints([])
+                    setPendingParentId(null)
+                    return
                   }
-                } catch (err) {
-                  addSystemMessage('Failed to create nodes.')
-                } finally {
-                  setShowCreate(false)
-                  setPendingPoints([])
-                  setPendingParentId(null)
-                }
-              }}
-            >
-              Create {pendingPoints.filter(n => n.selected).length} nodes
-            </Button>
-          </div>
+
+                  setIsPlacing(true)
+                  try {
+                    const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
+                    // Use specific parent if provided, otherwise use placement hook's default logic
+                    const result = pendingParentId 
+                      ? await placeGeneratedNodes(nodesToPlace, pendingParentId, { preferredDirection: 'down', minDistance: 40 })
+                      : await placeGeneratedNodes(nodesToPlace)
+
+                    if (result && result.success && result.placements.length > 0) {
+                      const newNodes: Node[] = result.placements.map(p => ({
+                        id: p.node.id,
+                        type: (p.node as any).type || 'default',
+                        position: p.position,
+                        data: { ...(p.node as any).data },
+                      }))
+                      setNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+
+                      if (result.connections && result.connections.length > 0) {
+                        const newEdges: Edge[] = result.connections.map(c => ({
+                          id: c.edge.id,
+                          source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id,
+                          target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id,
+                          type: (c.edge as any).type || 'floating',
+                        }))
+                        setEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                      }
+
+                      addSystemMessage(`Created ${newNodes.length} node(s).`)
+                    } else {
+                      addSystemMessage('No nodes were created.')
+                    }
+                  } catch (err) {
+                    addSystemMessage('Failed to create nodes.')
+                  } finally {
+                    setIsPlacing(false)
+                    setShowCreate(false)
+                    setPendingPoints([])
+                    setPendingParentId(null)
+                  }
+                }}
+              >
+                Create {pendingPoints.filter(n => n.selected).length} nodes
+              </Button>
+            </div>
+          </>
+        )}
         </Modal>
       </div>
     </>
