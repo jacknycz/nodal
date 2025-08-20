@@ -5,6 +5,7 @@ import type { BoardBrief } from '../features/board/boardTypes'
 import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
+import { templateStorage, type TemplateRecord } from '../features/storage/templateStorage'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
@@ -182,6 +183,8 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           )}
         </div>
       </div>
+
+      
 
       <div className="flex space-x-6 items-center">
         {/* Board Info (right column) */}
@@ -403,6 +406,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [showSharedOnly, setShowSharedOnly] = useState(false)
   const [totalDocuments, setTotalDocuments] = useState<number>(0)
   const [statsLoading, setStatsLoading] = useState<boolean>(false)
+  const [templates, setTemplates] = useState<TemplateRecord[]>([])
+  const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
+  const [templatesError, setTemplatesError] = useState<string | null>(null)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -438,6 +444,23 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
+
+  // Load templates (public)
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setTemplatesLoading(true)
+        setTemplatesError(null)
+        const list = await templateStorage.getAllTemplates()
+        setTemplates(list)
+      } catch {
+        setTemplatesError('Failed to load templates')
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+    loadTemplates()
+  }, [])
 
   // Re-compute document stats whenever boards/sharedBoards change
   useEffect(() => {
@@ -681,6 +704,71 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                     isPinned={pinnedBoardIds.includes(board.id)}
                     onTogglePin={() => togglePin(board.id)}
                   />
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Templates Section */}
+      <div className="relative z-20 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden mt-8">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">templates</h2>
+          </div>
+          {templatesError && (
+            <div className="mb-4 text-red-600 dark:text-red-400">{templatesError}</div>
+          )}
+          {templatesLoading ? (
+            <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+              <Loader />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {templates.length === 0 ? (
+                <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+                  No templates yet.
+                </div>
+              ) : (
+                templates.map((t) => (
+                  <div key={t.id} className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200">
+                    <div className="mb-2">
+                      <div className="text-xl font-thin text-gray-900 dark:text-white truncate" title={t.name}>{t.name}</div>
+                    </div>
+                    <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                      <div className="flex items-center gap-1">
+                        <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.nodeCount}</span>
+                        <span className="font-medium">nodes</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.edgeCount}</span>
+                        <span className="font-medium">connections</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        className="px-3 py-1.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 text-sm"
+                        onClick={async () => {
+                          try {
+                            const newName = `${t.name} (copy)`
+                            const { boardStorage } = await import('../features/storage/storage')
+                            const id = await boardStorage.saveBoard(newName, t.data)
+                            const newBoard = await boardStorage.loadBoard(id)
+                            if (newBoard) {
+                              onOpenBoard(newBoard, undefined)
+                            } else if (typeof window !== 'undefined') {
+                              window.location.href = `/board/${id}`
+                            }
+                          } catch (e) {
+                            alert('Failed to use template')
+                          }
+                        }}
+                      >
+                        Use
+                      </button>
+                    </div>
+                  </div>
                 ))
               )}
             </div>
