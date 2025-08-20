@@ -53,7 +53,7 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
       </div>
 
       <div className={isOverlay ? "h-full relative min-h-screen w-full flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-white"}>
-        <div className="flex h-full min-h-screen items-center justify-center px-6">
+        <div className="flex h-full min-h-screen items-center justify-center">
           {slideContent ? (
             <>{slideContent({ next, prev, close: onClose, index, total })}</>
           ) : (

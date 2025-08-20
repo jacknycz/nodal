@@ -18,7 +18,7 @@ export default function WelcomePage() {
             isBoardView={false}
             onOpenBoardRoom={() => router.push('/')}
           />
-          <div className="pt-12 h-[calc(100vh-3rem)]">{/* space for fixed topbar height approx */}
+          <div className="h-full min-h-screen">{/* space for fixed topbar height approx */}
             <ProductIntro
               open={true}
               onClose={() => router.push('/')}
@@ -34,12 +34,14 @@ export default function WelcomePage() {
                   </div>
                 ),
                 ({ next, prev }) => (
-                  <div className="text-center">
-                    <h2 className="text-2xl font-semibold mb-4">Slide 2</h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Slide 2 content goes here.</p>
-                    <div className="flex justify-center gap-3">
-                      <Button variant="secondary" size="medium" onClick={prev}>Previous</Button>
-                      <Button variant="primary" size="medium" onClick={next}>Next</Button>
+                  <div className="flex h-full min-h-screen w-full bg-red-500 dark:bg-blue-500 items-center justify-center px-6">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-semibold mb-4">Slide 2</h2>
+                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Slide 2 content goes here.</p>
+                      <div className="flex justify-center gap-3">
+                        <Button variant="secondary" size="medium" onClick={prev}>Previous</Button>
+                        <Button variant="primary" size="medium" onClick={next}>Next</Button>
+                      </div>
                     </div>
                   </div>
                 ),
