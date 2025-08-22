@@ -675,13 +675,13 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
       {/* Scrollable Boards Section */}
       <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 shadow dark:shadow-2xl dark:shadow-gray-950/70 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl overflow-hidden">
-        <div className="w-full bg-white/50 dark:bg-slate-950/70 mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl mb-6 font-medium font-fredoka text-gray-800 dark:text-white">your boards</h2>
-          </div>
+        <div className="w-full bg-white/50 dark:bg-slate-950/70 mx-auto px-4 sm:px-6 lg:px-12 py-10">
+          {/* <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-medium font-fredoka text-gray-800 dark:text-white">your boards</h2>
+          </div> */}
 
-          <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-4">
-            <div className="flex justify-center w-full max-w-3xl">
+          <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
+            <div className="flex justify-center w-full max-w-xl">
               <Search
                 placeholder="Search boards..."
                 value={searchQuery}
@@ -731,7 +731,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           )}
         </div>
 
-        <div className="w-96 bg-white/50 dark:bg-slate-950/50 p-4">
+        <div className="w-96 bg-white dark:bg-slate-950/90 p-8">
           <div className="flex flex-none justify-end">
             <Button
               onClick={handleNewBoardClick}
@@ -745,13 +745,29 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </Button>
           </div>
 
-          <div className="flex flex-col gap-4">
+          {/* <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">pinned boards</h2>
             <div className="flex flex-col gap-2">
-              {pinnedBoardIds.map(id => (
-                <div key={id}>{id}</div>
-              ))}
+              {pinnedBoardIds.map(id => {
+                const board = allBoards.find(b => b.id === id)
+                if (!board) return null
+                return (
+                  <BoardCard
+                    key={board.id}
+                    board={board}
+                    onLoad={() => onOpenBoard(board, undefined)}
+                    onRename={newName => handleRename(board.id, newName)}
+                    onDelete={() => handleDelete(board.id)}
+                    isPinned={true}
+                    onTogglePin={() => togglePin(board.id)}
+                  />
+                )
+              })}
             </div>
+          </div> */}
+
+          <div className="flex flex-col gap-4 mt-8">
+            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
           </div>
         </div>
       </div>

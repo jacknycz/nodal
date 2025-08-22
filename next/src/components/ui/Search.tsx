@@ -1,21 +1,43 @@
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search as SearchIcon } from "lucide-react";
 
-export default function FloatingSearch({ label = "Search" }) {
-  const [value, setValue] = useState("");
+export default function FloatingSearch({
+  label = "Search",
+  placeholder,
+  value,
+  onChange,
+  className = '',
+  id = 'floating-search'
+}: {
+  label?: string
+  placeholder?: string
+  value?: string
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  className?: string
+  id?: string
+}) {
+  const [internalValue, setInternalValue] = useState("");
+  const isControlled = typeof value !== 'undefined'
+  const displayValue = isControlled ? value : internalValue
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onChange) onChange(e)
+    else setInternalValue(e.target.value)
+  }
 
   return (
-    <div className="w-full relative">
+    <div className={"w-full relative " + className}>
       {/* Search icon */}
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5 pointer-events-none" />
+      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5 pointer-events-none" />
 
       {/* Input */}
       <input
         type="text"
-        id="floating-search"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        id={id}
+        value={displayValue}
+        onChange={handleChange}
         placeholder=" "
+        aria-label={placeholder || label}
         className="
           peer w-full rounded-full border border-transparent dark:border-primary-500/20
           shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-primary-500/40
@@ -30,7 +52,7 @@ export default function FloatingSearch({ label = "Search" }) {
 
       {/* Floating label */}
       <label
-        htmlFor="floating-search"
+        htmlFor={id}
         className="
           absolute left-10
           text-gray-500 dark:text-gray-400
