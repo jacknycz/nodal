@@ -444,6 +444,16 @@ next/src/
   - **Interactive Features**: Clickable tags with hover effects and keyboard accessibility
   - **Beta Integration**: Added "BETA" tag next to Nodal logo in Topbar and LoginScreen
 
+- **Today's Development Work (This Session)**:
+  - **Material-style Select component**: Rewrote the design-system `Select` to use a Material-like floating label + underline style, kept the native `<select>` for accessibility, added support for an `xs` size, and improved left/right icon layout and default chevron.
+  - **Shared model list**: Moved inline `MODELS` into a shared module `next/src/features/ai/models.ts` and updated `AISettingsMenu` and `ChatPanel2` to import and reuse it.
+  - **ChatPanel2 wiring**: Wired the ChatPanel model select to the shared AI settings store via `useAISettingsStore()` so changing the model updates shared settings across the app.
+  - **Select typing fix**: Resolved a TypeScript typing issue when forwarding native `onChange` by safely forwarding the native handler; can be tightened later to a stricter typed approach if desired.
+  - **Search component update**: Converted `Search` into a controlled-friendly component (`value`, `onChange`, `placeholder`, `id`, `className`) while preserving the floating-label UI so it can be used consistently across menus and pages.
+  - **BoardRoom: pinned boards**: Replaced the proof-of-concept pinned-IDs list with real `BoardCard` rendering (looks up boards by id and skips missing entries) so pinned boards render identically to main board cards.
+  - **Minor UI adjustments & polish**: Small visual tweaks to `Select` (shadows, font settings) and `BoardRoom` layout refinements; all modified files pass linter checks in this session.
+
+
 - **LoginScreen Modernization**:
   - **Complete Design System Migration**: Replaced all raw HTML buttons and inputs with design system components (`Button`, `TextInput`)
   - **Enhanced Styling**: Updated to use primary/secondary/tertiary colors from `globals.css`
