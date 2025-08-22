@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { 
-  User, 
   Settings, 
   Building, 
   HelpCircle, 
   LogOut,
   Clock
 } from 'lucide-react'
+import { User, GearSix } from '@phosphor-icons/react/dist/ssr'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 import { getUserRoleFromMetadata, isAdmin } from '../features/auth/roles'
@@ -18,6 +18,7 @@ import { boardStorage } from '../features/storage/storage'
 import ThemeToggle from './ThemeToggle'
 import Image from 'next/image'
 import Menu from './ui/Menu'
+import IconButton from './ui/IconButton'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -126,26 +127,25 @@ export default function AvatarMenu({
     <>
     <Menu
       trigger={
-        <button
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10 relative"
+        <IconButton
           aria-label="User menu"
-          style={{ minWidth: '40px', minHeight: '40px' }}
+          className="p-0!"
         >
           {getUserAvatar() ? (
             <Image 
               src={getUserAvatar()}
               alt={getUserDisplayName()}
-              width={24}
-              height={24}
-              className="w-6 h-6 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
               unoptimized
             />
           ) : (
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <User size={32} weight="duotone" />
             </div>
           )}
-        </button>
+        </IconButton>
       }
       showNotification={pendingInvites.length > 0}
       width="w-64"
@@ -258,19 +258,9 @@ export default function AvatarMenu({
             onClick={onOpenSettings}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
           >
-            <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            <GearSix size={24} weight="duotone" className="text-gray-600 dark:text-gray-400" />
             <span className="text-sm text-gray-900 dark:text-white">Settings</span>
           </button>
-
-          {/* Templates: available to all users for consumption */}
-          <div className="px-4 py-2">
-            <button
-              className="w-full px-2 py-2 text-left rounded bg-blue-600 text-white hover:bg-blue-700 text-sm"
-              onClick={() => setShowTemplatePicker(true)}
-            >
-              Use Template
-            </button>
-          </div>
 
           {/* Admin: Templates */}
           {admin && (

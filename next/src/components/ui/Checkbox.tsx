@@ -76,10 +76,10 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           'relative inline-flex items-center justify-center border rounded transition-colors select-none',
           boxSize[size],
           variant === 'default' && [
-            'border-gray-300 bg-white text-white peer-focus:ring-2 peer-focus:ring-blue-500',
-            'dark:border-gray-600 dark:bg-gray-900',
+            'border-gray-300 bg-white text-white peer-focus:ring-2 peer-focus:ring-primary-500',
+            'dark:border-primary-800 dark:bg-gray-900',
             // Checked state visuals (also affects children via arbitrary selector)
-            'peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20',
+            'peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20',
             'peer-checked:[&>svg.check]:opacity-100',
           ],
           error && 'border-red-500',
@@ -91,7 +91,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         {/* Check icon */}
         <svg
           className={clsx(
-            'check opacity-0 transition-opacity text-blue-600',
+            'check opacity-0 transition-opacity text-primary-600',
             iconSize[size]
           )}
           viewBox="0 0 20 20"

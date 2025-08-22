@@ -1,5 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import type { Variants } from 'motion/react'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
 
@@ -23,6 +25,12 @@ interface ProductIntroProps {
 export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }: ProductIntroProps) {
   const [index, setIndex] = useState(0)
   const total = slides?.length ?? 0
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.2, ease: 'easeOut' } },
+    exit: { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } },
+  }
 
   useEffect(() => {
     if (!open) setIndex(0)
@@ -52,16 +60,27 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
         </IconButton>
       </div>
 
-      <div className={isOverlay ? "h-full relative min-h-screen w-full flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-white"}>
+      <div className={isOverlay ? "h-full relative min-h-screen w-full flex flex-col bg-white dark:bg-primary-950 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white"}>
         <div className="flex h-full min-h-screen items-center justify-center">
-          {slideContent ? (
-            <>{slideContent({ next, prev, close: onClose, index, total })}</>
-          ) : (
-            <div className="w-full text-center">
-              <h2 className="text-2xl font-semibold mb-4">Slide {index + 1}</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">This is a minimal product intro slide — customize content as needed.</p>
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={index}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-full"
+            >
+              {slideContent ? (
+                <>{slideContent({ next, prev, close: onClose, index, total })}</>
+              ) : (
+                <div className="w-full text-center">
+                  <h2 className="text-2xl font-semibold mb-4">Slide {index + 1}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">This is a minimal product intro slide — customize content as needed.</p>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         <div className={isOverlay ? "py-6 fixed bottom-0 inset-x-0 flex justify-center z-[300]" : "py-6 absolute bottom-0 inset-x-0 flex justify-center"}>

@@ -38,9 +38,9 @@ interface TopbarProps {
   onDeleteNode?: (nodeId: string) => void;
 }
 
-export default function Topbar({ 
-  currentBoardName, 
-  saveStatus = 'saved', 
+export default function Topbar({
+  currentBoardName,
+  saveStatus = 'saved',
   hasUnsavedChanges = false,
   isTestMode = false,
   onToggleTestMode,
@@ -173,8 +173,8 @@ export default function Topbar({
 
   return (
     <>
-      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[80] bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm">
-        <div className="flex items-center px-3 sm:px-4 py-1 gap-2">
+      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[80] bg-gradient-to-b from-white via-white/70  to-white/0 dark:from-gray-950/50 dark:via-gray-900/10 dark:to-gray-950/0">
+        <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
           <div className="flex-shrink-0 flex items-center gap-3 sm:gap-6">
             {/* <button
@@ -220,7 +220,7 @@ export default function Topbar({
 
 
 
-            <div className="hidden sm:block">
+            {/* <div className="hidden sm:block">
               <ShareMenu
                 onShareBoard={handleShareBoard}
                 onCopyLink={handleCopyLink}
@@ -229,7 +229,7 @@ export default function Topbar({
             </div>
             {linkCopied && (
               <span className="ml-2 text-green-600 text-xs">Link copied!</span>
-            )}
+            )} */}
           </div>
 
           {/* Center - Board Info (truly centered) */}
@@ -237,15 +237,12 @@ export default function Topbar({
             {isBoardView && currentBoardName && (
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full">
                 <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
                   <span className="font-medium text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
                 </div>
                 <div className="sm:hidden min-w-0 w-full text-left">
                   <span className="font-medium text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
                 </div>
-                
+
                 {/* Save Status */}
                 <div className="hidden sm:flex items-center gap-2 text-xs">
                   {saveStatus === 'saving' && (
@@ -272,7 +269,7 @@ export default function Topbar({
                       <span>Save failed</span>
                     </div>
                   )}
-                  
+
                   {/* Manual Save Button */}
                   {hasUnsavedChanges && onSaveBoard && (
                     <button
@@ -284,7 +281,7 @@ export default function Topbar({
                     </button>
                   )}
                 </div>
-                {/* Presence Avatars */}
+                {/* Presence Avatars
                 {presentUsers.length > 0 && (
                   <div className="hidden sm:flex items-center ml-4 gap-1">
                     {presentUsers.map((u) => (
@@ -294,7 +291,7 @@ export default function Topbar({
                     ))}
                     <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">{presentUsers.length} online</span>
                   </div>
-                )}
+                )} */}
               </div>
             )}
           </div>
@@ -304,14 +301,17 @@ export default function Topbar({
             {isBoardView && (
               <>
                 <div className="hidden sm:flex items-center gap-3">
-                  <AISettingsMenu 
+                  <AISettingsMenu
                     isTestMode={isTestMode}
                     onToggleTestMode={onToggleTestMode}
                   />
-                  <DocumentsMenu 
+                  <DocumentsMenu
                     onDeleteNode={onDeleteNode}
                   />
-                  {isAdmin(user) && (
+                  <IconButton aria-label="Product intro" size="md" onClick={() => router.push('/welcome')}>
+                    <Info className="w-4 h-4" />
+                  </IconButton>
+                  {/* {isAdmin(user) && (
                     <Button
                       variant="secondaryGhost"
                       className="text-sm px-2 py-1"
@@ -334,7 +334,7 @@ export default function Topbar({
                     >
                       Save as new template
                     </Button>
-                  )}
+                  )} */}
                 </div>
                 {/* Mobile More menu */}
                 <div className="sm:hidden">
@@ -355,9 +355,6 @@ export default function Topbar({
                 </div>
               </>
             )}
-            <IconButton aria-label="Product intro" size="md" variant="secondaryGhost" onClick={() => router.push('/welcome')}>
-              <Info className="w-4 h-4" />
-            </IconButton>
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}
@@ -370,7 +367,7 @@ export default function Topbar({
               onLoadBoard={onLoadBoard}
               isBoardView={isBoardView}
             />
-            
+
           </div>
         </div>
       </header>

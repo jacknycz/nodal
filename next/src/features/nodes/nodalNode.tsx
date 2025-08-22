@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { Trash2, Edit3, Focus } from 'lucide-react'
+import { Trash, Pen, Headlights } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -192,7 +192,7 @@ export default function NodalNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${borderClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      className={`flex flex-col justify-start text-left p-3 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${borderClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''} ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -222,7 +222,7 @@ export default function NodalNode({
           }
         }}
       >
-        <Focus size={14} />
+        <Headlights size={14} weight="duotone" className='text-secondary-100' />
       </IconButton>
 
       <div className="nodal-drag-handle cursor-move">
@@ -246,7 +246,7 @@ export default function NodalNode({
         )}
       </div>
       {/* Action buttons - only show on hover and if not locked by someone else */}
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="flex w-full items-end justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <IconButton
           variant="default"
           size="sm"
@@ -254,7 +254,7 @@ export default function NodalNode({
           onClick={handleEdit}
           disabled={isLocked && !isLockedByMe || showEditModal}
         >
-          <Edit3 size={14} />
+          <Pen size={14} weight="duotone" />
         </IconButton>
         <IconButton
           variant="danger"
@@ -263,7 +263,7 @@ export default function NodalNode({
           onClick={handleDelete}
           disabled={isLocked && !isLockedByMe}
         >
-          <Trash2 size={14} />
+          <Trash size={14} weight="duotone" />
         </IconButton>
       </div>
 

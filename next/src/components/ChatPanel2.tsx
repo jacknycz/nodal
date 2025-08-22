@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Node, Edge, useReactFlow } from '@xyflow/react'
 import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
+import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import { useBoardStore } from '../features/board/boardSlice'
 import { Send, X, MessageSquare, Loader2, Key, Target } from 'lucide-react'
 import TextArea from './ui/TextArea'
@@ -13,6 +14,10 @@ import Checkbox from './ui/Checkbox'
 import Loader from './ui/Loader'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useAIPlacement } from '../features/board/usePlacement'
+import { PaperPlaneTilt } from '@phosphor-icons/react/dist/ssr'
+import { OpenAIModel } from '@/features/ai/aiTypes'
+import Select from './ui/Select'
+import { MODELS } from '../features/ai/models'
 
 export default function ChatPanel2() {
   const [isOpen, setIsOpen] = useState(() => {
@@ -36,7 +41,10 @@ export default function ChatPanel2() {
     clearError,
   } = useUnifiedAI2()
 
+
+
   const ai = useAIContext()
+  const { model, setModel } = useAISettingsStore()
   const { generateFromTopic } = useChatNodeGen2()
   const { setNodes, setEdges } = useReactFlow()
   const { placeGeneratedNodes } = useAIPlacement()
@@ -105,7 +113,7 @@ export default function ChatPanel2() {
       /(?:create|add|generate)\s+nodes?\s+(?:for|about)\s+(.+?)(?:\s|$)/i,
       /(?:create|add|generate)\s+(\d+)\s+nodes?\s+(?:for|about)\s+(.+?)(?:\s|$)/i
     ]
-    
+
     for (const pattern of patterns) {
       const match = text.match(pattern)
       if (match && match[match.length - 1]) {
@@ -124,7 +132,7 @@ export default function ChatPanel2() {
   // Find node by name (case-insensitive, partial match)
   const findNodeByName = (name: string): any => {
     const normalizedName = name.toLowerCase().trim()
-    return storeNodes.find((node: any) => 
+    return storeNodes.find((node: any) =>
       node.data?.title?.toLowerCase().includes(normalizedName) ||
       normalizedName.includes(node.data?.title?.toLowerCase())
     )
@@ -147,7 +155,7 @@ export default function ChatPanel2() {
     const count = extractCount(msg)
     const topic = extractTopic(msg)
     const parentName = extractParentName(msg)
-    
+
     // Determine parent node
     let parentId: string | null = null
     if (parentName) {
@@ -158,7 +166,7 @@ export default function ChatPanel2() {
     } else if (selectedNodes.length > 0) {
       parentId = selectedNodes[0].id
     }
-    
+
     // Determine topic for generation
     let generationTopic = topic
     if (!generationTopic && selectedNodes.length > 0) {
@@ -190,9 +198,8 @@ export default function ChatPanel2() {
       {/* Toggle */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${
-          isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
-        }`}
+        className={`fixed right-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+          }`}
         title="Open Chat"
       >
         <MessageSquare className="w-5 h-5" />
@@ -200,19 +207,14 @@ export default function ChatPanel2() {
 
       {/* Panel */}
       <div
-        className={`fixed top-16 right-4 rounded-4xl z-60 w-96 h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${
-          isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
-        }`}
+        className={`fixed top-16 right-4 rounded-4xl z-60 w-96 h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+          }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
           <div className="flex items-center space-x-2">
             <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
-            <span className="text-xs px-2 py-0.5 rounded bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">Chat #2</span>
-          </div>
 
-          {/* AI Status */}
-          <div className="flex items-center space-x-4">
             {ai.isInitialized ? (
               <div className="flex items-center space-x-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -224,7 +226,10 @@ export default function ChatPanel2() {
                 <span className="text-xs text-yellow-600 dark:text-yellow-400">Connecting...</span>
               </div>
             )}
+          </div>
 
+          {/* AI Status */}
+          <div className="flex items-center space-x-4">
             <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <X className="w-4 h-4" />
             </button>
@@ -295,6 +300,16 @@ export default function ChatPanel2() {
 
         {/* Input */}
         <div className="p-4">
+          <div className="flex mb-2 justify-center">
+            <Select
+              size="xs"
+              aria-label="AI Model"
+              value={model}
+              options={MODELS}
+              onChange={(v) => setModel(v as OpenAIModel)}
+            />
+          </div>
+
           <div className="flex space-x-2">
             <TextArea
               ref={inputRef}
@@ -317,16 +332,16 @@ export default function ChatPanel2() {
               fullWidth
               className="resize-none"
             />
-            <Button onClick={() => (parseCreateIntent(inputValue) ? handleCreate() : handleSend())} disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} className="px-4">
-              <Send className="w-4 h-4" />
+            <Button onClick={() => (parseCreateIntent(inputValue) ? handleCreate() : handleSend())} disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} className="w-12! h-12! p-0! flex-none">
+              <PaperPlaneTilt weight="duotone" size={32} className="w-6! h-6!" />
             </Button>
           </div>
-          <div className="mt-2 flex items-center justify-between">
+          {/* <div className="mt-2 flex items-center justify-between">
             <button className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={clearChat}>Clear</button>
             {isStreaming && (
               <button className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={cancelStreaming}>Stop</button>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Confirm Modal */}
@@ -336,87 +351,87 @@ export default function ChatPanel2() {
           title="Create nodes"
           description="Review and confirm the nodes to create."
         >
-        {isPlacing ? (
-          <div className="flex flex-col items-center justify-center h-40">
-            <Loader size="md" />
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">Placing nodes...</p>
-          </div>
-        ) : (
-          <>
-            <div className="max-h-64 overflow-auto mt-2 space-y-2">
-              {pendingPoints.map((p, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={p.selected}
-                      onChange={(checked) => setPendingPoints(prev => prev.map((n, i) => i === idx ? { ...n, selected: !!checked } : n))}
-                      label={p.title || '(untitled)'}
-                      labelTextClassName="text-sm"
-                    />
+          {isPlacing ? (
+            <div className="flex flex-col items-center justify-center h-40">
+              <Loader size="md" />
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">Placing nodes...</p>
+            </div>
+          ) : (
+            <>
+              <div className="max-h-64 overflow-auto mt-2 space-y-2">
+                {pendingPoints.map((p, idx) => (
+                  <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={p.selected}
+                        onChange={(checked) => setPendingPoints(prev => prev.map((n, i) => i === idx ? { ...n, selected: !!checked } : n))}
+                        label={p.title || '(untitled)'}
+                        labelTextClassName="text-sm"
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => { if (!isPlacing) { setShowCreate(false); setPendingPoints([]) } }} disabled={isPlacing}>Cancel</Button>
-              <Button
-                loading={isPlacing}
-                disabled={isPlacing}
-                onClick={async () => {
-                  const selected = pendingPoints.filter(n => n.selected)
-                  if (selected.length === 0) {
-                    setShowCreate(false)
-                    setPendingPoints([])
-                    setPendingParentId(null)
-                    return
-                  }
-
-                  setIsPlacing(true)
-                  try {
-                    const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
-                    // Use specific parent if provided, otherwise use placement hook's default logic
-                    const result = pendingParentId 
-                      ? await placeGeneratedNodes(nodesToPlace, pendingParentId, { preferredDirection: 'down', minDistance: 40 })
-                      : await placeGeneratedNodes(nodesToPlace)
-
-                    if (result && result.success && result.placements.length > 0) {
-                      const newNodes: Node[] = result.placements.map(p => ({
-                        id: p.node.id,
-                        type: (p.node as any).type || 'default',
-                        position: p.position,
-                        data: { ...(p.node as any).data },
-                      }))
-                      setNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-
-                      if (result.connections && result.connections.length > 0) {
-                        const newEdges: Edge[] = result.connections.map(c => ({
-                          id: c.edge.id,
-                          source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id,
-                          target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id,
-                          type: (c.edge as any).type || 'floating',
-                        }))
-                        setEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-                      }
-
-                      addSystemMessage(`Created ${newNodes.length} node(s).`)
-                    } else {
-                      addSystemMessage('No nodes were created.')
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="secondary" onClick={() => { if (!isPlacing) { setShowCreate(false); setPendingPoints([]) } }} disabled={isPlacing}>Cancel</Button>
+                <Button
+                  loading={isPlacing}
+                  disabled={isPlacing}
+                  onClick={async () => {
+                    const selected = pendingPoints.filter(n => n.selected)
+                    if (selected.length === 0) {
+                      setShowCreate(false)
+                      setPendingPoints([])
+                      setPendingParentId(null)
+                      return
                     }
-                  } catch (err) {
-                    addSystemMessage('Failed to create nodes.')
-                  } finally {
-                    setIsPlacing(false)
-                    setShowCreate(false)
-                    setPendingPoints([])
-                    setPendingParentId(null)
-                  }
-                }}
-              >
-                Create {pendingPoints.filter(n => n.selected).length} nodes
-              </Button>
-            </div>
-          </>
-        )}
+
+                    setIsPlacing(true)
+                    try {
+                      const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
+                      // Use specific parent if provided, otherwise use placement hook's default logic
+                      const result = pendingParentId
+                        ? await placeGeneratedNodes(nodesToPlace, pendingParentId, { preferredDirection: 'down', minDistance: 40 })
+                        : await placeGeneratedNodes(nodesToPlace)
+
+                      if (result && result.success && result.placements.length > 0) {
+                        const newNodes: Node[] = result.placements.map(p => ({
+                          id: p.node.id,
+                          type: (p.node as any).type || 'default',
+                          position: p.position,
+                          data: { ...(p.node as any).data },
+                        }))
+                        setNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+
+                        if (result.connections && result.connections.length > 0) {
+                          const newEdges: Edge[] = result.connections.map(c => ({
+                            id: c.edge.id,
+                            source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id,
+                            target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id,
+                            type: (c.edge as any).type || 'floating',
+                          }))
+                          setEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                        }
+
+                        addSystemMessage(`Created ${newNodes.length} node(s).`)
+                      } else {
+                        addSystemMessage('No nodes were created.')
+                      }
+                    } catch (err) {
+                      addSystemMessage('Failed to create nodes.')
+                    } finally {
+                      setIsPlacing(false)
+                      setShowCreate(false)
+                      setPendingPoints([])
+                      setPendingParentId(null)
+                    }
+                  }}
+                >
+                  Create {pendingPoints.filter(n => n.selected).length} nodes
+                </Button>
+              </div>
+            </>
+          )}
         </Modal>
       </div>
     </>

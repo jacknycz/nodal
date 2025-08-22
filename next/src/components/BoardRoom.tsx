@@ -13,7 +13,10 @@ import TextInput from './ui/TextInput'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
-import { CircuitBoard, FileText, Users, PencilIcon, PinIcon, CheckIcon, Copy, Plus } from 'lucide-react'
+import { PencilIcon, PinIcon, CheckIcon, Copy, Plus, Share2 } from 'lucide-react'
+import { ClockClockwise, Graph, PushPin, TreeStructure, Pen } from '@phosphor-icons/react/dist/ssr'
+import Select from './ui/Select'
+import Search from './ui/Search'
 // Gradient background only (no external images)
 
 interface BoardRoomProps {
@@ -131,12 +134,12 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         aria-label={isPinned ? 'Unpin board' : 'Pin board'}
         onClick={(e) => { e.stopPropagation(); onTogglePin() }}
         variant={isPinned ? 'primaryGhost' : 'secondaryGhost'}
-        className={`absolute top-2 right-2 ${isPinned ? 'text-tertiary-500 hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
+        className={`absolute top-2 right-2 z-20 ${isPinned ? 'text-tertiary-500 bg-tertiary-50/50! dark:bg-transparent! hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
       >
-        <PinIcon className="w-4 h-4" />
+        <PushPin size={16} weight="duotone" />
       </IconButton>
 
-      <div className="mb-4">
+      <div className="mb-2">
         {/* Clean title with hover-to-edit */}
         <div className="group relative">
           {isEditingTitle ? (
@@ -167,7 +170,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           ) : (
             <div className="flex items-center gap-2 group">
               <h3
-                className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="text-xl md:text-2xl font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
               >
                 {newName}
@@ -178,11 +181,16 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
                 onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
                 className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
               >
-                <PencilIcon className="w-4 h-4" />
+                <Pen size={20} weight="duotone" />
               </IconButton>
             </div>
           )}
         </div>
+
+        {/* Last Modified */}
+        <span className="flex mt-1 gap-1 items-center text-xs text-gray-400 dark:text-gray-400">
+          <ClockClockwise size={16} weight="duotone" />{formatDate(board.lastModified)}
+        </span>
       </div>
 
 
@@ -190,7 +198,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       <div className="flex space-x-6 items-center">
         {/* Board Info (right column) */}
         <div className="flex flex-col flex-1 w-full items-start">
-          {/* Shared with/by info */}
+          {/* Shared with/by info
           <div className="mb-2 flex items-center gap-2">
             {board.shared && (
               <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
@@ -198,22 +206,18 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           </div>
           {board.shared && (
             <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
-          )}
+          )} */}
           {/* Board Stats */}
-          <div className="flex flex space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
+          <div className="flex space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
             <div className="flex items-center gap-1">
-              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{board.nodeCount}</span>
-              <span className="font-medium">nodes</span>
+              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{board.nodeCount}</span>
+              <span className="font-medium font-fredoka text-base">nodes</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{board.edgeCount}</span>
-              <span className="font-medium">connections</span>
+              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{board.edgeCount}</span>
+              <span className="font-medium font-fredoka text-base">connections</span>
             </div>
           </div>
-          {/* Last Modified */}
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            {formatDate(board.lastModified)}
-          </p>
         </div>
 
         {/* Board Thumbnail */}
@@ -252,7 +256,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       </div>
 
       {/* Action Buttons - persistent bottom row */}
-      <div className="col-span-2 mt-4 flex items-center justify-between gap-2">
+      <div className="col-span-2 mt-2 flex items-center justify-between gap-2">
         <Button
           variant="secondary"
           size="small"
@@ -632,24 +636,33 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             <div className="grid grid-cols-3 gap-3">
               <div className="relative rounded-4xl px-6 py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
                 <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
-                  <CircuitBoard size={32} />
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12">
+                    <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
+                    <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM16 28C16.5523 28 17 28.4477 17 29V31C17 31.5523 16.5523 32 16 32H10C9.44772 32 9 31.5523 9 31V29C9 28.4477 9.44772 28 10 28H16ZM34 28C34.5523 28 35 28.4477 35 29V31C35 31.5523 34.5523 32 34 32H28C27.4477 32 27 31.5523 27 31V29C27 28.4477 27.4477 28 28 28H34ZM25 20C25.5523 20 26 20.4477 26 21V23C26 23.5523 25.5523 24 25 24H19C18.4477 24 18 23.5523 18 23V21C18 20.4477 18.4477 20 19 20H25ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
+                  </svg>
                 </div>
-                <div className="font-fredoka font-medium lowercase tracking-wide text-gray-500 dark:text-gray-400">boards</div>
-                <div className="text-4xl font-medium text-gray-900 dark:text-white">{boards.length}</div>
+                <div className="font-fredoka font-medium lowercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
+                <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">{boards.length}</div>
               </div>
-              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
+
+              <div className="relative rounded-4xl p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
                 <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
-                  <Users size={32} />
+                  <Graph size={48} weight="duotone" />
                 </div>
-                <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Shared</div>
-                <div className="text-4xl font-medium text-gray-900 dark:text-white">{sharedBoards.length}</div>
+                <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">nodes</div>
+                <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
+                  {boards.reduce((total, board) => total + (board.nodeCount || 0), 0)}
+                </div>
               </div>
-              <div className="relative rounded-lg p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
+
+              <div className="relative rounded-4xl p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
                 <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
-                  <FileText size={32} />
+                  <TreeStructure size={48} weight="duotone" />
                 </div>
-                <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">Documents</div>
-                <div className="text-4xl font-medium text-gray-900 dark:text-white">{statsLoading ? '—' : totalDocuments}</div>
+                <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">connections</div>
+                <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
+                  {boards.reduce((total, board) => total + (board.edgeCount || 0), 0)}
+                </div>
               </div>
             </div>
           </div>
@@ -661,35 +674,33 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       */}
 
       {/* Scrollable Boards Section */}
-      <div className="relative z-20 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">your boards</h2>
-
-            <Button onClick={handleNewBoardClick} className="flex items-center gap-2 bg-tertiary-500 hover:bg-tertiary-600 text-white">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>New Board</span>
-            </Button>
+      <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 shadow dark:shadow-2xl dark:shadow-gray-950/70 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl overflow-hidden">
+        <div className="w-full bg-white/50 dark:bg-slate-950/70 mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl mb-6 font-medium font-fredoka text-gray-800 dark:text-white">your boards</h2>
           </div>
 
-          <div className="mb-6 flex items-center gap-4">
-            <input
-              type="text"
-              placeholder="Search boards..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full max-w-md px-4 py-2 rounded-4xl bg-white/80 border-0 dark:bg-gray-950/50 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-4">
+            <div className="flex justify-center w-full max-w-3xl">
+              <Search
+                placeholder="Search boards..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                label="Search boards..."
+                className="w-full"
+              />
+            </div>
 
-            <Checkbox
-              label="Show shared only"
-              checked={showSharedOnly}
-              onChange={(v) => setShowSharedOnly(v)}
-              labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
-            />
+            <div className="flex items-center gap-4 flex-none">
+              <Checkbox
+                label="Show shared only"
+                checked={showSharedOnly}
+                onChange={(v) => setShowSharedOnly(v)}
+                labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
+              />
+            </div>
           </div>
+
           {error && (
             <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
           )}
@@ -698,7 +709,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               <Loader />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
               {sortedBoards.length === 0 ? (
                 <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
                   No boards found. Create a new board to get started!
@@ -719,10 +730,34 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </div>
           )}
         </div>
+
+        <div className="w-96 bg-white/50 dark:bg-slate-950/50 p-4">
+          <div className="flex flex-none justify-end">
+            <Button
+              onClick={handleNewBoardClick}
+              className="flex gap-3 w-full"
+            >
+              <span>New Board</span>
+              <svg width="44" height="44" className="mt-[1px] w-6 h-6 text-white" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
+                <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM23 16C23.5523 16 24 16.4477 24 17V20H27C27.5523 20 28 20.4477 28 21V23C28 23.5523 27.5523 24 27 24H24V27C24 27.5523 23.5523 28 23 28H21C20.4477 28 20 27.5523 20 27V24H17C16.4477 24 16 23.5523 16 23V21C16 20.4477 16.4477 20 17 20H20V17C20 16.4477 20.4477 16 21 16H23ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
+              </svg>
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">pinned boards</h2>
+            <div className="flex flex-col gap-2">
+              {pinnedBoardIds.map(id => (
+                <div key={id}>{id}</div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Templates Section */}
-      <div className="relative z-20 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden mt-8">
+      <div className="relative z-20 mx-4 md:mx-6 lg:mx-8 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden mt-8 md:mt-12 lg:mt-16">
         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">templates</h2>

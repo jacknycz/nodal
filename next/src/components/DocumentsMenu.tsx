@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { FileText, Trash2, Search, X } from 'lucide-react'
+import { Trash2, X} from 'lucide-react'
+import { Files } from '@phosphor-icons/react/dist/ssr'
 import { useBoardStore } from '../features/board/boardSlice'
 import { format } from 'date-fns'
 import Menu from './ui/Menu'
+import IconButton from './ui/IconButton'
+import Search from './ui/Search'
 
 function formatFileSize(bytes: number): string {
   if (!bytes) return '0 B'
@@ -55,26 +58,23 @@ export default function DocumentsMenu({
   return (
     <Menu
       trigger={
-        <button
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
-          aria-label="Documents"
-          style={{ minWidth: '40px', minHeight: '40px' }}
+        <IconButton
+        aria-label="Documents"
         >
-          <FileText className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-        </button>
+          <Files size={24} weight="duotone" className='text-tertiary-600 dark:text-tertiary-300' />
+        </IconButton>
       }
       width="min-w-[24rem] w-[24rem]"
       customContent={
         <div className="p-4">
           <div className="mb-3 flex items-center gap-2">
-            <Search className="w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              className="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-              placeholder="Search documents..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+            <Search 
+            placeholder="Search documents..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            label="Search documents..."
             />
+            
             {search && (
               <button onClick={() => setSearch('')} className="ml-1 text-gray-400 hover:text-gray-600">
                 <X className="w-4 h-4" />
@@ -89,7 +89,7 @@ export default function DocumentsMenu({
               {filteredDocs.map(doc => (
                 <div key={doc.id} className="py-3 flex items-start gap-3 group">
                   <div className="flex-shrink-0 mt-1">
-                    <FileText className="w-5 h-5 text-blue-500" />
+                    <Files className="w-5 h-5 text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { FileText, Download, Eye, Trash2, AlertCircle, CheckCircle, Loader2, Focus } from 'lucide-react'
+import { Trash, Headlights, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -98,7 +98,7 @@ export default function DocumentNode({
 
   const getFileIcon = () => {
     if (isImage) return '🖼️'
-    if (isPDF) return '📄'
+    if (isPDF) return <FilePdf size={44} weight="duotone" />
     if (data.fileType?.includes('word') || data.fileName?.match(/\.(doc|docx)$/i)) return '📝'
     if (data.fileType?.includes('text') || data.fileName?.match(/\.(txt|md|csv)$/i)) return '📄'
     return '📄'
@@ -107,13 +107,13 @@ export default function DocumentNode({
   const getStatusIcon = () => {
     switch (data.status) {
       case 'processing':
-        return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+        return <SpinnerGap weight="duotone" className="w-4 h-4 animate-spin text-primary-500" />
       case 'ready':
-        return <CheckCircle className="w-4 h-4 text-green-500" />
+        return <CheckCircle weight="duotone" className='text-green-500 w-4 h-4' />
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />
+        return <Warning weight="duotone" className="w-4 h-4 text-red-500" />
       default:
-        return <FileText className="w-4 h-4 text-gray-500" />
+        return <FileText weight="duotone" className="w-4 h-4 text-gray-500" />
     }
   }
 
@@ -173,17 +173,36 @@ export default function DocumentNode({
 
   return (
     <div 
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border rounded-lg shadow-sm group ${
+      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
         isFocused
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
           : selected 
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : isLocked && !isLockedByMe
           ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-          : 'border-gray-200 dark:border-gray-700'
+          : 'border-transparent dark:border-transparent'
       } ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
+
+      <IconButton
+        variant="default"
+        size="sm"
+        aria-label="Focus node"
+        className="absolute -top-2 -right-2"
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          if (typeof toggleFocusOnNode === 'function') {
+            toggleFocusOnNode(id)
+          } else if ((window as any).__toggleFocusOnNode) {
+            (window as any).__toggleFocusOnNode(id)
+          }
+        }}
+      >
+        <Headlights size={14} weight="duotone" className='text-secondary-100' />
+      </IconButton>
+
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-2xl">{getFileIcon()}</span>
@@ -236,23 +255,11 @@ export default function DocumentNode({
         <IconButton
           variant="default"
           size="sm"
-          aria-label="Focus node"
-          onClick={(e) => {
-            e.stopPropagation()
-            e.preventDefault()
-            toggleFocusOnNode(id, true)
-          }}
-        >
-          <Focus size={14} />
-        </IconButton>
-        <IconButton
-          variant="default"
-          size="sm"
           aria-label="Preview document"
           onClick={handlePreview}
           disabled={isLocked && !isLockedByMe}
         >
-          <Eye size={14} />
+          <FrameCorners size={14} weight="duotone" />
         </IconButton>
         <IconButton
           variant="default"
@@ -261,7 +268,7 @@ export default function DocumentNode({
           onClick={handleDownload}
           disabled={isLocked && !isLockedByMe}
         >
-          <Download size={14} />
+          <Download size={14} weight="duotone" />
         </IconButton>
         <IconButton
           variant="danger"
@@ -270,7 +277,7 @@ export default function DocumentNode({
           onClick={handleDelete}
           disabled={isLocked && !isLockedByMe}
         >
-          <Trash2 size={14} />
+          <Trash size={14} weight="duotone" />
         </IconButton>
       </div>
 

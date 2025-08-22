@@ -67,7 +67,7 @@ export default function Menu({
       onBlur={handleBlur}
     >
       {/* Trigger */}
-      <div className={`relative cursor-pointer ${triggerClassName}`}>
+      <div className={`relative flex cursor-pointer ${triggerClassName}`}>
         {trigger}
         {showNotification && (
           <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
@@ -77,7 +77,10 @@ export default function Menu({
       {/* Dropdown */}
       <div
         className={`
-          absolute z-50 ${width || 'w-56'} rounded-2xl bg-white dark:bg-gray-800 shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none
+          absolute z-50 ${width || 'w-56'} rounded-2xl 
+          bg-[linear-gradient(165deg,rgba(241,245,249,1)_0%,rgba(255,255,255,1)_20%,rgba(255,255,255,1)_80%,rgba(241,245,249,1)_100%)]
+          dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-950
+          shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none
           transition-all duration-200 ease-out
           ${align === 'right' ? 'right-0' : 'left-0'}
           ${isOpen 

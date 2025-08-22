@@ -1,9 +1,13 @@
 'use client'
 
 import { ArrowLeft, TestTube } from 'lucide-react'
+import { Robot } from '@phosphor-icons/react/dist/ssr'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import type { OpenAIModel } from '../features/ai/aiTypes'
 import Menu from './ui/Menu'
+import IconButton from './ui/IconButton'
+import Select from './ui/Select'
+import { MODELS } from '../features/ai/models'
 
 interface AISettingsMenuProps {
   isTestMode?: boolean
@@ -11,12 +15,7 @@ interface AISettingsMenuProps {
   className?: string
 }
 
-const MODELS = [
-  { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Faster)' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
-]
+
 
 const POSITION_STRATEGIES = [
   { value: 'smart', label: 'Smart (Recommended)' },
@@ -35,15 +34,11 @@ export default function AISettingsMenu({
   return (
     <Menu
       trigger={
-        <button
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center h-10 w-10"
+        <IconButton
           aria-label="AI Settings"
-          style={{ minWidth: '40px', minHeight: '40px' }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-600 dark:text-gray-300">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
-          </svg>
-        </button>
+          <Robot size={24} weight="duotone" className='text-primary-600 dark:text-gray-300' />
+        </IconButton>
       }
       width="w-64"
       customContent={
@@ -51,25 +46,25 @@ export default function AISettingsMenu({
           <div className="mb-3 font-semibold text-gray-800 dark:text-gray-100 text-sm">AI Settings</div>
 
           <div className="mb-3">
-            <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-300">Model</label>
-            <select
-              className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+            <Select
+              size="sm"
+              fullWidth
+              aria-label="AI Model"
               value={model}
-              onChange={e => setModel(e.target.value as OpenAIModel)}
-            >
-              {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-            </select>
+              options={MODELS}
+              onChange={(v) => setModel(v as OpenAIModel)}
+            />
           </div>
 
           <div className="mb-3">
-            <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-300">Position Strategy</label>
-            <select
-              className="w-full px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+            <Select
+              size="sm"
+              fullWidth
+              aria-label="Position Strategy"
               value={positionStrategy}
-              onChange={e => setPositionStrategy(e.target.value)}
-            >
-              {POSITION_STRATEGIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
+              options={POSITION_STRATEGIES}
+              onChange={(v) => setPositionStrategy(v)}
+            />
           </div>
 
           <div className="mb-1">
