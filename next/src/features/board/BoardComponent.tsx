@@ -34,6 +34,7 @@ import { useAIContext } from '../ai/aiContext'
 import { getOpenAIService } from '../ai/aiService'
 import BokehBackground from '../../components/BokehBackground'
 import ChatPanel2 from '../../components/ChatPanel2'
+import TaskList from '../../components/TaskList'
 import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
 import type { BoardBrief } from './boardTypes'
@@ -1658,6 +1659,9 @@ function BoardContent({
       )}
       {isBoardView && (
         <ChatPanel2 />
+      )}
+      {isBoardView && (
+        <TaskList />
       )}
       
       {/* Context Menu */}

@@ -423,6 +423,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [editingTemplateName, setEditingTemplateName] = useState<string>('')
   const [editingTemplateDescription, setEditingTemplateDescription] = useState<string>('')
   const [editingTemplateLoading, setEditingTemplateLoading] = useState<boolean>(false)
+  const [tasksLoading, setTasksLoading] = useState<boolean>(false)
+  const [incompleteTasks, setIncompleteTasks] = useState<Array<{ boardId: string; boardName: string; nodeId: string; title: string }>>([])
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -475,6 +477,39 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
     loadTemplates()
   }, [])
+
+  // Compute incomplete task nodes across all boards
+  useEffect(() => {
+    const computeTasks = async () => {
+      try {
+        setTasksLoading(true)
+        const { boardStorage } = await import('../features/storage/storage')
+        const all: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
+        const results: Array<{ boardId: string; boardName: string; nodeId: string; title: string }> = []
+        for (const b of all) {
+          try {
+            const full = await boardStorage.loadBoard(b.id)
+            const nodes = full?.data?.nodes || []
+            nodes.forEach((n: any) => {
+              if (n?.type === 'task' && !(n?.data?.completed === true)) {
+                results.push({ boardId: b.id, boardName: b.name, nodeId: n.id, title: n?.data?.title || 'Untitled' })
+              }
+            })
+          } catch {
+            // ignore board load errors for tasks list
+          }
+        }
+        setIncompleteTasks(results)
+      } catch {
+        setIncompleteTasks([])
+      } finally {
+        setTasksLoading(false)
+      }
+    }
+    if (!loading) {
+      computeTasks()
+    }
+  }, [boards, sharedBoards, loading])
 
   // Re-compute document stats whenever boards/sharedBoards change
   useEffect(() => {
@@ -765,6 +800,41 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               })}
             </div>
           </div> */}
+
+          <div className="flex flex-col gap-4 mt-8">
+            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">task nodes</h2>
+            {tasksLoading ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400">Loading tasks…</div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {incompleteTasks.length === 0 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">No incomplete tasks. Nice work!</div>
+                )}
+                {incompleteTasks.slice(0, 10).map((t) => (
+                  <button
+                    key={`${t.boardId}-${t.nodeId}`}
+                    onClick={() => {
+                      const b = allBoards.find((bb) => bb.id === t.boardId) as any
+                      if (b) onOpenBoard(b, undefined)
+                    }}
+                    className="text-left flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 bg-white/70 dark:bg-gray-900/60 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex w-4 h-4 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900" aria-hidden />
+                      <div className="flex flex-col">
+                        <span className="text-sm text-gray-800 dark:text-gray-100 truncate max-w-[220px]">{t.title}</span>
+                        <span className="text-[11px] text-gray-500 dark:text-gray-400">{t.boardName}</span>
+                      </div>
+                    </div>
+                    <span className="text-[11px] text-primary-600 dark:text-primary-400">Open</span>
+                  </button>
+                ))}
+                {incompleteTasks.length > 10 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Showing 10 of {incompleteTasks.length} tasks</div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>

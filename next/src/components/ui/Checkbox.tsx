@@ -1,7 +1,7 @@
 import React from 'react'
 import clsx from 'clsx'
 
-export type CheckboxSize = 'sm' | 'md' | 'lg'
+export type CheckboxSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
 export type CheckboxVariant = 'default' | 'unstyled'
 
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange' | 'type'> {
@@ -31,6 +31,8 @@ const iconSize: Record<CheckboxSize, string> = {
   sm: 'h-3 w-3',
   md: 'h-4 w-4',
   lg: 'h-5 w-5',
+  xl: 'h-6 w-6',
+  xxl: 'h-8 w-8',
 }
 
 const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(

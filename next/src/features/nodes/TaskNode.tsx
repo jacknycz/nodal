@@ -142,6 +142,7 @@ export default function TaskNode({
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}
             disabled={isLocked && !lockedByMe}
+            size="xl"
           />
           <TextInput
             id={`task-${id}`}
@@ -150,8 +151,9 @@ export default function TaskNode({
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
             placeholder="New task"
+            size="sm"
             fullWidth
-            className={`!border-0 !bg-transparent !px-0 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
+            className={`${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
           />
           {(isLocked) && (
             <div className="flex items-center gap-1 text-[10px] ml-1">
