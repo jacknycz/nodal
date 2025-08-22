@@ -24,6 +24,7 @@ import { templateStorage } from '../storage/templateStorage'
 import DocumentNode from '../nodes/DocumentNode'
 import ImageNode from '../nodes/ImageNode'
 import NodalNode from '../nodes/nodalNode'
+import TaskNode from '../nodes/TaskNode'
 import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
@@ -99,6 +100,7 @@ export const nodeTypes = {
   default: (props: any) => <NodalNode {...props} {...stableHandlers} />,
   document: (props: any) => <DocumentNode {...props} {...stableHandlers} />,
   image: (props: any) => <ImageNode {...props} {...stableHandlers} />,
+  task: (props: any) => <TaskNode {...props} {...stableHandlers} />,
 };
 
 export const edgeTypes = {
@@ -1688,6 +1690,28 @@ function BoardContent({
           setPendingSourceNodeId(null)
           setShowAddNodeModal(true);
           setContextMenu({ isOpen: false, position: null });
+        }}
+        onAddTaskNode={() => {
+          if (!contextMenu.position) return
+          const flowPosition = reactFlowInstance.screenToFlowPosition({
+            x: contextMenu.position.x,
+            y: contextMenu.position.y,
+          })
+          const newId = `task-${Date.now()}`
+          const newNode: Node = {
+            id: newId,
+            type: 'task',
+            position: flowPosition,
+            data: { title: 'New Task', completed: false },
+          }
+          setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          if (pendingSourceNodeId) {
+            const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: 'floating' }
+            setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+          }
+          setContextMenu({ isOpen: false, position: null })
+          setPendingSourceNodeId(null)
+          setPendingNodePosition(null)
         }}
         onGenerateAINode={handleOpenAINodeGenerator}
       />
