@@ -14,9 +14,10 @@ import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
 import { PencilIcon, PinIcon, CheckIcon, Copy, Plus, Share2 } from 'lucide-react'
-import { ClockClockwise, Graph, PushPin, TreeStructure, Pen } from '@phosphor-icons/react/dist/ssr'
+import { ClockClockwise, Graph, PushPin, TreeStructure, Pen, ChatCircleDots, Lightbulb, Gear } from '@phosphor-icons/react/dist/ssr'
 import Select from './ui/Select'
 import Search from './ui/Search'
+import { Tab, Tabs } from './ui/Tabs'
 // Gradient background only (no external images)
 
 interface BoardRoomProps {
@@ -126,7 +127,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
 
   return (
     <div
-      className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200 cursor-pointer"
+      className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
       onClick={handleCardClick}
     >
 
@@ -139,7 +140,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         <PushPin size={16} weight="duotone" />
       </IconButton>
 
-      <div className="mb-2">
+      <div className="mb-1">
         {/* Clean title with hover-to-edit */}
         <div className="group relative">
           {isEditingTitle ? (
@@ -170,7 +171,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
           ) : (
             <div className="flex items-center gap-2 group">
               <h3
-                className="text-xl md:text-2xl font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="text-xl font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
               >
                 {newName}
@@ -193,8 +194,6 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         </span>
       </div>
 
-
-
       <div className="flex space-x-6 items-center">
         {/* Board Info (right column) */}
         <div className="flex flex-col flex-1 w-full items-start">
@@ -208,7 +207,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
             <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
           )} */}
           {/* Board Stats */}
-          <div className="flex space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
+          <div className="flex space-x-4 text-sm text-gray-500 dark:text-gray-400">
             <div className="flex items-center gap-1">
               <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{board.nodeCount}</span>
               <span className="font-medium font-fredoka text-base">nodes</span>
@@ -221,7 +220,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
         </div>
 
         {/* Board Thumbnail */}
-        <div className="mb-2 flex flex-col justify-items-start">
+        <div className="flex flex-col justify-items-start">
           {loading && (
             <div className="flex justify-center w-16 h-16 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
               <span className="text-gray-400 text-xs">Generating...</span>
@@ -256,7 +255,7 @@ function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }:
       </div>
 
       {/* Action Buttons - persistent bottom row */}
-      <div className="col-span-2 mt-2 flex items-center justify-between gap-2">
+      <div className="col-span-2 mt-3 flex items-center justify-between gap-2">
         <Button
           variant="secondary"
           size="small"
@@ -707,6 +706,33 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       {/*
         ANNOYINGLY LARGE SEPERATOR (ALS) BETWEEN WELCOME AND BOARD CARDS JUST LIKE THE UI YEEEEAAAAHHHHH
       */}
+
+      <Tabs>
+        <Tab
+          label="Chat"
+          icon={<ChatCircleDots size={20} weight="duotone" />}
+        >
+          <p>Here’s where chat messages will show up.</p>
+        </Tab>
+
+        <Tab
+          label="Ideas"
+          icon={<Lightbulb size={20} weight="duotone" />}
+        >
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Mind map brainstorms</li>
+            <li>AI-generated suggestions</li>
+            <li>Random shower thoughts</li>
+          </ul>
+        </Tab>
+
+        <Tab
+          label="Settings"
+          icon={<Gear size={20} weight="duotone" />}
+        >
+          <p>Manage your board preferences and options here.</p>
+        </Tab>
+      </Tabs>
 
       {/* Scrollable Boards Section */}
       <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 shadow dark:shadow-2xl dark:shadow-gray-950/70 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl overflow-hidden">
