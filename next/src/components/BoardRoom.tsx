@@ -707,7 +707,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         ANNOYINGLY LARGE SEPERATOR (ALS) BETWEEN WELCOME AND BOARD CARDS JUST LIKE THE UI YEEEEAAAAHHHHH
       */}
 
-      <Tabs>
+      {/* <Tabs>
         <Tab
           label="Chat"
           icon={<ChatCircleDots size={20} weight="duotone" />}
@@ -732,65 +732,244 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         >
           <p>Manage your board preferences and options here.</p>
         </Tab>
-      </Tabs>
+      </Tabs> */}
 
       {/* Scrollable Boards Section */}
-      <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 shadow dark:shadow-2xl dark:shadow-gray-950/70 backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl overflow-hidden">
-        <div className="w-full bg-white/50 dark:bg-slate-950/70 mx-auto px-4 sm:px-6 lg:px-12 py-10">
-          {/* <div className="flex justify-between items-center mb-6">
+      <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 
+      shadow dark:shadow-2xl dark:shadow-gray-950/70 
+      backdrop-blur-sm bg-white/50 dark:bg-slate-950/70
+      border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl overflow-hidden">
+
+        <Tabs>
+
+          {/* TAB 1 */}
+          <Tab
+            label="Boards"
+            icon={<svg width="44" height="44" className="mt-[1px] w-6 h-6 text-white" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
+              <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM23 16C23.5523 16 24 16.4477 24 17V20H27C27.5523 20 28 20.4477 28 21V23C28 23.5523 27.5523 24 27 24H24V27C24 27.5523 23.5523 28 23 28H21C20.4477 28 20 27.5523 20 27V24H17C16.4477 24 16 23.5523 16 23V21C16 20.4477 16.4477 20 17 20H20V17C20 16.4477 20.4477 16 21 16H23ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
+            </svg>}
+            headerClassName="bg-white text-slate-900"
+            activeHeaderClassName="bg-white text-slate-900"
+          >
+            <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
+              {/* <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-medium font-fredoka text-gray-800 dark:text-white">your boards</h2>
           </div> */}
 
-          <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
-            <div className="flex justify-center w-full max-w-xl">
-              <Search
-                placeholder="Search boards..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                label="Search boards..."
-                className="w-full"
-              />
-            </div>
+              <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
+                <div className="flex justify-center w-full max-w-xl">
+                  <Search
+                    placeholder="Search boards..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    label="Search boards..."
+                    className="w-full"
+                  />
+                </div>
 
-            <div className="flex items-center gap-4 flex-none">
-              <Checkbox
-                label="Show shared only"
-                checked={showSharedOnly}
-                onChange={(v) => setShowSharedOnly(v)}
-                labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
-              />
-            </div>
-          </div>
+                <div className="flex items-center gap-4 flex-none">
+                  <Checkbox
+                    label="Show shared only"
+                    checked={showSharedOnly}
+                    onChange={(v) => setShowSharedOnly(v)}
+                    labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
+                  />
+                </div>
+              </div>
 
-          {error && (
-            <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
-          )}
-          {loading ? (
-            <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-              <Loader />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-              {sortedBoards.length === 0 ? (
-                <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                  No boards found. Create a new board to get started!
+              {error && (
+                <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
+              )}
+              {loading ? (
+                <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                  <Loader />
                 </div>
               ) : (
-                sortedBoards.map(board => (
-                  <BoardCard
-                    key={board.id}
-                    board={board}
-                    onLoad={() => onOpenBoard(board, undefined)}
-                    onRename={newName => handleRename(board.id, newName)}
-                    onDelete={() => handleDelete(board.id)}
-                    isPinned={pinnedBoardIds.includes(board.id)}
-                    onTogglePin={() => togglePin(board.id)}
-                  />
-                ))
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                  {sortedBoards.length === 0 ? (
+                    <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+                      No boards found. Create a new board to get started!
+                    </div>
+                  ) : (
+                    sortedBoards.map(board => (
+                      <BoardCard
+                        key={board.id}
+                        board={board}
+                        onLoad={() => onOpenBoard(board, undefined)}
+                        onRename={newName => handleRename(board.id, newName)}
+                        onDelete={() => handleDelete(board.id)}
+                        isPinned={pinnedBoardIds.includes(board.id)}
+                        onTogglePin={() => togglePin(board.id)}
+                      />
+                    ))
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
+          </Tab>
+          
+          {/* TAB 2 */}
+          <Tab
+            label="Ideas"
+            icon={<Lightbulb size={20} weight="duotone" />}
+          >
+            {/* Templates Section */}
+            <div className="relative z-20 mx-4 md:mx-6 lg:mx-8 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden mt-8 md:mt-12 lg:mt-16">
+              <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">templates</h2>
+                </div>
+                {templatesError && (
+                  <div className="mb-4 text-red-600 dark:text-red-400">{templatesError}</div>
+                )}
+                {templatesLoading ? (
+                  <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                    <Loader />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {templates.length === 0 ? (
+                      <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+                        No templates yet.
+                      </div>
+                    ) : (
+                      templates.map((t) => {
+                        const admin = isAdmin(user)
+                        const isEditing = editingTemplateId === t.id
+                        return (
+                          <div key={t.id} className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200">
+                            <div className="mb-2">
+                              {isEditing ? (
+                                <div className="flex items-center gap-2">
+                                  <TextInput
+                                    type="text"
+                                    value={editingTemplateName}
+                                    onChange={(e) => setEditingTemplateName(e.target.value)}
+                                    size="md"
+                                    className="flex-1"
+                                    maxLength={100}
+                                  />
+                                  <IconButton
+                                    variant="primary"
+                                    aria-label="Save title"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      try {
+                                        setEditingTemplateLoading(true)
+                                        const updated = await templateStorage.updateTemplate(t.id, { name: editingTemplateName, description: editingTemplateDescription })
+                                        setTemplates(prev => prev.map(p => p.id === t.id ? updated : p))
+                                        setEditingTemplateId(null)
+                                        setEditingTemplateName('')
+                                        setEditingTemplateDescription('')
+                                      } catch (err) {
+                                        alert('Failed to update template')
+                                      } finally {
+                                        setEditingTemplateLoading(false)
+                                      }
+                                    }}
+                                  >
+                                    <CheckIcon className="w-4 h-4" />
+                                  </IconButton>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 group">
+                                  <h3
+                                    className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                                  >
+                                    {t.name}
+                                  </h3>
+                                  <IconButton
+                                    variant="primaryGhost"
+                                    aria-label="Edit title"
+                                    onClick={(e) => { e.stopPropagation(); setEditingTemplateId(t.id); setEditingTemplateName(t.name || ''); setEditingTemplateDescription(t.description || '') }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                                  >
+                                    <PencilIcon className="w-4 h-4" />
+                                  </IconButton>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                              <div className="flex items-center gap-1">
+                                <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.nodeCount}</span>
+                                <span className="font-medium">nodes</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.edgeCount}</span>
+                                <span className="font-medium">connections</span>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex justify-end gap-2">
+
+                              <>
+                                {admin && (
+                                  <Button
+                                    variant="secondaryGhost"
+                                    size="small"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      try {
+                                        const { boardStorage } = await import('../features/storage/storage')
+                                        const id = await boardStorage.saveBoard(t.name, t.data)
+                                        // Persist mapping so autosave updates the template
+                                        try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
+                                        const newBoard = await boardStorage.loadBoard(id)
+                                        if (newBoard) {
+                                          onOpenBoard(newBoard, undefined)
+                                        } else if (typeof window !== 'undefined') {
+                                          window.location.href = `/board/${id}`
+                                        }
+                                      } catch (err) {
+                                        alert('Failed to open template for editing')
+                                      }
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="primary"
+                                  size="small"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    try {
+                                      const newName = `${t.name} (copy)`
+                                      const { boardStorage } = await import('../features/storage/storage')
+                                      const id = await boardStorage.saveBoard(newName, t.data)
+                                      const newBoard = await boardStorage.loadBoard(id)
+                                      if (newBoard) {
+                                        onOpenBoard(newBoard, undefined)
+                                      } else if (typeof window !== 'undefined') {
+                                        window.location.href = `/board/${id}`
+                                      }
+                                    } catch (e) {
+                                      alert('Failed to use template')
+                                    }
+                                  }}
+                                >
+                                  Use
+                                </Button>
+                              </>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </Tab>
+          
+          {/* TAB 3 */}
+          <Tab
+            label="Settings"
+            icon={<Gear size={20} weight="duotone" />}
+          >
+            <p>Manage your board preferences and options here.</p>
+          </Tab>
+        </Tabs>
 
         <div className="w-96 bg-white dark:bg-slate-950/90 p-8">
           <div className="flex flex-none justify-end">
@@ -865,153 +1044,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
           </div>
-        </div>
-      </div>
-
-      {/* Templates Section */}
-      <div className="relative z-20 mx-4 md:mx-6 lg:mx-8 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden mt-8 md:mt-12 lg:mt-16">
-        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">templates</h2>
-          </div>
-          {templatesError && (
-            <div className="mb-4 text-red-600 dark:text-red-400">{templatesError}</div>
-          )}
-          {templatesLoading ? (
-            <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-              <Loader />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {templates.length === 0 ? (
-                <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                  No templates yet.
-                </div>
-              ) : (
-                templates.map((t) => {
-                  const admin = isAdmin(user)
-                  const isEditing = editingTemplateId === t.id
-                  return (
-                    <div key={t.id} className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200">
-                      <div className="mb-2">
-                        {isEditing ? (
-                          <div className="flex items-center gap-2">
-                            <TextInput
-                              type="text"
-                              value={editingTemplateName}
-                              onChange={(e) => setEditingTemplateName(e.target.value)}
-                              size="md"
-                              className="flex-1"
-                              maxLength={100}
-                            />
-                            <IconButton
-                              variant="primary"
-                              aria-label="Save title"
-                              onClick={async (e) => {
-                                e.stopPropagation()
-                                try {
-                                  setEditingTemplateLoading(true)
-                                  const updated = await templateStorage.updateTemplate(t.id, { name: editingTemplateName, description: editingTemplateDescription })
-                                  setTemplates(prev => prev.map(p => p.id === t.id ? updated : p))
-                                  setEditingTemplateId(null)
-                                  setEditingTemplateName('')
-                                  setEditingTemplateDescription('')
-                                } catch (err) {
-                                  alert('Failed to update template')
-                                } finally {
-                                  setEditingTemplateLoading(false)
-                                }
-                              }}
-                            >
-                              <CheckIcon className="w-4 h-4" />
-                            </IconButton>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 group">
-                            <h3
-                              className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                            >
-                              {t.name}
-                            </h3>
-                            <IconButton
-                              variant="primaryGhost"
-                              aria-label="Edit title"
-                              onClick={(e) => { e.stopPropagation(); setEditingTemplateId(t.id); setEditingTemplateName(t.name || ''); setEditingTemplateDescription(t.description || '') }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                            >
-                              <PencilIcon className="w-4 h-4" />
-                            </IconButton>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        <div className="flex items-center gap-1">
-                          <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.nodeCount}</span>
-                          <span className="font-medium">nodes</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.edgeCount}</span>
-                          <span className="font-medium">connections</span>
-                        </div>
-                      </div>
-                      <div className="mt-3 flex justify-end gap-2">
-
-                        <>
-                          {admin && (
-                            <Button
-                              variant="secondaryGhost"
-                              size="small"
-                              onClick={async (e) => {
-                                e.stopPropagation()
-                                try {
-                                  const { boardStorage } = await import('../features/storage/storage')
-                                  const id = await boardStorage.saveBoard(t.name, t.data)
-                                  // Persist mapping so autosave updates the template
-                                  try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
-                                  const newBoard = await boardStorage.loadBoard(id)
-                                  if (newBoard) {
-                                    onOpenBoard(newBoard, undefined)
-                                  } else if (typeof window !== 'undefined') {
-                                    window.location.href = `/board/${id}`
-                                  }
-                                } catch (err) {
-                                  alert('Failed to open template for editing')
-                                }
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          <Button
-                            variant="primary"
-                            size="small"
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              try {
-                                const newName = `${t.name} (copy)`
-                                const { boardStorage } = await import('../features/storage/storage')
-                                const id = await boardStorage.saveBoard(newName, t.data)
-                                const newBoard = await boardStorage.loadBoard(id)
-                                if (newBoard) {
-                                  onOpenBoard(newBoard, undefined)
-                                } else if (typeof window !== 'undefined') {
-                                  window.location.href = `/board/${id}`
-                                }
-                              } catch (e) {
-                                alert('Failed to use template')
-                              }
-                            }}
-                          >
-                            Use
-                          </Button>
-                        </>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          )}
         </div>
       </div>
 
