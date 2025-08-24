@@ -9,15 +9,12 @@ import { templateStorage, type TemplateRecord } from '../features/storage/templa
 import { isAdmin } from '../features/auth/roles'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
-import TextInput from './ui/TextInput'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
-import IconButton from './ui/IconButton'
-import { PencilIcon, PinIcon, CheckIcon, Copy, Plus, Share2 } from 'lucide-react'
-import { ClockClockwise, Graph, PushPin, TreeStructure, Pen, ChatCircleDots, Lightbulb, Gear } from '@phosphor-icons/react/dist/ssr'
-import Select from './ui/Select'
+import { ClockClockwise, Graph, TreeStructure, Lightbulb, Gear } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
+import BoardCard from './BoardCard'
 // Gradient background only (no external images)
 
 interface BoardRoomProps {
@@ -25,383 +22,6 @@ interface BoardRoomProps {
 }
 
 type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
-
-function BoardCard({ board, onLoad, onRename, onDelete, isPinned, onTogglePin }: {
-  board: SavedBoard & { shared?: boolean; invited_by?: string }
-  onLoad: () => void
-  onRename: (newName: string) => void
-  onDelete: () => void
-  isPinned: boolean
-  onTogglePin: () => void
-}) {
-  const [newName, setNewName] = useState(board.name)
-  const [imgError, setImgError] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState(`https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg`)
-  const [loading, setLoading] = useState(false)
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [originalName, setOriginalName] = useState(board.name)
-  const titleInputRef = useRef<HTMLInputElement | null>(null)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showShareModal, setShowShareModal] = useState(false)
-  const [shareEmails, setShareEmails] = useState<string[]>([])
-  const [shareInput, setShareInput] = useState('')
-  const shareLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${board.id}`
-
-  // Optionally, poll for thumbnail updates
-  useEffect(() => {
-    if (loading) {
-      const timeout = setTimeout(() => {
-        // Bump the URL to force reload
-        const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${board.id}.jpg?${Date.now()}`;
-        setThumbnailUrl(newUrl)
-        setLoading(false)
-      }, 2000)
-      return () => clearTimeout(timeout)
-    }
-  }, [loading, board.id])
-
-  // Listen for a custom event to trigger loading state
-  useEffect(() => {
-    const handler = (e: CustomEvent) => {
-      if (e.detail === board.id) setLoading(true)
-    }
-    window.addEventListener('thumbnail-generation', handler as EventListener)
-    return () => window.removeEventListener('thumbnail-generation', handler as EventListener)
-  }, [board.id])
-
-  const commitTitleEdit = useCallback(() => {
-    const trimmed = newName.trim()
-    if (!trimmed) {
-      setNewName(originalName)
-      setIsEditingTitle(false)
-      return
-    }
-    if (trimmed !== originalName) {
-      onRename(trimmed)
-    }
-    setIsEditingTitle(false)
-  }, [newName, originalName, onRename])
-
-  // Click-outside to commit and exit title editing
-  useEffect(() => {
-    if (!isEditingTitle) return
-    const handleMouseDown = (e: MouseEvent) => {
-      const inputEl = titleInputRef.current
-      if (inputEl && !inputEl.contains(e.target as Node)) {
-        commitTitleEdit()
-      }
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [isEditingTitle, newName, originalName, commitTitleEdit])
-
-  // Autofocus and select when entering title edit mode
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus()
-      titleInputRef.current.select()
-    }
-  }, [isEditingTitle])
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffHours = diffMs / (1000 * 60 * 60)
-    const diffDays = diffMs / (1000 * 60 * 60 * 24)
-    if (diffHours < 1) {
-      return 'Just now'
-    } else if (diffHours < 24) {
-      return `${Math.floor(diffHours)}h ago`
-    } else if (diffDays < 7) {
-      return `${Math.floor(diffDays)}d ago`
-    } else {
-      return date.toLocaleDateString()
-    }
-  }
-
-  const handleCardClick = () => {
-    if (showShareModal || showDeleteModal || isEditingTitle) return
-    onLoad()
-  }
-
-  return (
-    <div
-      className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
-      onClick={handleCardClick}
-    >
-
-      <IconButton
-        aria-label={isPinned ? 'Unpin board' : 'Pin board'}
-        onClick={(e) => { e.stopPropagation(); onTogglePin() }}
-        variant={isPinned ? 'primaryGhost' : 'secondaryGhost'}
-        className={`absolute top-2 right-2 z-20 ${isPinned ? 'text-tertiary-500 bg-tertiary-50/50! dark:bg-transparent! hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
-      >
-        <PushPin size={16} weight="duotone" />
-      </IconButton>
-
-      <div className="mb-1">
-        {/* Clean title with hover-to-edit */}
-        <div className="group relative">
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2">
-              <TextInput
-                ref={titleInputRef}
-                type="text"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
-                  if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
-                }}
-                onBlur={commitTitleEdit}
-                size="md"
-                maxLength={50}
-                className="flex-1"
-              />
-              <IconButton
-                variant="primary"
-                aria-label="Save title"
-                onClick={(e) => { e.stopPropagation(); commitTitleEdit() }}
-                className="ml-2"
-              >
-                <CheckIcon className="w-4 h-4" />
-              </IconButton>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 group">
-              <h3
-                className="text-xl font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
-              >
-                {newName}
-              </h3>
-              <IconButton
-                variant="primaryGhost"
-                aria-label="Edit title"
-                onClick={(e) => { e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-              >
-                <Pen size={20} weight="duotone" />
-              </IconButton>
-            </div>
-          )}
-        </div>
-
-        {/* Last Modified */}
-        <span className="flex mt-1 gap-1 items-center text-xs text-gray-400 dark:text-gray-400">
-          <ClockClockwise size={16} weight="duotone" />{formatDate(board.lastModified)}
-        </span>
-      </div>
-
-      <div className="flex space-x-6 items-center">
-        {/* Board Info (right column) */}
-        <div className="flex flex-col flex-1 w-full items-start">
-          {/* Shared with/by info
-          <div className="mb-2 flex items-center gap-2">
-            {board.shared && (
-              <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-semibold">Shared</span>
-            )}
-          </div>
-          {board.shared && (
-            <div className="mb-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {board.invited_by || 'unknown'}</div>
-          )} */}
-          {/* Board Stats */}
-          <div className="flex space-x-4 text-sm text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{board.nodeCount}</span>
-              <span className="font-medium font-fredoka text-base">nodes</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{board.edgeCount}</span>
-              <span className="font-medium font-fredoka text-base">connections</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Board Thumbnail */}
-        <div className="flex flex-col justify-items-start">
-          {loading && (
-            <div className="flex justify-center w-16 h-16 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
-              <span className="text-gray-400 text-xs">Generating...</span>
-            </div>
-          )}
-          {!loading && !imgError && thumbnailUrl ? (
-            <div className="w-16 h-16 rounded-xl shadow overflow-hidden bg-gray-100 dark:bg-gray-900">
-              <img
-                src={thumbnailUrl}
-                alt="Board thumbnail"
-                className="w-full h-full object-cover"
-                onError={() => {
-                  setImgError(true);
-                }}
-              />
-            </div>
-          ) : (
-            <div
-              className="w-16 h-16 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700"
-            >
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none">
-                {(board.name || '')
-                  .trim()
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map(s => (s[0] ? s[0].toUpperCase() : ''))
-                  .join('') || 'NB'}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Action Buttons - persistent bottom row */}
-      <div className="col-span-2 mt-3 flex items-center justify-between gap-2">
-        <Button
-          variant="secondary"
-          size="small"
-          onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
-          title="Share board"
-        >
-          Share
-        </Button>
-        {/* Edit button removed; inline edit via title icon */}
-        <Button
-          variant="dangerGhost"
-          size="small"
-          onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
-          title="Delete board"
-        >
-          Delete
-        </Button>
-      </div>
-
-      {/* Inline title editing replaces rename modal */}
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        title="Delete Board"
-        description={`Are you sure you want to delete "${newName}"? This action cannot be undone.`}
-      >
-        <div className="flex justify-end gap-2 mt-2">
-          <Button variant="secondary" size="small" onClick={() => setShowDeleteModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="danger" size="small" onClick={() => { setShowDeleteModal(false); onDelete() }}>
-            Delete
-          </Button>
-        </div>
-      </Modal>
-
-      {/* Share Modal */}
-      <Modal
-        open={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        title="Share Board"
-        description="Copy a link or invite people by email."
-      >
-        <div className="space-y-4">
-          {/* Share link */}
-          <div>
-            <div className="flex gap-2">
-              <TextInput readOnly value={shareLink} fullWidth label="Share link" />
-              <IconButton aria-label="Copy share link" size="lg" variant="secondary" onClick={() => { navigator.clipboard.writeText(shareLink) }}>
-                <Copy className="w-4 h-4" />
-              </IconButton>
-            </div>
-          </div>
-
-          {/* Share by email */}
-          <div>
-            <div className="flex gap-2">
-              <TextInput
-                type="email"
-                placeholder="Add email and press Enter"
-                label="Invite by email"
-                value={shareInput}
-                onChange={e => setShareInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    const email = shareInput.trim()
-                    if (email && !shareEmails.includes(email)) {
-                      setShareEmails(prev => [...prev, email])
-                      setShareInput('')
-                    }
-                  }
-                }}
-                fullWidth
-              />
-              <IconButton
-                aria-label="Add email"
-                size="lg"
-                variant="secondary"
-                onClick={() => {
-                  const email = shareInput.trim()
-                  if (email && !shareEmails.includes(email)) {
-                    setShareEmails(prev => [...prev, email])
-                    setShareInput('')
-                  }
-                }}
-              >
-                <Plus className="w-4 h-4" />
-              </IconButton>
-            </div>
-            {shareEmails.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {shareEmails.map(email => (
-                  <span key={email} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
-                    {email}
-                    <IconButton
-                      aria-label={`Remove ${email}`}
-                      size="sm"
-                      variant="default"
-                      className="ml-1"
-                      onClick={() => setShareEmails(prev => prev.filter(e => e !== email))}
-                    >
-                      ×
-                    </IconButton>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 mt-6">
-            <Button
-              variant="secondary"
-              onClick={() => setShowShareModal(false)}
-            >
-              Close
-            </Button>
-            <Button
-              onClick={async () => {
-                // Fire invitations for each email
-                try {
-                  await Promise.all(shareEmails.map(async (email) => {
-                    await fetch('/api/board/invitations', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ boardId: board.id, email, invitedBy: board.userId })
-                    })
-                  }))
-                  setShowShareModal(false)
-                  setShareEmails([])
-                } catch (e) {
-                  console.error('Failed to send invites', e)
-                }
-              }}
-              disabled={shareEmails.length === 0}
-            >
-              Send Invites
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  )
-}
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const user = useSupabaseUser()
@@ -418,10 +38,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [templates, setTemplates] = useState<TemplateRecord[]>([])
   const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
-  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null)
-  const [editingTemplateName, setEditingTemplateName] = useState<string>('')
-  const [editingTemplateDescription, setEditingTemplateDescription] = useState<string>('')
-  const [editingTemplateLoading, setEditingTemplateLoading] = useState<boolean>(false)
   const [tasksLoading, setTasksLoading] = useState<boolean>(false)
   const [incompleteTasks, setIncompleteTasks] = useState<Array<{ boardId: string; boardName: string; nodeId: string; title: string }>>([])
 
@@ -707,34 +323,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         ANNOYINGLY LARGE SEPERATOR (ALS) BETWEEN WELCOME AND BOARD CARDS JUST LIKE THE UI YEEEEAAAAHHHHH
       */}
 
-      {/* <Tabs>
-        <Tab
-          label="Chat"
-          icon={<ChatCircleDots size={20} weight="duotone" />}
-        >
-          <p>Here’s where chat messages will show up.</p>
-        </Tab>
-
-        <Tab
-          label="Ideas"
-          icon={<Lightbulb size={20} weight="duotone" />}
-        >
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Mind map brainstorms</li>
-            <li>AI-generated suggestions</li>
-            <li>Random shower thoughts</li>
-          </ul>
-        </Tab>
-
-        <Tab
-          label="Settings"
-          icon={<Gear size={20} weight="duotone" />}
-        >
-          <p>Manage your board preferences and options here.</p>
-        </Tab>
-      </Tabs> */}
-
-      {/* Scrollable Boards Section */}
+      {/* Scrollable Board/Sidebar Section */}
       <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 
       shadow dark:shadow-2xl dark:shadow-gray-950/70 
       backdrop-blur-sm bg-white/50 dark:bg-slate-950/70
@@ -745,12 +334,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           {/* TAB 1 */}
           <Tab
             label="Boards"
-            icon={<svg width="44" height="44" className="mt-[1px] w-6 h-6 text-white" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            icon={<svg width="44" height="44" className="ml-2 w-6 h-6" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
               <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM23 16C23.5523 16 24 16.4477 24 17V20H27C27.5523 20 28 20.4477 28 21V23C28 23.5523 27.5523 24 27 24H24V27C24 27.5523 23.5523 28 23 28H21C20.4477 28 20 27.5523 20 27V24H17C16.4477 24 16 23.5523 16 23V21C16 20.4477 16.4477 20 17 20H20V17C20 16.4477 20.4477 16 21 16H23ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
             </svg>}
-            headerClassName="bg-white text-slate-900"
-            activeHeaderClassName="bg-white text-slate-900"
+            // headerClassName="bg-white text-slate-900"
+            // activeHeaderClassName="bg-white text-slate-900"
           >
             <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
               {/* <div className="flex justify-between items-center mb-6">
@@ -795,7 +384,11 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                     sortedBoards.map(board => (
                       <BoardCard
                         key={board.id}
-                        board={board}
+                        id={board.id}
+                        name={board.name}
+                        lastModified={board.lastModified}
+                        nodeCount={board.nodeCount}
+                        edgeCount={board.edgeCount}
                         onLoad={() => onOpenBoard(board, undefined)}
                         onRename={newName => handleRename(board.id, newName)}
                         onDelete={() => handleDelete(board.id)}
@@ -808,166 +401,136 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               )}
             </div>
           </Tab>
-          
+
           {/* TAB 2 */}
           <Tab
             label="Ideas"
-            icon={<Lightbulb size={20} weight="duotone" />}
+            icon={<svg width="44" height="44" className="h-6 w-6" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor"/>
+              <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM24.1025 18.0049C24.573 18.0528 24.9472 18.427 24.9951 18.8975C24.9985 18.9312 25 18.9654 25 19V29C25 29.0346 24.9985 29.0688 24.9951 29.1025C24.9472 29.573 24.573 29.9472 24.1025 29.9951C24.0688 29.9985 24.0346 30 24 30H14C13.4823 30 13.0562 29.6067 13.0049 29.1025C13.0015 29.0688 13 29.0346 13 29V19C13 18.4477 13.4477 18 14 18H24C24.0346 18 24.0688 18.0015 24.1025 18.0049ZM16 27H22V21H16V27ZM29 13C29.0346 13 29.0688 13.0015 29.1025 13.0049C29.573 13.0528 29.9472 13.427 29.9951 13.8975C29.9985 13.9312 30 13.9654 30 14V24C30 24.5523 29.5523 25 29 25H28C27.4477 25 27 24.5523 27 24V16H19C18.4477 16 18 15.5523 18 15V14C18 13.4477 18.4477 13 19 13H29Z" fill="currentColor"/>
+              </svg>              
+              }
           >
             {/* Templates Section */}
-            <div className="relative z-20 mx-4 md:mx-6 lg:mx-8 bg-white/50 dark:bg-slate-950/50 shadow backdrop-blur-sm border-t border-gray-200/50 dark:border-gray-800/50 rounded-t-4xl overflow-hidden mt-8 md:mt-12 lg:mt-16">
-              <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">templates</h2>
-                </div>
-                {templatesError && (
-                  <div className="mb-4 text-red-600 dark:text-red-400">{templatesError}</div>
-                )}
-                {templatesLoading ? (
-                  <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-                    <Loader />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {templates.length === 0 ? (
-                      <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                        No templates yet.
-                      </div>
-                    ) : (
-                      templates.map((t) => {
-                        const admin = isAdmin(user)
-                        const isEditing = editingTemplateId === t.id
-                        return (
-                          <div key={t.id} className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200">
-                            <div className="mb-2">
-                              {isEditing ? (
-                                <div className="flex items-center gap-2">
-                                  <TextInput
-                                    type="text"
-                                    value={editingTemplateName}
-                                    onChange={(e) => setEditingTemplateName(e.target.value)}
-                                    size="md"
-                                    className="flex-1"
-                                    maxLength={100}
-                                  />
-                                  <IconButton
-                                    variant="primary"
-                                    aria-label="Save title"
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      try {
-                                        setEditingTemplateLoading(true)
-                                        const updated = await templateStorage.updateTemplate(t.id, { name: editingTemplateName, description: editingTemplateDescription })
-                                        setTemplates(prev => prev.map(p => p.id === t.id ? updated : p))
-                                        setEditingTemplateId(null)
-                                        setEditingTemplateName('')
-                                        setEditingTemplateDescription('')
-                                      } catch (err) {
-                                        alert('Failed to update template')
-                                      } finally {
-                                        setEditingTemplateLoading(false)
-                                      }
-                                    }}
-                                  >
-                                    <CheckIcon className="w-4 h-4" />
-                                  </IconButton>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 group">
-                                  <h3
-                                    className="text-xl font-thin text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                                  >
-                                    {t.name}
-                                  </h3>
-                                  <IconButton
-                                    variant="primaryGhost"
-                                    aria-label="Edit title"
-                                    onClick={(e) => { e.stopPropagation(); setEditingTemplateId(t.id); setEditingTemplateName(t.name || ''); setEditingTemplateDescription(t.description || '') }}
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-                                  >
-                                    <PencilIcon className="w-4 h-4" />
-                                  </IconButton>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-6 text-sm text-gray-500 dark:text-gray-400 mb-2">
-                              <div className="flex items-center gap-1">
-                                <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.nodeCount}</span>
-                                <span className="font-medium">nodes</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-200 dark:border-none rounded-full text-primary-500 dark:text-primary-200">{t.edgeCount}</span>
-                                <span className="font-medium">connections</span>
-                              </div>
-                            </div>
-                            <div className="mt-3 flex justify-end gap-2">
+            <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10 min-h-screen">
 
-                              <>
-                                {admin && (
-                                  <Button
-                                    variant="secondaryGhost"
-                                    size="small"
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      try {
-                                        const { boardStorage } = await import('../features/storage/storage')
-                                        const id = await boardStorage.saveBoard(t.name, t.data)
-                                        // Persist mapping so autosave updates the template
-                                        try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
-                                        const newBoard = await boardStorage.loadBoard(id)
-                                        if (newBoard) {
-                                          onOpenBoard(newBoard, undefined)
-                                        } else if (typeof window !== 'undefined') {
-                                          window.location.href = `/board/${id}`
-                                        }
-                                      } catch (err) {
-                                        alert('Failed to open template for editing')
-                                      }
-                                    }}
-                                  >
-                                    Edit
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="primary"
-                                  size="small"
-                                  onClick={async (e) => {
-                                    e.stopPropagation()
-                                    try {
-                                      const newName = `${t.name} (copy)`
-                                      const { boardStorage } = await import('../features/storage/storage')
-                                      const id = await boardStorage.saveBoard(newName, t.data)
-                                      const newBoard = await boardStorage.loadBoard(id)
-                                      if (newBoard) {
-                                        onOpenBoard(newBoard, undefined)
-                                      } else if (typeof window !== 'undefined') {
-                                        window.location.href = `/board/${id}`
-                                      }
-                                    } catch (e) {
-                                      alert('Failed to use template')
-                                    }
-                                  }}
-                                >
-                                  Use
-                                </Button>
-                              </>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                )}
-              </div>
+              {templatesError && (
+                <div className="mb-4 text-red-600 dark:text-red-400">{templatesError}</div>
+              )}
+              {templatesLoading ? (
+                <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+                  <Loader />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+                  {templates.length === 0 ? (
+                    <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+                      No templates yet.
+                    </div>
+                  ) : (
+                    templates.map((t) => {
+                      const admin = isAdmin(user)
+                      const footer = (
+                        <>
+                          {admin && (
+                            <Button
+                              variant="secondaryGhost"
+                              size="small"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                try {
+                                  const { boardStorage } = await import('../features/storage/storage')
+                                  const id = await boardStorage.saveBoard(t.name, t.data)
+                                  try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
+                                  const newBoard = await boardStorage.loadBoard(id)
+                                  if (newBoard) {
+                                    onOpenBoard(newBoard, undefined)
+                                  } else if (typeof window !== 'undefined') {
+                                    window.location.href = `/board/${id}`
+                                  }
+                                } catch (err) {
+                                  alert('Failed to open template for editing')
+                                }
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                const newName = `${t.name} (copy)`
+                                const { boardStorage } = await import('../features/storage/storage')
+                                const id = await boardStorage.saveBoard(newName, t.data)
+                                const newBoard = await boardStorage.loadBoard(id)
+                                if (newBoard) {
+                                  onOpenBoard(newBoard, undefined)
+                                } else if (typeof window !== 'undefined') {
+                                  window.location.href = `/board/${id}`
+                                }
+                              } catch (e) {
+                                alert('Failed to use template')
+                              }
+                            }}
+                          >
+                            Use
+                          </Button>
+                        </>
+                      )
+                      return (
+                        <BoardCard
+                          key={t.id}
+                          id={t.id}
+                          name={t.name}
+                          nodeCount={t.nodeCount}
+                          edgeCount={t.edgeCount}
+                          onLoad={async () => {
+                            try {
+                              const newName = `${t.name} (copy)`
+                              const { boardStorage } = await import('../features/storage/storage')
+                              const id = await boardStorage.saveBoard(newName, t.data)
+                              const newBoard = await boardStorage.loadBoard(id)
+                              if (newBoard) {
+                                onOpenBoard(newBoard, undefined)
+                              } else if (typeof window !== 'undefined') {
+                                window.location.href = `/board/${id}`
+                              }
+                            } catch (e) {
+                              alert('Failed to use template')
+                            }
+                          }}
+                          onRename={admin ? async (newName) => {
+                            try {
+                              const updated = await templateStorage.updateTemplate(t.id, { name: newName })
+                              setTemplates(prev => prev.map(p => p.id === t.id ? updated : p))
+                            } catch {
+                              alert('Failed to rename template')
+                            }
+                          } : undefined}
+                          enableSharing={false}
+                          footerActions={footer}
+                        />
+                      )
+                    })
+                  )}
+                </div>
+              )}
             </div>
           </Tab>
-          
+
           {/* TAB 3 */}
           <Tab
             label="Settings"
             icon={<Gear size={20} weight="duotone" />}
           >
-            <p>Manage your board preferences and options here.</p>
+            <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10 min-h-screen">
+              <div className="flex flex-col gap-4">
+                <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">Settings</h2>
+              </div>
+            </div>
           </Tab>
         </Tabs>
 

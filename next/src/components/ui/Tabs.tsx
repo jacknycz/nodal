@@ -50,15 +50,15 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
   return (
     <div className="w-full">
       {/* Tab headers */}
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="flex gap-2 border-b border-gray-200/50 dark:border-primary-700/50">
         {tabs.map((tab: any, idx) => (
           <button
             key={idx}
             onClick={() => setActive(idx)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-t-xl text-sm font-medium transition-colors ${
+            className={`flex cursor-pointer items-center gap-2 px-4 py-3 rounded-t-xl text-base font-fredoka font-medium transition-colors ${
               active === idx
-                ? (tab.props.activeHeaderClassName || "bg-white text-slate-900")
-                : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700")
+                ? (tab.props.activeHeaderClassName || "text-slate-900 dark:text-gray-100 border-b-2 border-primary-500")
+                : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent")
             }`}
           >
             {tab.props.icon && <span className="text-lg">{tab.props.icon}</span>}
