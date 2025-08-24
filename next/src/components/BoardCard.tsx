@@ -119,7 +119,7 @@ export default function BoardCard({
     <div
       className="group relative 
       shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
-      bg-white dark:bg-slate-700/80 
+      bg-white dark:bg-slate-700/60 dark:hover:bg-slate-700/98
       border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
       onClick={handleCardClick}
     >

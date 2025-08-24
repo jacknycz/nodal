@@ -63,10 +63,10 @@ export default function TaskNode({
   const isFocusedBase = hasFocus ? focusedNodeIds.includes(id) : false
   const isAdjacentToAnchor = Array.isArray(focusAnchorIds) && focusAnchorIds.length > 0
     ? (storeEdges || []).some((e: any) => {
-        const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
-        const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
-        return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
-      })
+      const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
+      const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
+      return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
+    })
     : false
   const isFocused = isFocusedBase || isAdjacentToAnchor
 
@@ -111,7 +111,11 @@ export default function TaskNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 min-w-[220px] max-w-[420px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${borderClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''}`}
+      className={`flex flex-col justify-start text-left p-3 min-w-[220px] max-w-[420px] 
+        bg-white dark:bg-gray-800 
+        border border-transparent rounded-4xl 
+        shadow-sm shadow-gray-400/20 dark:shadow-none group 
+        ${glowClass} ${borderClass} ${isFocused ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50' : ''}`}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -143,6 +147,7 @@ export default function TaskNode({
             onChange={(checked) => handleToggleCompleted(checked)}
             disabled={isLocked && !lockedByMe}
             size="xl"
+            className="flex-none"
           />
           <TextInput
             id={`task-${id}`}
@@ -155,6 +160,20 @@ export default function TaskNode({
             fullWidth
             className={`${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
           />
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <IconButton
+              variant="danger"
+              size="sm"
+              aria-label="Delete task"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowDeleteModal(true)
+              }}
+              disabled={isLocked && !lockedByMe}
+            >
+              <Trash size={14} weight="duotone" />
+            </IconButton>
+          </div>
           {(isLocked) && (
             <div className="flex items-center gap-1 text-[10px] ml-1">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -164,21 +183,6 @@ export default function TaskNode({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex w-full items-end justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete task"
-          onClick={(e) => {
-            e.stopPropagation()
-            setShowDeleteModal(true)
-          }}
-          disabled={isLocked && !lockedByMe}
-        >
-          <Trash size={14} weight="duotone" />
-        </IconButton>
       </div>
 
       <Modal

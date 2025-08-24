@@ -535,7 +535,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         </Tabs>
         
         {/* SIDEBAR */}
-        <div className="w-96 -mt-8 min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 p-8 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-16 self-start z-30">
+        <div className="w-96 -mt-8 min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-1 self-start z-30">
           <div className="flex flex-none justify-end">
             <Button
               onClick={handleNewBoardClick}
