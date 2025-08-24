@@ -164,7 +164,7 @@ export default function BoardCard({
           ) : (
             <div className="flex items-center gap-2 group">
               <h3
-                className="text-xl font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="text-xl font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 onClick={(e) => { if (!onRename) return; e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
               >
                 {newName}

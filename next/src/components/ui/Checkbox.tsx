@@ -3,6 +3,7 @@ import clsx from 'clsx'
 
 export type CheckboxSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl'
 export type CheckboxVariant = 'default' | 'unstyled'
+export type CheckboxShape = 'rounded' | 'circle'
 
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange' | 'type'> {
   label?: string
@@ -10,6 +11,7 @@ interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>
   error?: string
   size?: CheckboxSize
   variant?: CheckboxVariant
+  shape?: CheckboxShape
   fullWidth?: boolean
   indeterminate?: boolean
   checked?: boolean
@@ -25,6 +27,8 @@ const boxSize: Record<CheckboxSize, string> = {
   sm: 'h-4 w-4',
   md: 'h-5 w-5',
   lg: 'h-6 w-6',
+  xl: 'h-8 w-8',
+  xxl: 'h-10 w-10',
 }
 
 const iconSize: Record<CheckboxSize, string> = {
@@ -43,6 +47,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       error,
       size = 'md',
       variant = 'default',
+      shape = 'rounded',
       fullWidth = false,
       indeterminate = false,
       disabled = false,
@@ -75,11 +80,12 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     const control = (
       <span
         className={clsx(
-          'relative inline-flex items-center justify-center border rounded transition-colors select-none',
+          'relative inline-flex items-center justify-center border transition-colors select-none',
+          shape === 'rounded' ? 'rounded' : 'rounded-full',
           boxSize[size],
           variant === 'default' && [
             'border-gray-300 bg-white text-white peer-focus:ring-2 peer-focus:ring-primary-500',
-            'dark:border-primary-800 dark:bg-gray-900',
+            'dark:border-primary-500/70 dark:hover:border-primary-500 dark:bg-gray-900',
             // Checked state visuals (also affects children via arbitrary selector)
             'peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20',
             'peer-checked:[&>svg.check]:opacity-100',

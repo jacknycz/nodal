@@ -93,7 +93,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             onChange={handleChange}
             className={clsx(
               'peer w-full h-full bg-transparent outline-none appearance-none cursor-pointer',
-              'text-gray-700 dark:text-white font-normal font-fredoka',
+              'text-gray-700 dark:text-white',
               leftIcon && 'pl-9',
               rightIcon && 'pr-9',
               'px-3',

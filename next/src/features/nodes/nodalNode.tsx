@@ -227,7 +227,7 @@ export default function NodalNode({
 
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-base font-medium text-gray-900 dark:text-white">
             {displayTitle}
           </h3>
           {(isLocked || showEditModal) && (

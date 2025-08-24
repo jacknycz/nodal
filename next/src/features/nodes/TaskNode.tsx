@@ -146,8 +146,9 @@ export default function TaskNode({
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}
             disabled={isLocked && !lockedByMe}
-            size="xl"
+            size="lg"
             className="flex-none"
+            shape="circle"
           />
           <TextInput
             id={`task-${id}`}

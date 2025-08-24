@@ -15,9 +15,9 @@ interface TextInputProps
 }
 
 const sizeClasses: Record<TextInputSize, string> = {
-  sm: "h-[40px] text-sm",
-  md: "h-[48px] text-sm",
-  lg: "h-[52px] text-base",
+  sm: "h-[32px] text-sm",
+  md: "h-[40px] text-sm",
+  lg: "h-[48px] text-base",
 };
 
 const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(

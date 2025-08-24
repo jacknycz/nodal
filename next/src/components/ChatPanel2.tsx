@@ -299,7 +299,7 @@ export default function ChatPanel2() {
         )}
 
         {/* Input */}
-        <div className="p-4">
+        <div className="p-2">
           <div className="flex mb-2 justify-center">
             <Select
               size="xs"
