@@ -11,7 +11,7 @@ import { useSupabaseUser } from '../features/auth/authUtils'
 import Modal from './ui/Modal'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
-import { ClockClockwise, Graph, TreeStructure, Lightbulb, Gear } from '@phosphor-icons/react/dist/ssr'
+import { ClockClockwise, Graph, TreeStructure, Lightbulb, Gear, Users } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
 import BoardCard from './BoardCard'
@@ -326,17 +326,17 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       {/* Scrollable Board/Sidebar Section */}
       <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 
       shadow dark:shadow-2xl dark:shadow-gray-950/70 
-      backdrop-blur-sm bg-white/50 dark:bg-slate-950/70
-      border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl overflow-hidden">
+      backdrop-blur-sm bg-white/70 dark:bg-slate-950/70
+      border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl">
 
         <Tabs>
 
           {/* TAB 1 */}
           <Tab
             label="Boards"
-            icon={<svg width="44" height="44" className="ml-2 w-6 h-6" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+            icon={<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 ml-2">
               <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
-              <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM23 16C23.5523 16 24 16.4477 24 17V20H27C27.5523 20 28 20.4477 28 21V23C28 23.5523 27.5523 24 27 24H24V27C24 27.5523 23.5523 28 23 28H21C20.4477 28 20 27.5523 20 27V24H17C16.4477 24 16 23.5523 16 23V21C16 20.4477 16.4477 20 17 20H20V17C20 16.4477 20.4477 16 21 16H23ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
+              <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM16 28C16.5523 28 17 28.4477 17 29V31C17 31.5523 16.5523 32 16 32H10C9.44772 32 9 31.5523 9 31V29C9 28.4477 9.44772 28 10 28H16ZM34 28C34.5523 28 35 28.4477 35 29V31C35 31.5523 34.5523 32 34 32H28C27.4477 32 27 31.5523 27 31V29C27 28.4477 27.4477 28 28 28H34ZM25 20C25.5523 20 26 20.4477 26 21V23C26 23.5523 25.5523 24 25 24H19C18.4477 24 18 23.5523 18 23V21C18 20.4477 18.4477 20 19 20H25ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
             </svg>}
             // headerClassName="bg-white text-slate-900"
             // activeHeaderClassName="bg-white text-slate-900"
@@ -404,7 +404,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
           {/* TAB 2 */}
           <Tab
-            label="Ideas"
+            label="Templates"
             icon={<svg width="44" height="44" className="h-6 w-6" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor"/>
               <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM24.1025 18.0049C24.573 18.0528 24.9472 18.427 24.9951 18.8975C24.9985 18.9312 25 18.9654 25 19V29C25 29.0346 24.9985 29.0688 24.9951 29.1025C24.9472 29.573 24.573 29.9472 24.1025 29.9951C24.0688 29.9985 24.0346 30 24 30H14C13.4823 30 13.0562 29.6067 13.0049 29.1025C13.0015 29.0688 13 29.0346 13 29V19C13 18.4477 13.4477 18 14 18H24C24.0346 18 24.0688 18.0015 24.1025 18.0049ZM16 27H22V21H16V27ZM29 13C29.0346 13 29.0688 13.0015 29.1025 13.0049C29.573 13.0528 29.9472 13.427 29.9951 13.8975C29.9985 13.9312 30 13.9654 30 14V24C30 24.5523 29.5523 25 29 25H28C27.4477 25 27 24.5523 27 24V16H19C18.4477 16 18 15.5523 18 15V14C18 13.4477 18.4477 13 19 13H29Z" fill="currentColor"/>
@@ -523,8 +523,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
           {/* TAB 3 */}
           <Tab
-            label="Settings"
-            icon={<Gear size={20} weight="duotone" />}
+            label="Community"
+            icon={<Users size={44} className="h-6 w-6" weight="duotone" />}
           >
             <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10 min-h-screen">
               <div className="flex flex-col gap-4">
@@ -533,8 +533,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </div>
           </Tab>
         </Tabs>
-
-        <div className="w-96 bg-white dark:bg-slate-950/90 p-8">
+        
+        {/* SIDEBAR */}
+        <div className="w-96 -mt-8 rounded-t-4xl bg-white dark:bg-slate-950/90 p-8 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70">
           <div className="flex flex-none justify-end">
             <Button
               onClick={handleNewBoardClick}

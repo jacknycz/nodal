@@ -117,7 +117,10 @@ export default function BoardCard({
 
   return (
     <div
-      className="group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl border-transparent bg-white/80 dark:bg-gray-950/70 dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
+      className="group relative 
+      shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
+      bg-white dark:bg-slate-700/80 
+      border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
       onClick={handleCardClick}
     >
       {typeof isPinned !== 'undefined' && onTogglePin && (

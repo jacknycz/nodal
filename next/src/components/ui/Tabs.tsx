@@ -50,14 +50,14 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
   return (
     <div className="w-full">
       {/* Tab headers */}
-      <div className="flex gap-2 border-b border-gray-200/50 dark:border-primary-700/50">
+      <div className="flex gap-2 border-b border-gray-200/50 dark:border-primary-700/20 dark:bg-slate-950/80 rounded-tl-4xl">
         {tabs.map((tab: any, idx) => (
           <button
             key={idx}
             onClick={() => setActive(idx)}
             className={`flex cursor-pointer items-center gap-2 px-4 py-3 rounded-t-xl text-base font-fredoka font-medium transition-colors ${
               active === idx
-                ? (tab.props.activeHeaderClassName || "text-slate-900 dark:text-gray-100 border-b-2 border-primary-500")
+                ? (tab.props.activeHeaderClassName || "text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")
                 : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent")
             }`}
           >
