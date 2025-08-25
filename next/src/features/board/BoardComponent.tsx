@@ -196,9 +196,7 @@ function BoardContent({
           last_updated: new Date().toISOString(),
         }).then(({ error, data }) => {
           if (error) {
-            // console.error('[Cursor] Upsert error:', error)
           } else {
-            // console.log('[Cursor] Upsert success:', data)
           }
         })
       }
@@ -834,7 +832,6 @@ function BoardContent({
               if (generatedEdges.length > 0) setEdges(generatedEdges)
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
               await boardStorage.updateBoard(boardId, boardData)
-              console.log('✅ Intelligently placed starter nodes (fan) saved successfully')
             } else {
               // Fallback to simple fan around topic
               const count = nodesToPlace.length
@@ -854,7 +851,6 @@ function BoardContent({
             }
             
           } catch (placementError) {
-            console.error('Placement system error, using fallback:', placementError)
             // Fallback: fan around topic
             const count = nodeDataArray.length
             const radius = 250

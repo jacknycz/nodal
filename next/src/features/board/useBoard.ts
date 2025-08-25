@@ -46,7 +46,6 @@ export function useBoard() {
         y: -viewport.y / viewport.zoom + (window.innerHeight / 2) / viewport.zoom
       }
     } catch (error) {
-      console.warn('Failed to get viewport center, using fallback:', error)
       // Ultimate fallback
       return { x: 400, y: 300 }
     }

@@ -118,13 +118,10 @@ function applyClusterSpacing(
   const clusters = detectNodeClusters(nodes, edges)
   
   if (clusters.length <= 1) {
-    console.log('Single cluster detected, no spacing adjustment needed')
     return nodes
   }
   
-  console.log(`🔍 Detected ${clusters.length} node clusters, applying spacing of ${spacing}px...`)
   clusters.forEach((cluster, i) => {
-    console.log(`  Cluster ${i + 1}: ${cluster.size} nodes, bounds:`, cluster.bounds)
   })
   
   // Sort clusters by size (largest first) for better arrangement
@@ -149,7 +146,7 @@ function applyClusterSpacing(
     const offsetX = currentX - cluster.bounds.minX
     const offsetY = center.y - cluster.bounds.minY - clusterHeight / 2
     
-    console.log(`  Moving cluster ${index + 1} by offset (${Math.round(offsetX)}, ${Math.round(offsetY)})`)
+    
     
     // Update positions for all nodes in this cluster
     cluster.nodes.forEach(node => {
@@ -167,13 +164,12 @@ function applyClusterSpacing(
   const result = nodes.map(node => {
     const update = updates.get(node.id)
     if (update) {
-      console.log(`  📍 Node ${node.id}: (${Math.round(node.position.x)}, ${Math.round(node.position.y)}) → (${Math.round(update.x)}, ${Math.round(update.y)})`)
       return { ...node, position: update }
     }
     return node
   })
   
-  console.log(`✅ Applied cluster spacing to ${updates.size} nodes`)
+  
   return result
 }
 
@@ -324,36 +320,24 @@ export function usePlacement() {
 
     const result = await reorganizeBoard(nodesToPlace, context, algorithm)
     
-    console.log('Reorganization result:', result)
-    console.log('Existing nodes before update:', existingNodes.length)
-    console.log('Placements returned:', result.placements.length)
-    console.log('First few placements:', result.placements.slice(0, 3).map(p => ({ id: p.node.id, position: p.position })))
-    console.log('First few existing nodes:', existingNodes.slice(0, 3).map(n => ({ id: n.id, position: n.position })))
-    console.log('All placement IDs:', result.placements.map(p => p.node.id))
-    console.log('All existing node IDs:', existingNodes.map(n => n.id))
+    
     
     // Apply the new positions to the actual board nodes
     if (result.success && result.placements.length > 0) {
       const updatedNodes = existingNodes.map(node => {
         const placement = result.placements.find(p => p.node.id === node.id)
-        console.log(`Node ${node.id}: placement found = ${!!placement}`)
         if (placement) {
-          console.log(`Moving node ${node.id} from ${JSON.stringify(node.position)} to ${JSON.stringify(placement.position)}`)
           return {
             ...node,
             position: placement.position
           }
-        } else {
-          console.log(`No placement found for node ${node.id}`)
         }
         return node
       })
       
-      console.log('Updated nodes:', updatedNodes.length)
       
       // Apply cluster spacing if there are multiple disconnected groups
       // TEMPORARILY DISABLED FOR DEBUGGING
-      console.log('🚧 Cluster spacing temporarily disabled for debugging')
       const finalNodes = updatedNodes
       
       // TODO: Re-enable cluster spacing after fixing the grid layout issue
@@ -367,7 +351,6 @@ export function usePlacement() {
       // Update the board with new positions
       setNodes(finalNodes)
     } else {
-      console.log('No placements to apply or result failed')
     }
     
     return result
@@ -395,7 +378,6 @@ export function usePlacement() {
         y: -viewport.y / viewport.zoom + (window.innerHeight / 2) / viewport.zoom
       }
     } catch (error) {
-      console.warn('Failed to get viewport center:', error)
       return { x: 400, y: 300 }
     }
   }, [getViewport, screenToFlowPosition])
@@ -407,7 +389,6 @@ export function usePlacement() {
     try {
       return screenToFlowPosition(screenPosition)
     } catch (error) {
-      console.warn('Failed to convert screen to flow position:', error)
       return screenPosition
     }
   }, [screenToFlowPosition])

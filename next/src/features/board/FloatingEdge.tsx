@@ -64,8 +64,7 @@ export default function FloatingEdge({
   const centerX = (sourceX + targetX) / 2
   const centerY = (sourceY + targetY) / 2
 
-  // Debug logging
-  // console.log('FloatingEdge render:', { id, isHovered, selected, onEdgeDelete: !!onEdgeDelete })
+  
 
   // Dynamic styling based on edge type and state
   const getEdgeStyle = () => {
@@ -106,7 +105,6 @@ export default function FloatingEdge({
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log('Delete button clicked for edge:', id)
     onEdgeDelete?.(id)
   }
 
@@ -114,14 +112,12 @@ export default function FloatingEdge({
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
     }
-    console.log('Edge hover enter:', id)
     setIsHovered(true)
   }
 
   const handleMouseLeave = () => {
     // Add a small delay before hiding to prevent flicker
     hoverTimeoutRef.current = setTimeout(() => {
-      console.log('Edge hover leave:', id)
       setIsHovered(false)
     }, 100) // 100ms delay
   }

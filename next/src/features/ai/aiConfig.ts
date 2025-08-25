@@ -146,21 +146,21 @@ export class AIConfigManager {
   // Configuration Management
   async loadConfig(): Promise<AIConfig | null> {
     try {
-      console.log('[aiConfig] loadConfig() called')
+      // console.log('[aiConfig] loadConfig() called')
       
       // Get API key from environment variables first (client-side)
       let apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY
-      console.log('[aiConfig] Environment API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND')
+      // console.log('[aiConfig] Environment API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND')
       
       // Fallback to stored API key if env var not available
       if (!apiKey) {
         apiKey = this.getStoredAPIKey()
-        console.log('[aiConfig] localStorage API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND')
+        // console.log('[aiConfig] localStorage API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT FOUND')
       }
       
       // If we have an API key, create the config
       if (apiKey && validateAPIKey(apiKey)) {
-        console.log('[aiConfig] API key is valid, creating config')
+        // console.log('[aiConfig] API key is valid, creating config')
         // Try to load saved preferences from localStorage
         const saved = localStorage.getItem(STORAGE_KEYS.AI_CONFIG)
         const userPreferences = saved ? JSON.parse(saved) : {}
@@ -173,24 +173,24 @@ export class AIConfigManager {
 
         const validation = validateAIConfig(fullConfig)
         if (validation.valid) {
-          console.log('[aiConfig] Config validation passed, setting config')
+          // console.log('[aiConfig] Config validation passed, setting config')
           this.config = fullConfig
           this.notifyListeners()
           return this.config
         } else {
-          console.warn('[aiConfig] Invalid AI config found, using defaults:', validation.errors)
+          // console.warn('[aiConfig] Invalid AI config found, using defaults:', validation.errors)
           // Even if validation fails, try with just the API key
           this.config = {
             ...DEFAULT_AI_CONFIG,
             apiKey
           }
-          console.log('[aiConfig] Using fallback config with API key')
+          // console.log('[aiConfig] Using fallback config with API key')
           this.notifyListeners()
           return this.config
         }
       }
 
-      console.log('[aiConfig] No valid API key found, config is null')
+      // console.log('[aiConfig] No valid API key found, config is null')
       this.config = null
       this.notifyListeners()
       return null

@@ -105,7 +105,6 @@ export class PlacementEngine {
       }
       
     } catch (error) {
-      console.error('Placement engine error:', error)
       return this.createErrorResult([`Placement failed: ${error.message}`], startTime)
     }
   }
@@ -327,7 +326,6 @@ export class PlacementEngine {
         return calculateRadialLayout(nodes, context, options as any)
         
       default:
-        console.warn(`Unknown algorithm ${algorithm}, falling back to grid`)
         return calculateGridLayout(nodes, context)
     }
   }

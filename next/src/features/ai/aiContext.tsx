@@ -338,13 +338,13 @@ export function AIProvider({ children }: AIProviderProps) {
   useEffect(() => {
     const loadInitialConfig = async () => {
       try {
-        console.log('[aiContext] Loading initial AI configuration...')
+        // console.log('[aiContext] Loading initial AI configuration...')
         const savedConfig = await configManager.loadConfig()
         if (savedConfig) {
-          console.log('[aiContext] Found saved config, attempting to initialize AI service...')
+          // console.log('[aiContext] Found saved config, attempting to initialize AI service...')
           const success = await initialize(savedConfig.apiKey)
           if (success) {
-            console.log('[aiContext] AI service initialized successfully!')
+            // console.log('[aiContext] AI service initialized successfully!')
           } else {
             console.warn('[aiContext] Failed to initialize AI service with saved config - clearing invalid API key')
             // Clear invalid API key to prevent repeated failures
