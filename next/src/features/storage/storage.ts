@@ -11,6 +11,10 @@ interface BoardData {
     zoom: number
   }
   topic?: string | null // Add topic to the board data type
+  meta?: {
+    taskSummary?: Array<{ id: string; title: string; completed?: boolean }>
+    tasksIncompleteCount?: number
+  }
 }
 
 interface SavedBoard {

@@ -152,8 +152,6 @@ function BoardContent({
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
-  const [thumbnailLoading, setThumbnailLoading] = useState(false);
-  const prevSaveStatus = useRef(saveStatus);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -586,102 +584,9 @@ function BoardContent({
     }
   }, [])
 
-  // Add screenshot capture function (current Canvas API implementation)
-  const captureBoardScreenshot = async (boardId: string) => {
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
+  // Thumbnails removed
 
-      canvas.width = 1200;
-      canvas.height = 800;
-
-      ctx.fillStyle = theme === 'dark' ? '#1f2937' : '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
-      ctx.font = 'bold 24px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText(currentBoardName || 'Untitled Board', canvas.width / 2, 40);
-
-      ctx.font = '16px system-ui';
-      ctx.fillText(`${nodes.length} nodes, ${edges.length} connections`, canvas.width / 2, 70);
-
-      const nodeRadius = 8;
-      const spacing = 100;
-      const startX = 100;
-      const startY = 150;
-
-      nodes.forEach((node, index) => {
-        const x = startX + (index % 8) * spacing;
-        const y = startY + Math.floor(index / 8) * spacing;
-
-        ctx.fillStyle = theme === 'dark' ? '#3b82f6' : '#2563eb';
-        ctx.beginPath();
-        ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.fillStyle = theme === 'dark' ? '#ffffff' : '#000000';
-        ctx.font = '12px system-ui';
-        ctx.textAlign = 'center';
-        const label = (node.data?.title || node.data?.label || `Node ${index + 1}`) as string;
-        ctx.fillText(label.substring(0, 15), x, y + 25);
-      });
-
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          resolve(blob!);
-        }, 'image/jpeg', 0.8);
-      });
-
-      // Upload directly to Supabase storage - save at root path to match BoardRoom expectations
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        // console.error('User not authenticated for thumbnail upload');
-        return;
-      }
-
-      const fileName = `thumbnail-${boardId}.jpg`;
-      // Save at root path instead of user subfolder to match BoardRoom expectations
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('thumbnails')
-        .upload(fileName, blob, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
-
-      if (uploadError) {
-        // console.error('Supabase upload error:', uploadError);
-        // console.error('Upload details:', {
-        //   bucket: 'thumbnails',
-        //   path: fileName,
-        //   userId: user.id,
-        //   boardId: boardId,
-        //   fileName: fileName
-        // });
-        return;
-      }
-
-      // console.log('Thumbnail saved successfully to Supabase storage');
-    } catch (error) {
-      // console.error('Screenshot capture failed:', error);
-    }
-  };
-
-  useEffect(() => {
-    // Only trigger on transition from 'saving' to 'saved'
-    if (prevSaveStatus.current === 'saving' && saveStatus === 'saved' && localBoardIdRef.current) {
-      // Trigger thumbnail generation
-      setThumbnailLoading(true);
-      // Dispatch event for BoardRoom
-      window.dispatchEvent(new CustomEvent('thumbnail-generation', { detail: localBoardIdRef.current }));
-      
-      // Capture and save thumbnail
-      captureBoardScreenshot(localBoardIdRef.current);
-      
-      setThumbnailLoading(false);
-    }
-    prevSaveStatus.current = saveStatus;
-  }, [saveStatus]);
+  // Thumbnails removed: no generation after save
   
   // Board utilities
   // Generate starter nodes using AI

@@ -43,9 +43,7 @@ function BoardCard({
   footerActions,
 }: BoardCardProps) {
   const [newName, setNewName] = useState(name)
-  const [imgError, setImgError] = useState(false)
-  const [thumbnailUrl, setThumbnailUrl] = useState(initialThumb || `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${id}.jpg`)
-  const [loading, setLoading] = useState(false)
+  
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [originalName, setOriginalName] = useState(name)
   const titleInputRef = useRef<HTMLInputElement | null>(null)
@@ -57,22 +55,7 @@ function BoardCard({
 
   useEffect(() => { setNewName(name) }, [name])
 
-  // Optional thumbnail refresh hook via window event
-  useEffect(() => {
-    if (!loading) return
-    const timeout = setTimeout(() => {
-      const newUrl = `https://xghncimqbauvtytdfkkx.supabase.co/storage/v1/object/public/thumbnails/thumbnail-${id}.jpg?${Date.now()}`
-      setThumbnailUrl(newUrl)
-      setLoading(false)
-    }, 2000)
-    return () => clearTimeout(timeout)
-  }, [loading, id])
-
-  useEffect(() => {
-    const handler = (e: CustomEvent) => { if (e.detail === id) setLoading(true) }
-    window.addEventListener('thumbnail-generation', handler as EventListener)
-    return () => window.removeEventListener('thumbnail-generation', handler as EventListener)
-  }, [id])
+  // Thumbnails removed
 
   const commitTitleEdit = useCallback(() => {
     const trimmed = newName.trim()
@@ -205,31 +188,13 @@ function BoardCard({
           )}
         </div>
 
-        {/* Thumbnail */}
+        {/* Thumbnail removed: show initials only */}
         <div className="flex flex-col justify-items-start">
-          {loading && (
-            <div className="flex justify-center w-16 h-16 bg-gray-100 dark:bg-gray-900 rounded animate-pulse">
-              <span className="text-gray-400 text-xs">Generating...</span>
-            </div>
-          )}
-          {!loading && !imgError && thumbnailUrl ? (
-            <div className="w-16 h-16 rounded-xl shadow overflow-hidden bg-gray-100 dark:bg-gray-900">
-              <img
-                src={thumbnailUrl}
-                alt="Board thumbnail"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                decoding="async"
-                onError={() => { setImgError(true) }}
-              />
-            </div>
-          ) : (
-            <div className="w-16 h-16 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none">
-                {(newName || '').trim().split(/\s+/).slice(0, 2).map(s => (s[0] ? s[0].toUpperCase() : '')).join('') || 'NB'}
-              </span>
-            </div>
-          )}
+          <div className="w-16 h-16 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none">
+              {(newName || '').trim().split(/\s+/).slice(0, 2).map(s => (s[0] ? s[0].toUpperCase() : '')).join('') || 'NB'}
+            </span>
+          </div>
         </div>
       </div>
 

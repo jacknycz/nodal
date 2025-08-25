@@ -35,31 +35,7 @@ export default function BoardsTab({
   onDelete,
   togglePin,
 }: BoardsTabProps) {
-  const [visibleCount, setVisibleCount] = React.useState(() => Math.min(sortedBoards.length, 24))
-
-  React.useEffect(() => {
-    setVisibleCount(Math.min(sortedBoards.length, 24))
-    let cancelled = false
-    const pump = () => {
-      if (cancelled) return
-      if (visibleCount >= sortedBoards.length) return
-      setVisibleCount((c) => Math.min(sortedBoards.length, c + 24))
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        ;(window as any).requestIdleCallback(pump, { timeout: 1200 })
-      } else {
-        setTimeout(pump, 0)
-      }
-    }
-    if (sortedBoards.length > 30) {
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        ;(window as any).requestIdleCallback(pump, { timeout: 1200 })
-      } else {
-        setTimeout(pump, 0)
-      }
-    }
-    return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sortedBoards])
+  // Render all boards at once to avoid post-load updates that can cause flashes
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
@@ -99,7 +75,7 @@ export default function BoardsTab({
               No boards found. Create a new board to get started!
             </div>
           ) : (
-            (sortedBoards.slice(0, visibleCount)).map((board: any) => (
+            (sortedBoards).map((board: any) => (
               <BoardCard
                 key={board.id}
                 id={board.id}

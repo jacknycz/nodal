@@ -45,8 +45,17 @@ class SupabaseStorage {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
+      // compute lightweight task summary
+      const taskSummary = Array.isArray((data as any).nodes)
+        ? (data as any).nodes
+            .filter((n: any) => n?.type === 'task')
+            .map((n: any) => ({ id: n?.id, title: (n?.data?.title || 'Untitled') as string, completed: !!n?.data?.completed }))
+        : []
+      const tasksIncompleteCount = taskSummary.reduce((acc: number, t: any) => acc + (t.completed ? 0 : 1), 0)
+
       const boardData: BoardData = {
-        ...data
+        ...(data as any),
+        meta: { ...(data as any).meta, taskSummary, tasksIncompleteCount },
       }
 
       const savedBoard = {
@@ -54,8 +63,8 @@ class SupabaseStorage {
         data: boardData,
         created_at: Date.now(),
         last_modified: Date.now(),
-        node_count: data.nodes.length,
-        edge_count: data.edges.length,
+        node_count: ((data as any).nodes?.length) || 0,
+        edge_count: ((data as any).edges?.length) || 0,
         user_id: user.id,
       }
 
@@ -81,8 +90,15 @@ class SupabaseStorage {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
+      const taskSummary = Array.isArray((data as any).nodes)
+        ? (data as any).nodes
+            .filter((n: any) => n?.type === 'task')
+            .map((n: any) => ({ id: n?.id, title: (n?.data?.title || 'Untitled') as string, completed: !!n?.data?.completed }))
+        : []
+      const tasksIncompleteCount = taskSummary.reduce((acc: number, t: any) => acc + (t.completed ? 0 : 1), 0)
       const boardData: BoardData = {
-        ...data
+        ...(data as any),
+        meta: { ...(data as any).meta, taskSummary, tasksIncompleteCount },
       }
 
       const savedBoard = {
@@ -91,8 +107,8 @@ class SupabaseStorage {
         data: boardData,
         created_at: Date.now(),
         last_modified: Date.now(),
-        node_count: data.nodes.length,
-        edge_count: data.edges.length,
+        node_count: ((data as any).nodes?.length) || 0,
+        edge_count: ((data as any).edges?.length) || 0,
         user_id: user.id,
       }
 
@@ -111,8 +127,15 @@ class SupabaseStorage {
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
     try {
+      const taskSummary = Array.isArray((data as any).nodes)
+        ? (data as any).nodes
+            .filter((n: any) => n?.type === 'task')
+            .map((n: any) => ({ id: n?.id, title: (n?.data?.title || 'Untitled') as string, completed: !!n?.data?.completed }))
+        : []
+      const tasksIncompleteCount = taskSummary.reduce((acc: number, t: any) => acc + (t.completed ? 0 : 1), 0)
       const boardData: BoardData = {
-        ...data
+        ...(data as any),
+        meta: { ...(data as any).meta, taskSummary, tasksIncompleteCount },
       }
 
       const { error } = await supabase
@@ -120,13 +143,13 @@ class SupabaseStorage {
         .update({
           data: boardData,
           last_modified: Date.now(),
-          node_count: data.nodes.length,
-          edge_count: data.edges.length,
+          node_count: ((data as any).nodes?.length) || 0,
+          edge_count: ((data as any).edges?.length) || 0,
         })
         .eq('id', boardId)
 
       if (error) throw error
-      console.log(`Board updated in Supabase successfully`)
+      console.log('Board updated in Supabase successfully')
     } catch (error) {
       console.error('Failed to update board in Supabase:', error)
       throw error

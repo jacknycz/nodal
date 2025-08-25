@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useDeferredValue } from 'react'
+import { useState, useEffect, useDeferredValue, useRef, startTransition } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardSetupModal from './BoardSetupModal'
@@ -14,6 +14,7 @@ import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
 import dynamic from 'next/dynamic'
 import BoardCard from './BoardCard'
+import BoardsTab from './BoardsTab'
 // Gradient background only (no external images)
 
 interface BoardRoomProps {
@@ -23,16 +24,6 @@ interface BoardRoomProps {
 type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
-  const BoardsTab = dynamic(() => import('./BoardsTab'), {
-    ssr: false,
-    loading: () => (
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
-        <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-          <Loader />
-        </div>
-      </div>
-    ),
-  })
   const TemplatesTab = dynamic(() => import('./TemplatesTab'), {
     ssr: false,
     loading: () => (
@@ -56,14 +47,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [templates, setTemplates] = useState<TemplateRecord[]>([])
   const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
+  const templatesRef = useRef<TemplateRecord[] | null>(null)
   const [tasksLoading, setTasksLoading] = useState<boolean>(false)
   const [incompleteTasks, setIncompleteTasks] = useState<Array<{ boardId: string; boardName: string; nodeId: string; title: string }>>([])
+  const incompleteTasksRef = useRef<Array<{ boardId: string; boardName: string; nodeId: string; title: string }> | null>(null)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
 
   const loadBoards = async () => {
     try {
+      // mark start of board load for perf debugging
+      try { performance.mark('loadBoards-start') } catch {}
       setLoading(true)
       const { boardStorage } = await import('../features/storage/storage')
       const loadedBoards = await boardStorage.getAllBoards()
@@ -77,6 +72,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         setSharedBoards([])
       }
       // Stats computed in a separate effect when state settles
+      try { performance.mark('loadBoards-end') } catch {}
+      try { performance.measure('loadBoards', 'loadBoards-start', 'loadBoards-end'); console.log('perf: loadBoards', performance.getEntriesByName('loadBoards')[0]?.duration) } catch {}
     } catch {
       setError('Failed to load boards')
     } finally {
@@ -98,10 +95,26 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   useEffect(() => {
     const loadTemplates = async () => {
       try {
+        try { performance.mark('loadTemplates-start') } catch {}
         setTemplatesLoading(true)
         setTemplatesError(null)
         const list = await templateStorage.getAllTemplates()
-        setTemplates(list)
+        // keep equality guard but also mark perf
+        startTransition(() => {
+          try {
+            const prev = templatesRef.current
+            const same = prev && prev.length === list.length && JSON.stringify(prev) === JSON.stringify(list)
+            if (!same) {
+              setTemplates(list)
+              templatesRef.current = list
+            }
+          } catch {
+            setTemplates(list)
+            templatesRef.current = list
+          }
+        })
+        try { performance.mark('loadTemplates-end') } catch {}
+        try { performance.measure('loadTemplates', 'loadTemplates-start', 'loadTemplates-end'); console.log('perf: loadTemplates', performance.getEntriesByName('loadTemplates')[0]?.duration) } catch {}
       } catch {
         setTemplatesError('Failed to load templates')
       } finally {
@@ -111,34 +124,70 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     loadTemplates()
   }, [])
 
-  // Compute incomplete task nodes across all boards (deferred to idle)
+  // Compute incomplete task nodes across all boards (deferred and chunked to avoid blocking)
   useEffect(() => {
     const computeTasks = async () => {
+      let cancelled = false
+      const waitForIdle = () => new Promise<void>(resolve => {
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          ;(window as any).requestIdleCallback(() => resolve(), { timeout: 1000 })
+        } else {
+          setTimeout(() => resolve(), 50)
+        }
+      })
+
       try {
+        try { performance.mark('computeTasks-start') } catch {}
         setTasksLoading(true)
-        const { boardStorage } = await import('../features/storage/storage')
+        // Use precomputed task summary from board.data.meta if available
         const all: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
-        const results: Array<{ boardId: string; boardName: string; nodeId: string; title: string }> = []
+        const results: Array<{ boardId: string; boardName: string; nodeId: string; title: string } | null> = []
+
         for (const b of all) {
-          try {
-            const full = await boardStorage.loadBoard(b.id)
-            const nodes = full?.data?.nodes || []
-            nodes.forEach((n: any) => {
-              if (n?.type === 'task' && !(n?.data?.completed === true)) {
-                results.push({ boardId: b.id, boardName: b.name, nodeId: n.id, title: n?.data?.title || 'Untitled' })
+          if (cancelled) break
+          await waitForIdle()
+          const summary = (b as any)?.data?.meta?.taskSummary as Array<{ id: string; title: string; completed?: boolean }> | undefined
+          if (Array.isArray(summary)) {
+            for (let i = 0; i < summary.length; i++) {
+              const t = summary[i]
+              if (!t?.completed) {
+                results.push({ boardId: b.id, boardName: b.name, nodeId: t.id, title: t.title || 'Untitled' })
               }
-            })
-          } catch {
-            // ignore board load errors for tasks list
+              if (i % 100 === 0) await waitForIdle()
+            }
+          } else {
+            // Fallback: if no meta present, skip heavy fetch (leave for later refresh)
           }
         }
-        setIncompleteTasks(results)
+
+        if (!cancelled) {
+          startTransition(() => {
+            try {
+              const compact = results.filter(Boolean) as Array<{ boardId: string; boardName: string; nodeId: string; title: string }>
+              const prev = incompleteTasksRef.current
+              const same = prev && prev.length === compact.length && JSON.stringify(prev) === JSON.stringify(compact)
+              if (!same) {
+                setIncompleteTasks(compact)
+                incompleteTasksRef.current = compact
+              }
+            } catch {
+              const compact = results.filter(Boolean) as Array<{ boardId: string; boardName: string; nodeId: string; title: string }>
+              setIncompleteTasks(compact)
+              incompleteTasksRef.current = compact
+            }
+          })
+        }
+
+        try { performance.mark('computeTasks-end') } catch {}
+        try { performance.measure('computeTasks', 'computeTasks-start', 'computeTasks-end'); console.log('perf: computeTasks', performance.getEntriesByName('computeTasks')[0]?.duration) } catch {}
       } catch {
-        setIncompleteTasks([])
+        if (!cancelled) setIncompleteTasks([])
       } finally {
-        setTasksLoading(false)
+        if (!cancelled) setTasksLoading(false)
       }
+      return () => { cancelled = true }
     }
+
     if (loading) return
     let idleId: any
     let timeoutId: any
@@ -270,9 +319,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               <h1 id="welcome-heading" className="mb-4 text-xl md:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
                 <span className="font-normal">welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
               </h1>
-              <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">
-                Pick up where you left off or create something new.
-              </p>
+              <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">Pick up where you left off or create something new.</p>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="relative rounded-4xl px-6 py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">

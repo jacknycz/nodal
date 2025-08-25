@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   console.log('[shared API] boardIds:', boardIds)
   const { data: boards, error: boardError } = await supabase
     .from('boards')
-    .select('id, name, user_id, created_at, last_modified, node_count, edge_count')
+    .select('id, name, user_id, created_at, last_modified, node_count, edge_count, data')
     .in('id', boardIds)
   console.log('[shared API] boards:', boards)
   if (boardError) {
