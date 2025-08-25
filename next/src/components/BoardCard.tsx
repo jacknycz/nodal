@@ -186,17 +186,17 @@ export default function BoardCard({
       <div className="flex space-x-6 items-center">
         <div className="flex flex-col flex-1 w-full items-start">
           {(typeof nodeCount !== 'undefined' || typeof edgeCount !== 'undefined') && (
-            <div className="flex space-x-4 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex space-x-4 font-medium text-gray-500 dark:text-gray-200">
               {typeof nodeCount !== 'undefined' && (
                 <div className="flex items-center gap-1">
-                  <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{nodeCount}</span>
-                  <span className="font-medium font-fredoka text-base">nodes</span>
+                  <span className="flex items-center justify-center w-8 h-8 text-base font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{nodeCount}</span>
+                  <span className="">nodes</span>
                 </div>
               )}
               {typeof edgeCount !== 'undefined' && (
                 <div className="flex items-center gap-1">
-                  <span className="flex items-center justify-center w-8 h-8 text-lg font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{edgeCount}</span>
-                  <span className="font-medium font-fredoka text-base">connections</span>
+                  <span className="flex items-center justify-center w-8 h-8 text-base font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{edgeCount}</span>
+                  <span className="">connections</span>
                 </div>
               )}
             </div>

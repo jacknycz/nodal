@@ -55,7 +55,7 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
           <button
             key={idx}
             onClick={() => setActive(idx)}
-            className={`flex cursor-pointer items-center gap-2 px-4 py-3 rounded-t-xl text-base font-fredoka font-medium transition-colors ${
+            className={`flex cursor-pointer items-center gap-2 px-4 py-3 rounded-t-xl text-lg font-fredoka font-medium transition-colors ${
               active === idx
                 ? (tab.props.activeHeaderClassName || "text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")
                 : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent")
