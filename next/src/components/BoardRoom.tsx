@@ -109,7 +109,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               templatesRef.current = list
             }
           } catch {
-            setTemplates(list)
+        setTemplates(list)
             templatesRef.current = list
           }
         })
@@ -445,7 +445,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             {tasksLoading ? (
               <div className="text-sm text-gray-500 dark:text-gray-400">Loading tasks…</div>
             ) : (
-              <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2">
                 {incompleteTasks.length === 0 && (
                   <div className="text-sm text-gray-500 dark:text-gray-400">No incomplete tasks. Nice work!</div>
                 )}
@@ -473,7 +473,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                 )}
               </div>
             )}
-          </div>
+            </div>
 
           <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>

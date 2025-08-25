@@ -2,6 +2,8 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useSupabaseUser } from '../../../src/features/auth/authUtils'
+import { useRouter } from 'next/navigation'
 import BoardComponent from '../../../src/features/board/BoardComponent';
 import { boardStorage } from '../../../src/features/storage/storage';
 import type { SavedBoard } from '../../../src/features/storage/storage';
@@ -10,6 +12,8 @@ import Loader from '../../../src/components/ui/Loader';
 import { ThemeProvider } from '../../../src/contexts/ThemeContext';
 import { AIProvider } from '../../../src/features/ai/aiContext';
 import Topbar from '../../../src/components/Topbar';
+import { useEffect as useEffect2 } from 'react';
+import { useBoardStore } from '../../../src/features/board/boardSlice';
 
 export default function BoardPage() {
   const params = useParams();
@@ -21,6 +25,16 @@ export default function BoardPage() {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const screenshotMode = searchParams.get('screenshot') === 'true';
+  const user = useSupabaseUser()
+  const router = useRouter()
+
+  // Redirect unauthenticated users to login (root)
+  useEffect(() => {
+    if (user === undefined) return // auth still resolving
+    if (user === null) {
+      router.replace('/')
+    }
+  }, [user, router])
 
   useEffect(() => {
     const loadBoard = async () => {
@@ -29,6 +43,8 @@ export default function BoardPage() {
         const loadedBoard = await boardStorage.loadBoard(boardId);
         if (loadedBoard) {
           setBoard(loadedBoard);
+          // eslint-disable-next-line no-console
+          console.log('Loaded board from storage:', loadedBoard)
         } else {
           setError('Board not found');
         }
@@ -40,10 +56,18 @@ export default function BoardPage() {
       }
     };
 
-    if (boardId) {
-      loadBoard();
+    if (!boardId) return
+    if (user === undefined) return // wait for auth
+    if (user === null) return // unauthenticated -> redirected
+    loadBoard();
+  }, [boardId, user]);
+
+  // Sync loaded board topic into the board store so Topbar can read it
+  useEffect2(() => {
+    if (board && typeof window !== 'undefined') {
+      useBoardStore.getState().setTopic(board.data?.topic ?? null)
     }
-  }, [boardId]);
+  }, [board])
 
   // Update save status and unsaved changes from BoardComponent
   const handleBoardStateChange = (name: string, status: string, hasChanges: boolean) => {

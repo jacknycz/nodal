@@ -48,8 +48,8 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
         {/* Input container */}
         <div
           className={clsx(
-            "relative rounded-full px-3 border border-transparent transition-all duration-200",
-            "bg-white dark:bg-gray-950/80",
+            "relative rounded-full px-3 pt-3 border border-transparent transition-all duration-200",
+            "bg-gray-100 dark:bg-gray-950/80",
             "focus-within:bg-white dark:focus-within:bg-gray-900",
             "focus-within:border-primary-500 dark:focus-within:border-primary-400/50",
             "focus-within:ring-2 focus-within:ring-primary-500/20",

@@ -127,15 +127,28 @@ class SupabaseStorage {
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
     try {
-      const taskSummary = Array.isArray((data as any).nodes)
-        ? (data as any).nodes
+      // Fetch existing board data to avoid accidentally wiping fields (like topic)
+      const { data: existingRow } = await supabase
+        .from('boards')
+        .select('data')
+        .eq('id', boardId)
+        .single()
+
+      const existingData = (existingRow && (existingRow as any).data) ? (existingRow as any).data as BoardData : {}
+
+      // Merge existing data with provided data so we don't drop fields like topic
+      const mergedDataObj: any = { ...(existingData || {}), ...(data as any) }
+
+      const taskSummary = Array.isArray(mergedDataObj.nodes)
+        ? mergedDataObj.nodes
             .filter((n: any) => n?.type === 'task')
             .map((n: any) => ({ id: n?.id, title: (n?.data?.title || 'Untitled') as string, completed: !!n?.data?.completed }))
         : []
       const tasksIncompleteCount = taskSummary.reduce((acc: number, t: any) => acc + (t.completed ? 0 : 1), 0)
+
       const boardData: BoardData = {
-        ...(data as any),
-        meta: { ...(data as any).meta, taskSummary, tasksIncompleteCount },
+        ...mergedDataObj,
+        meta: { ...(mergedDataObj.meta || {}), taskSummary, tasksIncompleteCount },
       }
 
       const { error } = await supabase
@@ -143,8 +156,8 @@ class SupabaseStorage {
         .update({
           data: boardData,
           last_modified: Date.now(),
-          node_count: ((data as any).nodes?.length) || 0,
-          edge_count: ((data as any).edges?.length) || 0,
+          node_count: (boardData.nodes?.length) || 0,
+          edge_count: (boardData.edges?.length) || 0,
         })
         .eq('id', boardId)
 

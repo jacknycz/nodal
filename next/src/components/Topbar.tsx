@@ -60,6 +60,7 @@ export default function Topbar({
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const user = useSupabaseUser()
   const currentBoardId = useBoardStore(state => state.currentBoardId)
+  const topic = useBoardStore(state => state.topic)
   const [linkCopied, setLinkCopied] = useState(false)
   const [presentUsers, setPresentUsers] = useState<{ user_id: string; last_seen: string }[]>([])
   const supabase = getSupabaseClient()
@@ -292,6 +293,14 @@ export default function Topbar({
                     <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">{presentUsers.length} online</span>
                   </div>
                 )} */}
+
+                {topic && (
+                  <div className="hidden sm:flex items-center ml-4">
+                    <Tag variant="secondary" size="sm">
+                      {topic}
+                    </Tag>
+                  </div>
+                )}
               </div>
             )}
           </div>

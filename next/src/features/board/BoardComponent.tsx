@@ -867,6 +867,7 @@ function BoardContent({
           nodes: [],
           edges: [],
           viewport: reactFlowInstance.getViewport(),
+          topic: pendingBoardBrief.boardTopic || null,
         }
         try {
           await boardStorage.saveBoardWithId(boardId, boardName, boardData)
