@@ -63,35 +63,36 @@ export default function BoardsTab({
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
-      <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
-        <div className="flex justify-center w-full max-w-xl">
-          <Search
-            placeholder="Search boards..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            label="Search boards..."
-            className="w-full"
-          />
-        </div>
-
-        <div className="flex items-center gap-4 flex-none">
-          <Checkbox
-            label="Show shared only"
-            checked={showSharedOnly}
-            onChange={(v) => setShowSharedOnly(v)}
-            labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
-          />
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
-      )}
       {loading ? (
         <div className="text-center py-16 text-gray-500 dark:text-gray-400">
           <Loader />
         </div>
       ) : (
+        <>
+          <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
+            <div className="flex justify-center w-full max-w-xl">
+              <Search
+                placeholder="Search boards..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                label="Search boards..."
+                className="w-full"
+              />
+            </div>
+
+            <div className="flex items-center gap-4 flex-none">
+              <Checkbox
+                label="Show shared only"
+                checked={showSharedOnly}
+                onChange={(v) => setShowSharedOnly(v)}
+                labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
+          )}
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
           {sortedBoards.length === 0 ? (
             <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
@@ -115,6 +116,7 @@ export default function BoardsTab({
             ))
           )}
         </div>
+        </>
       )}
     </div>
   )

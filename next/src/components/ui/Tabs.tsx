@@ -36,16 +36,7 @@ export const Tab = ({ children, isActive }: TabProps) => {
 
 export const Tabs = ({ children }: { children: ReactNode }) => {
   const [active, setActive] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-
   const tabs = Array.isArray(children) ? children : [children];
-
-  useEffect(() => {
-    // trigger a quick exit/enter animation when active tab changes
-    setIsVisible(false)
-    const t = setTimeout(() => setIsVisible(true), 20)
-    return () => clearTimeout(t)
-  }, [active])
 
   return (
     <div className="w-full">
@@ -71,12 +62,11 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* Tab content (no animation) */}
       <div
         id={`tabpanel-${active}`}
         role="tabpanel"
         aria-labelledby={`tab-${active}`}
-        className={`transition-all duration-200 ease-in-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-1'}`}
       >
         {React.cloneElement(tabs[active] as React.ReactElement<any>, { isActive: true } as any)}
       </div>

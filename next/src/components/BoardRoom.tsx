@@ -23,8 +23,26 @@ interface BoardRoomProps {
 type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
-  const BoardsTab = dynamic(() => import('./BoardsTab'), { ssr: false })
-  const TemplatesTab = dynamic(() => import('./TemplatesTab'), { ssr: false })
+  const BoardsTab = dynamic(() => import('./BoardsTab'), {
+    ssr: false,
+    loading: () => (
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
+        <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+          <Loader />
+        </div>
+      </div>
+    ),
+  })
+  const TemplatesTab = dynamic(() => import('./TemplatesTab'), {
+    ssr: false,
+    loading: () => (
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
+        <div className="text-center py-16 text-gray-500 dark:text-gray-400">
+          <Loader />
+        </div>
+      </div>
+    ),
+  })
   const CommunityTab = dynamic(() => import('./CommunityTab'), { ssr: false })
   const user = useSupabaseUser()
   const [boards, setBoards] = useState<SavedBoard[]>([])
