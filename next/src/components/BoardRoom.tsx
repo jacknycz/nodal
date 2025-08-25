@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useDeferredValue } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardSetupModal from './BoardSetupModal'
@@ -12,6 +12,7 @@ import Button from './ui/Button'
 import { Graph, TreeStructure, Users } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
+import dynamic from 'next/dynamic'
 import BoardCard from './BoardCard'
 // Gradient background only (no external images)
 
@@ -22,6 +23,9 @@ interface BoardRoomProps {
 type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
+  const BoardsTab = dynamic(() => import('./BoardsTab'), { ssr: false })
+  const TemplatesTab = dynamic(() => import('./TemplatesTab'), { ssr: false })
+  const CommunityTab = dynamic(() => import('./CommunityTab'), { ssr: false })
   const user = useSupabaseUser()
   const [boards, setBoards] = useState<SavedBoard[]>([])
   const [sharedBoards, setSharedBoards] = useState<SharedBoard[]>([])
@@ -89,7 +93,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     loadTemplates()
   }, [])
 
-  // Compute incomplete task nodes across all boards
+  // Compute incomplete task nodes across all boards (deferred to idle)
   useEffect(() => {
     const computeTasks = async () => {
       try {
@@ -117,8 +121,16 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         setTasksLoading(false)
       }
     }
-    if (!loading) {
-      computeTasks()
+    if (loading) return
+    let idleId: any
+    let timeoutId: any
+    const run = () => { void computeTasks() }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = (window as any).requestIdleCallback(run, { timeout: 2000 })
+      return () => (window as any).cancelIdleCallback?.(idleId)
+    } else {
+      timeoutId = setTimeout(run, 0)
+      return () => clearTimeout(timeoutId)
     }
   }, [boards, sharedBoards, loading])
 
@@ -192,9 +204,10 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   const allBoards: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
+  const deferredSearch = useDeferredValue(searchQuery)
   const filteredBoards = allBoards
     .filter(board =>
-      board.name.toLowerCase().includes(searchQuery.toLowerCase())
+      board.name.toLowerCase().includes(deferredSearch.toLowerCase())
     )
     .filter(board => !showSharedOnly || ('shared' in board && board.shared === true))
 
@@ -225,7 +238,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   })()
 
   return (
-    <div className="relative min-h-screen pt-16">
+    <div className="relative min-h-screen pt-16" role="main" aria-labelledby="welcome-heading">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
         <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
       </div>
@@ -236,7 +249,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           {/* Welcome + Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-1 rounded-xl">
-              <h1 className="mb-4 text-xl md:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
+              <h1 id="welcome-heading" className="mb-4 text-xl md:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
                 <span className="font-normal">welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
               </h1>
               <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">
@@ -246,7 +259,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             <div className="grid grid-cols-3 gap-3">
               <div className="relative rounded-4xl px-6 py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
                 <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
-                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12">
+                  <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12" aria-hidden="true">
                     <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
                     <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM16 28C16.5523 28 17 28.4477 17 29V31C17 31.5523 16.5523 32 16 32H10C9.44772 32 9 31.5523 9 31V29C9 28.4477 9.44772 28 10 28H16ZM34 28C34.5523 28 35 28.4477 35 29V31C35 31.5523 34.5523 32 34 32H28C27.4477 32 27 31.5523 27 31V29C27 28.4477 27.4477 28 28 28H34ZM25 20C25.5523 20 26 20.4477 26 21V23C26 23.5523 25.5523 24 25 24H19C18.4477 24 18 23.5523 18 23V21C18 20.4477 18.4477 20 19 20H25ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
                   </svg>
@@ -256,8 +269,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               </div>
 
               <div className="relative rounded-4xl p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-secondary-500/80">
-                  <Graph size={48} weight="duotone" />
+                <div className="flex absolute top-4 right-4 items-center text-secondary-500/80" aria-hidden>
+                  <Graph size={48} weight="duotone" aria-hidden />
                 </div>
                 <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">nodes</div>
                 <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
@@ -266,8 +279,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               </div>
 
               <div className="relative rounded-4xl p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80">
-                  <TreeStructure size={48} weight="duotone" />
+                <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80" aria-hidden>
+                  <TreeStructure size={48} weight="duotone" aria-hidden />
                 </div>
                 <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">connections</div>
                 <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
@@ -301,65 +314,20 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             // headerClassName="bg-white text-slate-900"
             // activeHeaderClassName="bg-white text-slate-900"
           >
-            <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
-              {/* <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-medium font-fredoka text-gray-800 dark:text-white">your boards</h2>
-          </div> */}
-
-              <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
-                <div className="flex justify-center w-full max-w-xl">
-                  <Search
-                    placeholder="Search boards..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    label="Search boards..."
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="flex items-center gap-4 flex-none">
-                  <Checkbox
-                    label="Show shared only"
-                    checked={showSharedOnly}
-                    onChange={(v) => setShowSharedOnly(v)}
-                    labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
-              )}
-              {loading ? (
-                <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-                  <Loader />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-                  {sortedBoards.length === 0 ? (
-                    <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                      No boards found. Create a new board to get started!
-                    </div>
-                  ) : (
-                    sortedBoards.map(board => (
-                      <BoardCard
-                        key={board.id}
-                        id={board.id}
-                        name={board.name}
-                        lastModified={board.lastModified}
-                        nodeCount={board.nodeCount}
-                        edgeCount={board.edgeCount}
-                        onLoad={() => onOpenBoard(board, undefined)}
-                        onRename={newName => handleRename(board.id, newName)}
-                        onDelete={() => handleDelete(board.id)}
-                        isPinned={pinnedBoardIds.includes(board.id)}
-                        onTogglePin={() => togglePin(board.id)}
-                      />
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+            <BoardsTab
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              showSharedOnly={showSharedOnly}
+              setShowSharedOnly={setShowSharedOnly}
+              error={error}
+              loading={loading}
+              sortedBoards={sortedBoards}
+              pinnedBoardIds={pinnedBoardIds}
+              onOpenBoard={(b: any) => onOpenBoard(b, undefined)}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              togglePin={togglePin}
+            />
           </Tab>
 
           {/* TAB 2 */}
@@ -371,114 +339,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               </svg>              
               }
           >
-            {/* Templates Section */}
-            <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10 min-h-screen">
-
-              {templatesError && (
-                <div className="mb-4 text-red-600 dark:text-red-400">{templatesError}</div>
-              )}
-              {templatesLoading ? (
-                <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-                  <Loader />
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-                  {templates.length === 0 ? (
-                    <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                      No templates yet.
-                    </div>
-                  ) : (
-                    templates.map((t) => {
-                      const admin = isAdmin(user)
-                      const footer = (
-                        <>
-                          {admin && (
-                            <Button
-                              variant="secondaryGhost"
-                              size="small"
-                              onClick={async (e) => {
-                                e.stopPropagation()
-                                try {
-                                  const { boardStorage } = await import('../features/storage/storage')
-                                  const id = await boardStorage.saveBoard(t.name, t.data)
-                                  try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
-                                  const newBoard = await boardStorage.loadBoard(id)
-                                  if (newBoard) {
-                                    onOpenBoard(newBoard, undefined)
-                                  } else if (typeof window !== 'undefined') {
-                                    window.location.href = `/board/${id}`
-                                  }
-                                } catch (err) {
-                                  alert('Failed to open template for editing')
-                                }
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                          <Button
-                            variant="primary"
-                            size="small"
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              try {
-                                const newName = `${t.name} (copy)`
-                                const { boardStorage } = await import('../features/storage/storage')
-                                const id = await boardStorage.saveBoard(newName, t.data)
-                                const newBoard = await boardStorage.loadBoard(id)
-                                if (newBoard) {
-                                  onOpenBoard(newBoard, undefined)
-                                } else if (typeof window !== 'undefined') {
-                                  window.location.href = `/board/${id}`
-                                }
-                              } catch (e) {
-                                alert('Failed to use template')
-                              }
-                            }}
-                          >
-                            Use
-                          </Button>
-                        </>
-                      )
-                      return (
-                        <BoardCard
-                          key={t.id}
-                          id={t.id}
-                          name={t.name}
-                          nodeCount={t.nodeCount}
-                          edgeCount={t.edgeCount}
-                          onLoad={async () => {
-                            try {
-                              const newName = `${t.name} (copy)`
-                              const { boardStorage } = await import('../features/storage/storage')
-                              const id = await boardStorage.saveBoard(newName, t.data)
-                              const newBoard = await boardStorage.loadBoard(id)
-                              if (newBoard) {
-                                onOpenBoard(newBoard, undefined)
-                              } else if (typeof window !== 'undefined') {
-                                window.location.href = `/board/${id}`
-                              }
-                            } catch (e) {
-                              alert('Failed to use template')
-                            }
-                          }}
-                          onRename={admin ? async (newName) => {
-                            try {
-                              const updated = await templateStorage.updateTemplate(t.id, { name: newName })
-                              setTemplates(prev => prev.map(p => p.id === t.id ? updated : p))
-                            } catch {
-                              alert('Failed to rename template')
-                            }
-                          } : undefined}
-                          enableSharing={false}
-                          footerActions={footer}
-                        />
-                      )
-                    })
-                  )}
-                </div>
-              )}
-            </div>
+            <TemplatesTab
+              templates={templates}
+              templatesLoading={templatesLoading}
+              templatesError={templatesError}
+              user={user}
+              setTemplates={setTemplates}
+              onOpenBoard={(b: any) => onOpenBoard(b, undefined)}
+            />
           </Tab>
 
           {/* TAB 3 */}
@@ -486,11 +354,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             label="Community"
             icon={<Users size={44} className="h-6 w-6" weight="duotone" />}
           >
-            <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10 min-h-screen">
-              <div className="flex flex-col gap-4">
-                <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">Settings</h2>
-              </div>
-            </div>
+            <CommunityTab />
           </Tab>
         </Tabs>
         

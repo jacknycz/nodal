@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import dynamic from 'next/dynamic'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
-import Modal from './ui/Modal'
+const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
 import { PushPin } from '@phosphor-icons/react/dist/ssr'
 import { Check as CheckIcon, Copy, Plus } from 'lucide-react'
 
@@ -25,7 +26,7 @@ interface BoardCardProps {
   footerActions?: React.ReactNode
 }
 
-export default function BoardCard({
+function BoardCard({
   id,
   name,
   lastModified,
@@ -122,6 +123,7 @@ export default function BoardCard({
       bg-white dark:bg-slate-700/60 dark:hover:bg-slate-700/98
       border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
       onClick={handleCardClick}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 160px' as any }}
     >
       {typeof isPinned !== 'undefined' && onTogglePin && (
         <IconButton
@@ -216,6 +218,8 @@ export default function BoardCard({
                 src={thumbnailUrl}
                 alt="Board thumbnail"
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
                 onError={() => { setImgError(true) }}
               />
             </div>
@@ -259,7 +263,7 @@ export default function BoardCard({
 
       {/* Delete Modal */}
       {onDelete && (
-        <Modal
+        <DynamicModal
           open={showDeleteModal}
           onClose={() => setShowDeleteModal(false)}
           title="Delete Board"
@@ -269,12 +273,12 @@ export default function BoardCard({
             <Button variant="secondary" size="small" onClick={() => setShowDeleteModal(false)}>Cancel</Button>
             <Button variant="danger" size="small" onClick={() => { setShowDeleteModal(false); onDelete() }}>Delete</Button>
           </div>
-        </Modal>
+        </DynamicModal>
       )}
 
       {/* Share Modal */}
       {enableSharing && (
-        <Modal
+        <DynamicModal
           open={showShareModal}
           onClose={() => setShowShareModal(false)}
           title="Share Board"
@@ -341,10 +345,10 @@ export default function BoardCard({
               <Button onClick={() => { setShowShareModal(false); setShareEmails([]) }} disabled={shareEmails.length === 0}>Send Invites</Button>
             </div>
           </div>
-        </Modal>
+        </DynamicModal>
       )}
     </div>
   )
 }
 
-
+export default memo(BoardCard)

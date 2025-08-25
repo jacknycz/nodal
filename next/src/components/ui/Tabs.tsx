@@ -50,7 +50,7 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
   return (
     <div className="w-full">
       {/* Tab headers */}
-      <div className="flex gap-2 border-b border-gray-200/50 dark:border-primary-700/20 dark:bg-slate-950/80 rounded-tl-4xl">
+      <div className="flex gap-2 border-b border-gray-200/50 dark:border-primary-700/20 dark:bg-slate-950/80 rounded-tl-4xl" role="tablist" aria-label="Sections">
         {tabs.map((tab: any, idx) => (
           <button
             key={idx}
@@ -60,15 +60,24 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
                 ? (tab.props.activeHeaderClassName || "text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")
                 : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent")
             }`}
+            role="tab"
+            aria-selected={active === idx}
+            aria-controls={`tabpanel-${idx}`}
+            id={`tab-${idx}`}
           >
-            {tab.props.icon && <span className="text-lg">{tab.props.icon}</span>}
+            {tab.props.icon && <span className="text-lg" aria-hidden="true">{tab.props.icon}</span>}
             {tab.props.label}
           </button>
         ))}
       </div>
 
       {/* Tab content */}
-      <div className={`transition-all duration-200 ease-in-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-1'}`}>
+      <div
+        id={`tabpanel-${active}`}
+        role="tabpanel"
+        aria-labelledby={`tab-${active}`}
+        className={`transition-all duration-200 ease-in-out ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-1'}`}
+      >
         {React.cloneElement(tabs[active] as React.ReactElement<any>, { isActive: true } as any)}
       </div>
     </div>
