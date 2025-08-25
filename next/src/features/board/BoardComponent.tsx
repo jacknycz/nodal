@@ -46,10 +46,8 @@ import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
-import NodeEditModal from '../../components/NodeEditModal'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
 import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
-import { placeNodes } from './placementEngine'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }

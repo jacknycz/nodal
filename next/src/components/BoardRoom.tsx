@@ -1,17 +1,15 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
-import BoardNameModal from './BoardNameModal'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
 import { templateStorage, type TemplateRecord } from '../features/storage/templateStorage'
 import { isAdmin } from '../features/auth/roles'
 import { useSupabaseUser } from '../features/auth/authUtils'
-import Modal from './ui/Modal'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
-import { ClockClockwise, Graph, TreeStructure, Lightbulb, Gear, Users } from '@phosphor-icons/react/dist/ssr'
+import { Graph, TreeStructure, Users } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
 import BoardCard from './BoardCard'
@@ -30,11 +28,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [showNewBoardModal, setShowNewBoardModal] = useState(false)
   const [pinnedBoardIds, setPinnedBoardIds] = useState<string[]>([])
   const [showSharedOnly, setShowSharedOnly] = useState(false)
-  const [totalDocuments, setTotalDocuments] = useState<number>(0)
-  const [statsLoading, setStatsLoading] = useState<boolean>(false)
+  
   const [templates, setTemplates] = useState<TemplateRecord[]>([])
   const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
@@ -126,39 +122,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }, [boards, sharedBoards, loading])
 
-  // Re-compute document stats whenever boards/sharedBoards change
-  useEffect(() => {
-    const computeDocs = async () => {
-      try {
-        setStatsLoading(true)
-        const { boardStorage } = await import('../features/storage/storage')
-        const allIds: string[] = [
-          ...boards.map(b => b.id),
-          ...sharedBoards.map((b) => b.id)
-        ]
-        const counts = await Promise.all(
-          allIds.map(async (id) => {
-            try {
-              const docs = await boardStorage.getBoardDocuments(id)
-              return docs.length
-            } catch {
-              return 0
-            }
-          })
-        )
-        const total = counts.reduce((a, b) => a + b, 0)
-        setTotalDocuments(total)
-      } catch {
-        setTotalDocuments(0)
-      } finally {
-        setStatsLoading(false)
-      }
-    }
-    // Only run after initial boards load completes
-    if (!loading) {
-      computeDocs()
-    }
-  }, [boards, sharedBoards, loading])
+  
 
   const togglePin = (boardId: string) => {
     setPinnedBoardIds(prev => {
@@ -204,7 +168,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       const boardId = await boardStorage.saveBoard(boardName, emptyBoardData)
       const newBoard = await boardStorage.loadBoard(boardId)
       if (newBoard) {
-        setShowNewBoardModal(false)
         await loadBoards() // Refresh the board list
         onOpenBoard(newBoard, undefined) // Mark as new
       }
@@ -244,10 +207,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     return (b.lastModified || 0) - (a.lastModified || 0)
   })
 
-  // Determine a topic query from latest board (owned or shared)
-  const latestBoards: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
-  const latestBoardTopic = (latestBoards
-    .sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0))[0]?.data?.topic) || 'creative'
+  
 
   // Prefer first name; if missing, use last name; otherwise no name
   const greetingName = (() => {
@@ -549,26 +509,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </Button>
           </div>
 
-          {/* <div className="flex flex-col gap-4 mt-8">
-            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">pinned boards</h2>
-            <div className="flex flex-col gap-2">
-              {pinnedBoardIds.map(id => {
-                const board = allBoards.find(b => b.id === id)
-                if (!board) return null
-                return (
-                  <BoardCard
-                    key={board.id}
-                    board={board}
-                    onLoad={() => onOpenBoard(board, undefined)}
-                    onRename={newName => handleRename(board.id, newName)}
-                    onDelete={() => handleDelete(board.id)}
-                    isPinned={true}
-                    onTogglePin={() => togglePin(board.id)}
-                  />
-                )
-              })}
-            </div>
-          </div> */}
+
 
           <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">task nodes</h2>
@@ -611,14 +552,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         </div>
       </div>
 
-      {/* Simple board name modal (fallback) */}
-      <BoardNameModal
-        isOpen={showNewBoardModal}
-        onClose={() => setShowNewBoardModal(false)}
-        onSave={handleCreateNewBoard}
-        defaultName=""
-        existingNames={boards.map(board => board.name)}
-      />
+      
 
       {/* Sophisticated board setup modal */}
       <BoardSetupModal
