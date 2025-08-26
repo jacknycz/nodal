@@ -253,14 +253,14 @@ export default function AvatarMenu({
             <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
           )}
 
-          {/* Settings */}
+          {/* Settings
           <button
             onClick={onOpenSettings}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
           >
             <GearSix size={24} weight="duotone" className="text-gray-600 dark:text-gray-400" />
             <span className="text-sm text-gray-900 dark:text-white">Settings</span>
-          </button>
+          </button> */}
 
           {/* Admin: Templates */}
           {admin && (
@@ -301,14 +301,14 @@ export default function AvatarMenu({
             <ThemeToggle />
           </div>
 
-          {/* Help & Support */}
+          {/* Help & Support
           <button
             onClick={() => window.open('https://help.nodal.app', '_blank')}
             className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
           >
             <HelpCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             <span className="text-sm text-gray-900 dark:text-white">Help & Support</span>
-          </button>
+          </button> */}
 
           {/* Separator */}
           <div className="border-t border-gray-200 dark:border-gray-700 my-2" />

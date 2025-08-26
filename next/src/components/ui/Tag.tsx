@@ -8,6 +8,9 @@ export interface TagProps {
   variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'beta'
   className?: string
   onClick?: () => void
+  leftIcon?: React.ReactNode
+  rightIcon?: React.ReactNode
+  onRightIconClick?: (e?: React.MouseEvent) => void
 }
 
 export default function Tag({ 
@@ -15,6 +18,7 @@ export default function Tag({
   variant = 'default',
   className,
   onClick
+  , leftIcon, rightIcon, onRightIconClick
 }: TagProps) {
   const baseClasses = 'inline-flex items-center font-medium rounded-sm transition-colors duration-150 px-2 py-0 text-xs h-5'
   
@@ -48,7 +52,23 @@ export default function Tag({
         }
       } : undefined}
     >
-      {children}
+      {leftIcon && (
+        <span className="mr-1 inline-flex items-center">{leftIcon}</span>
+      )}
+      <span className="truncate">{children}</span>
+      {rightIcon && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onRightIconClick?.(e)
+          }}
+          aria-label="Remove"
+          className="ml-2 inline-flex items-center"
+        >
+          {rightIcon}
+        </button>
+      )}
     </span>
   )
 }

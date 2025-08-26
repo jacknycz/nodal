@@ -296,6 +296,8 @@ export default function Topbar({
 
                 {topic && (
                   <div className="hidden sm:flex items-center ml-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
+
                     <Tag variant="secondary" size="sm">
                       {topic}
                     </Tag>

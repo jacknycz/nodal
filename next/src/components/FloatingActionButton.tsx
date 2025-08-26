@@ -1,7 +1,9 @@
-'use client'
+"use client"
 
-import React, { useState } from 'react'
-import { Plus, RotateCcw } from 'lucide-react'
+import React from 'react'
+import { Plus, RotateCcw, FilePlus } from 'lucide-react'
+import IconButton from './ui/IconButton'
+import Menu from './ui/Menu'
 
 interface FloatingActionButtonProps {
   onAddNode: () => void
@@ -20,55 +22,29 @@ export default function FloatingActionButton({
   aiInitialized,
   nodeCount = 0,
 }: FloatingActionButtonProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const items = [
+    { label: 'Add node', icon: Plus, onClick: () => onAddNode() },
+    { label: 'Upload document', icon: FilePlus, onClick: () => onUploadDocument() },
+    ...(aiInitialized ? [{ label: 'AI generate', onClick: () => onAIGenerate() }] : []),
+    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: RotateCcw, onClick: () => onReorganize?.() }] : []),
+  ]
 
   return (
-    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-10">
-      <div className={`flex flex-col gap-2 transition-all duration-200 ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0 pointer-events-none'}`}>
-        <button
-          onClick={onAddNode}
-          className="w-12 h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
-          title="Add Node"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
-        
-        {/* {aiInitialized && (
-          <button
-            onClick={onAIGenerate}
-            className="w-12 h-12 bg-purple-500 hover:bg-purple-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
-            title="AI Generate"
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20">
+      <Menu
+        trigger={
+          <IconButton
+            aria-label="Quick Actions"
+            size="lg"
+            className="w-14 h-14 bg-gray-800 hover:bg-gray-900 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200"
           >
-            <span className="text-lg">🤖</span>
-          </button>
-        )} */}
-        
-        <button
-          onClick={onUploadDocument}
-          className="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
-          title="Upload Document"
-        >
-          <span className="text-lg">📄</span>
-        </button>
-        
-        {onReorganize && nodeCount > 1 && (
-          <button
-            onClick={onReorganize}
-            className="w-12 h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
-            title={`Reorganize ${nodeCount} nodes`}
-          >
-            <RotateCcw className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-      
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-gray-800 hover:bg-gray-900 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200"
-        title="Quick Actions"
-      >
-        <Plus className={`w-6 h-6 transition-transform duration-200 ${isOpen ? 'rotate-45' : ''}`} />
-      </button>
+            <Plus className="w-6 h-6" />
+          </IconButton>
+        }
+        items={items}
+        fixedCenterAbove
+        width="w-56"
+      />
     </div>
   )
-} 
+}

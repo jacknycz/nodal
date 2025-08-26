@@ -7,6 +7,8 @@ import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
+import Tag from './ui/Tag'
+import { XCircle } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardSetupModalProps {
   isOpen: boolean
@@ -115,16 +117,15 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         {starterNodes.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
             {starterNodes.map((title) => (
-              <span key={title} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
+              <Tag
+                key={title}
+                variant="secondary"
+                className="px-2 py-1 text-xs"
+                rightIcon={<XCircle className="text-gray-500 dark:text-gray-400 cursor-pointer" size={12} weight="duotone" />}
+                onRightIconClick={() => setStarterNodes(prev => prev.filter(t => t !== title))}
+              >
                 {title}
-                <button
-                  onClick={() => setStarterNodes(prev => prev.filter(t => t !== title))}
-                  className="ml-1 text-gray-500 hover:text-gray-800 dark:hover:text-white"
-                  aria-label={`Remove ${title}`}
-                >
-                  ×
-                </button>
-              </span>
+              </Tag>
             ))}
           </div>
         )}

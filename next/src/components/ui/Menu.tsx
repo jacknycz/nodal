@@ -21,6 +21,7 @@ interface MenuProps {
   showNotification?: boolean
   customContent?: React.ReactNode
   width?: string
+  fixedCenterAbove?: boolean
 }
 
 export default function Menu({
@@ -32,6 +33,7 @@ export default function Menu({
   showNotification = false,
   customContent,
   width
+  , fixedCenterAbove = false
 }: MenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -77,12 +79,12 @@ export default function Menu({
       {/* Dropdown */}
       <div
         className={`
-          absolute z-50 ${width || 'w-56'} rounded-2xl 
+          ${fixedCenterAbove ? 'fixed left-1/2 bottom-24 transform -translate-x-1/2 z-50' : 'absolute z-50'} ${width || 'w-56'} rounded-2xl 
           bg-[linear-gradient(165deg,rgba(241,245,249,1)_0%,rgba(255,255,255,1)_20%,rgba(255,255,255,1)_80%,rgba(241,245,249,1)_100%)]
           dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-950
           shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none
           transition-all duration-200 ease-out
-          ${align === 'right' ? 'right-0' : 'left-0'}
+          ${!fixedCenterAbove ? (align === 'right' ? 'right-0' : 'left-0') : ''}
           ${isOpen 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-95 -translate-y-1 pointer-events-none'
