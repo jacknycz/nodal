@@ -6,7 +6,7 @@ import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import { useBoardStore } from '../features/board/boardSlice'
-import { Send, X, MessageSquare, Loader2, Key, Target } from 'lucide-react'
+import { X, Chat, Spinner, Key, Target, PaperPlaneTilt } from '@phosphor-icons/react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 import Modal from './ui/Modal'
@@ -14,7 +14,6 @@ import Checkbox from './ui/Checkbox'
 import Loader from './ui/Loader'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useAIPlacement } from '../features/board/usePlacement'
-import { PaperPlaneTilt } from '@phosphor-icons/react/dist/ssr'
 import { OpenAIModel } from '@/features/ai/aiTypes'
 import Select from './ui/Select'
 import { MODELS } from '../features/ai/models'
@@ -202,7 +201,7 @@ export default function ChatPanel2() {
           }`}
         title="Open Chat"
       >
-        <MessageSquare className="w-5 h-5" />
+        <Chat className="w-5 h-5" />
       </button>
 
       {/* Panel */}
@@ -259,7 +258,7 @@ export default function ChatPanel2() {
             <div className="flex justify-start">
               <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
                 <div className="flex items-center space-x-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+                  <Spinner className="w-4 h-4 animate-spin text-gray-500" />
                   <span className="text-sm text-gray-500">Thinking...</span>
                 </div>
               </div>

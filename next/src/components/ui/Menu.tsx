@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import type React from 'react'
 
 export interface MenuItem {
   label: string
-  icon?: LucideIcon
+  icon?: React.ComponentType<{ className?: string }>
   onClick?: () => void
   disabled?: boolean
   danger?: boolean

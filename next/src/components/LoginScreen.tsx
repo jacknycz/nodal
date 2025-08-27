@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { Chrome, Loader2, Sparkles, Users, Zap } from 'lucide-react'
+import { GoogleLogo, Spinner, Sparkle, Users, Lightning } from '@phosphor-icons/react'
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../features/auth/authUtils'
 import { useTheme } from '../contexts/ThemeContext'
 import AnimatedBackground from './AnimatedBackground'
@@ -103,7 +103,7 @@ export default function LoginScreen() {
             fullWidth
             className="mb-6 h-12"
           >
-            <Chrome className="w-5 h-5 mr-2" />
+            <GoogleLogo className="w-5 h-5 mr-2" />
             {isLoading ? 'Signing in...' : 'Continue with Google'}
           </Button>
 

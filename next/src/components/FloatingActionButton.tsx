@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Plus, RotateCcw, FilePlus } from 'lucide-react'
+import { Plus, RotateCounterClockwise, FilePlus } from '@phosphor-icons/react'
 import IconButton from './ui/IconButton'
 import Menu from './ui/Menu'
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position } from '@xyflow/react'
-import { X } from 'lucide-react'
+import { X } from '@phosphor-icons/react'
 import { useBoardStore } from './boardSlice'
 
 interface FloatingEdgeProps {

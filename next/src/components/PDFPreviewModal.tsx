@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Download } from 'lucide-react'
+import { X, DownloadSimple } from '@phosphor-icons/react'
 import Loader from './ui/Loader'
 
 interface PDFPreviewModalProps {
@@ -85,7 +85,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
               className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               title="Download PDF"
             >
-              <Download className="w-4 h-4" />
+              <DownloadSimple className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}

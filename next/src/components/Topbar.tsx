@@ -7,7 +7,7 @@ import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
-import { House, Info } from 'lucide-react';
+import { House, Info, Plus } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
@@ -16,7 +16,6 @@ import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import Tag from './ui/Tag'
-import { Plus } from 'lucide-react'
 import { isAdmin } from '../features/auth/roles'
 import { templateStorage } from '../features/storage/templateStorage'
 

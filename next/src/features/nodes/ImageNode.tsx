@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Download, Maximize2, Minimize2, Trash2, CheckCircle, AlertCircle, Loader2, Focus } from 'lucide-react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, Target } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -78,11 +78,11 @@ export default function ImageNode({
   const getStatusIcon = () => {
     switch (data.status) {
       case 'processing':
-        return <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+        return <Spinner className="w-4 h-4 animate-spin text-blue-500" />
       case 'ready':
         return <CheckCircle className="w-4 h-4 text-green-500" />
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />
+        return <Warning className="w-4 h-4 text-red-500" />
       default:
         return null
     }
@@ -271,7 +271,7 @@ export default function ImageNode({
                   setTranslate({ x: 0, y: 0 })
                 }}
               >
-                <Minimize2 size={14} />
+                <ArrowsIn size={14} />
               </IconButton>
             ) : (
               <IconButton
@@ -284,7 +284,7 @@ export default function ImageNode({
                 }}
                 disabled={isLocked && !isLockedByMe}
               >
-                <Maximize2 size={14} />
+                <ArrowsOut size={14} />
               </IconButton>
             )}
           </div>
@@ -313,7 +313,7 @@ export default function ImageNode({
                     toggleFocusOnNode(id, true)
                   }}
                 >
-                  <Focus size={14} />
+                  <Target size={14} />
                 </IconButton>
               </div>
             </div>
@@ -340,7 +340,7 @@ export default function ImageNode({
             onClick={handleDownload}
             disabled={isLocked && !isLockedByMe}
           >
-            <Download size={14} />
+            <DownloadSimple size={14} />
           </IconButton>
           <IconButton
             variant="danger"
@@ -349,7 +349,7 @@ export default function ImageNode({
             onClick={handleDelete}
             disabled={isLocked && !isLockedByMe}
           >
-            <Trash2 size={14} />
+            <Trash size={14} />
           </IconButton>
         </div>
       )}

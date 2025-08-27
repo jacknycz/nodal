@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search as SearchIcon } from "lucide-react";
+import { MagnifyingGlass } from '@phosphor-icons/react'
 
 export default function FloatingSearch({
   label = "Search",
@@ -28,7 +28,7 @@ export default function FloatingSearch({
   return (
     <div className={"w-full relative " + className}>
       {/* Search icon */}
-      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5 pointer-events-none" />
+      <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5 pointer-events-none" />
 
       {/* Input */}
       <input

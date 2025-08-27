@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import Checkbox from './ui/Checkbox'
-import { X, ListTodo } from 'lucide-react'
+import { X, ListChecks } from '@phosphor-icons/react'
 import { useReactFlow } from '@xyflow/react'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import { useSupabaseUser } from '../features/auth/authUtils'
@@ -45,7 +45,7 @@ export default function TaskList() {
         className={`fixed left-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
         title="Open Tasks"
       >
-        <ListTodo className="w-5 h-5" />
+        <ListChecks className="w-5 h-5" />
       </button>
 
       {/* Panel */}

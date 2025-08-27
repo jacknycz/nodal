@@ -2,16 +2,16 @@
 
 import React, { useState } from 'react'
 import { 
-  Grid, 
-  Circle, 
-  ArrowRight, 
-  Zap, 
-  RotateCcw, 
-  Sparkles,
-  Loader2,
+  Grid,
+  Circle,
+  ArrowRight,
+  Lightning,
+  RotateCounterClockwise,
+  Sparkle,
+  Spinner,
   CheckCircle,
-  AlertCircle
-} from 'lucide-react'
+  Warning
+} from '@phosphor-icons/react'
 import { useBoardReorganization } from '../features/board/usePlacement'
 import { LayoutAlgorithm } from '../features/board/placementTypes'
 
@@ -57,7 +57,7 @@ const layoutOptions: LayoutOption[] = [
     id: LayoutAlgorithm.SPIRAL,
     name: 'Spiral Layout',
     description: 'Create an organic spiral pattern',
-    icon: Zap,
+    icon: Lightning,
     bestFor: 'Creative layouts, brainstorming, organic flow'
   }
 ]
@@ -130,7 +130,7 @@ export default function BoardReorganizeMenu({
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg">
-              <RotateCcw className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <RotateCounterClockwise className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -153,7 +153,7 @@ export default function BoardReorganizeMenu({
             {result.success ? (
               <CheckCircle className="w-5 h-5" />
             ) : (
-              <AlertCircle className="w-5 h-5" />
+              <Warning className="w-5 h-5" />
             )}
             <span className="text-sm font-medium">{result.message}</span>
           </div>
@@ -188,7 +188,7 @@ export default function BoardReorganizeMenu({
                       : 'bg-gray-100 dark:bg-gray-700'
                   }`}>
                     {isProcessing ? (
-                      <Loader2 className="w-6 h-6 text-primary-600 animate-spin" />
+                      <Spinner className="w-6 h-6 text-primary-600 animate-spin" />
                     ) : (
                       <Icon className={`w-6 h-6 ${
                         isSelected && isReorganizing
@@ -228,7 +228,7 @@ export default function BoardReorganizeMenu({
         <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-              <Sparkles className="w-4 h-4" />
+              <Sparkle className="w-4 h-4" />
               <span>Powered by intelligent placement algorithms</span>
             </div>
             

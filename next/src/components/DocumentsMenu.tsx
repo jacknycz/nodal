@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Trash2, X} from 'lucide-react'
-import { Files } from '@phosphor-icons/react/dist/ssr'
+import { Trash, X } from '@phosphor-icons/react'
+import { Files } from '@phosphor-icons/react'
 import { useBoardStore } from '../features/board/boardSlice'
 import { format } from 'date-fns'
 import Menu from './ui/Menu'
@@ -122,7 +122,7 @@ export default function DocumentsMenu({
                       onClick={() => setConfirmDeleteId(doc.id)}
                       title="Delete document"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash className="w-4 h-4" />
                     </button>
                     {confirmDeleteId === doc.id && (
                       <div className="absolute right-0 mt-8 bg-white dark:bg-gray-900 border border-red-200 dark:border-red-700 rounded shadow p-3 z-50">
