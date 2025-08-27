@@ -69,7 +69,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed -inset-4 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl max-h-[90vh] w-full mx-4 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
@@ -85,14 +85,14 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
               className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               title="Download PDF"
             >
-              <DownloadSimple className="w-4 h-4" />
+              <DownloadSimple size={24} weight="duotone" className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
               className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
               title="Close"
             >
-              <X className="w-4 h-4" />
+              <X size={24} weight="duotone" className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -102,7 +102,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
           {pdfUrl ? (
             <iframe
               src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-              className="w-full h-full border-0"
+              className="w-full h-full min-h-64 border-0"
               title={fileName}
             />
           ) : (
