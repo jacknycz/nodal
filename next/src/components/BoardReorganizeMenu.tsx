@@ -2,11 +2,11 @@
 
 import React, { useState } from 'react'
 import { 
-  Grid,
+  GridFour,
   Circle,
   ArrowRight,
   Lightning,
-  RotateCounterClockwise,
+  ClockCounterClockwise,
   Sparkle,
   Spinner,
   CheckCircle,
@@ -35,7 +35,7 @@ const layoutOptions: LayoutOption[] = [
     id: LayoutAlgorithm.GRID,
     name: 'Grid Layout',
     description: 'Organize nodes in a clean, structured grid',
-    icon: Grid,
+    icon: GridFour,
     bestFor: 'Structured content, categories, systematic organization',
     recommended: true
   },
@@ -130,7 +130,7 @@ export default function BoardReorganizeMenu({
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-100 dark:bg-primary-900 rounded-lg">
-              <RotateCounterClockwise className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <ClockCounterClockwise className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">

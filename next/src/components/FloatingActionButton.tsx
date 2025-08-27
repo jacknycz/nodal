@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Plus, RotateCounterClockwise, FilePlus } from '@phosphor-icons/react'
+import { Plus, ClockCounterClockwise, FilePlus } from '@phosphor-icons/react'
 import IconButton from './ui/IconButton'
 import Menu from './ui/Menu'
 
@@ -26,7 +26,7 @@ export default function FloatingActionButton({
     { label: 'Add node', icon: Plus, onClick: () => onAddNode() },
     { label: 'Upload document', icon: FilePlus, onClick: () => onUploadDocument() },
     ...(aiInitialized ? [{ label: 'AI generate', onClick: () => onAIGenerate() }] : []),
-    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: RotateCcw, onClick: () => onReorganize?.() }] : []),
+    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, onClick: () => onReorganize?.() }] : []),
   ]
 
   return (

@@ -49,7 +49,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
         <div
           className={clsx(
             "relative rounded-full px-3 border border-transparent transition-all duration-200",
-            label ? "pt-0" : "pt-3",
+            label ? "pt-0" : "pt-0",
             "bg-gray-100 dark:bg-gray-950/80",
             "focus-within:bg-white dark:focus-within:bg-gray-900",
             "focus-within:border-primary-500 dark:focus-within:border-primary-400/50",

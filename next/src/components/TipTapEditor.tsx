@@ -26,7 +26,7 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   GripVertical
-} from '@phosphor-icons/react'
+} from 'lucide-react'
 import IconButton from './ui/IconButton'
 import Loader from './ui/Loader'
 
