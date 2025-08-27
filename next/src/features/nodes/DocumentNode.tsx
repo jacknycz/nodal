@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, Headlights, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
+import { Trash, Target, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -200,7 +200,7 @@ export default function DocumentNode({
           }
         }}
       >
-        <Headlights size={14} weight="duotone" className='text-secondary-100' />
+        <Target size={14} weight="duotone" className='text-primary-500' />
       </IconButton>
 
       <div className="nodal-drag-handle cursor-move">

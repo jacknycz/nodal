@@ -5,7 +5,7 @@ import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
 import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
-import { Trash, Headlights } from "@phosphor-icons/react/ssr";
+import { Trash, Target } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
@@ -137,7 +137,7 @@ export default function TaskNode({
           toggleFocusOnNode?.(id)
         }}
       >
-        <Headlights size={14} weight="duotone" className='text-secondary-100' />
+        <Target size={14} weight="duotone" className='text-primary-500' />
       </IconButton>
 
       <div className="nodal-drag-handle cursor-move">

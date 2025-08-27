@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, Target } from '@phosphor-icons/react'
+import Image from 'next/image'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -68,10 +69,10 @@ export default function ImageNode({
   const isFocusedBase = hasFocus ? focusedNodeIds.includes(id) : false
   const isAdjacentToAnchor = Array.isArray(focusAnchorIds) && focusAnchorIds.length > 0
     ? (storeEdges || []).some((e: any) => {
-        const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
-        const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
-        return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
-      })
+      const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
+      const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
+      return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
+    })
     : false
   const isFocused = isFocusedBase || isAdjacentToAnchor
 
@@ -114,29 +115,53 @@ export default function ImageNode({
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-    } catch {}
+    } catch { }
   }
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${
-        isFocused
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
-          : selected
+      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${isFocused
+        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
+        : selected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : isLocked && !isLockedByMe
-          ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-          : 'border-gray-200 dark:border-gray-700'
-      } ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
+            ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
+            : 'border-gray-200 dark:border-gray-700'
+        } ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
+
+      <IconButton
+        variant="default"
+        className="absolute -top-2 -right-2"
+        size="sm"
+        aria-label="Focus node"
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          toggleFocusOnNode(id, true)
+        }}
+      >
+        <Target size={14} weight="duotone" className='text-primary-500' />
+      </IconButton>
 
       <div className="relative cursor-default">
         {/* Image content */}
         <div
           className="relative w-full select-none"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (expanded) {
+              // collapse and reset view
+              setExpanded(false)
+              setScale(1)
+              setTranslate({ x: 0, y: 0 })
+            } else {
+              setExpanded(true)
+            }
+          }}
           onDoubleClick={(e) => {
             e.stopPropagation()
             setExpanded(!expanded)
@@ -188,7 +213,7 @@ export default function ImageNode({
           }}
           onPointerDown={(e) => {
             if (!expanded) return
-            ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+              ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
             pointerCacheRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
             if (pointerCacheRef.current.size === 2) {
               const pts = Array.from(pointerCacheRef.current.values())
@@ -236,20 +261,18 @@ export default function ImageNode({
           }}
         >
           {data.previewUrl ? (
-            <img
+            <Image
               src={data.previewUrl}
               alt={data.fileName || data.title || 'Image'}
               className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
+              width={expanded ? 800 : 240}
+              height={expanded ? 500 : 180}
               style={{
-                maxWidth: expanded ? 800 : 240,
                 transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
                 transformOrigin: '0 0',
               }}
-              loading="lazy"
-              decoding="async"
-              onLoad={() => setIsLoaded(true)}
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
+              onLoadingComplete={() => setIsLoaded(true)}
+              unoptimized
             />
           ) : (
             <div className={`rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm ${expanded ? 'w-[800px] h-[400px]' : 'w-full h-[180px]'}`}>
@@ -258,7 +281,7 @@ export default function ImageNode({
           )}
 
           {/* Minimize/Expand control overlay */}
-          <div className="absolute top-1 right-1">
+          <div className="absolute bottom-1 left-1">
             {expanded ? (
               <IconButton
                 variant="default"
@@ -301,20 +324,6 @@ export default function ImageNode({
                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
                 </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <IconButton
-                  variant="default"
-                  size="sm"
-                  aria-label="Focus node"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    e.preventDefault()
-                    toggleFocusOnNode(id, true)
-                  }}
-                >
-                  <Target size={14} />
-                </IconButton>
               </div>
             </div>
 

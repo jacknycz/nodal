@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { Trash, Pen, Headlights } from "@phosphor-icons/react/ssr";
+import { Trash, Pen, Target } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -222,7 +222,7 @@ export default function NodalNode({
           }
         }}
       >
-        <Headlights size={14} weight="duotone" className='text-secondary-100' />
+        <Target size={14} weight="duotone" className='text-primary-500' />
       </IconButton>
 
       <div className="nodal-drag-handle cursor-move">
