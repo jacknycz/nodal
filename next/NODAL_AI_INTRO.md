@@ -126,6 +126,8 @@ next/src/
 - **Canvas Rendering**: Simplified board representation with title, node count, and visual node layout
 - **Fallback Handling**: Clean UI when thumbnails are unavailable (no placeholder text)
 
+- **Current status**: Thumbnail generation has been deferred and the server/client thumbnail generation code has been removed from the codebase for now. We'll revisit and reintroduce a thumbnail system in a future iteration.
+
 ---
 
 ## UI/UX Improvements
@@ -176,6 +178,7 @@ next/src/
 - **IconButton Component**: Specialized icon-only buttons with accessibility support
 - **Toggle Component**: Reusable toggle switch with proper ARIA attributes
 - **Menu Component**: Unified dropdown menu system with support for custom content, notifications, and consistent hover behavior
+- **Icon set**: Migrating from `lucide-react` to **Phosphor Icons** for consistent, expressive iconography across the app. Refer to `https://phosphoricons.com/` for icons and weights; update components to import Phosphor icons where appropriate.
 - **Tag Component**: Reusable tag/badge component with variants (default, primary, secondary, success, warning, danger, beta), pill-shaped design, and interactive features
 - **Consistent Styling**: All components support dark/light themes and responsive design
 - **TextInput Component**: Design-system input with label, description, error, left/right icons, sizes (sm|md|lg), variants (default|unstyled), and `fullWidth` support

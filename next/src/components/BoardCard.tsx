@@ -6,8 +6,7 @@ import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
-import { PushPin } from '@phosphor-icons/react/dist/ssr'
-import { Check as CheckIcon, Copy, Plus } from 'lucide-react'
+import { PushPin, CheckCircle, Copy, Plus } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardCardProps {
   id: string
@@ -15,7 +14,6 @@ interface BoardCardProps {
   lastModified?: number
   nodeCount?: number
   edgeCount?: number
-  thumbnailUrl?: string
   invitedBy?: string
   isPinned?: boolean
   onTogglePin?: () => void
@@ -32,7 +30,6 @@ function BoardCard({
   lastModified,
   nodeCount,
   edgeCount,
-  thumbnailUrl: initialThumb,
   invitedBy,
   isPinned,
   onTogglePin,
@@ -143,7 +140,7 @@ function BoardCard({
                 onClick={(e) => { e.stopPropagation(); commitTitleEdit() }}
                 className="ml-2"
               >
-                <CheckIcon className="w-4 h-4" />
+                <CheckCircle size={24} weight="duotone" className="w-4 h-4" />
               </IconButton>
             </div>
           ) : (
@@ -186,15 +183,6 @@ function BoardCard({
               )}
             </div>
           )}
-        </div>
-
-        {/* Thumbnail removed: show initials only */}
-        <div className="flex flex-col justify-items-start">
-          <div className="w-16 h-16 rounded shadow flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 dark:from-gray-800 dark:to-gray-700">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 select-none">
-              {(newName || '').trim().split(/\s+/).slice(0, 2).map(s => (s[0] ? s[0].toUpperCase() : '')).join('') || 'NB'}
-            </span>
-          </div>
         </div>
       </div>
 
@@ -252,9 +240,9 @@ function BoardCard({
           <div className="space-y-4">
             <div>
               <div className="flex gap-2">
-                <TextInput readOnly value={shareLink} fullWidth label="Share link" />
+                <TextInput readOnly value={shareLink} fullWidth label="Share link" size="lg" />
                 <IconButton aria-label="Copy share link" size="lg" variant="secondary" onClick={() => { navigator.clipboard.writeText(shareLink) }}>
-                  <Copy className="w-4 h-4" />
+                  <Copy size={24} weight="duotone" className="w-4 h-4" />
                 </IconButton>
               </div>
             </div>
@@ -263,6 +251,7 @@ function BoardCard({
               <div className="flex gap-2">
                 <TextInput
                   type="email"
+                  size="lg"
                   placeholder="Add email and press Enter"
                   label="Invite by email"
                   value={shareInput}
@@ -291,7 +280,7 @@ function BoardCard({
                     }
                   }}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus size={24} weight="duotone" className="w-4 h-4" />
                 </IconButton>
               </div>
               {shareEmails.length > 0 && (

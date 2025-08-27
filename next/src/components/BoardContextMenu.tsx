@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Plus, Sparkles } from 'lucide-react'
+import { Plus, Sparkle, CheckCircle, PlusCircle } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -52,25 +52,27 @@ export default function BoardContextMenu({
             onClick={() => handleAction(() => onAddConnectedNodes(nodeId))}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus size={24} weight="duotone" className="w-4 h-4" />
             Add connected node(s)
           </button>
         )}
 
+        {!nodeId && onAddBlankNode && (
         <button
           onClick={() => handleAction(onAddBlankNode)}
           className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
           Add node(s)
         </button>
+        )}
 
         {onAddTaskNode && (
           <button
             onClick={() => handleAction(onAddTaskNode)}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <CheckCircle size={24} weight="duotone" className="w-4 h-4" />
             Add task
           </button>
         )}
@@ -79,10 +81,10 @@ export default function BoardContextMenu({
           onClick={() => handleAction(onGenerateAINode)}
           className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
         >
-          <Sparkles className="w-4 h-4" />
+          <Sparkle size={24} weight="duotone" className="w-4 h-4" />
           Generate AI Node
         </button>
       </div>
-    </>
+    </> 
   )
 } 

@@ -48,7 +48,8 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
         {/* Input container */}
         <div
           className={clsx(
-            "relative rounded-full px-3 pt-3 border border-transparent transition-all duration-200",
+            "relative rounded-full px-3 border border-transparent transition-all duration-200",
+            label ? "pt-0" : "pt-3",
             "bg-gray-100 dark:bg-gray-950/80",
             "focus-within:bg-white dark:focus-within:bg-gray-900",
             "focus-within:border-primary-500 dark:focus-within:border-primary-400/50",
@@ -63,12 +64,12 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
             <label
               htmlFor={inputId}
               className={clsx(
-                "absolute left-3 font-medium transition-all duration-200",
+                "absolute px-4 rounded-full dark:bg-gray-950/80 left-4 font-medium transition-all duration-200",
                 "text-gray-500 dark:text-gray-400",
                 error &&
                   "text-red-500 dark:text-red-400 peer-focus:text-red-500 dark:peer-focus:text-red-400",
                 isActive
-                  ? "top-1 text-xs"
+                  ? "-top-2 left-0! bg-white text-xs"
                   : "top-1/2 -translate-y-1/2 text-sm"
               )}
             >
@@ -95,7 +96,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
               onBlur={() => setIsFocused(false)}
               placeholder={label ? " " : props.placeholder} // keeps floating label working
               className={clsx(
-                "peer w-full h-full bg-transparent border-none outline-none",
+                "peer w-full h-full bg-transparent border-none outline-none pl-1",
                 "text-gray-900 dark:text-white placeholder-transparent",
                 leftIcon && "pl-8",
                 rightIcon && "pr-8",

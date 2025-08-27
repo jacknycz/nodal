@@ -1,6 +1,5 @@
 'use client'
 
-import { ArrowLeft, TestTube } from 'lucide-react'
 import { Robot } from '@phosphor-icons/react/dist/ssr'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import type { OpenAIModel } from '../features/ai/aiTypes'
@@ -85,26 +84,6 @@ export default function AISettingsMenu({
               <span>Creative</span>
             </div>
           </div>
-
-          {onToggleTestMode && (
-            <button
-              onClick={onToggleTestMode}
-              className="flex items-center gap-2 w-full mt-4 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title={isTestMode ? "Exit Test Mode" : "Enter Test Mode"}
-            >
-              {isTestMode ? (
-                <>
-                  <ArrowLeft className="w-4 h-4" />
-                  <span>Exit Test</span>
-                </>
-              ) : (
-                <>
-                  <TestTube className="w-4 h-4" />
-                  <span>Test Mode</span>
-                </>
-              )}
-            </button>
-          )}
         </div>
       }
       className={className}

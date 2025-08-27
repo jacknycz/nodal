@@ -1,14 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Settings, 
-  Building, 
-  HelpCircle, 
-  LogOut,
-  Clock
-} from 'lucide-react'
-import { User, GearSix } from '@phosphor-icons/react/dist/ssr'
+import { User, GearSix, SquaresFour, SignOut } from '@phosphor-icons/react/dist/ssr'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
 import { getUserRoleFromMetadata, isAdmin } from '../features/auth/roles'
@@ -203,55 +196,19 @@ export default function AvatarMenu({
           {isBoardView && (
             <button
               onClick={onOpenBoardRoom}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
+              className="cursor-pointer w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
             >
-              <Building className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <SquaresFour size={24} weight="duotone" className="text-gray-600 dark:text-gray-400 w-4 h-4" />
               <span className="text-sm font-medium text-gray-900 dark:text-white">Board Room</span>
             </button>
           )}
 
-          {/* Recent Boards Section - Only show when NOT on BoardRoom page */}
-          {isBoardView && (
-            <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-2 mb-2">
-                <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Recent boards</span>
-              </div>
-              {recentBoards.length > 0 ? (
-                <div className="space-y-1">
-                  {recentBoards.map((board) => (
-                    <button
-                      key={board.id}
-                      onClick={() => onLoadBoard?.(board)}
-                      className="w-full px-2 py-1 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                    >
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {board.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(board.lastModified).toLocaleDateString()}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No recent boards</p>
-                  <button
-                    onClick={onOpenBoardRoom}
-                    className="mt-1 text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline"
-                  >
-                    Create your first board
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+        
 
-          {/* Separator - Only show when we have content above and below */}
+          {/* Separator - Only show when we have content above and below
           {isBoardView && (
             <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
-          )}
+          )} */}
 
           {/* Settings
           <button
@@ -297,7 +254,7 @@ export default function AvatarMenu({
           )}
 
           {/* Theme Toggle */}
-          <div className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">
+          <div className="px-4 py-2">
             <ThemeToggle />
           </div>
 
@@ -323,9 +280,9 @@ export default function AvatarMenu({
                 alert('Sign out failed: ' + (err instanceof Error ? err.message : err));
               }
             }}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 text-red-600 dark:text-red-400"
+            className="cursor-pointer w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3 text-red-600 dark:text-red-400"
           >
-            <LogOut className="w-4 h-4" />
+            <SignOut size={24} weight="duotone" className="text-gray-600 dark:text-gray-400 w-4 h-4" />
             <span className="text-sm">Sign Out</span>
           </button>
         </div>

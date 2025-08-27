@@ -14,7 +14,7 @@ export default function ThemeToggle() {
     <Toggle
       checked={isDark}
       onChange={toggleTheme}
-      size="md"
+      size="sm"
       label={getLabel()}
       // description="Toggle between light and dark themes"
       aria-label={`Current theme: ${getLabel()}. Click to toggle.`}
