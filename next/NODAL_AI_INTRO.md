@@ -226,7 +226,7 @@ next/src/
 - **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
 - **UI Simplification**: Remove unused features to keep the interface clean and focused.
 - **Design System**: Use established UI components for consistency and maintainability.
-- **Inputs on iOS** (new): Avoid auto-zoom by ensuring effective 16px font-size (e.g., `text-base scale-[0.875] origin-top-left`).
+- **Checkbox/Inputs**: Keep native inputs in the DOM for accessibility; visually hide when styling custom controls. Prefer design-system components (`TextInput`, `Checkbox`) over raw inputs.
 - **XYFlow Coordinates**: Use XYFlow utilities like `screenToFlowPosition` for converting pointer/screen coordinates to flow space. Avoid manual math where XYFlow provides helpers.
 - **Node Dimensions**: Prefer actual `node.width`/`node.height` when available; only fall back to estimations when necessary.
 - **Placement Tuning**: Centralize tweak points for node placement (radius, offsets, minDistance) to enable quick UX iteration.
@@ -441,50 +441,47 @@ next/src/
 
 ### Today's Session Improvements (Latest)
 
-- **Design System Expansion**:
-  - **New Tag Component**: Created reusable `Tag` component in design system with variants (default, primary, secondary, success, warning, danger, beta)
-  - **Consistent Styling**: Pill-shaped design with `rounded-lg`, single size (`px-3 py-1 text-xs`), and proper theme support
-  - **Interactive Features**: Clickable tags with hover effects and keyboard accessibility
-  - **Beta Integration**: Added "BETA" tag next to Nodal logo in Topbar and LoginScreen
+- **Thumbnail System Removal**:
+  - **Complete Cleanup**: Removed all thumbnail-related code and files from the codebase
+  - **BoardCard Simplification**: Removed `thumbnailUrl` prop and thumbnail/initials display from BoardCard component
+  - **API Cleanup**: Deleted `next/api/generate-thumbnail.ts`, `next/api/package.json`, and `next/app/api/board/thumbnail/route.ts`
+  - **Documentation Update**: Updated AI Intro to reflect that thumbnail generation is deferred for future iteration
+  - **Storage Cleanup**: Removed all server-side thumbnail generation and storage logic
 
-- **Today's Development Work (This Session)**:
-  - **Material-style Select component**: Rewrote the design-system `Select` to use a Material-like floating label + underline style, kept the native `<select>` for accessibility, added support for an `xs` size, and improved left/right icon layout and default chevron.
-  - **Shared model list**: Moved inline `MODELS` into a shared module `next/src/features/ai/models.ts` and updated `AISettingsMenu` and `ChatPanel2` to import and reuse it.
-  - **ChatPanel2 wiring**: Wired the ChatPanel model select to the shared AI settings store via `useAISettingsStore()` so changing the model updates shared settings across the app.
-  - **Select typing fix**: Resolved a TypeScript typing issue when forwarding native `onChange` by safely forwarding the native handler; can be tightened later to a stricter typed approach if desired.
-  - **Search component update**: Converted `Search` into a controlled-friendly component (`value`, `onChange`, `placeholder`, `id`, `className`) while preserving the floating-label UI so it can be used consistently across menus and pages.
-  - **BoardRoom: pinned boards**: Replaced the proof-of-concept pinned-IDs list with real `BoardCard` rendering (looks up boards by id and skips missing entries) so pinned boards render identically to main board cards.
-  - **Minor UI adjustments & polish**: Small visual tweaks to `Select` (shadows, font settings) and `BoardRoom` layout refinements; all modified files pass linter checks in this session.
+- **Icon Library Migration**:
+  - **Phosphor Icons Integration**: Migrated from `lucide-react` to `@phosphor-icons/react` across the entire codebase
+  - **File-by-File Updates**: Updated components including Topbar, FloatingActionButton, BoardReorganizeMenu, ChatPanel2, TaskList, Search, DocumentsMenu, ChatPanel, LoginScreen, ShareMenu, and PDFPreviewModal
+  - **Strategic Revert**: Reverted TipTapEditor back to `lucide-react` due to its unique editor-specific icon requirements
+  - **Alias Handling**: Used proper aliases for icon name differences (e.g., `ClockCounterClockwise as RotateCounterClockwise`)
+  - **Documentation**: Updated AI Intro to reflect the icon library migration
 
+- **ImageNode Enhancement**:
+  - **Clickable Preview**: Made the entire image preview clickable to expand/collapse
+  - **Next.js Image Integration**: Replaced native `<img>` tag with Next.js `Image` component for optimization
+  - **Dynamic Sizing**: Image dimensions adjust based on expanded state
+  - **Collapse on Click**: Clicking the expanded image now collapses it back to preview size
 
-- **LoginScreen Modernization**:
-  - **Complete Design System Migration**: Replaced all raw HTML buttons and inputs with design system components (`Button`, `TextInput`)
-  - **Enhanced Styling**: Updated to use primary/secondary/tertiary colors from `globals.css`
-  - **Improved UX**: Added loading states, proper form validation, and full-width components
-  - **Visual Polish**: Rounded corners (`rounded-3xl`), improved shadows, and better spacing
-  - **Beta Branding**: Integrated "BETA" tag with Nodal logo for consistent branding
-
-- **Board Creation Flow Enhancement**:
-  - **Topic as Parent Node**: User-provided topic now becomes the central parent node in new boards
-  - **Fan Layout Implementation**: All generated/starter nodes are placed in a fan pattern around the topic node
-  - **Automatic Connections**: Edges are automatically created from topic to all generated nodes
-  - **Improved Positioning**: Topic node positioned at `{ x: 500, y: 400 }` to avoid overlap with fan nodes
-  - **Radius Optimization**: Fan nodes placed at 250px radius with proper angle distribution
-  - **Fallback Handling**: Graceful fallback to simple fan placement when complex placement engine fails
+- **PDFPreviewModal Enhancement**:
+  - **Pan and Zoom**: Added full pan/zoom functionality for PDF content with mouse wheel zoom and drag panning
+  - **Browser UI Hiding**: Used URL parameters (`#toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-fit`) to hide browser's default PDF UI
+  - **Resize Handle**: Added diagonal resize handle in bottom-right corner for width/height adjustment
+  - **Node Drag Integration**: Enabled node dragging through the modal header while keeping only X button for closing
+  - **Pointer Events**: Implemented robust pointer event handling with capture for reliable resize functionality
+  - **Content Height Management**: Dynamic content height calculation to ensure iframe resizes with modal
 
 - **Technical Improvements**:
-  - **Storage Consistency**: Unified use of `boardStorage.saveBoardWithId` for new board creation
-  - **Error Handling**: Robust error handling with fallback node creation when AI generation fails
-  - **Navigation Flow**: Proper routing to board URL after successful creation
-  - **State Management**: Consistent save status updates and unsaved changes tracking
+  - **Event Handling**: Proper event propagation and pointer capture for resize functionality
+  - **State Management**: Robust state handling for scale, translate, modal dimensions, and resize operations
+  - **UI Polish**: Smooth interactions with proper cursor states and visual feedback
+  - **Accessibility**: Maintained keyboard accessibility while adding advanced mouse interactions
 
 ### Key Lessons from Today's Session
 
-- **File Structure Integrity**: When making large code replacements, ensure proper closing braces and function structure to avoid syntax errors
-- **Design System Consistency**: Use established design system components (Button, TextInput, Tag) instead of raw HTML elements for maintainability
-- **Board Creation Flow**: Ensure topic nodes are properly positioned and fan layouts use consistent radius and angle calculations
-- **Error Recovery**: Provide graceful fallbacks when complex placement engines fail, falling back to simpler, reliable implementations
-- **Component Design**: Keep design system components simple and focused - removed size variants from Tag component for consistency
+- **Icon Migration Strategy**: When migrating icon libraries, consider component-specific needs and be prepared to revert certain components that have unique requirements
+- **Event Handling**: Pointer events with capture provide more reliable drag/resize functionality than basic mouse events
+- **PDF UI Control**: URL parameters can effectively hide browser PDF UI while maintaining iframe interactivity
+- **Modal Integration**: Careful balance needed between modal functionality and underlying node interactions
+- **Code Cleanup**: Systematic removal of features requires attention to all related files, components, and documentation
 
 ### New since latest session
 
