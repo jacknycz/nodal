@@ -171,9 +171,11 @@ export default function DocumentNode({
     }
   }
 
+  const containerWidthClass = showPreview ? 'w-[820px]' : 'min-w-[240px] max-w-[540px]'
+
   return (
     <div 
-      className={`flex flex-col justify-start text-left p-4 min-w-[240px] max-w-[540px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
+      className={`flex flex-col justify-start text-left p-4 ${containerWidthClass} bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
         isFocused
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
           : selected 
@@ -233,6 +235,8 @@ export default function DocumentNode({
             {getStatusText()}
           </span>
         </div>
+
+        {/* Preview is handled by PDFPreviewModal to preserve PDF interactivity */}
 
         {/* Extracted text preview */}
         {hasExtractedText && (
