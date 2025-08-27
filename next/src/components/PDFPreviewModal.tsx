@@ -89,7 +89,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
   return (
     <div className="fixed -inset-4 flex items-center justify-center z-50">
       <div
-        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl mx-4 flex flex-col nodrag nowheel select-none"
+        className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl mx-4 flex flex-col select-none"
         style={{
           width: modalWidth,
           height: modalHeight,
@@ -98,7 +98,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
         }}
       >
         {/* Header */}
-        <div ref={headerRef} className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div ref={headerRef} className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 cursor-move pointer-events-none">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {fileName}
@@ -108,14 +108,14 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 pointer-events-auto"
               title="Download PDF"
             >
               <DownloadSimple size={24} weight="duotone" className="w-4 h-4" />
             </button>
             <button
               onClick={onClose}
-              className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              className="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 pointer-events-auto"
               title="Close"
             >
               <X size={24} weight="duotone" className="w-4 h-4" />
@@ -125,7 +125,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
 
         {/* PDF Content */}
         <div
-          className="overflow-hidden"
+          className="overflow-hidden nodrag nowheel"
           style={{ height: contentHeight > 0 ? contentHeight : undefined }}
         >
           {pdfUrl ? (
