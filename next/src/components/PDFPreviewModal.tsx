@@ -101,7 +101,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
         <div className="flex-1 overflow-hidden">
           {pdfUrl ? (
             <iframe
-              src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+              src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-fit`}
               className="w-full h-full min-h-64 border-0"
               title={fileName}
             />
