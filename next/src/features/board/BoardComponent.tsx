@@ -1089,18 +1089,45 @@ function BoardContent({
       }
       handleAddNodeToStore(newNode)
       
-      // Extract text if the file type supports it
+      // Extract text: prefer server-side extraction for PDFs; fall back to client for others
       if (isTextExtractable(file.type, file.name)) {
         try {
-          // console.log('🔍 Starting client-side text extraction for:', file.name)
-          
-          // Dynamic import to avoid SSR issues
-          const { extractTextFromFile } = await import('../storage/textExtractor')
-          const extractedText = await extractTextFromFile(file, file.type, file.name)
+          let extractedText = ''
+          if (file.type.includes('pdf')) {
+            try {
+              // Prefer server route using pdf-parse against a signed URL
+              const resp = await fetch('/api/documents/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ signedUrl, fileName: file.name, fileType: file.type }),
+              })
+              if (!resp.ok) {
+                const errText = await resp.text().catch(() => '')
+                throw new Error(`Extraction request failed (${resp.status}): ${errText}`)
+              }
+              const json = await resp.json()
+              if (json?.success && typeof json.extractedText === 'string') {
+                extractedText = json.extractedText
+              }
+            } catch (e) {
+              console.error('Server PDF extraction failed, skipping to ready state', e)
+            }
+          } else {
+            // Dynamic import to avoid SSR issues for non-PDF
+            const { extractTextFromFile } = await import('../storage/textExtractor')
+            extractedText = await extractTextFromFile(file, file.type, file.name)
+          }
           
           if (extractedText && extractedText.length > 0) {
             // console.log(`✅ Text extracted successfully: ${extractedText.length} characters`)
             
+            // Persist extracted text to Supabase
+            try {
+              await supabaseStorage.updateDocumentExtractedText(documentId, extractedText)
+            } catch (e) {
+              console.warn('Failed to persist extracted text; continuing with node update only', e)
+            }
+
             // Update the node with extracted text
             setNodes((currentNodes) => {
               if (!Array.isArray(currentNodes)) return currentNodes
