@@ -152,7 +152,8 @@ export default function ChatPanel({
     if (contextNodes.length > 0) {
       const nodeContext = contextNodes.map(node => {
         const title = node.data.title || 'Untitled Node'
-        const content = node.data.content || ''
+        const rawContent = node.data.content || node.data.extractedText || (node.data as any).extracted_text || ''
+        const content = typeof rawContent === 'string' ? rawContent : String(rawContent)
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
       
@@ -374,6 +375,19 @@ export default function ChatPanel({
     return out.join('\n\n')
   }
 
+  // For user messages sent with hidden context prefix, only show the user's original question
+  const getUserDisplayText = (text: string): string => {
+    if (!text) return ''
+    if (text.startsWith('Context - ')) {
+      const marker = '\n\nUser message: '
+      const idx = text.indexOf(marker)
+      if (idx >= 0) {
+        return text.slice(idx + marker.length)
+      }
+    }
+    return text
+  }
+
   // Generate nodes using our new intelligent placement system
   const handleGenerateNodesFromMessage = async (points: { title: string; content: string }[]) => {
     if (!selectedNodes.length) {
@@ -586,7 +600,7 @@ export default function ChatPanel({
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.role === 'assistant' ? sanitizeForDisplay(message.content) : message.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{message.role === 'assistant' ? sanitizeForDisplay(message.content) : getUserDisplayText(message.content)}</p>
               </div>
             </div>
           ))}

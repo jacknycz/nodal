@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, Target } from '@phosphor-icons/react'
 import Image from 'next/image'
@@ -56,6 +56,20 @@ export default function ImageNode({
   const panStartRef = React.useRef<{ x: number; y: number } | null>(null)
   const pointerCacheRef = React.useRef<Map<number, { x: number; y: number }>>(new Map())
   const pinchStartRef = React.useRef<{ distance: number; center: { x: number; y: number }; scale: number; translate: { x: number; y: number } } | null>(null)
+
+  // Status visibility (auto-hide when status becomes 'ready')
+  const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
+  useEffect(() => {
+    // Always show when status changes, then auto-hide for 'ready'
+    setShowStatus(true)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    if (data.status === 'ready') {
+      timer = setTimeout(() => setShowStatus(false), 5000)
+    }
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [data.status])
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -328,7 +342,7 @@ export default function ImageNode({
             </div>
 
             {data.status && (
-              <div className="mt-2 flex items-center gap-2">
+              <div className={`mt-2 flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
                 {getStatusIcon()}
                 <span className="text-xs text-gray-600 dark:text-gray-400">
                   {data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}

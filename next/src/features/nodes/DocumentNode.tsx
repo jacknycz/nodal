@@ -53,6 +53,18 @@ export default function DocumentNode({
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  // Status visibility (auto-hide when status becomes 'ready')
+  const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
+  useEffect(() => {
+    setShowStatus(true)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    if (data.status === 'ready') {
+      timer = setTimeout(() => setShowStatus(false), 5000)
+    }
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [data.status])
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -229,12 +241,14 @@ export default function DocumentNode({
         </div>
         
         {/* Status indicator */}
-        <div className="flex items-center gap-2 mb-3">
-          {getStatusIcon()}
-          <span className="text-xs text-gray-600 dark:text-gray-400">
-            {getStatusText()}
-          </span>
-        </div>
+        {data.status && (
+          <div className={`flex items-center gap-1 mb-3 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
+            {getStatusIcon()}
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              {getStatusText()}
+            </span>
+          </div>
+        )}
 
         {/* Preview is handled by PDFPreviewModal to preserve PDF interactivity */}
 

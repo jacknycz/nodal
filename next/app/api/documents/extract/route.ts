@@ -20,12 +20,36 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     let extractedText = ''
+    let errorMessage = ''
 
     if (fileType.includes('pdf')) {
-      // Use ESM-compatible entry to avoid odd default behavior
-      const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js')
-      const result = await pdfParse(buffer)
-      extractedText = result.text?.trim() || ''
+      try {
+        // Primary: pdf-parse
+        const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js')
+        const result = await pdfParse(buffer)
+        extractedText = result.text?.trim() || ''
+      } catch (e) {
+        errorMessage = `pdf-parse failed: ${e instanceof Error ? e.message : 'unknown error'}`
+        // Fallback: pdfjs-dist text extraction
+        try {
+          const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
+          const loadingTask = pdfjsLib.getDocument({ data: buffer })
+          const pdf = await loadingTask.promise
+          let combined = ''
+          const maxPages = Math.min(pdf.numPages || 0, 50)
+          for (let i = 1; i <= maxPages; i++) {
+            const page = await pdf.getPage(i)
+            const tc = await page.getTextContent()
+            const pageText = (tc.items || [])
+              .map((it: any) => (it && typeof it.str === 'string' ? it.str : ''))
+              .join(' ')
+            combined += (combined ? '\n\n' : '') + pageText
+          }
+          extractedText = combined.trim()
+        } catch (e2) {
+          errorMessage += ` | pdfjs-dist failed: ${e2 instanceof Error ? e2.message : 'unknown error'}`
+        }
+      }
     } else if (fileType.startsWith('text/') || fileType.includes('json') || fileType.includes('markdown')) {
       extractedText = buffer.toString('utf-8')
     } else {
@@ -33,11 +57,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: true,
+      success: extractedText.length > 0,
       extractedText,
       characterCount: extractedText.length,
       fileName,
       fileType,
+      error: extractedText.length > 0 ? undefined : errorMessage || undefined,
     })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })

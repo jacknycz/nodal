@@ -15,6 +15,7 @@ interface AINodeGeneratorProps {
   onClose: () => void
   onGenerate: (nodeData: { label: string; content?: string }) => void
   initialContext?: { topic?: string; description?: string }
+  parentNodeId?: string
 }
 
 type PendingPoint = { title: string; content: string; selected: boolean }
@@ -24,6 +25,7 @@ export default function AINodeGenerator({
   onClose,
   onGenerate,
   initialContext,
+  parentNodeId,
 }: AINodeGeneratorProps) {
   const { generateFromTopic } = useChatNodeGen2()
   const { placeGeneratedNodes } = useAIPlacement()
@@ -32,6 +34,12 @@ export default function AINodeGenerator({
   const storeNodes = useBoardStore((s) => s.nodes)
   const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
   const selectedNodes = (storeNodes || []).filter((n: any) => selectedNodeIds.includes(n.id))
+  const parentNode = React.useMemo(() => {
+    if (parentNodeId) {
+      return (storeNodes || []).find((n: any) => n.id === parentNodeId)
+    }
+    return selectedNodes[0]
+  }, [parentNodeId, storeNodes, selectedNodes])
 
   const [prompt, setPrompt] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
@@ -63,13 +71,14 @@ export default function AINodeGenerator({
     setIsLoading(true)
     setError(null)
     try {
-      // Include selected node context so "this" refers to the selection
+      // Include parent/selected node context so "this" refers to that node
       const baseTopic = prompt.trim()
       let topicForAI = baseTopic
-      if (selectedNodes.length > 0) {
-        const sel = selectedNodes[0]
+      const sel = parentNode || selectedNodes[0]
+      if (sel) {
         const selTitle = sel?.data?.title || 'topic'
-        const selContent = (sel?.data?.content || '').toString()
+        const rawSel = sel?.data?.content || sel?.data?.extractedText || (sel?.data as any)?.extracted_text || ''
+        const selContent = rawSel ? String(rawSel) : ''
         topicForAI = baseTopic || selTitle
         if (selContent) {
           topicForAI = `${topicForAI}\n\nContext from selected node:\n${selContent}`
@@ -98,7 +107,7 @@ export default function AINodeGenerator({
     }
     try {
       const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
-      const result = await placeGeneratedNodes(nodesToPlace)
+      const result = await placeGeneratedNodes(nodesToPlace, parentNode?.id)
 
       if (result && result.success && result.placements.length > 0) {
         const newNodes: Node[] = result.placements.map(p => ({
@@ -156,6 +165,12 @@ export default function AINodeGenerator({
     >
       {step === 0 && (
         <div className="space-y-3">
+          {parentNode && (
+            <div className="rounded-md border border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900/40 text-sm">
+              <div className="text-gray-700 dark:text-gray-200 font-medium">Parent node:</div>
+              <div className="text-gray-900 dark:text-gray-100">{parentNode?.data?.title || '(untitled)'}</div>
+            </div>
+          )}
           <TextArea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}

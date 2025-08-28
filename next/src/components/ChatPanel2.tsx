@@ -61,6 +61,43 @@ export default function ChatPanel2() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Sanitize assistant text: reduce repeated content and fix formatting
+  const sanitizeForDisplay = (text: string): string => {
+    let s = text || ''
+    s = s.replace(/([^\n])(\s*)(\d+\.\s)/g, '$1\n\n$3')
+    if (s.length >= 120) {
+      const third = Math.floor(s.length / 3)
+      const head = s.slice(0, third)
+      const tail = s.slice(third)
+      if (tail.startsWith(head)) {
+        while (s.endsWith(head + head)) {
+          s = s.slice(0, s.length - head.length)
+        }
+      }
+    }
+    const paras = s.split(/\n\s*\n/)
+    const out: string[] = []
+    for (const p of paras) {
+      const t = p.trim()
+      if (!t) continue
+      if (out.length === 0 || out[out.length - 1] !== t) {
+        out.push(t)
+      }
+    }
+    return out.join('\n\n')
+  }
+
+  // For user messages with hidden context prefix, only show the original user text
+  const getUserDisplayText = (text: string): string => {
+    if (!text) return ''
+    if (text.startsWith('Context - ')) {
+      const marker = '\n\nUser message: '
+      const idx = text.indexOf(marker)
+      if (idx >= 0) return text.slice(idx + marker.length)
+    }
+    return text
+  }
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || isStreaming) return
     const userText = inputValue.trim()
@@ -72,7 +109,8 @@ export default function ChatPanel2() {
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map((n: any) => {
         const title = n?.data?.title || 'Untitled Node'
-        const content = (n?.data?.content || '').toString()
+        const raw = n?.data?.content || n?.data?.extractedText || (n?.data as any)?.extracted_text || ''
+        const content = (raw || '').toString()
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
 
@@ -250,7 +288,7 @@ export default function ChatPanel2() {
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
-                <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                <p className="text-sm whitespace-pre-wrap">{m.role === 'assistant' ? sanitizeForDisplay(m.content) : getUserDisplayText(m.content)}</p>
               </div>
             </div>
           ))}

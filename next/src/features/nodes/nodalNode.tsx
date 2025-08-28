@@ -227,7 +227,7 @@ export default function NodalNode({
 
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="text-base font-medium text-gray-900 dark:text-white">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
             {displayTitle}
           </h3>
           {(isLocked || showEditModal) && (
@@ -246,7 +246,7 @@ export default function NodalNode({
         )}
       </div>
       {/* Action buttons - only show on hover and if not locked by someone else */}
-      <div className="flex w-full items-end justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="flex w-full items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <IconButton
           variant="default"
           size="sm"

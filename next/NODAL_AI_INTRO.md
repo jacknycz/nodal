@@ -4,7 +4,7 @@
 
 ## Overview
 
-**Nodal** is a collaborative mindmapping and brainstorming app, now built on a modern Next.js stack. The app enables users to visually map ideas, leverage AI for creative expansion, and enjoy a robust, cloud-synced experience with automatic thumbnail generation. This document is the canonical reference for the Next.js version of Nodal—**the old Vite/CRA codebase is deprecated and should not be referenced for new work.**
+**Nodal** is a collaborative mindmapping and brainstorming app, now built on a modern Next.js stack. The app enables users to visually map ideas, leverage AI for creative expansion, and enjoy a robust, cloud-synced experience. This document is the canonical reference for the Next.js version of Nodal—**the old Vite/CRA codebase is deprecated and should not be referenced for new work.**
 
 ---
 

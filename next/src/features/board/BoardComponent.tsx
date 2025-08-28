@@ -152,6 +152,7 @@ function BoardContent({
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
+  const [aiParentNodeId, setAiParentNodeId] = useState<string | null>(null)
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -1106,8 +1107,12 @@ function BoardContent({
                 throw new Error(`Extraction request failed (${resp.status}): ${errText}`)
               }
               const json = await resp.json()
-              if (json?.success && typeof json.extractedText === 'string') {
+              if (typeof json?.extractedText === 'string' && json.extractedText.length > 0) {
                 extractedText = json.extractedText
+              } else {
+                if (json?.error) {
+                  console.warn('PDF extraction returned no text:', json.error)
+                }
               }
             } catch (e) {
               console.error('Server PDF extraction failed, skipping to ready state', e)
@@ -1468,13 +1473,19 @@ function BoardContent({
     (window as any).__focusedNodeIds = useBoardStore.getState().focusedNodeIds || []
   }, [nodes])
 
-  const handleOpenAINodeGenerator = useCallback(() => {
-    setShowAINodeGenerator(true)
-  }, [])
+  
 
   const [showAddNodeModal, setShowAddNodeModal] = useState(false)
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null)
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
+
+  const handleOpenAINodeGenerator = useCallback(() => {
+    // Prefer explicit pendingSourceNodeId from context menu; fallback to current selection
+    const selectedIds = useBoardStore.getState().selectedNodeIds || []
+    const parentId = pendingSourceNodeId || (selectedIds.length > 0 ? selectedIds[0] : null)
+    setAiParentNodeId(parentId)
+    setShowAINodeGenerator(true)
+  }, [pendingSourceNodeId])
 
   return (
     <div 
@@ -1644,7 +1655,10 @@ function BoardContent({
           setPendingSourceNodeId(null)
           setPendingNodePosition(null)
         }}
-        onGenerateAINode={handleOpenAINodeGenerator}
+        onGenerateAINode={() => {
+          handleOpenAINodeGenerator()
+          setContextMenu({ isOpen: false, position: null })
+        }}
       />
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}
@@ -1681,6 +1695,7 @@ function BoardContent({
                 topic: pendingBoardBrief.boardTopic,
                 description: pendingBoardBrief.description
               } : undefined}
+              parentNodeId={aiParentNodeId || undefined}
             />
           )}
           {/* NodeSetupModal deprecated for add-new-node; using NodeEditModal instead */}

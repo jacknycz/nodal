@@ -318,9 +318,6 @@ export default function Topbar({
                   <DocumentsMenu
                     onDeleteNode={onDeleteNode}
                   />
-                  <IconButton aria-label="Product intro" size="md" onClick={() => router.push('/welcome')}>
-                    <Info className="w-4 h-4" />
-                  </IconButton>
                   {/* {isAdmin(user) && (
                     <Button
                       variant="secondaryGhost"
@@ -365,6 +362,9 @@ export default function Topbar({
                 </div>
               </>
             )}
+            <IconButton aria-label="Product intro" size="md" onClick={() => router.push('/welcome')}>
+                    <Info className="w-4 h-4" />
+                  </IconButton>
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}

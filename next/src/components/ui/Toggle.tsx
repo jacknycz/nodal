@@ -58,10 +58,10 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
           disabled={disabled}
           onClick={handleClick}
           className={clsx(
-            'cursor-pointer relative inline-flex items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800',
+            'cursor-pointer relative inline-flex items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800',
             sizeClasses[size],
             checked
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
+              ? 'bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600'
               : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500',
             disabled && 'opacity-50 cursor-not-allowed',
             className

@@ -48,7 +48,22 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
   const sanitizeStreamContent = useCallback((text: string): string => {
     let s = text
+    // Fix missing spaces between words and numbers (e.g., "has15")
+    s = s.replace(/([A-Za-z])(\d)/g, '$1 $2')
+    // Ensure numbered lists start on a new paragraph
     s = s.replace(/([^\n])(\s*)(\d+\.\s)/g, '$1\n\n$3')
+
+    // Collapse consecutive identical sentences
+    const sentenceSplit = s.split(/(?<=[.!?])\s+/)
+    const sentenceOut: string[] = []
+    for (const sent of sentenceSplit) {
+      const t = sent.trim()
+      if (!t) continue
+      if (sentenceOut.length === 0 || sentenceOut[sentenceOut.length - 1] !== t) sentenceOut.push(t)
+    }
+    s = sentenceOut.join(' ')
+
+    // Collapse adjacent duplicate paragraphs
     const paras = s.split(/\n\s*\n/)
     const out: string[] = []
     for (const p of paras) {
@@ -87,7 +102,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Avoid repetition. When the user says "this" or "it", interpret it as referring to the selected node context provided in the user message.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Do not repeat sentences or phrases. Answer once, clearly and concisely. When the user says "this" or "it", interpret it as referring to the selected node context provided in the user message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -144,7 +159,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Avoid repetition. When the user says "this" or "it", interpret it as referring to the selected node context provided in the user message.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application. Be helpful and context-aware. Do not repeat sentences or phrases. Answer once, clearly and concisely. When the user says "this" or "it", interpret it as referring to the selected node context provided in the user message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
