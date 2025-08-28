@@ -10,6 +10,9 @@ import Toggle from '../../src/components/ui/Toggle'
 import { motion } from 'motion/react'
 import Loader from '../../src/components/ui/Loader'
 import Image from 'next/image'
+import Tag from '../../src/components/ui/Tag'
+import IconButton from '../../src/components/ui/IconButton'
+import { X, LinkedinLogo, InstagramLogo } from '@phosphor-icons/react'
 
 const slideContainerVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -101,8 +104,8 @@ function WelcomeContent() {
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex justify-center mb-4 gap-6">
                   <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
-                  <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
-                  <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
+                  <Image src="/welcome/image-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
+                  <Image src="/welcome/document-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
                 </motion.div>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
@@ -112,13 +115,13 @@ function WelcomeContent() {
             ),
             ({ next,prev }) => (
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
-                <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">meet the nodes</motion.h2>
+                <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">share with friends</motion.h2>
                 <motion.h2 variants={itemVariants} className="text-8xl font-medium font-fredoka mb-4">FPO</motion.h2>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  Nodes are everything. Content, docs, links, images - connect them, group them, leave them alone - they're good like that.
+                  Share your boards with friends and family. Or enemies. Very flexible.
                 </motion.p>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  Confused? That's fair - we've go an intro board in just a second that should help.
+                  Collaborate with friends and family! (<Tag size="sm">Pro</Tag> feature. I'm one dude, I have rent.)
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
@@ -128,14 +131,30 @@ function WelcomeContent() {
             ),
             ({ next,prev }) => (
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
-                <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">meet the nodes</motion.h2>
+                <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">be our friend?</motion.h2>
                 <motion.h2 variants={itemVariants} className="text-8xl font-medium font-fredoka mb-4">FPO</motion.h2>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  Nodes are everything. Content, docs, links, images - connect them, group them, leave them alone - they're good like that.
+                  We're on all the cool social things and we <span className="line-through">post when legally required</span> would love to see you guys there!
                 </motion.p>
-                <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  Confused? That's fair - we've go an intro board in just a second that should help.
-                </motion.p>
+                <motion.div variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  <div className="flex items-center justify-center gap-4">
+                    <a href="https://x.com/nodal_app" target="_blank" rel="noopener noreferrer">
+                      <IconButton aria-label="Open X" variant="secondaryGhost" size="sm">
+                        <X size={16} />
+                      </IconButton>
+                    </a>
+                    {/* <a href="https://www.linkedin.com/company/nodal-app" target="_blank" rel="noopener noreferrer">
+                      <IconButton aria-label="Open LinkedIn" variant="secondaryGhost" size="sm">
+                        <LinkedinLogo size={16} />
+                      </IconButton>
+                    </a> */}
+                    <a href="https://www.instagram.com/nodal_app" target="_blank" rel="noopener noreferrer">
+                      <IconButton aria-label="Open Instagram" variant="secondaryGhost" size="sm">
+                        <InstagramLogo size={16} />
+                      </IconButton>
+                    </a>
+                  </div>
+                </motion.div>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
                   <Button variant="primary" size="lg" onClick={() => router.replace('/')}>Finish</Button>

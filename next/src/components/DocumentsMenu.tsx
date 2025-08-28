@@ -61,7 +61,7 @@ export default function DocumentsMenu({
         <IconButton
         aria-label="Documents"
         >
-          <Files size={24} weight="duotone" className='text-tertiary-600 dark:text-tertiary-300' />
+          <Files size={24} className='w-4 h-4' />
         </IconButton>
       }
       width="min-w-[24rem] w-[24rem]"

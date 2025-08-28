@@ -363,8 +363,8 @@ export default function Topbar({
               </>
             )}
             <IconButton aria-label="Product intro" size="md" onClick={() => router.push('/welcome')}>
-                    <Info className="w-4 h-4" />
-                  </IconButton>
+              <Info className="w-4 h-4" />
+            </IconButton>
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}
