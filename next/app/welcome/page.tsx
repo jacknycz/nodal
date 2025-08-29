@@ -116,7 +116,9 @@ function WelcomeContent() {
             ({ next,prev }) => (
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">share with friends</motion.h2>
-                <motion.h2 variants={itemVariants} className="text-8xl font-medium font-fredoka mb-4">FPO</motion.h2>
+                <motion.div variants={itemVariants} className="flex justify-center mb-4">
+                  <Image src="/welcome/share-nodal.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-md rounded-lg shadow-lg" />
+                </motion.div>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Share your boards with friends and family. Or enemies. Very flexible.
                 </motion.p>
@@ -132,29 +134,29 @@ function WelcomeContent() {
             ({ next,prev }) => (
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">be our friend?</motion.h2>
-                <motion.h2 variants={itemVariants} className="text-8xl font-medium font-fredoka mb-4">FPO</motion.h2>
-                <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  We're on all the cool social things and we <span className="line-through">post when legally required</span> would love to see you guys there!
-                </motion.p>
                 <motion.div variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   <div className="flex items-center justify-center gap-4">
                     <a href="https://x.com/nodal_app" target="_blank" rel="noopener noreferrer">
-                      <IconButton aria-label="Open X" variant="secondaryGhost" size="sm">
-                        <X size={16} />
+                      <IconButton aria-label="Open X" variant="secondaryGhost" size="lg">
+                        <X size={24} />
                       </IconButton>
                     </a>
                     {/* <a href="https://www.linkedin.com/company/nodal-app" target="_blank" rel="noopener noreferrer">
-                      <IconButton aria-label="Open LinkedIn" variant="secondaryGhost" size="sm">
-                        <LinkedinLogo size={16} />
+                      <IconButton aria-label="Open LinkedIn" variant="secondaryGhost" size="lg">
+                        <LinkedinLogo size={24} />
                       </IconButton>
                     </a> */}
                     <a href="https://www.instagram.com/nodal_app" target="_blank" rel="noopener noreferrer">
-                      <IconButton aria-label="Open Instagram" variant="secondaryGhost" size="sm">
-                        <InstagramLogo size={16} />
+                      <IconButton aria-label="Open Instagram" variant="secondaryGhost" size="lg">
+                        <InstagramLogo size={24} />
                       </IconButton>
                     </a>
                   </div>
                 </motion.div>
+                <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  We're on all the cool social things and we <span className="line-through">post when legally required</span> would love to see you guys there!
+                </motion.p>
+                
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
                   <Button variant="primary" size="lg" onClick={() => router.replace('/')}>Finish</Button>
