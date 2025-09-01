@@ -53,6 +53,22 @@ export const MODEL_INFO: Record<OpenAIModel, ModelInfo> = {
     maxTokens: 128000,
     costPer1k: 0.00015,
     capabilities: { streaming: true, functionCalling: true, vision: true }
+  },
+  'gpt-5': {
+    id: 'gpt-5',
+    name: 'GPT-5',
+    description: 'Latest flagship model with improved reasoning and multimodal capabilities',
+    maxTokens: 200000,
+    costPer1k: 0.01,
+    capabilities: { streaming: true, functionCalling: true, vision: true }
+  },
+  'gpt-5-mini': {
+    id: 'gpt-5-mini',
+    name: 'GPT-5 Mini',
+    description: 'Smaller, faster GPT-5 variant optimized for cost and latency',
+    maxTokens: 200000,
+    costPer1k: 0.002,
+    capabilities: { streaming: true, functionCalling: true, vision: true }
   }
 }
 

@@ -76,7 +76,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Be helpful and context-aware, and ground your answers in the provided board and node context. There is no restriction on output length or format; use code blocks, lists, or long-form text when appropriate. When the user says "this" or "it", interpret it relative to the selected/focused nodes included in the user's message. Avoid unnecessary repetition.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Ground answers in the provided board and node context. There is no restriction on output length or format. When the user says "this" or "it", interpret it relative to the selected/focused nodes included in the user's message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -133,7 +133,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Be helpful and context-aware, and ground your answers in the provided board and node context. There is no restriction on output length or format; use code blocks, lists, or long-form text when appropriate. When the user says "this" or "it", interpret it relative to the selected/focused nodes included in the user's message. Avoid unnecessary repetition.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Ground answers in the provided board and node context. There is no restriction on output length or format. When the user says "this" or "it", interpret it relative to the selected/focused nodes included in the user's message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -145,12 +145,14 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
       }
 
       for await (const chunk of aiContext.generateStream(streamOptions)) {
-        const delta = (chunk as any).delta || (chunk as any).content || ''
-        if (!delta) continue
-        setMessages(prev => prev.map(m => {
-          if (m.id !== assistantId) return m
-          return { ...m, content: (m.content || '') + delta }
-        }))
+        const delta = (chunk as any)?.delta
+        const contentFull = (chunk as any)?.content
+        if (typeof delta === 'string' && delta.length > 0) {
+          setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: (m.content || '') + delta } : m)))
+        } else if (typeof contentFull === 'string') {
+          // Some providers send the full accumulated content each tick
+          setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: contentFull } : m)))
+        }
       }
     } catch (err) {
       if (!(err instanceof Error && err.name === 'AbortError')) {
@@ -160,7 +162,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [aiContext, messages, currentContext, sanitizeStreamContent])
+  }, [aiContext, messages, currentContext])
 
   const cancelStreaming = useCallback(() => {
     try {
