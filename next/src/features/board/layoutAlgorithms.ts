@@ -228,6 +228,14 @@ export function calculateGridLayout(
   context: PlacementContext,
   options: Partial<GridLayoutOptions> = {}
 ): NodePlacement[] {
+  // If parent/child relationships are present (or a focus parent exists),
+  // use a hierarchical tiered grid: each depth is a row, siblings grouped under their parent.
+  const hasHierarchy =
+    nodesToPlace.some(n => !!n.parentId) || !!context.focusNode
+  if (hasHierarchy) {
+    return calculateHierarchicalGridLayout(nodesToPlace, context, options)
+  }
+
   const {
     columns = Math.ceil(Math.sqrt(nodesToPlace.length)),
     cellWidth = 300,
@@ -296,6 +304,226 @@ export function calculateGridLayout(
     })
   })
   
+  return placements
+}
+
+/**
+ * Hierarchical Grid Layout
+ * - Tier 1 is the parent (focus node or roots). Each tier is a row below the previous.
+ * - Multiple families in the same row sit side-by-side in the order of parents in the row above.
+ */
+function calculateHierarchicalGridLayout(
+  nodesToPlace: NodeToPlace[],
+  context: PlacementContext,
+  options: Partial<GridLayoutOptions> = {}
+): NodePlacement[] {
+  const {
+    cellWidth = 300,
+    cellHeight = 200,
+    padding = 60
+  } = options
+
+  const placements: NodePlacement[] = []
+  const center = getCenterPosition(context)
+
+  // Stable ids for building tiers
+  const idOf = (node: NodeToPlace, index: number) => node.id || `temp-${index}`
+  const idMap = new Map<string, NodeToPlace>()
+  const nodeIds: string[] = []
+  nodesToPlace.forEach((n, i) => {
+    const nid = idOf(n, i)
+    idMap.set(nid, n)
+    nodeIds.push(nid)
+  })
+  const idSet = new Set(nodeIds)
+
+  // Group children by parentId
+  const childrenByParent = new Map<string, string[]>()
+  nodesToPlace.forEach((n, i) => {
+    if (!n.parentId) return
+    const list = childrenByParent.get(n.parentId) || []
+    list.push(idOf(n, i))
+    childrenByParent.set(n.parentId, list)
+  })
+
+  // Compute degree from existing edges among these nodes (source/target both present)
+  const degree = new Map<string, number>()
+  nodeIds.forEach(id => degree.set(id, 0))
+  ;(context.existingEdges || []).forEach((edge: any) => {
+    const s = typeof edge?.source === 'string' ? edge.source : undefined
+    const t = typeof edge?.target === 'string' ? edge.target : undefined
+    if (s && t && idSet.has(s) && idSet.has(t)) {
+      degree.set(s, (degree.get(s) || 0) + 1)
+      degree.set(t, (degree.get(t) || 0) + 1)
+    }
+  })
+  const parentKeys = new Set<string>(Array.from(childrenByParent.keys()))
+  const singletonIds = nodeIds.filter(id => {
+    const node = idMap.get(id)
+    const deg = degree.get(id) || 0
+    const hasParent = !!node?.parentId
+    const isParent = parentKeys.has(id)
+    // Single nodes: no edges, no parent, not a parent
+    return deg === 0 && !hasParent && !isParent
+  })
+
+  // Build tiered order: start from tier1 parents
+  const tierIds: string[][] = [] // excludes singletons
+  const tierParentOrder: string[][] = [] // mirrors tierIds but keeps parent grouping
+
+  // Tier 1: if focus exists, it is the only parent id (may not be placed). Otherwise, roots among nodesToPlace without parentId
+  if (context.focusNode) {
+    tierIds.push([]) // no nodes placed at tier 1 if focus isn't in nodesToPlace
+    tierParentOrder.push([context.focusNode.id])
+  } else {
+    const roots: string[] = []
+    nodesToPlace.forEach((n, i) => {
+      const nid = idOf(n, i)
+      if (singletonIds.includes(nid)) return
+      if (!n.parentId || !idMap.has(n.parentId)) {
+        roots.push(nid)
+      }
+    })
+    tierIds.push(roots)
+    // Each root acts as its own parent reference for ordering
+    tierParentOrder.push(roots)
+  }
+
+  // Build subsequent tiers until no more children
+  // For each parent in previous tierParentOrder, append its children (in the order they appear in nodesToPlace)
+  while (true) {
+    const prevParents = tierParentOrder[tierParentOrder.length - 1]
+    const nextTier: string[] = []
+    const nextParents: string[] = []
+
+    prevParents.forEach(parentId => {
+      const children = childrenByParent.get(parentId) || []
+      const filteredChildren = children.filter(id => !singletonIds.includes(id))
+      if (filteredChildren.length > 0) {
+        // Maintain grouping by parent; order within children as given
+        nextTier.push(...filteredChildren)
+        nextParents.push(...filteredChildren) // children themselves become parents for the next tier
+      }
+    })
+
+    if (nextTier.length === 0) break
+    tierIds.push(nextTier)
+    tierParentOrder.push(nextParents)
+  }
+
+  // Compute vertical positions (rows). If focus exists, start under it; else center around viewport center.
+  const baseY = context.focusNode ? context.focusNode.position.y : center.y
+  const rowY = (rowIndex: number) =>
+    context.focusNode
+      ? baseY + rowIndex * (cellHeight + padding) // tier 2 is first placed row when focus exists
+      : baseY - ((tierIds.length - 1) * (cellHeight + padding)) / 2 + rowIndex * (cellHeight + padding)
+
+  // For each tier, place nodes in groups side-by-side according to parent order from previous tier
+  const rowWidths: number[] = []
+  for (let t = 0; t < tierIds.length; t++) {
+    const idsInTier = tierIds[t]
+    if (idsInTier.length === 0) continue
+
+    // Build groups by parent order
+    const prevParents = t > 0 ? tierParentOrder[t - 1] : tierParentOrder[0]
+    const groups: string[][] = []
+    const parentToChildren = new Map<string, string[]>()
+    prevParents.forEach(pid => parentToChildren.set(pid, []))
+    // Assign each id in tier to its parent bucket
+    idsInTier.forEach(id => {
+      const node = idMap.get(id)
+      const parentId = node?.parentId || 'root'
+      if (!parentToChildren.has(parentId)) parentToChildren.set(parentId, [])
+      parentToChildren.get(parentId)!.push(id)
+    })
+    prevParents.forEach(pid => {
+      const arr = parentToChildren.get(pid)
+      if (arr && arr.length > 0) groups.push(arr)
+    })
+    // If no matching parents (e.g., roots when no focus), treat entire tier as one group
+    if (groups.length === 0) groups.push(idsInTier)
+
+    // Compute total columns = sum of group sizes; center the row
+    const columns = groups.reduce((sum, g) => sum + g.length, 0)
+    const totalWidth = columns * cellWidth + Math.max(0, columns - 1) * padding
+    rowWidths.push(totalWidth)
+    let currentX = center.x - totalWidth / 2 + cellWidth / 2
+    const y = rowY(t)
+
+    // Place nodes group by group
+    for (const group of groups) {
+      for (const id of group) {
+        const nodeToPlace = idMap.get(id)
+        if (!nodeToPlace) {
+          currentX += cellWidth + padding
+          continue
+        }
+
+        const basePosition = { x: currentX, y }
+        const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+        const finalPosition = findAvailablePosition(
+          basePosition,
+          dimensions,
+          context.existingNodes,
+          { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
+        )
+        const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
+
+        placements.push({
+          node: createNodeFromToPlace(nodeToPlace),
+          position: finalPosition,
+          reason: `Hierarchical grid tier ${t + 1}`,
+          confidence
+        })
+
+        currentX += cellWidth + padding
+      }
+    }
+  }
+
+  // Place singleton nodes (no edges, no parent/children) to the right in their own grid
+  if (singletonIds.length > 0) {
+    // Determine base starting X: to the right of the widest grouped row
+    const groupedExists = rowWidths.length > 0
+    const widest = groupedExists ? Math.max(...rowWidths) : 0
+    const gap = padding * 2
+    const xStart = groupedExists
+      ? center.x + widest / 2 + gap + cellWidth / 2
+      : center.x - ((Math.ceil(Math.sqrt(singletonIds.length)) - 1) * (cellWidth + padding)) / 2
+    const yStart = groupedExists ? rowY(0) : center.y
+
+    const columns = Math.max(1, Math.ceil(Math.sqrt(singletonIds.length)))
+    let col = 0
+    let row = 0
+    for (let i = 0; i < singletonIds.length; i++) {
+      const id = singletonIds[i]
+      const nodeToPlace = idMap.get(id)
+      if (!nodeToPlace) continue
+      const x = xStart + col * (cellWidth + padding)
+      const y = yStart + row * (cellHeight + padding)
+      const basePosition = { x, y }
+      const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+      const finalPosition = findAvailablePosition(
+        basePosition,
+        dimensions,
+        context.existingNodes,
+        { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
+      )
+      const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
+      placements.push({
+        node: createNodeFromToPlace(nodeToPlace),
+        position: finalPosition,
+        reason: 'Singleton grid placement',
+        confidence
+      })
+      col++
+      if (col >= columns) {
+        col = 0
+        row++
+      }
+    }
+  }
+
   return placements
 }
 

@@ -395,6 +395,14 @@ next/src/
   - Implemented a 150ms delayed close with shared hover handlers so the menu stays open when moving from the FAB to the dropdown
   - Closed the visual gap by adjusting the fixed menu position (bottom-20) to align with the FAB placement
 
+- **AI & Chat Updates (Today)**:
+  - **ChatPanel2 — removed node generation**: Removed node-generation UI and parsing from `next/src/components/ChatPanel2.tsx` so the chat focuses on conversation and feedback. Node generation is handled by the dedicated `AINodeGenerator` and context-menu flows.
+  - **Board-aware chat context**: Chat messages now include the board title/topic and selected/focused node context (from `useBoardStore`) so the assistant can interpret references like "this" or "it" relative to the board and selection.
+  - **Unedited assistant responses**: We removed client-side sanitization/rewriting of assistant text—responses are shown raw from the AI unless explicitly prefixed with the hidden context wrapper.
+  - **Streaming fix**: Fixed streaming handling in `next/src/features/ai/useUnifiedAI2.ts` and `next/src/features/ai/aiService.ts` to avoid duplicated output when providers emit full accumulated content per chunk; deltas are appended and full-content chunks replace the assistant message.
+  - **System prompt relaxed**: The AI system prompt was simplified to provide minimal app grounding (nodes/edges/board context) and no editorial length/format restrictions.
+  - **Model updates**: Added `gpt-5` and `gpt-5-mini` to the selectable models and model metadata (`next/src/features/ai/models.ts`, `aiTypes.ts`, `aiConfig.ts`, `aiService.ts`).
+
 ### Key Lessons from Today's Session
 
 - **Icon Migration Strategy**: When migrating icon libraries, consider component-specific needs and be prepared to revert certain components that have unique requirements

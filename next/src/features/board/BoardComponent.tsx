@@ -1755,7 +1755,7 @@ function BoardContent({
             const center = pendingNodePosition || getViewportCenter()
             // If we have a parent (right-clicked node), use AI fan placement centered under parent
             if (pendingSourceNodeId) {
-              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? description : '', type: 'default' as const }))
+              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? description : '', type: 'default' as const, parentId: pendingSourceNodeId }))
               try {
                 const result = await placeAINodes(nodesToPlace, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40 })
                 if (result.success && result.placements.length > 0) {

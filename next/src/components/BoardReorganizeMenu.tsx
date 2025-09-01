@@ -3,9 +3,6 @@
 import React, { useState } from 'react'
 import { 
   GridFour,
-  Circle,
-  ArrowRight,
-  Lightning,
   ClockCounterClockwise,
   Sparkle,
   Spinner,
@@ -34,31 +31,10 @@ const layoutOptions: LayoutOption[] = [
   {
     id: LayoutAlgorithm.GRID,
     name: 'Grid Layout',
-    description: 'Organize nodes in a clean, structured grid',
+    description: 'Reorganize nodes into a clean, tiered grid by parent/child rows',
     icon: GridFour,
-    bestFor: 'Structured content, categories, systematic organization',
+    bestFor: 'Most boards; families grouped by parent across rows',
     recommended: true
-  },
-  {
-    id: LayoutAlgorithm.RADIAL,
-    name: 'Radial Layout', 
-    description: 'Arrange nodes in concentric circles',
-    icon: Circle,
-    bestFor: 'Hierarchical content, central themes with branches'
-  },
-  {
-    id: LayoutAlgorithm.LINEAR,
-    name: 'Linear Layout',
-    description: 'Place nodes in a straight line or sequence',
-    icon: ArrowRight,
-    bestFor: 'Timelines, processes, step-by-step content'
-  },
-  {
-    id: LayoutAlgorithm.SPIRAL,
-    name: 'Spiral Layout',
-    description: 'Create an organic spiral pattern',
-    icon: Lightning,
-    bestFor: 'Creative layouts, brainstorming, organic flow'
   }
 ]
 
@@ -137,7 +113,7 @@ export default function BoardReorganizeMenu({
                 Reorganize Board
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Choose a layout to reorganize your {nodeCount} nodes
+                Apply grid layout to reorganize your {nodeCount} nodes
               </p>
             </div>
           </div>
@@ -169,7 +145,7 @@ export default function BoardReorganizeMenu({
             return (
               <button
                 key={option.id}
-                onClick={() => !isReorganizing && handleReorganize(option.id)}
+                onClick={() => !isReorganizing && handleReorganize(LayoutAlgorithm.GRID)}
                 disabled={isReorganizing}
                 className={`w-full p-4 rounded-lg border-2 text-left transition-all duration-200 ${
                   isSelected && isReorganizing

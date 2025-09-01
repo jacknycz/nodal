@@ -16,11 +16,7 @@ import {
 } from './placementTypes'
 import type { BoardEdge } from './boardTypes'
 import {
-  calculateFanLayout,
   calculateGridLayout,
-  calculateRadialLayout,
-  calculateLinearLayout,
-  calculateSpiralLayout,
   calculateLayoutQuality
 } from './layoutAlgorithms'
 import {
@@ -183,44 +179,8 @@ export class PlacementEngine {
     request: PlacementRequest,
     context: PlacementContext
   ): LayoutAlgorithm {
-    const { strategy, nodes } = request
-    const nodeCount = nodes.length
-    
-    // Strategy-based algorithm selection
-    switch (strategy) {
-      case PlacementStrategy.AI_GENERATION:
-        // AI generation with parent node -> Fan layout
-        if (context.focusNode || context.selectedNodeIds.length > 0) {
-          return LayoutAlgorithm.FAN
-        }
-        // AI generation without parent -> Smart grid
-        return nodeCount <= 6 ? LayoutAlgorithm.GRID : LayoutAlgorithm.RADIAL
-        
-      case PlacementStrategy.BOARD_CREATION:
-        // Board creation -> Structured layouts
-        if (nodeCount <= 4) return LayoutAlgorithm.LINEAR
-        if (nodeCount <= 9) return LayoutAlgorithm.GRID
-        return LayoutAlgorithm.RADIAL
-        
-      case PlacementStrategy.DOCUMENT_UPLOAD:
-        // Document uploads -> Near focus or in available space
-        return context.focusNode ? LayoutAlgorithm.FAN : LayoutAlgorithm.SPIRAL
-        
-      case PlacementStrategy.MANUAL_ADD:
-        // Manual additions -> Simple, predictable placement
-        return LayoutAlgorithm.LINEAR
-        
-      case PlacementStrategy.REORGANIZE:
-        // Reorganization -> Based on current layout and node count
-        if (nodeCount <= 8) return LayoutAlgorithm.GRID
-        if (context.existingNodes.length > 20) return LayoutAlgorithm.CLUSTER
-        return LayoutAlgorithm.RADIAL
-        
-      case PlacementStrategy.SMART_AUTO:
-      default:
-        // Intelligent auto-selection based on context
-        return this.selectSmartAlgorithm(nodes, context)
-    }
+    // Force GRID everywhere for now
+    return LayoutAlgorithm.GRID
   }
   
   /**
@@ -296,38 +256,8 @@ export class PlacementEngine {
     context: PlacementContext,
     options?: Partial<LayoutOptions>
   ): Promise<NodePlacement[]> {
-    
-    switch (algorithm) {
-      case LayoutAlgorithm.FAN:
-        return calculateFanLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.GRID:
-        return calculateGridLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.RADIAL:
-        return calculateRadialLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.LINEAR:
-        return calculateLinearLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.SPIRAL:
-        return calculateSpiralLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.CLUSTER:
-        // TODO: Implement cluster layout
-        return calculateRadialLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.HIERARCHY:
-        // TODO: Implement hierarchy layout
-        return calculateRadialLayout(nodes, context, options as any)
-        
-      case LayoutAlgorithm.FORCE_DIRECTED:
-        // TODO: Implement force-directed layout
-        return calculateRadialLayout(nodes, context, options as any)
-        
-      default:
-        return calculateGridLayout(nodes, context)
-    }
+    // Force GRID everywhere for now
+    return calculateGridLayout(nodes, context, options as any)
   }
   
   /**
@@ -543,9 +473,7 @@ export async function placeAIGeneratedNodes(
     nodes,
     context: enhancedContext,
     strategy: PlacementStrategy.AI_GENERATION,
-    algorithm: LayoutAlgorithm.FAN, // Prefer fan for AI generation
-    // Adjust placement settings (radius, distances, etc.) here for AI-generated nodes
-    options: { radius: 250, verticalOffset: 60 }
+    algorithm: LayoutAlgorithm.GRID
   })
 }
 
@@ -560,7 +488,7 @@ export async function placeBoardCreationNodes(
     nodes,
     context,
     strategy: PlacementStrategy.BOARD_CREATION,
-    algorithm: nodes.length <= 6 ? LayoutAlgorithm.GRID : LayoutAlgorithm.RADIAL
+    algorithm: LayoutAlgorithm.GRID
   })
 }
 
@@ -576,6 +504,6 @@ export async function reorganizeBoard(
     nodes,
     context,
     strategy: PlacementStrategy.REORGANIZE,
-    algorithm
+    algorithm: LayoutAlgorithm.GRID
   })
 }

@@ -293,7 +293,7 @@ export function usePlacement() {
       nodes,
       context,
       strategy: PlacementStrategy.DOCUMENT_UPLOAD,
-      algorithm: LayoutAlgorithm.SPIRAL
+      algorithm: LayoutAlgorithm.GRID
     })
   }, [createPlacementContext])
 
@@ -302,19 +302,36 @@ export function usePlacement() {
    */
   const reorganizeBoardLayout = useCallback(async (
     algorithm: LayoutAlgorithm,
-    includeExistingNodes: boolean = false,
+    includeExistingNodes: boolean = true,
     constraints?: Partial<PlacementConstraints>
   ): Promise<PlacementResult> => {
-    const context = createPlacementContext(undefined, constraints)
+    // Fetch fresh nodes/edges directly from the store to avoid any sync lag
+    const freshNodes = useBoardStore.getState().nodes
+    const freshEdges = useBoardStore.getState().edges
+
+    const baseContext = createPlacementContext(undefined, constraints)
+    const context = { ...baseContext, existingNodes: freshNodes, existingEdges: freshEdges }
     
+    // Build parent relationships from edges (source -> parent, target -> child)
+    const parentOf: Record<string, string> = {}
+    freshEdges.forEach((edge: any) => {
+      const sourceId = edge?.source
+      const targetId = edge?.target
+      if (typeof sourceId === 'string' && typeof targetId === 'string') {
+        // Only set if not already assigned to keep first parent
+        if (!parentOf[targetId]) parentOf[targetId] = sourceId
+      }
+    })
+
     // Convert existing nodes to NodeToPlace if including them
     const nodesToPlace: NodeToPlace[] = includeExistingNodes 
-      ? existingNodes.map(node => ({
+      ? freshNodes.map(node => ({
           id: node.id,
           title: node.data.title || 'Node',
           content: node.data.content,
           type: node.data.type,
-          data: node.data
+          data: node.data,
+          parentId: parentOf[node.id]
         }))
       : []
 
@@ -324,7 +341,7 @@ export function usePlacement() {
     
     // Apply the new positions to the actual board nodes
     if (result.success && result.placements.length > 0) {
-      const updatedNodes = existingNodes.map(node => {
+      const updatedNodes = freshNodes.map(node => {
         const placement = result.placements.find(p => p.node.id === node.id)
         if (placement) {
           return {

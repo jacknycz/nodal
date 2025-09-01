@@ -106,7 +106,7 @@ export default function AINodeGenerator({
       return
     }
     try {
-      const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '' }))
+      const nodesToPlace = selected.map(p => ({ title: p.title, content: p.content || '', parentId: parentNode?.id }))
       const result = await placeGeneratedNodes(nodesToPlace, parentNode?.id)
 
       if (result && result.success && result.placements.length > 0) {
