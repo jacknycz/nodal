@@ -48,6 +48,7 @@ import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
 import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
+import { placeNodes as enginePlaceNodes } from './placementEngine'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -616,30 +617,25 @@ function BoardContent({
       })
       // If user provided manual starter nodes, prioritize those and skip AI
       if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
-        const nodesToPlace = brief.starterNodes.map(title => ({ title, content: '', type: 'default' as const }))
+        // Use hierarchical GRID under the topic as parent
+        const nodesToPlace = brief.starterNodes.map(title => ({ title, content: '', type: 'default' as const, parentId: topicNodeId }))
         try {
           const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
           const viewport = reactFlowInstance.getViewport()
-          const placementResult = await (async () => {
-            // Fan placement centered on topic
-            const req = {
-              nodes: nodesToPlace,
-              context: {
-                existingNodes: [topicNode] as any,
-                existingEdges: [],
-                viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom, width: rect?.width || window.innerWidth, height: rect?.height || window.innerHeight },
-                selectedNodeIds: [],
-                focusNode: topicNode,
-                constraints: { minDistance: 40, avoidOverlap: true, preferredDirection: 'down' },
-              },
-              strategy: PlacementStrategy.AI_GENERATION,
-              algorithm: LayoutAlgorithm.FAN,
-              options: { radius: 250, verticalOffset: 60 },
-            } as any
-            // We don't have direct placeNodes from hook; rely on placement engine via Board creation util when exposed
-            // Temporarily approximate: map to manual fan fallback if unavailable
-            return { success: false, placements: [], connections: [] } as any
-          })()
+          const context = {
+            existingNodes: [topicNode] as any,
+            existingEdges: [] as any[],
+            viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom, width: rect?.width || window.innerWidth, height: rect?.height || window.innerHeight },
+            selectedNodeIds: [] as string[],
+            focusNode: topicNode as any,
+            constraints: { minDistance: 40, avoidOverlap: true, preferredDirection: 'down' as const },
+          }
+          const placementResult = await enginePlaceNodes({
+            nodes: nodesToPlace,
+            context,
+            strategy: PlacementStrategy.AI_GENERATION,
+            algorithm: LayoutAlgorithm.GRID
+          } as any)
           if (placementResult.success && placementResult.placements.length > 0) {
             const generatedNodes = placementResult.placements.map((placement: any) => ({
               id: placement.node.id,
@@ -664,14 +660,18 @@ function BoardContent({
             return
           }
         } catch {}
-        // Fallback: manual fan around topic
+        // Fallback: simple local grid under topic
         const count = brief.starterNodes.length
-        const radius = 250
-        const angleCenter = Math.PI / 2
-        const angleStep = (Math.PI) / Math.max(count, 1)
+        const columns = Math.ceil(Math.sqrt(count))
+        const rows = Math.ceil(count / columns)
+        const spacingX = 300
+        const spacingY = 200
+        const startX = topicNode.position.x - ((columns - 1) * spacingX) / 2
+        const startY = topicNode.position.y + spacingY
         const generatedNodes = brief.starterNodes.map((title, index) => {
-          const angle = angleCenter - (angleStep * ((count - 1) / 2 - index))
-          const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
+          const r = Math.floor(index / columns)
+          const c = index % columns
+          const position = { x: startX + c * spacingX, y: startY + r * spacingY }
           return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: '' } }
         })
         const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
@@ -714,12 +714,25 @@ function BoardContent({
             const nodesToPlace = nodeDataArray.map((nodeData: any) => ({
               title: nodeData.label,
               content: nodeData.content,
-              type: 'default' as const
+              type: 'default' as const,
+              parentId: topicNodeId
             }))
-            // Fan placement using topic as parent
             const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
             const viewport = reactFlowInstance.getViewport()
-            const placementResult = { success: false, placements: [], connections: [] } as any
+            const context = {
+              existingNodes: [topicNode] as any,
+              existingEdges: [] as any[],
+              viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom, width: rect?.width || window.innerWidth, height: rect?.height || window.innerHeight },
+              selectedNodeIds: [] as string[],
+              focusNode: topicNode as any,
+              constraints: { minDistance: 40, avoidOverlap: true, preferredDirection: 'down' as const },
+            }
+            const placementResult = await enginePlaceNodes({
+              nodes: nodesToPlace,
+              context,
+              strategy: PlacementStrategy.AI_GENERATION,
+              algorithm: LayoutAlgorithm.GRID
+            } as any)
 
             if (placementResult.success && (placementResult as any).placements.length > 0) {
               const generatedNodes = (placementResult as any).placements.map((placement: any) => ({
@@ -739,14 +752,18 @@ function BoardContent({
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
               await boardStorage.updateBoard(boardId, boardData)
             } else {
-              // Fallback to simple fan around topic
+              // Fallback: simple local grid under topic
               const count = nodesToPlace.length
-              const radius = 250
-              const angleCenter = Math.PI / 2
-              const angleStep = (Math.PI) / Math.max(count, 1)
+              const columns = Math.ceil(Math.sqrt(count))
+              const rows = Math.ceil(count / columns)
+              const spacingX = 300
+              const spacingY = 200
+              const startX = topicNode.position.x - ((columns - 1) * spacingX) / 2
+              const startY = topicNode.position.y + spacingY
               const generatedNodes = nodesToPlace.map((n: any, index: number) => {
-                const angle = angleCenter - (angleStep * ((count - 1) / 2 - index))
-                const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
+                const r = Math.floor(index / columns)
+                const c = index % columns
+                const position = { x: startX + c * spacingX, y: startY + r * spacingY }
                 return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
               })
               const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
