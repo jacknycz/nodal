@@ -13,11 +13,11 @@
 - 🚀 Deliver a seamless, real-time visual mindmapping experience on the web
 - 🤖 Integrate AI for brainstorming, node generation, and context-aware suggestions
 - 🧑‍💻 Prioritize maintainable, scalable, and idiomatic Next.js + React code
-- ☁️ Use Supabase for authentication, board storage, document uploads, and thumbnail storage
+- ☁️ Use Supabase for authentication, board storage, and document uploads
 - 🎨 Ensure delightful, accessible, and themeable UI/UX
 - 🔄 Real-time collaboration with board sharing, presence, cursors, and optimistic node locking
 - 📱 Responsive design that works across all devices
-- 🖼️ Automatic thumbnail generation for board previews
+ 
 - 🎯 Node selection and focus capabilities with AI chat integration
 
 ---
@@ -29,11 +29,11 @@
 - **Zustand** (atomic, composable state slices)
 - **XYFlow** (graph visualization, successor to React Flow)
 - **Tailwind CSS** (utility-first, themeable design)
-- **Supabase** (auth, database, file storage, thumbnail storage)
+- **Supabase** (auth, database, file storage)
 - **Framer Motion** (UI animation)
 - **OpenAI API** (AI features, user-provided keys)
 - **Date-fns** (date manipulation)
-- **Canvas API** (client-side thumbnail generation)
+ 
 - **TipTap** (rich text editing for node content)
 
 ---
@@ -42,12 +42,12 @@
 
 - **Board**: The main canvas, containing nodes and edges.
 - **Node**: The atomic unit of content (idea, document, etc.).
-- **Board Room**: The dashboard for managing boards with thumbnail previews.
+- **Board Room**: The dashboard for managing boards.
 - **Board Brief**: The object describing a new board's intent, topic, and AI setup.
 - **Single Source of Truth**: All board data and logic now live in `next/src/features/board/`.
 - **Focus Tree**: Hierarchical organization system for nodes and ideas.
 - **AI Context**: Persistent memory system for AI conversations and suggestions.
-- **Thumbnail System**: Automatic generation and storage of board previews using Canvas API and Supabase storage.
+- **Thumbnail System (Deferred)**: Thumbnail generation is currently removed and will be revisited later.
 - **Node Selection**: Multi-node selection system with AI chat integration and visual feedback.
 - **Design System**: Reusable UI components (Modal, Button, IconButton, Toggle, TextInput, Checkbox, Menu, Loader) for consistent design.
 - **Rich Text Editing**: TipTap WYSIWYG editor for node content with formatting options.
@@ -64,7 +64,7 @@
 - **Robust State Handling**: Board ID is managed via `useRef` to avoid React state setter issues and module cache bugs.
 - **AI-Assisted or Blank**: Users can start with a blank board or let AI generate starter nodes, but the board ID and storage logic are unified.
 - **Pre-Session Chat**: Users can refine their board intent through AI conversation before creation.
-- **Automatic Thumbnails**: Board thumbnails are generated and saved automatically when boards are saved.
+ 
 
 ---
 
@@ -117,16 +117,10 @@ next/src/
 
 ---
 
-## Thumbnail System Architecture
+## Thumbnail System (Deferred)
 
-- **Client-Side Generation**: Uses Canvas API to create board previews without server-side rendering
-- **Automatic Triggers**: Thumbnails are generated when boards transition from 'saving' to 'saved' state
-- **Supabase Storage**: Thumbnails stored in dedicated `thumbnails` bucket with simplified RLS policies
-- **BoardRoom Integration**: Thumbnails display in BoardRoom with loading states and error handling
-- **Canvas Rendering**: Simplified board representation with title, node count, and visual node layout
-- **Fallback Handling**: Clean UI when thumbnails are unavailable (no placeholder text)
-
-- **Current status**: Thumbnail generation has been deferred and the server/client thumbnail generation code has been removed from the codebase for now. We'll revisit and reintroduce a thumbnail system in a future iteration.
+- Thumbnail generation has been deferred. All client/server thumbnail code has been removed.
+- We may revisit a lightweight client-side approach in the future, but for now the BoardCard shows a simplified layout without previews.
 
 ---
 
@@ -136,7 +130,7 @@ next/src/
 - **Centered Tips**: Drag & drop tips positioned bottom-center for better visibility
 - **Responsive Design**: All components work seamlessly across desktop and mobile devices
 - **Theme Consistency**: Dark/light mode support throughout all components
-- **Loading States**: Proper feedback during thumbnail generation and board operations
+- **Loading States**: Proper feedback during board operations
 - **Design System**: Built reusable UI components (Modal, Button, IconButton, Toggle) for consistency
 - **Node Selection UI**: Visual feedback for selected nodes with blue border and background
 - **Chat Panel Integration**: Context-aware chat with node selection notifications and dynamic placeholders
@@ -223,7 +217,6 @@ next/src/
 - **Error Boundaries**: Handle errors gracefully, especially in async AI and storage flows.
 - **Accessibility**: All interactive elements must be keyboard-accessible and theme-aware.
 - **Cloud-First**: All board and document data is stored in Supabase; no local storage or legacy fallback.
-- **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
 - **UI Simplification**: Remove unused features to keep the interface clean and focused.
 - **Design System**: Use established UI components for consistency and maintainability.
 - **Checkbox/Inputs**: Keep native inputs in the DOM for accessibility; visually hide when styling custom controls. Prefer design-system components (`TextInput`, `Checkbox`) over raw inputs.
@@ -311,7 +304,6 @@ next/src/
 - **Live Status**: Application successfully deployed to Vercel with full functionality
 - **Authentication**: Supabase OAuth working correctly with proper redirect URLs
 - **Storage**: Board and document storage fully operational
-- **Thumbnails**: Automatic thumbnail generation working in production
 - **AI Integration**: All AI features functional with proper environment configuration
 
 ---
@@ -339,82 +331,6 @@ next/src/
 - **Modal State Management**: Simple modal open/close state can effectively drive optimistic locking without complex heartbeat systems.
 
 ---
-
-// Update the Best Practices section (around line 296):
-## Best Practices for Next.js Nodal
-
-- **AI Response Handling**: Parse and generate nodes from structured AI responses with proper layout and connections
-- **Modal UX**: Use smooth animations, auto-focus, and keyboard shortcuts for better interaction
-- **Document Preview**: Handle PDF previews client-side with proper error states and loading indicators
-
-- **Atomic Components**: Keep components small, focused, and reusable.
-- **Strict Typing**: Use TypeScript everywhere, with strictest settings.
-- **Error Boundaries**: Handle errors gracefully, especially in async AI and storage flows.
-- **Accessibility**: All interactive elements must be keyboard-accessible and theme-aware.
-- **Cloud-First**: All board and document data is stored in Supabase; no local storage or legacy fallback.
-- **Thumbnail Optimization**: Use Canvas API for reliable client-side image generation without external dependencies.
-- **UI Simplification**: Remove unused features to keep the interface clean and focused.
-- **Design System**: Use established UI components for consistency and maintainability.
-- **Checkbox/Inputs**: Keep native inputs in the DOM for accessibility; visually hide when styling custom controls. Prefer design-system components (`TextInput`, `Checkbox`) over raw inputs.
-- **XYFlow Coordinates**: Use XYFlow utilities like `screenToFlowPosition` for converting pointer/screen coordinates to flow space. Avoid manual math where XYFlow provides helpers.
-- **Node Dimensions**: Prefer actual `node.width`/`node.height` when available; only fall back to estimations when necessary.
-- **Placement Tuning**: Centralize tweak points for node placement (radius, offsets, minDistance) to enable quick UX iteration.
-- **Node Selection**: Leverage XYFlow's native selection capabilities for reliability.
-- **Rich Text Editing**: Use TipTap for consistent, accessible rich text editing across the app.
-- **Build Optimization**: Configure ESLint and TypeScript settings appropriately for development vs production.
-
----
-
-// Add to Recent Improvements section (around line 312):
-## Recent Improvements
-
-- **Unified Menu System**: 
-  - Created reusable Menu component with consistent hover behavior and styling
-  - Refactored all topbar menus (Share, AI Settings, Documents, Avatar) to use new component
-  - Support for custom content, notifications, and configurable width
-  - Cleaner codebase with reduced duplication and improved maintainability
-
-- **Enhanced AI Node Generation**: 
-  - Smart fan layout for generated nodes with proper spacing
-  - Automatic connection to parent/source nodes
-  - Support for both numbered lists and bullet points
-  - Proper title/content separation in generated nodes
-  - Fixed title/content duplication issue in ChatPanel
-
-- **TipTap Editor Enhancements**:
-  - Full-height clickable area in edit modal
-  - Auto-focus on title field for better UX
-  - Enter key support for quick saving
-  - Improved modal animations for smoother transitions
-
-- **Document Handling Improvements**:
-  - PDF preview functionality with signed URL support
-  - Graceful fallback for text extraction
-  - Preview of extracted text in document nodes
-  - Client-side PDF handling to prevent SSR issues
-
-- **Board creation is now bulletproof**: No more double-saves, duplicate IDs, or race conditions.
-- **AI setup is context-aware**: The AI receives the full board brief and user intent.
-- **Debugging workflow is documented**: If you hit a "not a function" error, check for module cache, import paths, and state setter shadowing.
-- **Vite/CRA code is deprecated**: All new work must be in the Next.js app.
-- **Thumbnail system is live**: Automatic board preview generation using Canvas API and Supabase storage.
-- **Robust storage architecture**: Simplified RLS policies for reliable thumbnail storage.
-- **Clean UI**: Removed unused import/export functionality and improved tip positioning.
-- **Error resilience**: Graceful handling of thumbnail failures and loading states.
-- **Node selection system**: Multi-node selection with AI chat integration and visual feedback.
-- **Design system established**: Reusable UI components for consistency and maintainability.
-- **Unified menu system**: All topbar menus now use consistent Menu component with proper hover behavior.
-- **Edge interactions**: Interactive edges with delete functionality and smooth animations.
-- **Chat panel integration**: Context-aware AI chat with node selection notifications.
-- **Improved UX**: Streamlined avatar menu, centered action button, and better theme management.
-- **Production deployment**: Successfully deployed to Vercel with full functionality.
-- **Drag & drop reliability**: Fixed first-drop issue for consistent document handling.
-- **Build system optimization**: Configured for successful production builds with appropriate error handling.
-- **Rich text editing**: TipTap integration for enhanced node content editing.
-- **Codebase cleanup**: Complete removal of legacy Vite/CRA codebase.
-- **Collaborative boards**: Full real-time collaboration with sharing, presence, cursors, and node locking.
-- **Optimistic locking system**: Prevents editing conflicts with visual indicators and seamless UX.
-- **Real-time content sync**: Live node updates across users (implemented, debugging subscription issues).
 
 ### Latest Session Improvements (December 2024)
 
@@ -475,6 +391,10 @@ next/src/
   - **UI Polish**: Smooth interactions with proper cursor states and visual feedback
   - **Accessibility**: Maintained keyboard accessibility while adding advanced mouse interactions
 
+- **FAB Menu Hover Behavior**:
+  - Implemented a 150ms delayed close with shared hover handlers so the menu stays open when moving from the FAB to the dropdown
+  - Closed the visual gap by adjusting the fixed menu position (bottom-20) to align with the FAB placement
+
 ### Key Lessons from Today's Session
 
 - **Icon Migration Strategy**: When migrating icon libraries, consider component-specific needs and be prepared to revert certain components that have unique requirements
@@ -500,7 +420,7 @@ next/src/
   - Pinned Boards: pin icon at `absolute top-2 right-2` toggles pin state; pinned boards sort first.
   - Share/Delete actions: persistent bottom-row buttons; delete uses confirmation modal.
   - Inline title editing: pencil icon next to title; autofocus/select on edit; optimistic rename to avoid loader flicker.
-  - Thumbnail resilience: initials fallback when image missing/fails; polling for refreshed thumbnails.
+  - BoardCard simplified: thumbnail previews removed; cleaner layout with no polling.
   - Background: new `UnsplashBackground` with gradient base layer and blurred image overlay; positioned with `fixed inset-0 -z-10`; container uses `min-h-screen` so gradient covers full scroll.
   - Show shared only: filter surfaced via new design-system `Checkbox` component.
 
@@ -560,7 +480,7 @@ CREATE TABLE board_updates (...); -- Needs Realtime enabled
 - **Read this file before making changes!**
 - **Ask questions if you're unsure about the Next.js architecture or AI integration.**
 - **Keep the codebase clean, modern, and idiomatic.**
-- **Test thumbnail generation when making board-related changes.**
+- **Thumbnail generation is deferred**: no related tests required at this time.
 - **Focus on core functionality**: Remove unused features to maintain clean UI.
 - **Use the design system**: Leverage established UI components for consistency.
 - **Test node selection**: Ensure multi-node selection works with AI chat integration.
