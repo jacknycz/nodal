@@ -7,10 +7,10 @@ interface BoardContextMenuProps {
   isOpen: boolean
   position: { x: number; y: number } | null
   onClose: () => void
-  onAddBlankNode: () => void
+  onAddBlankNode: (position: { x: number; y: number }) => void
   onGenerateAINode: () => void
   nodeId?: string | null
-  onAddConnectedNodes?: (nodeId: string) => void
+  onAddConnectedNodes?: (nodeId: string, position: { x: number; y: number }) => void
   onAddTaskNode?: () => void
 }
 
@@ -49,7 +49,7 @@ export default function BoardContextMenu({
       >
         {nodeId && onAddConnectedNodes && (
           <button
-            onClick={() => handleAction(() => onAddConnectedNodes(nodeId))}
+            onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
             <Plus size={24} weight="duotone" className="w-4 h-4" />
@@ -59,7 +59,7 @@ export default function BoardContextMenu({
 
         {!nodeId && onAddBlankNode && (
         <button
-          onClick={() => handleAction(onAddBlankNode)}
+          onClick={() => handleAction(() => onAddBlankNode(position))}
           className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
         >
           <PlusCircle size={24} weight="duotone" className="w-4 h-4" />

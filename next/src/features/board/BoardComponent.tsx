@@ -1477,6 +1477,7 @@ function BoardContent({
 
   const [showAddNodeModal, setShowAddNodeModal] = useState(false)
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null)
+  const [awaitingNodePlacement, setAwaitingNodePlacement] = useState(false)
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
 
   const handleOpenAINodeGenerator = useCallback(() => {
@@ -1525,7 +1526,21 @@ function BoardContent({
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
         onSelectionChange={handleSelectionChange}
-        onPaneClick={() => {
+        onPaneClick={(event) => {
+          // If we're awaiting a placement click (triggered by FAB), capture this click and open the modal
+          if (awaitingNodePlacement) {
+            try {
+              const flowPosition = reactFlowInstance.screenToFlowPosition({ x: (event as any).clientX, y: (event as any).clientY })
+              setPendingNodePosition(flowPosition)
+            } catch (e) {
+              setPendingNodePosition(getViewportCenter())
+            }
+            setAwaitingNodePlacement(false)
+            setShowAddNodeModal(true)
+            setContextMenu({ isOpen: false, position: null })
+            return
+          }
+
           setContextMenu({ isOpen: false, position: null })
           // Clear focus when clicking empty space
           useBoardStore.getState().clearFocusedNodes()
@@ -1574,7 +1589,8 @@ function BoardContent({
       {isBoardView && (
         <FloatingActionButton
           onAddNode={() => {
-            setShowAddNodeModal(true)
+            // Trigger next click/tap on the board to pick placement
+            setAwaitingNodePlacement(true)
           }}
           onAIGenerate={handleOpenAINodeGenerator}
           onUploadDocument={() => {
@@ -1608,26 +1624,24 @@ function BoardContent({
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
         nodeId={pendingSourceNodeId}
-        onAddConnectedNodes={(nodeId: string) => {
-          if (contextMenu.position) {
-            const flowPosition = reactFlowInstance.screenToFlowPosition({
-              x: contextMenu.position.x,
-              y: contextMenu.position.y,
-            })
+        onAddConnectedNodes={(nodeId: string, screenPos: { x: number; y: number }) => {
+          try {
+            const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
             setPendingNodePosition(flowPosition)
+          } catch (e) {
+            setPendingNodePosition(getViewportCenter())
           }
           setPendingSourceNodeId(nodeId)
           setShowAddNodeModal(true)
           setContextMenu({ isOpen: false, position: null })
         }}
-        onAddBlankNode={() => {
+        onAddBlankNode={(screenPos: { x: number; y: number }) => {
           // Store the position and show the modal instead of creating a blank node
-          if (contextMenu.position) {
-            const flowPosition = reactFlowInstance.screenToFlowPosition({
-              x: contextMenu.position.x,
-              y: contextMenu.position.y,
-            });
-            setPendingNodePosition(flowPosition);
+          try {
+            const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
+            setPendingNodePosition(flowPosition)
+          } catch (e) {
+            setPendingNodePosition(getViewportCenter())
           }
           setPendingSourceNodeId(null)
           setShowAddNodeModal(true);
@@ -1703,7 +1717,8 @@ function BoardContent({
             <>
               <FloatingActionButton
                 onAddNode={() => {
-                  setShowAddNodeModal(true)
+                  // Trigger next click/tap on the board to pick placement
+                  setAwaitingNodePlacement(true)
                 }}
                 onAIGenerate={handleOpenAINodeGenerator}
                 onUploadDocument={() => {
@@ -1763,40 +1778,46 @@ function BoardContent({
                 }
               } catch {}
             } else if (titles.length === 1) {
-              // Single node: honor click by finding best position near the pending point
+              // Single node: place EXACTLY at the click/touch point (no auto-adjustment)
               const target = pendingNodePosition || center
-              const finalPos = await findBestPosition(target, titles[0], description, { avoidOverlap: true, minDistance: 50 })
               const newNode: Node = {
                 id: `node-${Date.now()}`,
                 type: 'default',
-                position: finalPos,
+                position: target,
                 data: { title: titles[0], content: description },
               }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             } else {
               // Multiple nodes: if we have a click position, place each near the click using manual placement
               if (pendingNodePosition) {
-                const radius = 220
-                const angleStep = (2 * Math.PI) / titles.length
+                // STRICT GRID centered on click/touch (no auto-adjustment)
+                const count = titles.length
+                const columns = Math.ceil(Math.sqrt(count))
+                const rows = Math.ceil(count / columns)
+                const spacingX = 300
+                const spacingY = 200
+                const startX = pendingNodePosition.x - ((columns - 1) * spacingX) / 2
+                const startY = pendingNodePosition.y - ((rows - 1) * spacingY) / 2
                 const created: Node[] = []
-                for (let i = 0; i < titles.length; i++) {
-                  const t = titles[i]
-                  const base = {
-                    x: pendingNodePosition.x + Math.cos(i * angleStep) * radius,
-                    y: pendingNodePosition.y + Math.sin(i * angleStep) * radius,
+                let idx = 0
+                for (let r = 0; r < rows; r++) {
+                  for (let c = 0; c < columns; c++) {
+                    if (idx >= count) break
+                    const x = startX + c * spacingX
+                    const y = startY + r * spacingY
+                    created.push({
+                      id: `node-${Date.now()}-${idx}`,
+                      type: 'default',
+                      position: { x, y },
+                      data: { title: titles[idx], content: '' },
+                    })
+                    idx++
                   }
-                  const result = await findBestPosition(base, t, '', { avoidOverlap: true, minDistance: 50 })
-                  const node: Node = {
-                    id: `node-${Date.now()}-${i}`,
-                    type: 'default',
-                    position: result,
-                    data: { title: t, content: '' },
-                  }
-                  created.push(node)
                 }
                 setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
               } else {
                 const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
+                let placed = false
                 try {
                   const placementResult = await placeBoardNodes(nodesToPlace)
                   if (placementResult.success && placementResult.placements.length > 0) {
@@ -1807,14 +1828,38 @@ function BoardContent({
                       data: { ...p.node.data },
                     }))
                     setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                    placed = true
                   }
-                } catch {
-                  const fallbackNodes: Node[] = titles.map((t, i) => ({
-                    id: `node-${Date.now()}-${i}`,
-                    type: 'default',
-                    position: { x: center.x + i * 60, y: center.y + 150 },
-                    data: { title: t, content: '' },
-                  }))
+                } catch (e) {
+                  // fall through to grid fallback
+                }
+
+                // If placement failed or returned no placements, use a deterministic grid fallback
+                if (!placed) {
+                  const count = titles.length
+                  const columns = Math.ceil(Math.sqrt(count))
+                  const rows = Math.ceil(count / columns)
+                  const spacingX = 300
+                  const spacingY = 200
+                  // center is from earlier (viewport center)
+                  const startX = center.x - ((columns - 1) * spacingX) / 2
+                  const startY = center.y - ((rows - 1) * spacingY) / 2
+                  const fallbackNodes: Node[] = []
+                  let idx = 0
+                  for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < columns; c++) {
+                      if (idx >= count) break
+                      const x = startX + c * spacingX
+                      const y = startY + r * spacingY
+                      fallbackNodes.push({
+                        id: `node-${Date.now()}-${idx}`,
+                        type: 'default',
+                        position: { x, y },
+                        data: { title: titles[idx], content: '' },
+                      })
+                      idx++
+                    }
+                  }
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
                 }
               }
