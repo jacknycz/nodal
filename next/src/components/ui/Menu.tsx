@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import type React from 'react'
 
 export interface MenuItem {
   label: string
@@ -50,9 +49,33 @@ export default function Menu({
     }
   }, [isOpen])
 
-  const handleMouseEnter = () => setIsOpen(true)
-  const handleMouseLeave = () => setIsOpen(false)
-  const handleFocus = () => setIsOpen(true)
+  // Keep menu open when moving between trigger and dropdown by using a small close delay
+  const closeTimeoutRef = useRef<number | null>(null)
+
+  const openMenu = () => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+    setIsOpen(true)
+  }
+
+  const closeMenuWithDelay = (ms = 150) => {
+    if (closeTimeoutRef.current) window.clearTimeout(closeTimeoutRef.current)
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setIsOpen(false)
+      closeTimeoutRef.current = null
+    }, ms) as unknown as number
+  }
+
+  const cancelClose = () => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current)
+      closeTimeoutRef.current = null
+    }
+  }
+
+  const handleFocus = () => openMenu()
   const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsOpen(false)
@@ -63,8 +86,8 @@ export default function Menu({
     <div
       ref={menuRef}
       className={`relative ${className}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={openMenu}
+      onMouseLeave={() => closeMenuWithDelay(150)}
       onFocus={handleFocus}
       onBlur={handleBlur}
     >
@@ -78,8 +101,10 @@ export default function Menu({
 
       {/* Dropdown */}
       <div
+        onMouseEnter={() => { cancelClose(); setIsOpen(true) }}
+        onMouseLeave={() => closeMenuWithDelay(150)}
         className={`
-          ${fixedCenterAbove ? 'fixed left-1/2 bottom-24 transform -translate-x-1/2 z-50' : 'absolute z-50'} ${width || 'w-56'} rounded-2xl overflow-hidden 
+          ${fixedCenterAbove ? 'fixed left-1/2 bottom-20 transform -translate-x-1/2 z-50' : 'absolute z-50'} ${width || 'w-56'} rounded-2xl overflow-hidden 
           bg-[linear-gradient(165deg,rgba(241,245,249,1)_0%,rgba(255,255,255,1)_20%,rgba(255,255,255,1)_80%,rgba(241,245,249,1)_100%)]
           dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-950
           shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none
