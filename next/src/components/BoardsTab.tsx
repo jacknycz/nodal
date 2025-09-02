@@ -48,17 +48,17 @@ export default function BoardsTab({
           <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
             <div className="flex justify-center w-full max-w-xl">
               <Search
-                placeholder="Search boards..."
+                placeholder="search boards..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                label="Search boards..."
+                label="search boards..."
                 className="w-full"
               />
             </div>
 
             <div className="flex items-center gap-4 flex-none">
               <Checkbox
-                label="Show shared only"
+                label="show shared only"
                 checked={showSharedOnly}
                 onChange={(v) => setShowSharedOnly(v)}
                 labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
