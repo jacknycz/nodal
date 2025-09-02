@@ -39,6 +39,7 @@ const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
 
 export default function BokehBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationRef = useRef<number>()
   const { isDark } = useTheme()
   
   useEffect(() => {
@@ -47,6 +48,11 @@ export default function BokehBackground() {
     
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    
+    // Cancel any existing animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+    }
     
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
@@ -117,7 +123,7 @@ export default function BokehBackground() {
         ctx.shadowColor = 'transparent'
       })
       
-      requestAnimationFrame(animate)
+      animationRef.current = requestAnimationFrame(animate)
     }
     
     animate()
@@ -129,7 +135,13 @@ export default function BokehBackground() {
     }
     
     window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
   }, [isDark]) // Re-run effect when theme changes
   
   const styles = isDark ? themeStyles.dark : themeStyles.light
