@@ -39,8 +39,14 @@ const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
 
 export default function BokehBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
   const { isDark } = useTheme()
+  const currentThemeRef = useRef<'light' | 'dark'>(isDark ? 'dark' : 'light')
+  
+  // Update the ref whenever theme changes
+  useEffect(() => {
+    currentThemeRef.current = isDark ? 'dark' : 'light'
+  }, [isDark])
   
   useEffect(() => {
     const canvas = canvasRef.current
@@ -93,12 +99,15 @@ export default function BokehBackground() {
     function animate() {
       if (!canvas || !ctx) return
       
+      // Get current theme styles on each frame to ensure they're up to date
+      const currentStyles = currentThemeRef.current === 'dark' ? themeStyles.dark : themeStyles.light
+      
       // Clear the canvas properly
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       
       // Draw background if not transparent
-      if (styles.background !== 'transparent') {
-        ctx.fillStyle = styles.background
+      if (currentStyles.background !== 'transparent') {
+        ctx.fillStyle = currentStyles.background
         ctx.fillRect(0, 0, canvas.width, canvas.height)
       }
       
@@ -110,8 +119,8 @@ export default function BokehBackground() {
         if (particle.y < 0 || particle.y > canvas.height) particle.speedY *= -1
         
         // Set up glow effect using particle-specific color
-        ctx.shadowBlur = particle.size * styles.glowIntensity
-        ctx.shadowColor = `rgba(${particle.color}, ${particle.opacity * styles.glowOpacity})`
+        ctx.shadowBlur = particle.size * currentStyles.glowIntensity
+        ctx.shadowColor = `rgba(${particle.color}, ${particle.opacity * currentStyles.glowOpacity})`
         
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
@@ -150,7 +159,11 @@ export default function BokehBackground() {
     <canvas
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none z-0"
-      style={{ background: styles.background }}
+      style={{ 
+        background: styles.background,
+        // Ensure the background is visible and not overridden
+        backgroundColor: styles.background 
+      }}
     />
   )
 } 
