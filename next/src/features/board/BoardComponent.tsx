@@ -49,6 +49,10 @@ import { getSupabaseClient } from '../auth/supabaseClient'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
 import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
 import { placeNodes as enginePlaceNodes } from './placementEngine'
+import { Info } from '@phosphor-icons/react'
+import IconButton from '../../components/ui/IconButton'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -150,6 +154,7 @@ function BoardContent({
   const localBoardIdRef = useRef<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [showTopicModal, setShowTopicModal] = useState(false)
+  const [showTips, setShowTips] = useState(false)
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
@@ -1576,12 +1581,21 @@ function BoardContent({
           <MiniMap />
         </div>
 
-        <div className="hidden sm:block absolute bottom-4 left-16 z-10">
+        <div className="hidden sm:flex items-center gap-2 absolute bottom-4 left-16 z-10">
           <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               💡 Tip: Drag & drop documents and images here
             </p>
           </div>
+
+          <IconButton
+            aria-label="Info"
+            onClick={() => {
+              setShowTips(true)
+            }}
+          >
+            <Info size={32} weight="duotone" className="w-4 h-4" />
+          </IconButton>
         </div>
         
         {/** Removed FAB and ChatPanel from inside ReactFlow to avoid stacking context issues */}
@@ -1711,6 +1725,32 @@ function BoardContent({
               } : undefined}
               parentNodeId={aiParentNodeId || undefined}
             />
+          )}
+
+          {/* Quick Tips Modal */}
+          {showTips && (
+            <Modal
+              open={showTips}
+              onClose={() => setShowTips(false)}
+              title="Board quick tips"
+              description="Useful shortcuts and gestures to navigate and edit your board faster"
+            >
+              <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
+                  <li><strong>Shift + click</strong> a node (with another selected) to connect them.</li>
+                  <li><strong>Hold Shift</strong> + click and drag to select multiple nodes with a marquee.</li>
+                  <li><strong>Drag & drop</strong> documents or images onto the board to create nodes.</li>
+                  <li><strong>Drag</strong> nodes to reposition; use the delete key to remove selected nodes.</li>
+                  <li><strong>Double-click</strong> a node to expand or open editing.</li>
+                  <li><strong>Use the FAB</strong> (bottom center) to quickly add nodes, upload, or generate with AI.</li>
+                  <li><strong>Use MiniMap/Controls</strong> to navigate large boards quickly.</li>
+                </ul>
+              </div>
+              <div className="mt-6 flex justify-end">
+                <Button onClick={() => setShowTips(false)}>Close</Button>
+              </div>
+            </Modal>
           )}
           {/* NodeSetupModal deprecated for add-new-node; using NodeEditModal instead */}
           {isBoardView && (
