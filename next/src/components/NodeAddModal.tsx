@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import TextArea from './ui/TextArea'
@@ -16,12 +16,17 @@ export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalPr
   const [titleInput, setTitleInput] = useState('')
   const [titles, setTitles] = useState<string[]>([])
   const [description, setDescription] = useState('')
+  const titleRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     if (open) {
       setTitleInput('')
       setTitles([])
       setDescription('')
+      // focus title input when modal opens
+      requestAnimationFrame(() => {
+        titleRef.current?.focus()
+      })
     }
   }, [open])
 
@@ -70,6 +75,7 @@ export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalPr
             label={titles.length > 0 ? 'Add another title' : 'Title'}
             value={titleInput}
             onChange={(e) => setTitleInput((e.target as HTMLInputElement).value)}
+            ref={titleRef}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault()
