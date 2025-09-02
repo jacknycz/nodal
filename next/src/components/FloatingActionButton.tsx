@@ -25,7 +25,7 @@ export default function FloatingActionButton({
   const items = [
     { label: 'Add node', icon: Plus, onClick: () => onAddNode() },
     { label: 'Upload document', icon: FilePlus, onClick: () => onUploadDocument() },
-    ...(aiInitialized ? [{ label: 'AI generate', onClick: () => onAIGenerate() }] : []),
+    ...(aiInitialized ? [{ label: 'AI generate', icon: Plus, onClick: () => onAIGenerate() }] : []),
     ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, onClick: () => onReorganize?.() }] : []),
   ]
 
@@ -38,7 +38,7 @@ export default function FloatingActionButton({
             size="lg"
             className="w-14 h-14 bg-gray-800 hover:bg-gray-900 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200"
           >
-            <Plus className="w-6 h-6" />
+            <img src="/nodal.svg" alt="Nodal" className="w-8 h-8" />
           </IconButton>
         }
         items={items}

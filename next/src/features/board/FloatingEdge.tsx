@@ -44,12 +44,10 @@ export default function FloatingEdge({
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
-  const focusAnchorIds: string[] = useBoardStore((s: any) => s.focusAnchorIds || [])
   const isInConnectionMode = !!connectingSourceId
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
-  const contextIds = Array.from(new Set([...(selectedNodeIds || []), ...(focusAnchorIds || [])]))
-  const hasContext = contextIds.length > 0
-  const isRelatedToContext = hasContext && (contextIds.includes(source as string) || contextIds.includes(target as string))
+  const hasContext = (selectedNodeIds || []).length > 0
+  const isRelatedToContext = hasContext && (selectedNodeIds.includes(source as string) || selectedNodeIds.includes(target as string))
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -90,9 +88,9 @@ export default function FloatingEdge({
       case 'focus':
         return {
           ...baseStyle,
-          stroke: 'var(--edge-focus-color)',
-          strokeWidth: selected ? 5 : 3,
-          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-focus-glow))` : 'none',
+          stroke: 'var(--edge-default-color)',
+          strokeWidth: selected ? 3 : 2,
+          filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-default-glow))` : 'drop-shadow(0 0 8px var(--edge-default-glow))',
         }
       default:
         return {

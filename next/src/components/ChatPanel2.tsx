@@ -40,16 +40,13 @@ export default function ChatPanel2() {
   const ai = useAIContext()
   const { model, setModel } = useAISettingsStore()
 
-  // Selection/focus awareness
+  // Selection awareness
   const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
-  const focusedNodeIds = useBoardStore((s) => s.focusedNodeIds || [])
   const clearSelectedNodes = useBoardStore((s) => s.clearSelectedNodes)
-  const clearFocusedNodes = useBoardStore((s) => s.clearFocusedNodes)
   const storeNodes = useBoardStore((s) => s.nodes)
   const boardBrief = useBoardStore((s) => s.boardBrief)
   const boardTopic = useBoardStore((s) => s.topic)
-  const contextIds = (focusedNodeIds && focusedNodeIds.length > 0) ? focusedNodeIds : selectedNodeIds
-  const selectedNodes = (storeNodes || []).filter((n: any) => contextIds.includes(n.id))
+  const selectedNodes = (storeNodes || []).filter((n: any) => selectedNodeIds.includes(n.id))
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -80,7 +77,7 @@ export default function ChatPanel2() {
     // Board context (title/topic and primer about nodes/edges)
     const boardTitle = boardBrief?.boardName || 'Untitled Board'
     const boardTopicLine = boardBrief?.boardTopic || boardTopic || ''
-    const boardInfo = `Context - Board:\nTitle: ${boardTitle}${boardTopicLine ? `\nTopic: ${boardTopicLine}` : ''}\nInfo: Nodal is a visual mind map where nodes represent ideas/documents/tasks and edges represent relationships. Interpret pronouns like "this" or "it" relative to the selected/focused nodes.`
+    const boardInfo = `Context - Board:\nTitle: ${boardTitle}${boardTopicLine ? `\nTopic: ${boardTopicLine}` : ''}\nInfo: Nodal is a visual mind map where nodes represent ideas/documents/tasks and edges represent relationships. Interpret pronouns like \"this\" or \"it\" relative to the selected nodes.`
 
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map((n: any) => {
@@ -196,7 +193,7 @@ export default function ChatPanel2() {
                 </p>
               </div>
               <button
-                onClick={() => { clearSelectedNodes(); clearFocusedNodes() }}
+                onClick={() => { clearSelectedNodes() }}
                 className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
               >
                 <X className="w-3 h-3" />

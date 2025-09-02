@@ -57,9 +57,6 @@ export interface BoardState {
   nodes: BoardNode[]
   edges: BoardEdge[]
   selectedNodeIds: string[] // Change from selectedNodeId to selectedNodeIds
-  focusedNodeIds?: string[]
-  // The node ids that initiated focus (without auto-included neighbors)
-  focusAnchorIds?: string[]
   viewport: {
     x: number
     y: number
@@ -96,5 +93,4 @@ export interface BoardActions {
   removeSelectedNode: (id: string) => void
   clearSelectedNodes: () => void
   setConnectingSource: (id: string | null) => void
-  setFocusAnchors: (ids: string[]) => void
 } 

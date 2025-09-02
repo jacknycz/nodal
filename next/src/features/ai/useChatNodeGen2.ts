@@ -26,7 +26,7 @@ No code fences, no commentary.`
       model: ai.selectOptimalModel('generate_related'),
       temperature: 0.8,
       stream: false,
-      context: existingNodes ? { board: { nodes: existingNodes, edges: [], selectedNodeId: null, focusedNodeIds: [] } as any } : undefined,
+      context: existingNodes ? { board: { nodes: existingNodes, edges: [], selectedNodeId: null } as any } : undefined,
     })
 
     // Try JSON parse: fenced or inline

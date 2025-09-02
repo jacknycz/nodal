@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, Target } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner } from '@phosphor-icons/react'
 import Image from 'next/image'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -74,21 +74,7 @@ export default function ImageNode({
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
 
-  // Focus store
-  const focusedNodeIds = useBoardStore((s) => s.focusedNodeIds || [])
-  const focusAnchorIds = useBoardStore((s: any) => s.focusAnchorIds || [])
-  const storeEdges = useBoardStore((s: any) => s.edges || [])
-  const toggleFocusOnNode = useBoardStore((s) => s.toggleFocusOnNode)
-  const hasFocus = Array.isArray(focusedNodeIds) && focusedNodeIds.length > 0
-  const isFocusedBase = hasFocus ? focusedNodeIds.includes(id) : false
-  const isAdjacentToAnchor = Array.isArray(focusAnchorIds) && focusAnchorIds.length > 0
-    ? (storeEdges || []).some((e: any) => {
-      const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
-      const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
-      return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
-    })
-    : false
-  const isFocused = isFocusedBase || isAdjacentToAnchor
+  // Focus removed
 
   const getStatusIcon = () => {
     switch (data.status) {
@@ -136,30 +122,16 @@ export default function ImageNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${isFocused
-        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
-        : selected
+      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${selected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : isLocked && !isLockedByMe
             ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
             : 'border-gray-200 dark:border-gray-700'
-        } ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
+        }`}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
-      <IconButton
-        variant="default"
-        className="absolute -top-2 -right-2"
-        size="sm"
-        aria-label="Focus node"
-        onClick={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
-          toggleFocusOnNode(id, true)
-        }}
-      >
-        <Target size={14} weight="duotone" className='text-primary-500' />
-      </IconButton>
+      
 
       <div className="relative cursor-default">
         {/* Image content */}

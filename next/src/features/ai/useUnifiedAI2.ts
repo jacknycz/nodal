@@ -76,7 +76,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Ground answers in the provided board and node context. There is no restriction on output length or format. When the user says "this" or "it", interpret it relative to the selected/focused nodes included in the user's message.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Ground answers in the provided board and node context. There is no restriction on output length or format. When the user says "this" or "it", interpret it relative to the selected nodes included in the user's message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -133,7 +133,7 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Ground answers in the provided board and node context. There is no restriction on output length or format. When the user says "this" or "it", interpret it relative to the selected/focused nodes included in the user's message.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual mind mapping app. The app represents ideas as nodes and relationships as edges. Ground answers in the provided board and node context. There is no restriction on output length or format. When the user says "this" or "it", interpret it relative to the selected nodes included in the user's message.`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,

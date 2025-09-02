@@ -6,8 +6,6 @@ const initialState: BoardState = {
   nodes: [],
   edges: [],
   selectedNodeIds: [], // Change from selectedNodeId to selectedNodeIds array
-  focusedNodeIds: [],
-  focusAnchorIds: [],
   viewport: {
     x: 0,
     y: 0,
@@ -37,12 +35,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   removeSelectedNode: (id: string) => void
   clearSelectedNodes: () => void
   setEdges: (edges: BoardEdge[]) => void
-  setFocusedNodes: (ids: string[]) => void
-  clearFocusedNodes: () => void
-  toggleFocusOnNode: (id: string, includeNeighbors?: boolean) => void
-  getFirstDegreeNeighbors: (id: string) => string[]
   setConnectingSource: (id: string | null) => void
-  setFocusAnchors: (ids: string[]) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -133,40 +126,6 @@ export const useBoardStore = create<BoardState & BoardActions & {
     set({ selectedNodeIds: [] })
   },
 
-  // Focus controls
-  setFocusedNodes: (ids) => set({ focusedNodeIds: ids }),
-  clearFocusedNodes: () => set({ focusedNodeIds: [] }),
-  toggleFocusOnNode: (id, includeNeighbors = true) => {
-    set((state) => {
-      const isFocused = (state.focusedNodeIds || []).includes(id)
-      if (isFocused) {
-        return { focusedNodeIds: [], focusAnchorIds: [] }
-      }
-      if (!includeNeighbors) {
-        return { focusedNodeIds: [id], focusAnchorIds: [id] }
-      }
-      // Compute first-degree neighbors
-      const neighborIds = new Set<string>([id])
-      ;(state.edges || []).forEach(edge => {
-        const source = typeof edge.source === 'string' ? edge.source : (edge.source as any)?.id
-        const target = typeof edge.target === 'string' ? edge.target : (edge.target as any)?.id
-        if (source === id && target) neighborIds.add(target)
-        if (target === id && source) neighborIds.add(source)
-      })
-      return { focusedNodeIds: Array.from(neighborIds), focusAnchorIds: [id] }
-    })
-  },
-  getFirstDegreeNeighbors: (id) => {
-    const state = _get()
-    const neighborIds = new Set<string>()
-    ;(state.edges || []).forEach(edge => {
-      const source = typeof edge.source === 'string' ? edge.source : (edge.source as any)?.id
-      const target = typeof edge.target === 'string' ? edge.target : (edge.target as any)?.id
-      if (source === id && target) neighborIds.add(target)
-      if (target === id && source) neighborIds.add(source)
-    })
-    return Array.from(neighborIds)
-  },
 
   updateViewport: (viewport) => {
     set((state) => ({
@@ -214,5 +173,4 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setFreeChatMode: (free) => set({ freeChatMode: free }),
   setTopbarHeight: (height) => set({ topbarHeight: height }),
   setConnectingSource: (id) => set({ connectingSourceId: id }),
-  setFocusAnchors: (ids) => set({ focusAnchorIds: ids }),
 })) 

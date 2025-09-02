@@ -57,18 +57,15 @@ export default function ChatPanel({
   const aiContext = useAIContext()
   const { isInitialized: aiInitialized } = aiContext
   
-  // Get selection and focus from board store
+  // Get selection from board store
   const selectedNodeIds = useBoardStore((state) => state.selectedNodeIds)
-  const focusedNodeIds = useBoardStore((state) => state.focusedNodeIds || [])
   const clearSelectedNodes = useBoardStore((state) => state.clearSelectedNodes)
-  const clearFocusedNodes = useBoardStore((state) => state.clearFocusedNodes)
   
   // Use only props nodes - the store nodes are empty
   const nodes = propNodes || []
   
-  // Get context nodes: prefer focus if present, else selection
-  const contextIds = (focusedNodeIds && focusedNodeIds.length > 0) ? focusedNodeIds : selectedNodeIds
-  const selectedNodes = nodes.filter(node => contextIds.includes(node.id))
+  // Get context nodes: use selection only
+  const selectedNodes = nodes.filter(node => selectedNodeIds.includes(node.id))
   
   // Use the new AI placement system
   const { placeGeneratedNodes } = useAIPlacement()
@@ -692,7 +689,6 @@ export default function ChatPanel({
               <button
                 onClick={() => {
                   clearSelectedNodes()
-                  clearFocusedNodes()
                 }}
                 className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
               >

@@ -369,7 +369,6 @@ Consider the existing context and create nodes that build upon or relate to what
           nodes: context.existingNodes,
           edges: [],
           selectedNodeId: null,
-          focusedNodeIds: [],
           boardSummary: context.topic
         } : undefined
       }

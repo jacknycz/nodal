@@ -134,7 +134,7 @@ export default function Menu({
                   }}
                   disabled={item.disabled}
                   className={`
-                    group flex w-full items-center px-4 py-2 text-sm transition-colors duration-150
+                    group flex w-full cursor-pointer items-center px-4 py-2 text-sm transition-colors duration-150
                     ${item.disabled
                       ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
                       : item.danger

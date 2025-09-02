@@ -58,7 +58,6 @@ export interface BoardContext {
   nodes: BoardNode[]
   edges: BoardEdge[]
   selectedNodeId: string | null
-  focusedNodeIds: string[]
   boardSummary?: string
 }
 
@@ -248,7 +247,6 @@ export type AIContextBuilder = (options: {
   includeBoard?: boolean
   includeDocuments?: boolean
   includeConversation?: boolean
-  focusedOnly?: boolean
 }) => AIContext
 
 export type ModelSelector = (actionType: AIActionType, context?: AIContext) => OpenAIModel 

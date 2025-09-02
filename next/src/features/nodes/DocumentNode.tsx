@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, Target, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -92,21 +92,7 @@ export default function DocumentNode({
 
   const hasExtractedText = data.extractedText && data.extractedText.length > 0 && !data.extractedText.includes('Text extraction failed')
 
-  // Focus store
-  const focusedNodeIds = useBoardStore((s) => s.focusedNodeIds || [])
-  const focusAnchorIds = useBoardStore((s: any) => s.focusAnchorIds || [])
-  const storeEdges = useBoardStore((s: any) => s.edges || [])
-  const toggleFocusOnNode = useBoardStore((s) => s.toggleFocusOnNode)
-  const hasFocus = Array.isArray(focusedNodeIds) && focusedNodeIds.length > 0
-  const isFocusedBase = hasFocus ? focusedNodeIds.includes(id) : false
-  const isAdjacentToAnchor = Array.isArray(focusAnchorIds) && focusAnchorIds.length > 0
-    ? (storeEdges || []).some((e: any) => {
-        const src = typeof e.source === 'string' ? e.source : (e.source as any)?.id
-        const tgt = typeof e.target === 'string' ? e.target : (e.target as any)?.id
-        return (src === id && focusAnchorIds.includes(tgt)) || (tgt === id && focusAnchorIds.includes(src)) || focusAnchorIds.includes(id)
-      })
-    : false
-  const isFocused = isFocusedBase || isAdjacentToAnchor
+  // Focus removed
 
   const getFileIcon = () => {
     if (isImage) return '🖼️'
@@ -188,34 +174,16 @@ export default function DocumentNode({
   return (
     <div 
       className={`flex flex-col justify-start text-left p-4 ${containerWidthClass} bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
-        isFocused
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400/50'
-          : selected 
+        selected 
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : isLocked && !isLockedByMe
           ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
           : 'border-transparent dark:border-transparent'
-      } ${(hasFocus || focusAnchorIds.length > 0) && !isFocused ? 'opacity-40 blur-[1px]' : ''}`}
+      }`}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
-      <IconButton
-        variant="default"
-        size="sm"
-        aria-label="Focus node"
-        className="absolute -top-2 -right-2"
-        onClick={(e) => {
-          e.stopPropagation()
-          e.preventDefault()
-          if (typeof toggleFocusOnNode === 'function') {
-            toggleFocusOnNode(id)
-          } else if ((window as any).__toggleFocusOnNode) {
-            (window as any).__toggleFocusOnNode(id)
-          }
-        }}
-      >
-        <Target size={14} weight="duotone" className='text-primary-500' />
-      </IconButton>
+      
 
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-2">
