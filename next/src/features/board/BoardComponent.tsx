@@ -147,6 +147,16 @@ function BoardContent({
   useEffect(() => {
     if (boardId) {
       useBoardStore.getState().setCurrentBoardId(boardId)
+      // Load saved colorgories for this board if available
+      ;(async () => {
+        try {
+          const saved = await boardStorage.loadBoard(boardId)
+          const savedColorgories = saved?.data?.colorgories
+          if (Array.isArray(savedColorgories) && savedColorgories.length > 0) {
+            useBoardStore.getState().setColorgories(savedColorgories as any)
+          }
+        } catch {}
+      })()
     }
   }, [boardId])
   
@@ -501,7 +511,7 @@ function BoardContent({
         //   edgesCount: boardData.edges.length
         // })
         
-        await boardStorage.updateBoard(localBoardIdRef.current, boardData)
+        await boardStorage.updateBoard(localBoardIdRef.current, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
         // If this board was created from a template, autosave template data as well
         try {
           if (typeof window !== 'undefined') {
@@ -619,6 +629,7 @@ function BoardContent({
         edges: [],
         viewport: reactFlowInstance.getViewport(),
         topic: brief.boardTopic || null,
+        colorgories: useBoardStore.getState().colorgories || []
       })
       // If user provided manual starter nodes, prioritize those and skip AI
       if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
@@ -656,7 +667,7 @@ function BoardContent({
             }))
             setNodes([topicNode, ...generatedNodes])
             if (generatedEdges.length > 0) setEdges(generatedEdges)
-            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
+            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
             await boardStorage.updateBoard(boardId, boardData)
             setSaveStatus('saved')
             setHasUnsavedChanges(false)
@@ -682,7 +693,7 @@ function BoardContent({
         const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
         setNodes([topicNode, ...generatedNodes])
         setEdges(generatedEdges as any)
-        const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
+        const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
         await boardStorage.updateBoard(boardId, boardData)
         setSaveStatus('saved')
         setHasUnsavedChanges(false)
@@ -754,7 +765,7 @@ function BoardContent({
               }))
               setNodes([topicNode, ...generatedNodes])
               if (generatedEdges.length > 0) setEdges(generatedEdges)
-              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
+              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
               await boardStorage.updateBoard(boardId, boardData)
             } else {
               // Fallback: simple local grid under topic
@@ -774,7 +785,7 @@ function BoardContent({
               const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
               setNodes([topicNode, ...generatedNodes])
               setEdges(generatedEdges as any)
-              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
+              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
               await boardStorage.updateBoard(boardId, boardData)
             }
             
@@ -792,7 +803,7 @@ function BoardContent({
             const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
             setNodes([topicNode, ...generatedNodes])
             setEdges(generatedEdges as any)
-            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
+            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
             await boardStorage.updateBoard(boardId, boardData)
           }
           
@@ -816,7 +827,7 @@ function BoardContent({
         setEdges([newEdge] as any)
         
         // Save with topic and connection
-        const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null }
+        const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
         
         // console.log('💾 Saving single generated node immediately...')
         await boardStorage.updateBoard(boardId, boardData)
@@ -893,7 +904,7 @@ function BoardContent({
           topic: pendingBoardBrief.boardTopic || null,
         }
         try {
-          await boardStorage.saveBoardWithId(boardId, boardName, boardData)
+          await boardStorage.saveBoardWithId(boardId, boardName, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
           // console.log('🔵 CREATING BLANK BOARD with ID:', boardId, 'for name:', boardName)
           setCurrentBoardName(boardName)
           setSaveStatus('saved')
@@ -1033,6 +1044,7 @@ function BoardContent({
         nodes,
         edges,
         viewport: reactFlowInstance.getViewport(),
+        colorgories: useBoardStore.getState().colorgories || []
       }
       
       // console.log('💾 Manual save data:', {
@@ -1042,11 +1054,11 @@ function BoardContent({
       // })
       
       if (localBoardIdRef.current && !name) {
-        await boardStorage.updateBoard(localBoardIdRef.current, boardData)
+        await boardStorage.updateBoard(localBoardIdRef.current, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
         // console.log('✅ Updated existing board:', localBoardIdRef.current)
       } else {
         const boardName = name || `Board ${new Date().toLocaleDateString()}`
-        const boardId = await boardStorage.saveBoard(boardName, boardData)
+        const boardId = await boardStorage.saveBoard(boardName, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
         // console.log('🆕 Created new board:', boardId, 'with name:', boardName)
         localBoardIdRef.current = boardId
         setCurrentBoardName(boardName)

@@ -9,11 +9,13 @@ import { Trash } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
+import Tag from '../../components/ui/Tag'
 
 interface TaskNodeData {
   title?: string
   type?: 'task'
   completed?: boolean
+  colorgoryIds?: string[]
 }
 
 interface TaskNodeProps {
@@ -48,6 +50,8 @@ export default function TaskNode({
   const [title, setTitle] = useState(data.title || '')
   const [completed, setCompleted] = useState<boolean>(!!data.completed)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showColorgoryModal, setShowColorgoryModal] = useState(false)
+  const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
 
   const isLocked = isNodeLocked?.(id) || false
   const lockedByMe = isNodeLockedByMe?.(id) || false
@@ -155,6 +159,32 @@ export default function TaskNode({
         </div>
       </div>
 
+      {/* Colorgories */}
+      {Array.isArray((data as any).colorgoryIds) && (data as any).colorgoryIds.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-1">
+          {(useBoardStore.getState().colorgories || [])
+            .filter(c => (data as any).colorgoryIds?.includes(c.id))
+            .map(c => {
+              const color = c.color.toLowerCase()
+              const variant = color === 'red' ? 'danger'
+                : color === 'yellow' || color === 'orange' ? 'warning'
+                : color === 'green' ? 'success'
+                : color === 'blue' || color === 'cyan' ? 'primary'
+                : 'secondary'
+              return (
+                <Tag key={c.id} variant={variant as any}>{c.name}</Tag>
+              )
+            })}
+        </div>
+      )}
+
+      {/* Colorgories add button */}
+      <div className="mb-2">
+        <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}>
+          Colorgories
+        </Button>
+      </div>
+
       <Modal
         open={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -167,6 +197,42 @@ export default function TaskNode({
           </>
         }
       />
+
+      {/* Colorgories Modal */}
+      <Modal
+        open={showColorgoryModal}
+        onClose={() => setShowColorgoryModal(false)}
+        title="Colorgories"
+        description="Choose categories to apply to this node"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowColorgoryModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              onNodeUpdate?.(id, { colorgoryIds: pendingColorgoryIds })
+              setShowColorgoryModal(false)
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {(useBoardStore.getState().colorgories || []).map((c: any) => (
+            <Checkbox
+              key={c.id}
+              checked={pendingColorgoryIds.includes(c.id)}
+              onChange={(checked) => {
+                setPendingColorgoryIds((prev) => {
+                  const has = prev.includes(c.id)
+                  if (checked && !has) return [...prev, c.id]
+                  if (!checked && has) return prev.filter(id0 => id0 !== c.id)
+                  return prev
+                })
+              }}
+              label={c.name}
+              labelTextClassName="text-sm"
+            />
+          ))}
+        </div>
+      </Modal>
 
       <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
     </div>

@@ -1,6 +1,6 @@
 import { supabaseStorage } from './supabaseStorage'
 import { templateStorage } from './templateStorage'
-import type { BoardNode, BoardEdge } from '../board/boardTypes'
+import type { BoardNode, BoardEdge, Colorgory } from '../board/boardTypes'
 
 interface BoardData {
   nodes: BoardNode[]
@@ -15,6 +15,7 @@ interface BoardData {
     taskSummary?: Array<{ id: string; title: string; completed?: boolean }>
     tasksIncompleteCount?: number
   }
+  colorgories?: Colorgory[]
 }
 
 interface SavedBoard {

@@ -20,6 +20,8 @@ export interface BoardNode extends Node {
     previewUrl?: string
     // Document processing status: 'processing', 'ready', 'error'
     status?: 'processing' | 'ready' | 'error'
+    // Colorgories (category tags) referenced by ID
+    colorgoryIds?: string[]
   }
 }
 
@@ -28,6 +30,12 @@ export interface BoardEdge extends Edge {
     label?: string
     type?: 'default' | 'focus' | 'ai'
   }
+}
+
+export interface Colorgory {
+  id: string
+  color: string // e.g., 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'
+  name: string // default to color, editable by user
 }
 
 export interface BoardBrief {
@@ -71,6 +79,8 @@ export interface BoardState {
   topbarHeight: number
   // When dragging from a handle, source id indicates connection mode
   connectingSourceId?: string | null
+  // Global colorgories for the board
+  colorgories?: Colorgory[]
 }
 
 export interface BoardActions {

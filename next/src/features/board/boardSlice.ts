@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
-import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, DocumentEmbedding } from './boardTypes'
+import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, DocumentEmbedding, Colorgory } from './boardTypes'
 
 const initialState: BoardState = {
   nodes: [],
@@ -19,6 +19,16 @@ const initialState: BoardState = {
   freeChatMode: false, // Add default value
   topbarHeight: 49, // Default, can be updated dynamically
   connectingSourceId: null,
+  colorgories: [
+    { id: 'red', color: 'red', name: 'Red' },
+    { id: 'orange', color: 'orange', name: 'Orange' },
+    { id: 'yellow', color: 'yellow', name: 'Yellow' },
+    { id: 'green', color: 'green', name: 'Green' },
+    { id: 'cyan', color: 'cyan', name: 'Cyan' },
+    { id: 'blue', color: 'blue', name: 'Blue' },
+    { id: 'purple', color: 'purple', name: 'Purple' },
+    { id: 'pink', color: 'pink', name: 'Pink' },
+  ],
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -36,6 +46,13 @@ export const useBoardStore = create<BoardState & BoardActions & {
   clearSelectedNodes: () => void
   setEdges: (edges: BoardEdge[]) => void
   setConnectingSource: (id: string | null) => void
+  // Colorgories actions
+  setColorgories: (c: Colorgory[]) => void
+  addColorgory: (c: Colorgory) => void
+  renameColorgory: (id: string, name: string) => void
+  removeColorgory: (id: string) => void
+  assignNodeColorgory: (nodeId: string, colorgoryId: string) => void
+  unassignNodeColorgory: (nodeId: string, colorgoryId: string) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -173,4 +190,22 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setFreeChatMode: (free) => set({ freeChatMode: free }),
   setTopbarHeight: (height) => set({ topbarHeight: height }),
   setConnectingSource: (id) => set({ connectingSourceId: id }),
+
+  // Colorgories
+  setColorgories: (c) => set({ colorgories: c }),
+  addColorgory: (c) => set((state) => ({ colorgories: [...(state.colorgories || []), c] })),
+  renameColorgory: (id, name) => set((state) => ({ colorgories: (state.colorgories || []).map(c => c.id === id ? { ...c, name } : c) })),
+  removeColorgory: (id) => set((state) => ({ colorgories: (state.colorgories || []).filter(c => c.id !== id) })),
+  assignNodeColorgory: (nodeId, colorgoryId) => set((state) => ({
+    nodes: (state.nodes || []).map(n => n.id === nodeId ? ({
+      ...n,
+      data: { ...n.data, colorgoryIds: Array.from(new Set([...(n.data.colorgoryIds || []), colorgoryId])) }
+    }) : n)
+  })),
+  unassignNodeColorgory: (nodeId, colorgoryId) => set((state) => ({
+    nodes: (state.nodes || []).map(n => n.id === nodeId ? ({
+      ...n,
+      data: { ...n.data, colorgoryIds: (n.data.colorgoryIds || []).filter(id => id !== colorgoryId) }
+    }) : n)
+  })),
 })) 

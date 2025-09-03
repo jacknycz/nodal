@@ -9,6 +9,8 @@ import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import { supabaseStorage } from '../storage/supabaseStorage'
+import Tag from '../../components/ui/Tag'
+import Checkbox from '../../components/ui/Checkbox'
 
 interface DocumentNodeData {
   label: string
@@ -22,12 +24,14 @@ interface DocumentNodeData {
   previewUrl?: string
   documentId?: string // Store document ID instead of File object
   uploadedAt?: number
+  colorgoryIds?: string[]
 }
 
 interface DocumentNodeProps {
   data: DocumentNodeData
   id: string
   onNodeDelete?: (nodeId: string) => void
+  onNodeUpdate?: (nodeId: string, updates: Record<string, any>) => void
   selected?: boolean
   // Add locking props
   acquireNodeLock?: (nodeId: string) => Promise<boolean>
@@ -42,6 +46,7 @@ export default function DocumentNode({
   data, 
   id, 
   onNodeDelete, 
+  onNodeUpdate,
   selected,
   acquireNodeLock,
   releaseNodeLock,
@@ -53,6 +58,8 @@ export default function DocumentNode({
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showColorgoryModal, setShowColorgoryModal] = useState(false)
+  const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
   useEffect(() => {
@@ -236,6 +243,32 @@ export default function DocumentNode({
         )}
       </div>
 
+      {/* Colorgories */}
+      {Array.isArray((data as any).colorgoryIds) && (data as any).colorgoryIds.length > 0 && (
+        <div className="mt-2 mb-2 flex flex-wrap gap-1">
+          {(useBoardStore.getState().colorgories || [])
+            .filter(c => (data as any).colorgoryIds?.includes(c.id))
+            .map(c => {
+              const color = c.color.toLowerCase()
+              const variant = color === 'red' ? 'danger'
+                : color === 'yellow' || color === 'orange' ? 'warning'
+                : color === 'green' ? 'success'
+                : color === 'blue' || color === 'cyan' ? 'primary'
+                : 'secondary'
+              return (
+                <Tag key={c.id} variant={variant as any}>{c.name}</Tag>
+              )
+            })}
+        </div>
+      )}
+
+      {/* Colorgories add button */}
+      <div className="mb-2">
+        <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}>
+          Colorgories
+        </Button>
+      </div>
+
       {/* Action buttons - only show on hover and if not locked by someone else */}
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <IconButton
@@ -293,6 +326,42 @@ export default function DocumentNode({
           fileName={data.fileName || ''}
         />
       )}
+
+      {/* Colorgories Modal */}
+      <Modal 
+        open={showColorgoryModal}
+        onClose={() => setShowColorgoryModal(false)}
+        title="Colorgories"
+        description="Choose categories to apply to this node"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowColorgoryModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              onNodeUpdate?.(id, { colorgoryIds: pendingColorgoryIds })
+              setShowColorgoryModal(false)
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {(useBoardStore.getState().colorgories || []).map((c: any) => (
+            <Checkbox
+              key={c.id}
+              checked={pendingColorgoryIds.includes(c.id)}
+              onChange={(checked) => {
+                setPendingColorgoryIds((prev) => {
+                  const has = prev.includes(c.id)
+                  if (checked && !has) return [...prev, c.id]
+                  if (!checked && has) return prev.filter(id0 => id0 !== c.id)
+                  return prev
+                })
+              }}
+              label={c.name}
+              labelTextClassName="text-sm"
+            />
+          ))}
+        </div>
+      </Modal>
 
       <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
     </div>
