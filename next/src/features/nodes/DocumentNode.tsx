@@ -12,6 +12,7 @@ import { supabaseStorage } from '../storage/supabaseStorage'
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
+import { getNodeContainerClasses } from './nodeStyles'
 
 interface DocumentNodeData {
   label: string
@@ -178,6 +179,8 @@ export default function DocumentNode({
   }
 
   const containerWidthClass = showPreview ? 'w-[820px]' : 'min-w-[240px] max-w-[540px]'
+  const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
+  const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -189,13 +192,7 @@ export default function DocumentNode({
 
   return (
     <div 
-      className={`relative flex flex-col justify-start text-left p-4 ${containerWidthClass} bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
-        selected 
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-          : isLocked && !isLockedByMe
-          ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-          : 'border-transparent dark:border-transparent'
-      }`}
+      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
     >
       {/* Colorgory Swatch */}
       <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>

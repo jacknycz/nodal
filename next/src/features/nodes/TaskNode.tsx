@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
+import { getNodeContainerClasses } from './nodeStyles'
 
 interface TaskNodeData {
   title?: string
@@ -85,15 +86,8 @@ export default function TaskNode({
     onNodeUpdate?.(id, { completed: next })
   }
 
-  const glowClass = isLocked && !lockedByMe
-      ? 'shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
-      : ''
-
-  const borderClass = (() => {
-    if (selected) return '!border-primary-500'
-    if (isLocked && !lockedByMe) return '!border-red-500'
-    return 'border-transparent dark:border-transparent'
-  })()
+  const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
+  const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -105,11 +99,7 @@ export default function TaskNode({
 
   return (
     <div
-      className={`relative flex flex-col justify-start text-left p-3 min-w-[220px] max-w-[420px] 
-        bg-white dark:bg-gray-800 
-        border border-transparent rounded-4xl 
-        shadow-sm shadow-gray-400/20 dark:shadow-none group 
-        ${glowClass} ${borderClass}`}
+      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe: lockedByMe, receiveMode: isReceiveMode, extra: 'min-w-[220px] max-w-[420px]' })}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -121,7 +111,7 @@ export default function TaskNode({
       <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
 
       {/* Colorgory Swatch */}
-      <div className="absolute left-0 top-0 h-full w-2 rounded-l-4xl overflow-hidden" aria-hidden>
+      <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
         {swatchColors.length === 0 ? (
           <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
         ) : (

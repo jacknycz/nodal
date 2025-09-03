@@ -12,6 +12,7 @@ import { useSupabaseUser } from '../auth/authUtils'
 import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
+import { getNodeContainerClasses } from './nodeStyles'
 
 interface NodalNodeProps {
   data: {
@@ -166,16 +167,6 @@ export default function NodalNode({
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
-  const glowClass = isLocked && !isLockedByMe
-      ? 'shadow-[0_0_0_3px_rgba(239,68,68,0.12)]'
-      : ''
-
-  const borderClass = (() => {
-    if (selected) return '!border-primary-500'
-    if (isLocked && !isLockedByMe) return '!border-red-500'
-    return 'border-transparent dark:border-transparent'
-  })()
-
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
   const swatchColors: string[] = Array.isArray(data.colorgoryIds)
@@ -186,7 +177,7 @@ export default function NodalNode({
 
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 min-w-[240px] max-w-[240px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${borderClass} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: 'min-w-[240px] max-w-[240px]' })}
       style={{ position: 'relative' }}
       onClick={(e) => {
         if (e.shiftKey) {

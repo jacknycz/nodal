@@ -11,6 +11,7 @@ import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
+import { getNodeContainerClasses } from './nodeStyles'
 
 interface ImageNodeData {
   label: string
@@ -127,6 +128,8 @@ export default function ImageNode({
   }
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
+  const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
+  const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -138,12 +141,7 @@ export default function ImageNode({
 
   return (
     <div
-      className={`relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${selected
-          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-          : isLocked && !isLockedByMe
-            ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-            : 'border-gray-200 dark:border-gray-700'
-        }`}
+      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
     >
       {/* Colorgory Swatch */}
       <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
