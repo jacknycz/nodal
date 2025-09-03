@@ -115,7 +115,7 @@ export default function ChatPanel2() {
           }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
+        <div className="flex items-center justify-between py-2 px-4 border-b border-gray-100 dark:border-gray-950/50">
           <div className="flex items-center space-x-2">
             <img src="/nobot.svg" alt="Nodal" width={32} height={32} />
 
