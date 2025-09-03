@@ -136,7 +136,11 @@ export default function ChatPanel2() {
     if (!inputValue.trim() || isLoading || isStreaming) return
     const userText = inputValue.trim()
     setInputValue('')
-    if (inputRef.current) inputRef.current.blur()
+    // Keep focus so user can continue typing
+    if (inputRef.current) {
+      const el = inputRef.current
+      requestAnimationFrame(() => el.focus())
+    }
 
     // Build contextual message with selected/focused nodes
     let contextualMessage = userText
