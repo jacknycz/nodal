@@ -1,0 +1,92 @@
+'use client'
+
+import React, { useMemo, useState } from 'react'
+import { useBoardStore } from '../features/board/boardSlice'
+import FloatingSearch from './ui/Search'
+import { useReactFlow } from '@xyflow/react'
+import { CrosshairSimple } from '@phosphor-icons/react'
+
+export default function OmniSearch() {
+  const [query, setQuery] = useState('')
+  const nodes = useBoardStore((s) => s.nodes || [])
+  const rf = useReactFlow()
+
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return [] as { id: string; title: string }[]
+    return (nodes as any[])
+      .map((n) => {
+        const d = (n?.data || {}) as any
+        const title = d.title || d.fileName || 'Untitled'
+        const content =
+          (typeof d.content === 'string' ? d.content : '') +
+          ' ' +
+          (typeof d.extractedText === 'string' ? d.extractedText : '')
+        const haystack = `${title} ${content}`.toLowerCase()
+        return { id: n.id as string, title, haystack }
+      })
+      .filter((r) => r.haystack.includes(q))
+      .map(({ id, title }) => ({ id, title }))
+      .slice(0, 20)
+  }, [nodes, query])
+
+  const panToNode = (id: string) => {
+    try {
+      const n = rf.getNodes().find((x) => x.id === id)
+      if (!n) return
+      const width = (n as any).width || (n as any).measured?.width || 240
+      const height = (n as any).height || (n as any).measured?.height || 140
+      const centerX = n.position.x + width / 2
+      const centerY = n.position.y + height / 2
+      rf.setCenter(centerX, centerY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+      // Pulse highlight
+      const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+      if (nodeEl) {
+        nodeEl.classList.add('node-pulse-highlight')
+        window.setTimeout(() => nodeEl.classList.remove('node-pulse-highlight'), 900)
+      }
+    } catch {}
+  }
+
+  return (
+    <div className="fixed left-28 z-40 bottom-4 sm:bottom-auto sm:top-16 w-64">
+      <FloatingSearch
+        label="Search nodes"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className=""
+        id="omni-search"
+      />
+      {/* Results dropdown */}
+      <div
+        className={`mt-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
+          query ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+        }`}
+      >
+        {query && results.length === 0 && (
+          <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">No matches</div>
+        )}
+        {results.length > 0 && (
+          <ul className="max-h-64 overflow-y-auto">
+            {results.map((r) => (
+              <li key={r.id} className="px-3 py-2 text-sm text-gray-800 dark:text-gray-200 border-b border-gray-200/60 dark:border-gray-700/60 last:border-b-0">
+                <div className="flex items-center gap-2 justify-between">
+                  <div className="min-w-0 truncate">{r.title}</div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); panToNode(r.id) }}
+                    className="flex-none text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
+                    title="Center on node"
+                  >
+                    <CrosshairSimple className="w-4 h-4" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
