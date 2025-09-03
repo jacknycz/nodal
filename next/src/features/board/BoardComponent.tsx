@@ -1656,7 +1656,7 @@ function BoardContent({
         <OmniSearch />
       )}
       {/* Tips & Info (moved) */}
-      <div className="hidden sm:flex items-center gap-2 fixed top-28 left-28 z-40">
+      <div className="hidden sm:flex items-center gap-2 fixed bottom-32 left-4 z-40">
         <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
           <p className="text-xs text-gray-600 dark:text-gray-400">
             💡 Tip: Drag & drop documents and images here

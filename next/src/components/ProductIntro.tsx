@@ -54,7 +54,7 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
   const isOverlay = mode === 'overlay'
   return (
     <div className={isOverlay ? "fixed h-full min-h-screen w-full flex inset-0 z-[200]" : "relative h-screen w-full z-0"}>
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-12 right-8">
         <IconButton aria-label="Close intro" size="md" variant="secondaryGhost" onClick={onClose}>
           ×
         </IconButton>

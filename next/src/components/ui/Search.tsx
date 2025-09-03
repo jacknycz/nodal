@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MagnifyingGlass } from '@phosphor-icons/react'
+import { MagnifyingGlass, XCircle } from '@phosphor-icons/react'
 
 export default function FloatingSearch({
   label = "Search",
@@ -8,6 +8,7 @@ export default function FloatingSearch({
   onChange,
   onFocus,
   onBlur,
+  onClear,
   className = '',
   id = 'floating-search'
 }: {
@@ -17,6 +18,7 @@ export default function FloatingSearch({
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onFocus?: () => void
   onBlur?: () => void
+  onClear?: () => void
   className?: string
   id?: string
 }) {
@@ -27,6 +29,16 @@ export default function FloatingSearch({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) onChange(e)
     else setInternalValue(e.target.value)
+  }
+
+  const handleClear = () => {
+    if (onClear) {
+      onClear()
+    } else {
+      setInternalValue("")
+      // also notify change listeners in uncontrolled usage if any
+      if (onChange) (onChange as any)({ target: { value: '' } })
+    }
   }
 
   return (
@@ -48,13 +60,25 @@ export default function FloatingSearch({
           peer w-full rounded-full border border-transparent dark:border-primary-500/20
           shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-primary-500/40
           bg-white dark:bg-gray-900/80
-          pl-10 pr-3 pt-5 pb-2
+          pl-10 pr-9 pt-5 pb-2
           text-sm text-gray-900 dark:text-gray-100
           placeholder-transparent
           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
           transition
         "
       />
+
+      {/* Clear button (shows only when there is a value) */}
+      {displayValue && displayValue.length > 0 && (
+        <button
+          type="button"
+          aria-label="Clear search"
+          onClick={handleClear}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+        >
+          <XCircle className="w-6 h-6" weight="duotone" />
+        </button>
+      )}
 
       {/* Floating label */}
       <label
