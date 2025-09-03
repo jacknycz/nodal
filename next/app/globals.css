@@ -294,6 +294,6 @@ body {
 }
 
 .node-pulse-highlight {
-  animation: node-pulse-highlight 0.9s ease-out 1;
+  animation: node-pulse-highlight 1.5s ease-out 1;
   will-change: box-shadow;
 }

@@ -6,6 +6,8 @@ export default function FloatingSearch({
   placeholder,
   value,
   onChange,
+  onFocus,
+  onBlur,
   className = '',
   id = 'floating-search'
 }: {
@@ -13,6 +15,8 @@ export default function FloatingSearch({
   placeholder?: string
   value?: string
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onFocus?: () => void
+  onBlur?: () => void
   className?: string
   id?: string
 }) {
@@ -36,6 +40,8 @@ export default function FloatingSearch({
         id={id}
         value={displayValue}
         onChange={handleChange}
+        onFocus={onFocus}
+        onBlur={onBlur}
         placeholder=" "
         aria-label={placeholder || label}
         className="

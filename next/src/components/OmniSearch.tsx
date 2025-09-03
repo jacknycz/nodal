@@ -8,6 +8,8 @@ import { CrosshairSimple } from '@phosphor-icons/react'
 
 export default function OmniSearch() {
   const [query, setQuery] = useState('')
+  const [isFocused, setIsFocused] = useState(false)
+  const [isHoveringResults, setIsHoveringResults] = useState(false)
   const nodes = useBoardStore((s) => s.nodes || [])
   const rf = useReactFlow()
 
@@ -40,13 +42,17 @@ export default function OmniSearch() {
       const centerY = n.position.y + height / 2
       rf.setCenter(centerX, centerY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
       // Pulse highlight
-      const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
-      if (nodeEl) {
-        nodeEl.classList.add('node-pulse-highlight')
-        window.setTimeout(() => nodeEl.classList.remove('node-pulse-highlight'), 900)
+      const nodeOuter = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+      const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+      const targetEl = nodeInner || nodeOuter
+      if (targetEl) {
+        targetEl.classList.add('node-pulse-highlight')
+        window.setTimeout(() => targetEl.classList.remove('node-pulse-highlight'), 1500)
       }
     } catch {}
   }
+
+  const showResults = !!query && (isFocused || isHoveringResults)
 
   return (
     <div className="fixed left-28 z-40 bottom-4 sm:bottom-auto sm:top-16 w-64">
@@ -54,22 +60,30 @@ export default function OmniSearch() {
         label="Search nodes"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         className=""
         id="omni-search"
       />
       {/* Results dropdown */}
       <div
+        onMouseEnter={() => setIsHoveringResults(true)}
+        onMouseLeave={() => setIsHoveringResults(false)}
         className={`mt-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
-          query ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+          showResults ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
-        {query && results.length === 0 && (
+        {showResults && results.length === 0 && (
           <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400">No matches</div>
         )}
-        {results.length > 0 && (
+        {showResults && results.length > 0 && (
           <ul className="max-h-64 overflow-y-auto">
             {results.map((r) => (
-              <li key={r.id} className="px-3 py-2 text-sm text-gray-800 dark:text-gray-200 border-b border-gray-200/60 dark:border-gray-700/60 last:border-b-0">
+              <li
+                key={r.id}
+                onClick={() => panToNode(r.id)}
+                className="px-3 py-2 text-sm text-gray-800 dark:text-gray-200 border-b border-gray-200/60 dark:border-gray-700/60 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+              >
                 <div className="flex items-center gap-2 justify-between">
                   <div className="min-w-0 truncate">{r.title}</div>
                   <button
