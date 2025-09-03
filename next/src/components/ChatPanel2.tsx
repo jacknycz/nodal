@@ -275,7 +275,7 @@ export default function ChatPanel2() {
         )}
 
         {/* Input */}
-        <div className="p-2">
+        <div className="px-4 py-3">
           <div className="flex mb-2 justify-center">
             <Select
               size="xs"
@@ -286,7 +286,7 @@ export default function ChatPanel2() {
             />
           </div>
 
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 items-end">
             <TextArea
               ref={inputRef}
               value={inputValue}
@@ -302,7 +302,7 @@ export default function ChatPanel2() {
                 : 'Chat with Nodal...'}
               rows={1}
               fullWidth
-              className="resize-none"
+              className="resize-none scrollbar-none"
             />
             <Button onClick={() => handleSend()} disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} className="w-12! h-12! p-0! flex-none">
               <PaperPlaneTilt weight="duotone" size={32} className="w-6! h-6!" />

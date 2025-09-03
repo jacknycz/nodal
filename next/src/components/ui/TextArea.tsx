@@ -45,7 +45,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
         {/* Textarea container with label inside */}
         <div
           className={clsx(
-            'relative rounded-4xl border border-transparent transition-all duration-200',
+            'relative rounded-4xl border border-transparent transition-all duration-200 overflow-hidden',
             'bg-gray-100 dark:bg-gray-800',
             'focus-within:bg-white dark:focus-within:bg-gray-900',
             'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',

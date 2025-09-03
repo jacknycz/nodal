@@ -297,3 +297,12 @@ body {
   animation: node-pulse-highlight 1.5s ease-out 1;
   will-change: box-shadow;
 }
+
+/* Hide scrollbars utility */
+.scrollbar-none {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
