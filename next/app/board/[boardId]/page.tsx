@@ -53,6 +53,21 @@ export default function BoardPage() {
           setBoard(loadedBoard);
           // eslint-disable-next-line no-console
           console.log('Loaded board from storage:', loadedBoard)
+          // Hydrate local chat state from board meta if present
+          try {
+            const chatMeta = loadedBoard.data?.meta?.chat
+            if (chatMeta && typeof window !== 'undefined') {
+              if (Array.isArray(chatMeta.messages)) {
+                localStorage.setItem(`nodal.chat.${boardId}`, JSON.stringify(chatMeta.messages))
+              }
+              if (typeof chatMeta.panelOpen === 'boolean') {
+                localStorage.setItem(`nodal.chatpanel.${boardId}.open`, chatMeta.panelOpen ? 'true' : 'false')
+              }
+              if (typeof chatMeta.model === 'string' && chatMeta.model) {
+                localStorage.setItem(`nodal.chatpanel.${boardId}.model`, chatMeta.model)
+              }
+            }
+          } catch {}
         } else {
           setError('Board not found');
         }

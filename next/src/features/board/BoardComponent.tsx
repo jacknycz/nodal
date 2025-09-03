@@ -1510,6 +1510,23 @@ function BoardContent({
     setShowAINodeGenerator(true)
   }, [pendingSourceNodeId])
 
+  // Trigger autosave when chat updates (so chat meta is saved with the board)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if (!localBoardIdRef.current) return
+      if (saveStatus === 'saving') return
+      setHasUnsavedChanges(true)
+      if (onBoardStateChangeRef.current) {
+        onBoardStateChangeRef.current(currentBoardName, 'saving', true)
+      }
+      triggerAutosaveRef.current()
+    }
+    window.addEventListener('nodal:chat-updated', handler as EventListener)
+    return () => {
+      window.removeEventListener('nodal:chat-updated', handler as EventListener)
+    }
+  }, [saveStatus, currentBoardName])
+
   return (
     <div 
       className="w-full h-full relative" 

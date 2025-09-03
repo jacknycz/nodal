@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAIContext } from './aiContext'
 import type { AIContext as AIContextType } from './aiTypes'
+import { useBoardStore } from '../board/boardSlice'
 
 interface ChatMessage2 {
   id: string
@@ -31,6 +32,9 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentContext, setCurrentContext] = useState<AIContextType>({})
+
+  const currentBoardId = useBoardStore((s) => s.currentBoardId)
+  const storageKey = currentBoardId ? `nodal.chat.${currentBoardId}` : 'nodal.chat.global'
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -175,6 +179,41 @@ export function useUnifiedAI2(): UseUnifiedAI2Result {
     setMessages([])
     setError(null)
   }, [])
+
+  // Load saved chat on board change/mount
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      const raw = localStorage.getItem(storageKey)
+      if (raw) {
+        const parsed = JSON.parse(raw) as any[]
+        if (Array.isArray(parsed)) {
+          const restored = parsed.map((m: any): ChatMessage2 => ({
+            id: String(m.id ?? Date.now()),
+            role: m.role === 'assistant' || m.role === 'user' || m.role === 'system' ? m.role : 'assistant',
+            content: String(m.content ?? ''),
+            timestamp: new Date(m.timestamp ?? Date.now())
+          }))
+          setMessages(restored)
+        }
+      } else {
+        setMessages([])
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey])
+
+  // Persist chat on changes
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return
+      localStorage.setItem(storageKey, JSON.stringify(messages))
+      // Notify listeners (e.g., BoardComponent) that chat updated
+      try {
+        window.dispatchEvent(new CustomEvent('nodal:chat-updated', { detail: { boardId: currentBoardId } }))
+      } catch {}
+    } catch {}
+  }, [messages, storageKey])
 
   return {
     messages,

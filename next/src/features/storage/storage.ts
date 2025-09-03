@@ -14,6 +14,12 @@ interface BoardData {
   meta?: {
     taskSummary?: Array<{ id: string; title: string; completed?: boolean }>
     tasksIncompleteCount?: number
+    // Persisted chat state
+    chat?: {
+      messages?: Array<{ id: string; role: 'user' | 'assistant' | 'system' | string; content: string; timestamp: string | Date }>
+      panelOpen?: boolean
+      model?: string
+    }
   }
   colorgories?: Colorgory[]
 }
@@ -100,13 +106,41 @@ class BoardStorage {
 
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
-    const res = await supabaseStorage.updateBoard(boardId, data)
+    // Merge chat meta from localStorage (client) so chats persist with the board
+    let augmented = data as BoardData
+    try {
+      if (typeof window !== 'undefined') {
+        const messagesRaw = localStorage.getItem(`nodal.chat.${boardId}`)
+        const panelRaw = localStorage.getItem(`nodal.chatpanel.${boardId}.open`)
+        const modelRaw = localStorage.getItem(`nodal.chatpanel.${boardId}.model`)
+        let messagesParsed: any[] | undefined = undefined
+        if (messagesRaw) {
+          try {
+            messagesParsed = JSON.parse(messagesRaw)
+          } catch {}
+        }
+        const chatMeta = {
+          messages: messagesParsed,
+          panelOpen: panelRaw === 'true',
+          model: modelRaw || undefined,
+        }
+        augmented = {
+          ...augmented,
+          meta: {
+            ...(augmented.meta || {}),
+            chat: chatMeta,
+          },
+        }
+      }
+    } catch {}
+
+    const res = await supabaseStorage.updateBoard(boardId, augmented)
     // Also propagate updates to a mapped template if present in localStorage
     try {
       if (typeof window !== 'undefined') {
         const tplId = localStorage.getItem(`templateMapping:${boardId}`)
         if (tplId) {
-          await templateStorage.updateTemplate(tplId, { data })
+          await templateStorage.updateTemplate(tplId, { data: augmented })
         }
       }
     } catch (err) {

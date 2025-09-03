@@ -1,11 +1,11 @@
-'use client'
+"use client"
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import { useBoardStore } from '../features/board/boardSlice'
-import { X, Chat, Spinner, Key, Target, PaperPlaneTilt } from '@phosphor-icons/react'
+import { X, Chat, Spinner, Key, Target, PaperPlaneTilt, Resize } from '@phosphor-icons/react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 // Node generation UI and placement imports removed
@@ -14,8 +14,14 @@ import Select from './ui/Select'
 import { MODELS } from '../features/ai/models'
 
 export default function ChatPanel2() {
+  const currentBoardId = useBoardStore((s) => s.currentBoardId)
+  const panelKey = currentBoardId ? `nodal.chatpanel.${currentBoardId}.open` : 'nodal.chatpanel.global.open'
+  const modelKey = currentBoardId ? `nodal.chatpanel.${currentBoardId}.model` : 'nodal.chatpanel.global.model'
+
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem(panelKey)
+    if (saved === 'true' || saved === 'false') return saved === 'true'
     return window.innerWidth >= 640
   })
   const [inputValue, setInputValue] = useState('')
@@ -52,6 +58,67 @@ export default function ChatPanel2() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // md+ resize state
+  const [isMdUp, setIsMdUp] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(min-width: 768px)').matches
+  })
+  const MIN_WIDTH = 320
+  const MAX_WIDTH = 640
+  const MIN_HEIGHT = 240
+  const getMaxHeight = () => (typeof window !== 'undefined' ? Math.min(window.innerHeight - 80, 900) : 700)
+  const [panelWidth, setPanelWidth] = useState<number>(384)
+  const [panelHeight, setPanelHeight] = useState<number>(() => (typeof window !== 'undefined' ? Math.min(Math.max(480, window.innerHeight - 80), getMaxHeight()) : 560))
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 768px)')
+    const onChange = () => {
+      setIsMdUp(mq.matches)
+      // Clamp height on viewport changes
+      setPanelHeight((h) => Math.max(MIN_HEIGHT, Math.min(h, getMaxHeight())))
+      setPanelWidth((w) => Math.max(MIN_WIDTH, Math.min(w, MAX_WIDTH)))
+    }
+    onChange()
+    mq.addEventListener('change', onChange)
+    window.addEventListener('resize', onChange)
+    return () => {
+      mq.removeEventListener('change', onChange)
+      window.removeEventListener('resize', onChange)
+    }
+  }, [])
+
+  const resizingRef = useRef(false)
+  const startRef = useRef<{ x: number; y: number; width: number; height: number }>({ x: 0, y: 0, width: 384, height: panelHeight })
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!resizingRef.current) return
+    // From bottom-left: width grows as mouse moves left; height grows as mouse moves down
+    const dx = e.clientX - startRef.current.x
+    const dy = e.clientY - startRef.current.y
+    const nextWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startRef.current.width - dx))
+    const nextHeight = Math.max(MIN_HEIGHT, Math.min(getMaxHeight(), startRef.current.height + dy))
+    setPanelWidth(nextWidth)
+    setPanelHeight(nextHeight)
+  }
+
+  const onMouseUp = () => {
+    if (!resizingRef.current) return
+    resizingRef.current = false
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
+  }
+
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    if (!isMdUp) return
+    e.preventDefault()
+    e.stopPropagation()
+    resizingRef.current = true
+    startRef.current = { x: e.clientX, y: e.clientY, width: panelWidth, height: panelHeight }
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
   // Render assistant text as-is without additional sanitization
 
   // For user messages with hidden context prefix, only show the original user text
@@ -77,7 +144,7 @@ export default function ChatPanel2() {
     // Board context (title/topic and primer about nodes/edges)
     const boardTitle = boardBrief?.boardName || 'Untitled Board'
     const boardTopicLine = boardBrief?.boardTopic || boardTopic || ''
-    const boardInfo = `Context - Board:\nTitle: ${boardTitle}${boardTopicLine ? `\nTopic: ${boardTopicLine}` : ''}\nInfo: Nodal is a visual mind map where nodes represent ideas/documents/tasks and edges represent relationships. Interpret pronouns like \"this\" or \"it\" relative to the selected nodes.`
+    const boardInfo = `Context - Board:\nTitle: ${boardTitle}${boardTopicLine ? `\nTopic: ${boardTopicLine}` : ''}\nInfo: Nodal is a visual mind map where nodes represent ideas/documents/tasks and edges represent relationships. Interpret pronouns like "this" or "it" relative to the selected nodes.`
 
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map((n: any) => {
@@ -113,6 +180,7 @@ export default function ChatPanel2() {
       <div
         className={`fixed top-16 right-4 rounded-4xl z-60 w-96 h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
+        style={isMdUp ? { width: panelWidth, height: panelHeight, maxWidth: MAX_WIDTH, minWidth: MIN_WIDTH, minHeight: MIN_HEIGHT, maxHeight: getMaxHeight() } as React.CSSProperties : undefined}
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 border-b border-gray-100 dark:border-gray-950/50">
@@ -243,6 +311,17 @@ export default function ChatPanel2() {
             )}
           </div> */}
         </div>
+
+        {/* Resize handle (md and above) */}
+        {isMdUp && (
+          <div
+            className="hidden md:flex absolute -bottom-1 -left-1 w-5 h-5 items-center justify-center rounded-full bg-white/90 dark:bg-gray-600/50 text-gray-600 dark:text-gray-200 cursor-sw-resize"
+            onMouseDown={onResizeMouseDown}
+            title="Resize"
+          >
+            <Resize size={32} weight="duotone" className="w-3 h-3" />
+          </div>
+        )}
 
         {/* Node generation UI removed */}
       </div>
