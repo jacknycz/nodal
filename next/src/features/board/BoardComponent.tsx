@@ -1610,26 +1610,11 @@ function BoardContent({
         <div className="hidden sm:block">
           <Controls />
         </div>
-        <div className="hidden sm:block">
-          <MiniMap />
-        </div>
-
-        <div className="hidden sm:flex items-center gap-2 absolute bottom-4 left-16 z-10">
-          <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
-            <p className="text-xs text-gray-600 dark:text-gray-400">
-              💡 Tip: Drag & drop documents and images here
-            </p>
-          </div>
-
-          <IconButton
-            aria-label="Info"
-            onClick={() => {
-              setShowTips(true)
-            }}
-          >
-            <Info size={32} weight="duotone" className="w-4 h-4" />
-          </IconButton>
-        </div>
+        {/* Place MiniMap bottom-left next to Controls */}
+        <MiniMap
+          className="hidden sm:block !bg-white/80 dark:!bg-gray-900/70 !rounded-md !shadow-lg"
+          style={{ position: 'absolute', left: 30, bottom: 0, right: 'auto', top: 'auto', width: 160, height: 104 }}
+        />
         
         {/** Removed FAB and ChatPanel from inside ReactFlow to avoid stacking context issues */}
       </ReactFlow>
@@ -1670,6 +1655,22 @@ function BoardContent({
       {isBoardView && (
         <OmniSearch />
       )}
+      {/* Tips & Info (moved) */}
+      <div className="hidden sm:flex items-center gap-2 fixed top-28 left-28 z-40">
+        <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            💡 Tip: Drag & drop documents and images here
+          </p>
+        </div>
+        <IconButton
+          aria-label="Info"
+          onClick={() => {
+            setShowTips(true)
+          }}
+        >
+          <Info size={32} weight="duotone" className="w-4 h-4" />
+        </IconButton>
+      </div>
       
       {/* Context Menu */}
       <BoardContextMenu

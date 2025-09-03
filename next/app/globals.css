@@ -306,3 +306,43 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
+
+/* Themed scrollbar (cross-browser) */
+:root {
+  --scrollbar-track: rgba(0,0,0,0.06);
+  --scrollbar-thumb: rgba(0,0,0,0.25);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.35);
+  --scrollbar-corner: transparent;
+  --scrollbar-size: 10px;
+  --scrollbar-radius: 8px;
+}
+.dark {
+  --scrollbar-track: rgba(255,255,255,0.06);
+  --scrollbar-thumb: rgba(255,255,255,0.28);
+  --scrollbar-thumb-hover: rgba(255,255,255,0.38);
+  --scrollbar-corner: transparent;
+}
+
+.scrollbar-themed {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+.scrollbar-themed::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+.scrollbar-themed::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-radius);
+}
+.scrollbar-themed::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-radius);
+}
+.scrollbar-themed::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+.scrollbar-themed::-webkit-scrollbar-corner {
+  background: var(--scrollbar-corner);
+}
