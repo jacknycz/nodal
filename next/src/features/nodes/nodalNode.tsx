@@ -176,6 +176,14 @@ export default function NodalNode({
         .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
     : []
 
+  // Build colorgory ring gradient
+  const gradientStops = swatchColors.length <= 1
+    ? (swatchColors[0] || '')
+    : swatchColors.map((color, index) => {
+        const percentage = (index / (swatchColors.length - 1)) * 100
+        return `${color} ${percentage}%`
+      }).join(', ')
+
   return (
     <div
       className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: 'min-w-[240px] max-w-[240px]' })}
@@ -188,18 +196,18 @@ export default function NodalNode({
         }
       }}
     >
-      {/* Colorgory Swatch */}
-      <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
-        {swatchColors.length === 0 ? (
-          <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
-        ) : (
-          <div style={{ height: '100%', width: '100%' }}>
-            {swatchColors.map((hex, idx) => (
-              <div key={idx} style={{ height: `${100 / swatchColors.length}%`, backgroundColor: hex }} />
-            ))}
-          </div>
-        )}
-      </div>
+      {swatchColors.length > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-lg"
+          style={{
+            padding: 3,
+            background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
+            // Draw only the ring via masking (outer minus inner)
+            ...( { WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any )
+          }}
+        />
+      )}
       <Handle
         type="target"
         position={Position.Top}
