@@ -28,18 +28,26 @@ export default function BoardPage() {
   const user = useSupabaseUser()
   const router = useRouter()
 
-  // Redirect unauthenticated users to login (root)
+  // Redirect unauthenticated users to login (root), but avoid transient flicker on session refresh
   useEffect(() => {
     if (user === undefined) return // auth still resolving
-    if (user === null) {
+    if (user && (user as any).id) {
+      try { localStorage.setItem('nodal.auth.hadUser', 'true') } catch {}
+      return
+    }
+    // user is null here
+    const hadUser = typeof window !== 'undefined' ? localStorage.getItem('nodal.auth.hadUser') === 'true' : false
+    if (!hadUser) {
       router.replace('/')
     }
+    // If hadUser was true, skip redirect to prevent flash when session briefly resets on focus
   }, [user, router])
 
   useEffect(() => {
     const loadBoard = async () => {
       try {
-        setLoading(true);
+        // If board already loaded, avoid flashing the screen again
+        setLoading(prev => (board ? prev : true));
         const loadedBoard = await boardStorage.loadBoard(boardId);
         if (loadedBoard) {
           setBoard(loadedBoard);
@@ -57,10 +65,9 @@ export default function BoardPage() {
     };
 
     if (!boardId) return
-    if (user === undefined) return // wait for auth
-    if (user === null) return // unauthenticated -> redirected
+    if (!user || !(user as any).id) return // wait for stable authenticated user
     loadBoard();
-  }, [boardId, user]);
+  }, [boardId, user?.id]);
 
   // Sync loaded board topic into the board store so Topbar can read it
   useEffect2(() => {
