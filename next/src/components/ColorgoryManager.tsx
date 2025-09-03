@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import { X, Tag as TagIcon } from '@phosphor-icons/react'
 import TextInput from './ui/TextInput'
+import { colorgoryHexById } from '../features/board/colorgoryColors'
 
 export default function ColorgoryManager() {
   const [isOpen, setIsOpen] = useState(false)
@@ -13,16 +14,7 @@ export default function ColorgoryManager() {
 
   const ordered = useMemo(() => colorgories, [colorgories])
 
-  const colorClasses: Record<string, string> = {
-    red: 'bg-red-500',
-    orange: 'bg-orange-500',
-    yellow: 'bg-yellow-400',
-    green: 'bg-green-500',
-    cyan: 'bg-cyan-500',
-    blue: 'bg-blue-500',
-    purple: 'bg-purple-500',
-    pink: 'bg-pink-500',
-  }
+  
 
   return (
     <>
@@ -57,7 +49,7 @@ export default function ColorgoryManager() {
           )}
           {ordered.map((c) => (
             <div key={c.id} className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white/70 dark:bg-gray-800/60">
-              <div className={`w-3 h-3 rounded-full ${colorClasses[c.color] || 'bg-gray-400'}`} />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
               <TextInput
                 value={c.name}
                 onChange={(e) => renameColorgory(c.id, (e.target as HTMLInputElement).value)}

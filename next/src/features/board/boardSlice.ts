@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, DocumentEmbedding, Colorgory } from './boardTypes'
+import { COLORGORY_DEFS } from './colorgoryColors'
 
 const initialState: BoardState = {
   nodes: [],
@@ -19,16 +20,7 @@ const initialState: BoardState = {
   freeChatMode: false, // Add default value
   topbarHeight: 49, // Default, can be updated dynamically
   connectingSourceId: null,
-  colorgories: [
-    { id: 'red', color: 'red', name: 'Red' },
-    { id: 'orange', color: 'orange', name: 'Orange' },
-    { id: 'yellow', color: 'yellow', name: 'Yellow' },
-    { id: 'green', color: 'green', name: 'Green' },
-    { id: 'cyan', color: 'cyan', name: 'Cyan' },
-    { id: 'blue', color: 'blue', name: 'Blue' },
-    { id: 'purple', color: 'purple', name: 'Purple' },
-    { id: 'pink', color: 'pink', name: 'Pink' },
-  ],
+  colorgories: COLORGORY_DEFS.map(d => ({ id: d.id, color: d.id, name: d.name })),
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {

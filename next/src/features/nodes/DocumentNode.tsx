@@ -11,6 +11,7 @@ import { useBoardStore } from '../board/boardSlice'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
+import { colorgoryHexById } from '../board/colorgoryColors'
 
 interface DocumentNodeData {
   label: string
@@ -178,9 +179,17 @@ export default function DocumentNode({
 
   const containerWidthClass = showPreview ? 'w-[820px]' : 'min-w-[240px] max-w-[540px]'
 
+  // Build colorgory swatch colors
+  const colorgories = useBoardStore.getState().colorgories || []
+  const swatchColors: string[] = Array.isArray(data.colorgoryIds)
+    ? colorgories
+        .filter((c: any) => data.colorgoryIds!.includes(c.id))
+        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+    : []
+
   return (
     <div 
-      className={`flex flex-col justify-start text-left p-4 ${containerWidthClass} bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
+      className={`relative flex flex-col justify-start text-left p-4 ${containerWidthClass} bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm group ${
         selected 
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : isLocked && !isLockedByMe
@@ -188,6 +197,18 @@ export default function DocumentNode({
           : 'border-transparent dark:border-transparent'
       }`}
     >
+      {/* Colorgory Swatch */}
+      <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
+        {swatchColors.length === 0 ? (
+          <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
+        ) : (
+          <div style={{ height: '100%', width: '100%' }}>
+            {swatchColors.map((hex, idx) => (
+              <div key={idx} style={{ height: `${100 / swatchColors.length}%`, backgroundColor: hex }} />
+            ))}
+          </div>
+        )}
+      </div>
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
       
@@ -243,24 +264,7 @@ export default function DocumentNode({
         )}
       </div>
 
-      {/* Colorgories */}
-      {Array.isArray((data as any).colorgoryIds) && (data as any).colorgoryIds.length > 0 && (
-        <div className="mt-2 mb-2 flex flex-wrap gap-1">
-          {(useBoardStore.getState().colorgories || [])
-            .filter(c => (data as any).colorgoryIds?.includes(c.id))
-            .map(c => {
-              const color = c.color.toLowerCase()
-              const variant = color === 'red' ? 'danger'
-                : color === 'yellow' || color === 'orange' ? 'warning'
-                : color === 'green' ? 'success'
-                : color === 'blue' || color === 'cyan' ? 'primary'
-                : 'secondary'
-              return (
-                <Tag key={c.id} variant={variant as any}>{c.name}</Tag>
-              )
-            })}
-        </div>
-      )}
+      {/* Colorgories swatch replaces tag list */}
 
       {/* Colorgories add button */}
       <div className="mb-2">

@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
+import { colorgoryHexById } from '../board/colorgoryColors'
 
 interface ImageNodeData {
   label: string
@@ -127,15 +128,35 @@ export default function ImageNode({
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
 
+  // Build colorgory swatch colors
+  const colorgories = useBoardStore.getState().colorgories || []
+  const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
+    ? colorgories
+        .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
+        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+    : []
+
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${selected
+      className={`relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm group hover:cursor-move ${containerWidthClass} ${selected
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
           : isLocked && !isLockedByMe
             ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
             : 'border-gray-200 dark:border-gray-700'
         }`}
     >
+      {/* Colorgory Swatch */}
+      <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
+        {swatchColors.length === 0 ? (
+          <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
+        ) : (
+          <div style={{ height: '100%', width: '100%' }}>
+            {swatchColors.map((hex, idx) => (
+              <div key={idx} style={{ height: `${100 / swatchColors.length}%`, backgroundColor: hex }} />
+            ))}
+          </div>
+        )}
+      </div>
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
       
@@ -332,24 +353,7 @@ export default function ImageNode({
         )}
       </div>
 
-      {/* Colorgories */}
-      {Array.isArray((data as any).colorgoryIds) && (data as any).colorgoryIds.length > 0 && (
-        <div className="mt-2 mb-1 flex flex-wrap gap-1">
-          {(useBoardStore.getState().colorgories || [])
-            .filter(c => (data as any).colorgoryIds?.includes(c.id))
-            .map(c => {
-              const color = c.color.toLowerCase()
-              const variant = color === 'red' ? 'danger'
-                : color === 'yellow' || color === 'orange' ? 'warning'
-                : color === 'green' ? 'success'
-                : color === 'blue' || color === 'cyan' ? 'primary'
-                : 'secondary'
-              return (
-                <Tag key={c.id} variant={variant as any}>{c.name}</Tag>
-              )
-            })}
-        </div>
-      )}
+      {/* Colorgories swatch replaces tag list */}
 
       {/* Colorgories add button */}
       <div className="mb-2">

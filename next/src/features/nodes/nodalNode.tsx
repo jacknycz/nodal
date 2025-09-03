@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import NodeEditModal from '../../components/NodeEditModal'
 import { useSupabaseUser } from '../auth/authUtils'
 import Tag from '../../components/ui/Tag'
+import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 
 interface NodalNodeProps {
@@ -175,9 +176,18 @@ export default function NodalNode({
     return 'border-transparent dark:border-transparent'
   })()
 
+  // Build colorgory swatch colors
+  const colorgories = useBoardStore.getState().colorgories || []
+  const swatchColors: string[] = Array.isArray(data.colorgoryIds)
+    ? colorgories
+        .filter((c: any) => data.colorgoryIds!.includes(c.id))
+        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+    : []
+
   return (
     <div
       className={`flex flex-col justify-start text-left p-3 min-w-[240px] max-w-[240px] bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group ${glowClass} ${borderClass} ${isReceiveMode ? 'ring-2 ring-emerald-400/60 bg-emerald-50/40 dark:bg-emerald-900/10' : ''}`}
+      style={{ position: 'relative' }}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -186,6 +196,18 @@ export default function NodalNode({
         }
       }}
     >
+      {/* Colorgory Swatch */}
+      <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
+        {swatchColors.length === 0 ? (
+          <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
+        ) : (
+          <div style={{ height: '100%', width: '100%' }}>
+            {swatchColors.map((hex, idx) => (
+              <div key={idx} style={{ height: `${100 / swatchColors.length}%`, backgroundColor: hex }} />
+            ))}
+          </div>
+        )}
+      </div>
       <Handle
         type="target"
         position={Position.Top}
@@ -214,24 +236,6 @@ export default function NodalNode({
           </div>
         )}
       </div>
-      {/* Colorgories */}
-      {Array.isArray((data as any).colorgoryIds) && (data as any).colorgoryIds.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1">
-          {(useBoardStore.getState().colorgories || [])
-            .filter(c => (data as any).colorgoryIds?.includes(c.id))
-            .map(c => {
-              const color = c.color.toLowerCase()
-              const variant = color === 'red' ? 'danger'
-                : color === 'yellow' || color === 'orange' ? 'warning'
-                : color === 'green' ? 'success'
-                : color === 'blue' || color === 'cyan' ? 'primary'
-                : 'secondary'
-              return (
-                <Tag key={c.id} variant={variant as any}>{c.name}</Tag>
-              )
-            })}
-        </div>
-      )}
       {/* Colorgories add button */}
       <div className="mb-2">
         <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}>

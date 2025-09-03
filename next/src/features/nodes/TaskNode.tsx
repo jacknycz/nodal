@@ -10,6 +10,7 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
+import { colorgoryHexById } from '../board/colorgoryColors'
 
 interface TaskNodeData {
   title?: string
@@ -94,9 +95,17 @@ export default function TaskNode({
     return 'border-transparent dark:border-transparent'
   })()
 
+  // Build colorgory swatch colors
+  const colorgories = useBoardStore.getState().colorgories || []
+  const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
+    ? colorgories
+        .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
+        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+    : []
+
   return (
     <div
-      className={`flex flex-col justify-start text-left p-3 min-w-[220px] max-w-[420px] 
+      className={`relative flex flex-col justify-start text-left p-3 min-w-[220px] max-w-[420px] 
         bg-white dark:bg-gray-800 
         border border-transparent rounded-4xl 
         shadow-sm shadow-gray-400/20 dark:shadow-none group 
@@ -110,6 +119,19 @@ export default function TaskNode({
       }}
     >
       <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
+
+      {/* Colorgory Swatch */}
+      <div className="absolute left-0 top-0 h-full w-2 rounded-l-4xl overflow-hidden" aria-hidden>
+        {swatchColors.length === 0 ? (
+          <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
+        ) : (
+          <div style={{ height: '100%', width: '100%' }}>
+            {swatchColors.map((hex, idx) => (
+              <div key={idx} style={{ height: `${100 / swatchColors.length}%`, backgroundColor: hex }} />
+            ))}
+          </div>
+        )}
+      </div>
 
       
 
@@ -158,25 +180,6 @@ export default function TaskNode({
           )}
         </div>
       </div>
-
-      {/* Colorgories */}
-      {Array.isArray((data as any).colorgoryIds) && (data as any).colorgoryIds.length > 0 && (
-        <div className="mb-2 flex flex-wrap gap-1">
-          {(useBoardStore.getState().colorgories || [])
-            .filter(c => (data as any).colorgoryIds?.includes(c.id))
-            .map(c => {
-              const color = c.color.toLowerCase()
-              const variant = color === 'red' ? 'danger'
-                : color === 'yellow' || color === 'orange' ? 'warning'
-                : color === 'green' ? 'success'
-                : color === 'blue' || color === 'cyan' ? 'primary'
-                : 'secondary'
-              return (
-                <Tag key={c.id} variant={variant as any}>{c.name}</Tag>
-              )
-            })}
-        </div>
-      )}
 
       {/* Colorgories add button */}
       <div className="mb-2">
