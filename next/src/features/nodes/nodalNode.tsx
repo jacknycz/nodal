@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { Trash, Pen } from "@phosphor-icons/react/ssr";
+import { Trash, Pen, Tag as TagIcon } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -13,6 +13,7 @@ import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses } from './nodeStyles'
+import NodeActionDrawer from './NodeActionDrawer'
 
 interface NodalNodeProps {
   data: {
@@ -227,14 +228,9 @@ export default function NodalNode({
           </div>
         )}
       </div>
-      {/* Colorgories add button */}
-      <div className="mb-2">
-        <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}>
-          Colorgories
-        </Button>
-      </div>
-      {/* Action buttons - only show on hover and if not locked by someone else */}
-      <div className="flex w-full items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      {/* Colorgories button moved to drawer */}
+      {/* Slide-out action panel on hover */}
+      <NodeActionDrawer>
         <IconButton
           variant="default"
           size="sm"
@@ -245,6 +241,15 @@ export default function NodalNode({
           <Pen size={14} weight="duotone" />
         </IconButton>
         <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Manage colorgories"
+          onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <TagIcon size={14} weight="duotone" />
+        </IconButton>
+        <IconButton
           variant="danger"
           size="sm"
           aria-label="Delete node"
@@ -253,7 +258,7 @@ export default function NodalNode({
         >
           <Trash size={14} weight="duotone" />
         </IconButton>
-      </div>
+      </NodeActionDrawer>
 
       {/* Modals */}
       <Modal

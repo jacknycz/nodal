@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, Tag as TagIcon } from '@phosphor-icons/react'
 import Image from 'next/image'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -12,6 +12,7 @@ import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
+import NodeActionDrawer from './NodeActionDrawer'
 
 interface ImageNodeData {
   label: string
@@ -353,16 +354,11 @@ export default function ImageNode({
 
       {/* Colorgories swatch replaces tag list */}
 
-      {/* Colorgories add button */}
-      <div className="mb-2">
-        <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}>
-          Colorgories
-        </Button>
-      </div>
+      {/* Colorgories button moved to drawer */}
 
-      {/* Hover actions - hidden when expanded */}
+      {/* Slide-out action panel on hover (hidden when expanded) */}
       {!expanded && (
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 mt-2">
+        <NodeActionDrawer>
           <IconButton
             variant="default"
             size="sm"
@@ -373,6 +369,15 @@ export default function ImageNode({
             <DownloadSimple size={14} />
           </IconButton>
           <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Manage colorgories"
+            onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <TagIcon size={14} />
+          </IconButton>
+          <IconButton
             variant="danger"
             size="sm"
             aria-label="Delete image"
@@ -381,7 +386,7 @@ export default function ImageNode({
           >
             <Trash size={14} />
           </IconButton>
-        </div>
+        </NodeActionDrawer>
       )}
 
       {/* Delete Modal */}

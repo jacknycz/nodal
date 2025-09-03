@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, Tag as TagIcon } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -13,6 +13,7 @@ import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
+import NodeActionDrawer from './NodeActionDrawer'
 
 interface DocumentNodeData {
   label: string
@@ -263,15 +264,10 @@ export default function DocumentNode({
 
       {/* Colorgories swatch replaces tag list */}
 
-      {/* Colorgories add button */}
-      <div className="mb-2">
-        <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}>
-          Colorgories
-        </Button>
-      </div>
+      {/* Colorgories button moved to drawer */}
 
-      {/* Action buttons - only show on hover and if not locked by someone else */}
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      {/* Slide-out action panel on hover */}
+      <NodeActionDrawer>
         <IconButton
           variant="default"
           size="sm"
@@ -291,6 +287,15 @@ export default function DocumentNode({
           <Download size={14} weight="duotone" />
         </IconButton>
         <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Manage colorgories"
+          onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <TagIcon size={14} weight="duotone" />
+        </IconButton>
+        <IconButton
           variant="danger"
           size="sm"
           aria-label="Delete document"
@@ -299,7 +304,7 @@ export default function DocumentNode({
         >
           <Trash size={14} weight="duotone" />
         </IconButton>
-      </div>
+      </NodeActionDrawer>
 
       {/* Modals */}
       <Modal 

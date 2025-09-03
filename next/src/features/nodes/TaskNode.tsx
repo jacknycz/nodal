@@ -5,13 +5,14 @@ import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
 import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
-import { Trash } from "@phosphor-icons/react/ssr";
+import { Trash, Tag as TagIcon } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
+import NodeActionDrawer from './NodeActionDrawer'
 
 interface TaskNodeData {
   title?: string
@@ -146,20 +147,7 @@ export default function TaskNode({
             fullWidth
             className={`${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
           />
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <IconButton
-              variant="danger"
-              size="sm"
-              aria-label="Delete task"
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowDeleteModal(true)
-              }}
-              disabled={isLocked && !lockedByMe}
-            >
-              <Trash size={14} weight="duotone" />
-            </IconButton>
-          </div>
+          {/* inline actions removed; moved to slide-out */}
           {(isLocked) && (
             <div className="flex items-center gap-1 text-[10px] ml-1">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -171,12 +159,32 @@ export default function TaskNode({
         </div>
       </div>
 
-      {/* Colorgories add button */}
-      <div className="mb-2">
-        <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}>
-          Colorgories
-        </Button>
-      </div>
+      {/* Colorgories button moved to drawer */}
+
+      {/* Slide-out action panel on hover */}
+      <NodeActionDrawer>
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Manage colorgories"
+          onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}
+          disabled={isLocked && !lockedByMe}
+        >
+          <TagIcon size={14} weight="duotone" />
+        </IconButton>
+        <IconButton
+          variant="danger"
+          size="sm"
+          aria-label="Delete task"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowDeleteModal(true)
+          }}
+          disabled={isLocked && !lockedByMe}
+        >
+          <Trash size={14} weight="duotone" />
+        </IconButton>
+      </NodeActionDrawer>
 
       <Modal
         open={showDeleteModal}
