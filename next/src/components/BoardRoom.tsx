@@ -305,50 +305,51 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   })()
 
   return (
-    <div className="relative min-h-screen pt-16" role="main" aria-labelledby="welcome-heading">
+    <div className="relative min-h-screen pt-12" role="main" aria-labelledby="welcome-heading">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
         <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
       </div>
 
       {/* Sticky Welcome Section */}
-      <div className="sticky top-16 z-10 pb-8">
+      <div className="sticky top-12 z-10 pb-8">
         <div className="w-full mx-auto py-10 px-4 sm:px-6 lg:px-8">
           {/* Welcome + Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-1 rounded-xl">
-              <h1 id="welcome-heading" className="mb-4 text-xl md:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
+              <h1 id="welcome-heading" className="mb-4 text-2xl md:text-3xl xl:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
                 <span className="font-normal">welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
               </h1>
               <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">Pick up where you left off or create something new.</p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="relative rounded-4xl px-6 py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-primary-500/80">
+
+            <div className="grid grid-cols-3 mt-4 md:mt-0 gap-2 md:gap-3">
+              <div className="relative rounded-xl px-2 lg:px-4 py-2 lg:py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
+                <div className="flex absolute bottom-2 lg:bottom-4 right-2 lg:right-4 w-8 h-8 lg:w-10 lg:h-10 items-center text-primary-500/80">
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12" aria-hidden="true">
                     <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
                     <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM16 28C16.5523 28 17 28.4477 17 29V31C17 31.5523 16.5523 32 16 32H10C9.44772 32 9 31.5523 9 31V29C9 28.4477 9.44772 28 10 28H16ZM34 28C34.5523 28 35 28.4477 35 29V31C35 31.5523 34.5523 32 34 32H28C27.4477 32 27 31.5523 27 31V29C27 28.4477 27.4477 28 28 28H34ZM25 20C25.5523 20 26 20.4477 26 21V23C26 23.5523 25.5523 24 25 24H19C18.4477 24 18 23.5523 18 23V21C18 20.4477 18.4477 20 19 20H25ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
                   </svg>
                 </div>
                 <div className="font-fredoka font-medium lowercase tracking-wide text-gray-500 dark:text-gray-400">Boards</div>
-                <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">{boards.length}</div>
+                <div className="text-2xl lg:text-4xl font-fredoka font-normal text-gray-900 dark:text-white">{boards.length}</div>
               </div>
 
-              <div className="relative rounded-4xl p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-secondary-500/80" aria-hidden>
+              <div className="relative rounded-xl lg:rounded-xl p-2 lg:p-4 bg-white/80 dark:bg-gray-900/60 border border-secondary-500/80 dark:border-secondary-700/80">
+                <div className="flex absolute bottom-2 lg:bottom-4 right-2 lg:right-4 w-8 h-8 lg:w-10 lg:h-10 items-center text-secondary-500/80" aria-hidden>
                   <Graph size={48} weight="duotone" aria-hidden />
                 </div>
                 <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">nodes</div>
-                <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
+                <div className="text-2xl lg:text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
                   {boards.reduce((total, board) => total + (board.nodeCount || 0), 0)}
                 </div>
               </div>
 
-              <div className="relative rounded-4xl p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
-                <div className="flex absolute top-4 right-4 items-center text-tertiary-500/80" aria-hidden>
+              <div className="relative rounded-xl p-2 lg:p-4 bg-white/80 dark:bg-gray-900/60 border border-tertiary-500/80 dark:border-tertiary-700/80">
+                <div className="flex absolute bottom-2 lg:bottom-4 right-2 lg:right-4 w-8 h-8 lg:w-10 lg:h-10 items-center text-tertiary-500/80" aria-hidden>
                   <TreeStructure size={48} weight="duotone" aria-hidden />
                 </div>
                 <div className="font-fredoka font-semibold lowercase tracking-wide text-gray-500 dark:text-gray-400">connections</div>
-                <div className="text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
+                <div className="text-2xl lg:text-4xl font-fredoka font-normal text-gray-900 dark:text-white">
                   {boards.reduce((total, board) => total + (board.edgeCount || 0), 0)}
                 </div>
               </div>

@@ -56,14 +56,14 @@ export default function BoardsTab({
               />
             </div>
 
-            <div className="flex items-center gap-4 flex-none">
+            {/* <div className="flex items-center gap-4 flex-none">
               <Checkbox
                 label="show shared only"
                 checked={showSharedOnly}
                 onChange={(v) => setShowSharedOnly(v)}
                 labelTextClassName='text-sm text-gray-500 dark:text-gray-400'
               />
-            </div>
+            </div> */}
           </div>
 
           {error && (

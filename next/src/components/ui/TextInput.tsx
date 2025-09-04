@@ -64,7 +64,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
             <label
               htmlFor={inputId}
               className={clsx(
-                "absolute px-4 rounded-full dark:bg-gray-950/80 left-4 font-medium transition-all duration-200",
+                "absolute px-4 rounded-full dark:bg-gray-950/80 left-2 font-medium transition-all duration-200",
                 "text-gray-500 dark:text-gray-400",
                 error &&
                   "text-red-500 dark:text-red-400 peer-focus:text-red-500 dark:peer-focus:text-red-400",
