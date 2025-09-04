@@ -36,6 +36,7 @@ import BokehBackground from '../../components/BokehBackground'
 import ChatPanel2 from '../../components/ChatPanel2'
 import TaskList from '../../components/TaskList'
 import ColorgoryManager from '../../components/ColorgoryManager'
+import LeftDock from '../../components/LeftDock'
 import OmniSearch from '../../components/OmniSearch'
 import { useTheme } from '../../contexts/ThemeContext'
 import TopicModal from '../../components/TopicModal'
@@ -171,6 +172,7 @@ function BoardContent({
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
   const [aiParentNodeId, setAiParentNodeId] = useState<string | null>(null)
+  const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | null>(null)
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -1582,6 +1584,14 @@ function BoardContent({
 
           setContextMenu({ isOpen: false, position: null })
           clearConnecting()
+          // Close left dock panel if click is outside dock/panels
+          try {
+            const target = event.target as HTMLElement
+            const inDock = target.closest('[data-left-dock]') || target.closest('[data-left-dock-panel]')
+            if (!inDock && leftDockActive) {
+              setLeftDockActive(null)
+            }
+          } catch {}
         }}
         onPaneContextMenu={(event) => {
           event.preventDefault();
@@ -1619,6 +1629,12 @@ function BoardContent({
         {/** Removed FAB and ChatPanel from inside ReactFlow to avoid stacking context issues */}
       </ReactFlow>
       {isBoardView && (
+        <LeftDock
+          active={leftDockActive}
+          onToggle={(key) => setLeftDockActive(prev => (prev === key ? null : key))}
+        />
+      )}
+      {isBoardView && (
         <FloatingActionButton
           onAddNode={() => {
             // Trigger next click/tap on the board to pick placement
@@ -1647,10 +1663,10 @@ function BoardContent({
         <ChatPanel2 />
       )}
       {isBoardView && (
-        <TaskList />
+        <TaskList dock open={leftDockActive === 'tasks'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={64} />
       )}
       {isBoardView && (
-        <ColorgoryManager />
+        <ColorgoryManager dock open={leftDockActive === 'colorgories'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={132} />
       )}
       {isBoardView && (
         <OmniSearch />

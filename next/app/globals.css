@@ -92,6 +92,9 @@ body {
   border-style: none !important;
   border-color: transparent !important;
 }
+/* Bring hovered node and its flyouts above others */
+.react-flow__node { z-index: 1; }
+.react-flow__node:hover { z-index: 1000 !important; }
 /* 
 .react-flow__node-default {
   width: auto !important;

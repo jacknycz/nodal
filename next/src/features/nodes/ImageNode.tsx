@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, Tag as TagIcon } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner } from '@phosphor-icons/react'
 import Image from 'next/image'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -13,6 +13,7 @@ import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
+import ColorgoryQuickMenu from './ColorgoryQuickMenu'
 
 interface ImageNodeData {
   label: string
@@ -375,15 +376,11 @@ export default function ImageNode({
           >
             <DownloadSimple size={14} />
           </IconButton>
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Manage colorgories"
-            onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}
+          <ColorgoryQuickMenu
+            selectedIds={(data as any).colorgoryIds || []}
+            onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
             disabled={isLocked && !isLockedByMe}
-          >
-            <TagIcon size={14} />
-          </IconButton>
+          />
           <IconButton
             variant="danger"
             size="sm"

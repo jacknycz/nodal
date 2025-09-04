@@ -5,7 +5,7 @@ import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
 import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
-import { Trash, Tag as TagIcon } from "@phosphor-icons/react/ssr";
+import { Trash } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
@@ -13,6 +13,7 @@ import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
+import ColorgoryQuickMenu from './ColorgoryQuickMenu'
 
 interface TaskNodeData {
   title?: string
@@ -170,15 +171,11 @@ export default function TaskNode({
 
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Manage colorgories"
-          onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds((data as any).colorgoryIds || []); setShowColorgoryModal(true) }}
+        <ColorgoryQuickMenu
+          selectedIds={(data as any).colorgoryIds || []}
+          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
           disabled={isLocked && !lockedByMe}
-        >
-          <TagIcon size={14} weight="duotone" />
-        </IconButton>
+        />
         <IconButton
           variant="danger"
           size="sm"

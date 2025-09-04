@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import React, { useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
@@ -8,8 +8,24 @@ import { useReactFlow } from '@xyflow/react'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import { useSupabaseUser } from '../features/auth/authUtils'
 
-export default function TaskList() {
-  const [isOpen, setIsOpen] = useState(false)
+interface TaskListProps {
+  open?: boolean
+  onClose?: () => void
+  dock?: boolean
+  leftOffsetPx?: number
+  topOffsetPx?: number
+}
+
+export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 64 }: TaskListProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = typeof open === 'boolean' ? open : internalOpen
+  const setIsOpen = (next: boolean) => {
+    if (typeof open === 'boolean') {
+      if (!next && onClose) onClose()
+    } else {
+      setInternalOpen(next)
+    }
+  }
   const nodes = useBoardStore((s) => s.nodes || [])
   const boardId = useBoardStore((s) => s.currentBoardId)
   const { setNodes } = useReactFlow()
@@ -39,18 +55,22 @@ export default function TaskList() {
 
   return (
     <>
-      {/* Toggle Button (left side) */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`fixed left-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
-        title="Open Tasks"
-      >
-        <ListChecks className="w-5 h-5" />
-      </button>
+      {/* Toggle Button hidden in dock mode */}
+      {!dock && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className={`fixed left-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
+          title="Open Tasks"
+        >
+          <ListChecks className="w-5 h-5" />
+        </button>
+      )}
 
       {/* Panel */}
       <div
-        className={`fixed top-16 left-4 rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
+        className={`fixed rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
+        style={{ top: topOffsetPx, left: dock ? leftOffsetPx : 16 }}
+        data-left-dock-panel
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">

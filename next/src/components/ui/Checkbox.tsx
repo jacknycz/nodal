@@ -129,13 +129,13 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         className={clsx(
-          'inline-flex items-start gap-3 cursor-pointer',
+          'inline-flex items-center gap-2 cursor-pointer',
           disabled && 'cursor-not-allowed',
           fullWidth && 'w-full',
           className
         )}
       >
-        <span className="relative inline-flex">
+        <span className="relative inline-flex ">
           <input
             ref={inputRef}
             type="checkbox"
@@ -150,7 +150,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         </span>
 
         {(label || description || error) && (
-          <span className="mt-[-1px] flex flex-col">
+          <span className="flex flex-col justify-center">
             {label && (
               <span className={clsx('text-sm font-medium text-gray-900 dark:text-white', labelTextClassName)}>{label}</span>
             )}

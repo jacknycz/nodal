@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, Tag as TagIcon } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -14,6 +14,7 @@ import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
+import ColorgoryQuickMenu from './ColorgoryQuickMenu'
 
 interface DocumentNodeData {
   label: string
@@ -294,15 +295,11 @@ export default function DocumentNode({
         >
           <Download size={14} weight="duotone" />
         </IconButton>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Manage colorgories"
-          onClick={(e) => { e.stopPropagation(); setPendingColorgoryIds(data.colorgoryIds || []); setShowColorgoryModal(true) }}
+        <ColorgoryQuickMenu
+          selectedIds={data.colorgoryIds || []}
+          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
           disabled={isLocked && !isLockedByMe}
-        >
-          <TagIcon size={14} weight="duotone" />
-        </IconButton>
+        />
         <IconButton
           variant="danger"
           size="sm"
