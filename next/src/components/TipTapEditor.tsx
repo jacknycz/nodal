@@ -321,7 +321,7 @@ export default function TipTapEditor({
       {/* Editor content with resize handle */}
       <div 
         ref={resizeRef}
-        className="relative bg-white dark:bg-gray-800"
+        className="relative bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
         style={{ height: `${editorHeight}px` }}
       >
         <div className="p-3 h-full overflow-y-auto">

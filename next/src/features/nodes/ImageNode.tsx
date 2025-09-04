@@ -140,22 +140,29 @@ export default function ImageNode({
         .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
     : []
 
+  const gradientStops = swatchColors.length <= 1
+    ? (swatchColors[0] || '')
+    : swatchColors.map((color, index) => {
+        const percentage = (index / (swatchColors.length - 1)) * 100
+        return `${color} ${percentage}%`
+      }).join(', ')
+
   return (
     <div
       className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
     >
-      {/* Colorgory Swatch */}
-      <div className="absolute left-0 top-0 h-full w-2 rounded-l-lg overflow-hidden" aria-hidden>
-        {swatchColors.length === 0 ? (
-          <div style={{ height: '100%', width: '100%', backgroundColor: 'transparent' }} />
-        ) : (
-          <div style={{ height: '100%', width: '100%' }}>
-            {swatchColors.map((hex, idx) => (
-              <div key={idx} style={{ height: `${100 / swatchColors.length}%`, backgroundColor: hex }} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Colorgory ring overlay (hidden when expanded) */}
+      {!expanded && swatchColors.length > 0 && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-lg"
+          style={{
+            padding: 3,
+            background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
+            ...( { WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any )
+          }}
+        />
+      )}
       <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
       

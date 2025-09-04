@@ -9,7 +9,7 @@ export interface SelectOption {
   label: string
 }
 
-interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'onChange'> {
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'onChange' | 'value'> {
   label?: string
   description?: string
   error?: string
@@ -18,7 +18,9 @@ interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>
   size?: SelectSize
   fullWidth?: boolean
   options?: SelectOption[]
-  onChange?: (value: string, e: React.ChangeEvent<HTMLSelectElement>) => void
+  value?: string | string[]
+  multiple?: boolean
+  onChange?: (value: string | string[], e: React.ChangeEvent<HTMLSelectElement>) => void
 }
 
 const sizeClasses: Record<SelectSize, string> = {
@@ -41,6 +43,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
       className = '',
       options,
       value,
+      multiple,
       onChange,
       children,
       ...props
@@ -50,9 +53,16 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     const id = props.id || `select-${Math.random().toString(36).slice(2, 9)}`
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      onChange?.(e.target.value, e)
+      if (multiple) {
+        const selected: string[] = Array.from(e.target.selectedOptions).map(o => o.value)
+        onChange?.(selected, e)
+      } else {
+        onChange?.(e.target.value, e)
+      }
       ;(props as any).onChange?.(e)
     }
+
+    const isMultiple = !!multiple
 
     return (
       <div className={clsx('flex flex-col gap-1', fullWidth && 'w-full')}>
@@ -77,6 +87,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             'focus-within:border-primary-500 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',
             error && 'border-red-500 dark:border-red-400 focus-within:ring-red-500/20',
+            isMultiple && 'min-h-[2.75rem] py-1',
             sizeClasses[size],
             fullWidth && 'w-full'
           )}
@@ -89,19 +100,21 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           <select
             ref={ref}
             id={id}
-            value={value}
+            value={value as any}
+            multiple={isMultiple}
             onChange={handleChange}
             className={clsx(
               'peer w-full h-full bg-transparent outline-none appearance-none cursor-pointer',
+              isMultiple && 'appearance-none',
               'text-gray-700 dark:text-white',
               leftIcon && 'pl-9',
-              rightIcon && 'pr-9',
+              rightIcon && !isMultiple && 'pr-9',
               'px-3',
               className
             )}
             {...props}
           >
-            {children ??
+            {children ?? (
               options?.map((opt) => (
                 <option
                   key={opt.value}
@@ -110,12 +123,15 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                 >
                   {opt.label}
                 </option>
-              ))}
+              ))
+            )}
           </select>
-          {/* Chevron */}
-          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
-            {rightIcon}
-          </span>
+          {/* Chevron (hide when multiple) */}
+          {!isMultiple && (
+            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400">
+              {rightIcon}
+            </span>
+          )}
         </div>
 
         {description && !error && (

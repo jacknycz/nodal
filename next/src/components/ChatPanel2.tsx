@@ -283,6 +283,7 @@ export default function ChatPanel2() {
               value={model}
               options={MODELS}
               onChange={(v) => setModel(v as OpenAIModel)}
+              fullWidth
             />
           </div>
 

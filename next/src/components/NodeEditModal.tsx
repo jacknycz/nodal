@@ -4,13 +4,17 @@ import React, { useState, useEffect, useRef } from 'react'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import TipTapEditor from './TipTapEditor'
+import TextInput from './ui/TextInput'
+import MultiSelect from './ui/MultiSelect'
+import { useBoardStore } from '../features/board/boardSlice'
 
 interface NodeEditModalProps {
   open: boolean
   onClose: () => void
-  onSave: (title: string, content: string) => void
+  onSave: (title: string, content: string, colorgoryIds?: string[]) => void
   initialTitle: string
   initialContent: string
+  initialColorgoryIds?: string[]
 }
 
 export default function NodeEditModal({ 
@@ -18,25 +22,34 @@ export default function NodeEditModal({
   onClose, 
   onSave, 
   initialTitle, 
-  initialContent 
+  initialContent,
+  initialColorgoryIds = []
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
+  const [selectedColorgoryIds, setSelectedColorgoryIds] = useState<string[]>(initialColorgoryIds)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const colorgories = useBoardStore.getState().colorgories || []
 
   useEffect(() => {
     if (open) {
-      setTitle(initialTitle)
-      setContent(initialContent)
+      setTitle(prev => (prev !== initialTitle ? initialTitle : prev))
+      setContent(prev => (prev !== initialContent ? initialContent : prev))
+      setSelectedColorgoryIds(prev => {
+        const next = initialColorgoryIds
+        const sameLength = prev.length === next.length
+        const same = sameLength && prev.every((v, i) => v === next[i])
+        return same ? prev : next
+      })
       // Focus the title input after a brief delay to ensure modal is rendered
       setTimeout(() => {
         titleInputRef.current?.focus()
       }, 100)
     }
-  }, [open, initialTitle, initialContent])
+  }, [open, initialTitle, initialContent, initialColorgoryIds])
 
   const handleSave = () => {
-    onSave(title, content)
+    onSave(title, content, selectedColorgoryIds)
     onClose()
   }
 
@@ -78,23 +91,27 @@ export default function NodeEditModal({
       }
     >
       <div className="space-y-4 py-2">
+        <TextInput
+          ref={titleInputRef}
+          id="edit-title"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleTitleKeyDown}
+          placeholder="Enter node title..."
+          fullWidth
+          label="Title"
+        />
+        <MultiSelect
+          label="Colorgories"
+          values={selectedColorgoryIds}
+          onChange={setSelectedColorgoryIds}
+          options={colorgories.map((c: any) => ({ value: c.id, label: c.name }))}
+          size="sm"
+          fullWidth
+        />
         <div>
-          <label htmlFor="edit-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Title
-          </label>
-          <input
-            ref={titleInputRef}
-            id="edit-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={handleTitleKeyDown}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter node title..."
-          />
-        </div>
-        <div>
-          <label htmlFor="edit-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="edit-content" aria-description="Content" className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Content
           </label>
           <TipTapEditor

@@ -125,8 +125,8 @@ export default function NodalNode({
     }
   }
 
-  const handleSaveEdit = async (title: string, content: string) => {
-    if (onNodeUpdate) onNodeUpdate(id, { title, content })
+  const handleSaveEdit = async (title: string, content: string, colorgoryIds?: string[]) => {
+    if (onNodeUpdate) onNodeUpdate(id, { title, content, ...(colorgoryIds ? { colorgoryIds } : {}) })
     // Release lock BEFORE closing modal
     if (releaseNodeLock && !lockReleasedRef.current) {
       try {
@@ -293,6 +293,7 @@ export default function NodalNode({
           onSave={handleSaveEdit}
           initialTitle={displayTitle}
           initialContent={data.content || ''}
+          initialColorgoryIds={data.colorgoryIds || []}
         />
       )}
 

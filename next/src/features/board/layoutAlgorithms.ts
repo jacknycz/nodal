@@ -489,38 +489,53 @@ function calculateHierarchicalGridLayout(
     const gap = padding * 2
     const xStart = groupedExists
       ? center.x + widest / 2 + gap + cellWidth / 2
-      : center.x - ((Math.ceil(Math.sqrt(singletonIds.length)) - 1) * (cellWidth + padding)) / 2
-    const yStart = groupedExists ? rowY(0) : center.y
+      : center.x + gap + cellWidth / 2
+    const yStart = groupedExists ? rowY(0) : center.y - cellHeight / 2
 
-    const columns = Math.max(1, Math.ceil(Math.sqrt(singletonIds.length)))
-    let col = 0
-    let row = 0
-    for (let i = 0; i < singletonIds.length; i++) {
-      const id = singletonIds[i]
-      const nodeToPlace = idMap.get(id)
-      if (!nodeToPlace) continue
-      const x = xStart + col * (cellWidth + padding)
-      const y = yStart + row * (cellHeight + padding)
-      const basePosition = { x, y }
-      const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
-      const finalPosition = findAvailablePosition(
-        basePosition,
-        dimensions,
-        context.existingNodes,
-        { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
-      )
-      const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
-      placements.push({
-        node: createNodeFromToPlace(nodeToPlace),
-        position: finalPosition,
-        reason: 'Singleton grid placement',
-        confidence
-      })
-      col++
-      if (col >= columns) {
-        col = 0
-        row++
+    // Group singleton nodes by type in desired order (normalize aliases)
+    const typeOrder = ['nodal', 'task', 'document', 'image']
+    const buckets: Record<string, string[]> = {}
+    singletonIds.forEach(id => {
+      const n = idMap.get(id)
+      const raw = (n?.type || (n as any)?.data?.type || 'nodal') as string
+      let key = String(raw).toLowerCase()
+      if (key === 'default' || key === 'nodal' || key === 'note' || key === 'idea') key = 'nodal'
+      else if (key === 'doc' || key === 'documentnode' || key === 'pdf' || key === 'document') key = 'document'
+      else if (key === 'img' || key === 'imagenode' || key === 'image') key = 'image'
+      if (!buckets[key]) buckets[key] = []
+      buckets[key].push(id)
+    })
+    const orderedTypes = [...typeOrder, ...Object.keys(buckets).filter(t => !typeOrder.includes(t))]
+      .filter(t => (buckets[t] && buckets[t].length > 0))
+
+    // Place each type bucket as a vertical column. If a bucket has many nodes, it simply grows downward.
+    let typeColIndex = 0
+    for (const t of orderedTypes) {
+      const ids = buckets[t]
+      if (!ids || ids.length === 0) continue
+      const x = xStart + typeColIndex * (cellWidth + padding)
+      for (let r = 0; r < ids.length; r++) {
+        const id = ids[r]
+        const nodeToPlace = idMap.get(id)
+        if (!nodeToPlace) continue
+        const y = yStart + r * (cellHeight + padding)
+        const basePosition = { x, y }
+        const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+        const finalPosition = findAvailablePosition(
+          basePosition,
+          dimensions,
+          context.existingNodes,
+          { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
+        )
+        const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
+        placements.push({
+          node: createNodeFromToPlace(nodeToPlace),
+          position: finalPosition,
+          reason: `Singleton ${t} column placement`,
+          confidence
+        })
       }
+      typeColIndex++
     }
   }
 
