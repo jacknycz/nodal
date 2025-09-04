@@ -90,6 +90,7 @@ export default function TaskNode({
 
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -114,6 +115,9 @@ export default function TaskNode({
           e.preventDefault()
           e.stopPropagation()
           onNodeShiftClickConnect?.(id)
+        }
+        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
+          setDrawerOpen((prev) => !prev)
         }
       }}
     >
@@ -170,7 +174,7 @@ export default function TaskNode({
       {/* Colorgories button moved to drawer */}
 
       {/* Slide-out action panel on hover */}
-      <NodeActionDrawer>
+      <NodeActionDrawer open={drawerOpen}>
         <ColorgoryQuickMenu
           selectedIds={(data as any).colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}

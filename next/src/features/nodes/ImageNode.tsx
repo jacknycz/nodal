@@ -61,6 +61,7 @@ export default function ImageNode({
   const [isLoaded, setIsLoaded] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
@@ -151,6 +152,11 @@ export default function ImageNode({
   return (
     <div
       className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
+      onClick={(e) => {
+        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
+          setDrawerOpen((prev) => !prev)
+        }
+      }}
     >
       {/* Colorgory ring overlay (hidden when expanded) */}
       {!expanded && swatchColors.length > 0 && (
@@ -366,7 +372,7 @@ export default function ImageNode({
 
       {/* Slide-out action panel on hover (hidden when expanded) */}
       {!expanded && (
-        <NodeActionDrawer>
+        <NodeActionDrawer open={drawerOpen}>
           <IconButton
             variant="default"
             size="sm"

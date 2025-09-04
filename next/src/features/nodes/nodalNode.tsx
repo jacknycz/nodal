@@ -185,6 +185,8 @@ export default function NodalNode({
         return `${color} ${percentage}%`
       }).join(', ')
 
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
   return (
     <div
       className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: 'min-w-[240px] max-w-[240px]' })}
@@ -194,6 +196,10 @@ export default function NodalNode({
           e.preventDefault()
           e.stopPropagation()
           onNodeShiftClickConnect?.(id)
+        }
+        // Toggle drawer on tap for touch devices; keep desktop behavior via hover
+        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
+          setDrawerOpen((prev) => !prev)
         }
       }}
     >
@@ -239,7 +245,7 @@ export default function NodalNode({
       </div>
       {/* Colorgories button moved to drawer */}
       {/* Slide-out action panel on hover */}
-      <NodeActionDrawer>
+      <NodeActionDrawer open={drawerOpen}>
         <IconButton
           variant="default"
           size="sm"

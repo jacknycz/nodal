@@ -64,6 +64,7 @@ export default function DocumentNode({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
+  const [drawerOpen, setDrawerOpen] = useState(false)
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
   useEffect(() => {
@@ -203,6 +204,11 @@ export default function DocumentNode({
   return (
     <div 
       className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
+      onClick={(e) => {
+        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
+          setDrawerOpen((prev) => !prev)
+        }
+      }}
     >
       {/* Colorgory ring overlay */}
       {swatchColors.length > 0 && (
@@ -276,7 +282,7 @@ export default function DocumentNode({
       {/* Colorgories button moved to drawer */}
 
       {/* Slide-out action panel on hover */}
-      <NodeActionDrawer>
+      <NodeActionDrawer open={drawerOpen}>
         <IconButton
           variant="default"
           size="sm"
