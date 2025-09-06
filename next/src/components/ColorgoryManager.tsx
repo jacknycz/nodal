@@ -14,7 +14,7 @@ interface ColorgoryManagerProps {
   topOffsetPx?: number
 }
 
-export default function ColorgoryManager({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 132 }: ColorgoryManagerProps) {
+export default function ColorgoryManager({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 116 }: ColorgoryManagerProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = typeof open === 'boolean' ? open : internalOpen
   const setIsOpen = (next: boolean) => {

@@ -123,8 +123,7 @@ export function AIProvider({ children }: AIProviderProps) {
       try {
         isHealthy = await newService.healthCheck()
       } catch (err) {
-        // Health check failed, but don't spam console with errors
-        console.warn('Health check failed:', err instanceof Error ? err.message : 'Unknown error')
+        // Health check failed; likely invalid key or network
       }
       
       if (!isHealthy) {
@@ -133,6 +132,7 @@ export function AIProvider({ children }: AIProviderProps) {
           message: 'Failed to connect to OpenAI API - please check your API key',
           timestamp: new Date()
         })
+        // Do not destructively clear stored key automatically; allow UI to prompt user to fix
         return false
       }
 
@@ -346,21 +346,14 @@ export function AIProvider({ children }: AIProviderProps) {
           if (success) {
             // console.log('[aiContext] AI service initialized successfully!')
           } else {
-            console.warn('[aiContext] Failed to initialize AI service with saved config - clearing invalid API key')
-            // Clear invalid API key to prevent repeated failures
-            localStorage.removeItem('nodal_api_key')
-            localStorage.removeItem('nodal_ai_config')
-            // Reset config manager state
-            configManager.clearConfig()
+            console.warn('[aiContext] Failed to initialize AI service with saved config - leaving key for manual correction')
           }
         } else {
           console.log('[aiContext] No saved AI configuration found')
         }
       } catch (err) {
         console.error('[aiContext] Failed to load initial AI configuration:', err)
-        // Clear potentially corrupt config
-        localStorage.removeItem('nodal_api_key')
-        localStorage.removeItem('nodal_ai_config')
+        // Keep local storage intact; user can correct in UI
       }
     }
 

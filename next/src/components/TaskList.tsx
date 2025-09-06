@@ -16,7 +16,7 @@ interface TaskListProps {
   topOffsetPx?: number
 }
 
-export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 64 }: TaskListProps) {
+export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 72 }: TaskListProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = typeof open === 'boolean' ? open : internalOpen
   const setIsOpen = (next: boolean) => {

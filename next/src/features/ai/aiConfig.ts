@@ -48,12 +48,14 @@ export function validateAPIKey(apiKey: string): boolean {
   }
   
   // OpenAI API keys can be:
-  // 1. Old format: sk- followed by 48 alphanumeric characters (total 51 chars)
-  // 2. New format: sk-proj- followed by more characters (variable length)
-  const oldFormatRegex = /^sk-[a-zA-Z0-9]{48}$/
-  const newFormatRegex = /^sk-proj-[a-zA-Z0-9_-]{20,}$/
+  // 1. Legacy fixed length: sk-xxxxxxxx...
+  // 2. Variable length: sk-[any base64/url-safe chars]{20+}
+  // 3. Project-scoped: sk-proj-[...]
+  const legacyFixed = /^sk-[a-zA-Z0-9]{48}$/
+  const flexible = /^sk-[a-zA-Z0-9_-]{20,}$/
+  const projectScoped = /^sk-proj-[a-zA-Z0-9_-]{20,}$/
   
-  return oldFormatRegex.test(apiKey) || newFormatRegex.test(apiKey)
+  return legacyFixed.test(apiKey) || projectScoped.test(apiKey) || flexible.test(apiKey)
 }
 
 export function validateModel(model: string): model is OpenAIModel {

@@ -52,7 +52,7 @@ import { getSupabaseClient } from '../auth/supabaseClient'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
 import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
 import { placeNodes as enginePlaceNodes } from './placementEngine'
-import { Info } from '@phosphor-icons/react'
+import { Info, X } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
@@ -172,7 +172,7 @@ function BoardContent({
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
   const [aiParentNodeId, setAiParentNodeId] = useState<string | null>(null)
-  const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | null>(null)
+  const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -1663,30 +1663,44 @@ function BoardContent({
         <ChatPanel2 />
       )}
       {isBoardView && (
-        <TaskList dock open={leftDockActive === 'tasks'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={64} />
+        <TaskList dock open={leftDockActive === 'tasks'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={72} />
       )}
       {isBoardView && (
-        <ColorgoryManager dock open={leftDockActive === 'colorgories'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={132} />
+        <ColorgoryManager dock open={leftDockActive === 'colorgories'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={116} />
+      )}
+      {isBoardView && leftDockActive === 'tips' && (
+        <div
+          className="fixed rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out"
+          style={{ top: 160, left: 56 }}
+          data-left-dock-panel
+        >
+          <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
+            <div className="flex items-center space-x-2">
+              <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
+              <span className="text-xs text-gray-600 dark:text-gray-300">Tips & Info</span>
+            </div>
+            <button onClick={() => setLeftDockActive(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            <ul className="list-disc pl-5 space-y-2">
+              <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
+              <li><strong>Shift + click</strong> a node (with another selected) to connect them.</li>
+              <li><strong>Hold Shift</strong> + click and drag to select multiple nodes with a marquee.</li>
+              <li><strong>Drag & drop</strong> documents or images onto the board to create nodes.</li>
+              <li><strong>Drag</strong> nodes to reposition; use the delete key to remove selected nodes.</li>
+              <li><strong>Double-click</strong> a node to expand or open editing.</li>
+              <li><strong>Use the FAB</strong> (bottom center) to quickly add nodes, upload, or generate with AI.</li>
+              <li><strong>Use MiniMap/Controls</strong> to navigate large boards quickly.</li>
+            </ul>
+          </div>
+        </div>
       )}
       {isBoardView && (
         <OmniSearch />
       )}
-      {/* Tips & Info (moved) */}
-      <div className="hidden sm:flex items-center gap-2 fixed bottom-32 left-4 z-40">
-        <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-lg shadow-lg backdrop-blur-sm">
-          <p className="text-xs text-gray-600 dark:text-gray-400">
-            💡 Tip: Drag & drop documents and images here
-          </p>
-        </div>
-        <IconButton
-          aria-label="Info"
-          onClick={() => {
-            setShowTips(true)
-          }}
-        >
-          <Info size={32} weight="duotone" className="w-4 h-4" />
-        </IconButton>
-      </div>
+      {/* Removed old Tips button; now opened via LeftDock */}
       
       {/* Context Menu */}
       <BoardContextMenu
