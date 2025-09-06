@@ -23,11 +23,9 @@ export default function FloatingActionButton({
   nodeCount = 0,
 }: FloatingActionButtonProps) {
   const items = [
-    { label: 'Add node', icon: Plus, onClick: () => onAddNode() },
+    { label: 'Add node(s)', icon: Plus, onClick: () => onAddNode() },
     { label: 'Upload document', icon: FilePlus, onClick: () => onUploadDocument() },
-    ...(aiInitialized ? [{ label: 'AI generate', icon: Plus, onClick: () => onAIGenerate() }] : []),
     ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, onClick: () => onReorganize?.() }] : []),
-    
   ]
 
   return (

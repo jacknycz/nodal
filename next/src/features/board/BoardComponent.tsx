@@ -30,6 +30,7 @@ import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
 import AINodeGenerator from '../../components/AINodeGenerator'
+import AddNodesModal from '../../components/AddNodesModal'
 import { useAIContext } from '../ai/aiContext'
 import { getOpenAIService } from '../ai/aiService'
 import BokehBackground from '../../components/BokehBackground'
@@ -1500,6 +1501,7 @@ function BoardContent({
   
 
   const [showAddNodeModal, setShowAddNodeModal] = useState(false)
+  const [showUnifiedAddModal, setShowUnifiedAddModal] = useState(false)
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null)
   const [awaitingNodePlacement, setAwaitingNodePlacement] = useState(false)
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
@@ -1637,10 +1639,10 @@ function BoardContent({
       {isBoardView && (
         <FloatingActionButton
           onAddNode={() => {
-            // Trigger next click/tap on the board to pick placement
-            setAwaitingNodePlacement(true)
+            // Use unified modal directly
+            setShowUnifiedAddModal(true)
           }}
-          onAIGenerate={handleOpenAINodeGenerator}
+          onAIGenerate={() => setShowUnifiedAddModal(true)}
           onUploadDocument={() => {
             const input = document.createElement('input')
             input.type = 'file'
@@ -1716,7 +1718,7 @@ function BoardContent({
             setPendingNodePosition(getViewportCenter())
           }
           setPendingSourceNodeId(nodeId)
-          setShowAddNodeModal(true)
+          setShowUnifiedAddModal(true)
           setContextMenu({ isOpen: false, position: null })
         }}
         onAddBlankNode={(screenPos: { x: number; y: number }) => {
@@ -1728,7 +1730,7 @@ function BoardContent({
             setPendingNodePosition(getViewportCenter())
           }
           setPendingSourceNodeId(null)
-          setShowAddNodeModal(true);
+          setShowUnifiedAddModal(true);
           setContextMenu({ isOpen: false, position: null });
         }}
         onAddTaskNode={() => {
@@ -1990,6 +1992,118 @@ function BoardContent({
             setShowAddNodeModal(false)
             setPendingNodePosition(null)
             setPendingSourceNodeId(null)
+          }}
+        />
+      )}
+
+      {showUnifiedAddModal && (
+        <AddNodesModal
+          open={showUnifiedAddModal}
+          onClose={() => setShowUnifiedAddModal(false)}
+          parentNodeTitle={aiParentNodeId ? (nodes.find(n => n.id === aiParentNodeId)?.data as any)?.title : undefined}
+          initialAIContext={pendingBoardBrief ? { topic: pendingBoardBrief.boardTopic, description: pendingBoardBrief.description } : undefined}
+          onManualSubmit={async ({ titles, description, generateDescription }) => {
+            const center = pendingNodePosition || getViewportCenter()
+            let desc = (description || '').trim()
+            if (generateDescription && titles.length === 1 && !desc) {
+              try {
+                const service = getOpenAIService()
+                if (service) {
+                  const titleForAI = titles[0]
+                  const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
+                  const res = await service.generate({ prompt, maxTokens: 120 })
+                  desc = (res.content || '').trim()
+                }
+              } catch {}
+            }
+            if (pendingSourceNodeId) {
+              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? desc : '', type: 'default' as const, parentId: pendingSourceNodeId }))
+              try {
+                const result = await placeAINodes(nodesToPlace, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40 })
+                if (result.success && result.placements.length > 0) {
+                  const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
+                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                  if (result.connections.length > 0) {
+                    const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
+                    setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                  }
+                }
+              } catch {}
+            } else if (titles.length === 1) {
+              const target = pendingNodePosition || center
+              const newNode: Node = { id: `node-${Date.now()}`, type: 'default', position: target, data: { title: titles[0], content: desc } }
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+            } else {
+              if (pendingNodePosition) {
+                const count = titles.length
+                const columns = Math.ceil(Math.sqrt(count))
+                const rows = Math.ceil(count / columns)
+                const spacingX = 300
+                const spacingY = 200
+                const startX = pendingNodePosition.x - ((columns - 1) * spacingX) / 2
+                const startY = pendingNodePosition.y - ((rows - 1) * spacingY) / 2
+                const created: Node[] = []
+                let idx = 0
+                for (let r = 0; r < rows; r++) {
+                  for (let c = 0; c < columns; c++) {
+                    if (idx >= count) break
+                    const x = startX + c * spacingX
+                    const y = startY + r * spacingY
+                    created.push({ id: `node-${Date.now()}-${idx}`, type: 'default', position: { x, y }, data: { title: titles[idx], content: '' } })
+                    idx++
+                  }
+                }
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+              } else {
+                const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
+                let placed = false
+                try {
+                  const placementResult = await placeBoardNodes(nodesToPlace)
+                  if (placementResult.success && placementResult.placements.length > 0) {
+                    const newNodes: Node[] = placementResult.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
+                    setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                    placed = true
+                  }
+                } catch {}
+                if (!placed) {
+                  const count = titles.length
+                  const columns = Math.ceil(Math.sqrt(count))
+                  const rows = Math.ceil(count / columns)
+                  const spacingX = 300
+                  const spacingY = 200
+                  const startX = center.x - ((columns - 1) * spacingX) / 2
+                  const startY = center.y - ((rows - 1) * spacingY) / 2
+                  const fallbackNodes: Node[] = []
+                  let idx = 0
+                  for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < columns; c++) {
+                      if (idx >= count) break
+                      const x = startX + c * spacingX
+                      const y = startY + r * spacingY
+                      fallbackNodes.push({ id: `node-${Date.now()}-${idx}`, type: 'default', position: { x, y }, data: { title: titles[idx], content: '' } })
+                      idx++
+                    }
+                  }
+                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
+                }
+              }
+            }
+            setShowUnifiedAddModal(false)
+          }}
+          onAIConfirm={async (items) => {
+            try {
+              const nodesToPlace = items.map(p => ({ title: p.title, content: p.content || '', parentId: aiParentNodeId || pendingSourceNodeId }))
+              const result = await placeAINodes(nodesToPlace, aiParentNodeId || pendingSourceNodeId || undefined, { preferredDirection: 'down', minDistance: 40 })
+              if (result.success && result.placements.length > 0) {
+                const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                if (result.connections.length > 0) {
+                  const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
+                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                }
+              }
+            } catch {}
+            setShowUnifiedAddModal(false)
           }}
         />
       )}

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Plus, Sparkle, CheckCircle, PlusCircle } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, CheckCircle } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -52,7 +52,7 @@ export default function BoardContextMenu({
             onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
-            <Plus size={24} weight="duotone" className="w-4 h-4" />
+            <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
             Add connected node(s)
           </button>
         )}
@@ -77,13 +77,6 @@ export default function BoardContextMenu({
           </button>
         )}
         
-        <button
-          onClick={() => handleAction(onGenerateAINode)}
-          className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
-        >
-          <Sparkle size={24} weight="duotone" className="w-4 h-4" />
-          Generate AI Node
-        </button>
       </div>
     </> 
   )
