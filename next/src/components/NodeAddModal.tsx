@@ -5,17 +5,19 @@ import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
+import Toggle from './ui/Toggle'
 
 interface NodeAddModalProps {
   open: boolean
   onClose: () => void
-  onSubmit: (payload: { titles: string[]; description?: string }) => void
+  onSubmit: (payload: { titles: string[]; description?: string; generateDescription?: boolean }) => void
 }
 
 export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalProps) {
   const [titleInput, setTitleInput] = useState('')
   const [titles, setTitles] = useState<string[]>([])
   const [description, setDescription] = useState('')
+  const [generateDescription, setGenerateDescription] = useState(false)
   const titleRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalPr
       setTitleInput('')
       setTitles([])
       setDescription('')
+      setGenerateDescription(false)
       // focus title input when modal opens
       requestAnimationFrame(() => {
         titleRef.current?.focus()
@@ -36,8 +39,8 @@ export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalPr
   }, [titles, titleInput])
 
   const canSubmit = effectiveTitles.length > 0
-  // Hide description as soon as a pill exists (user pressed Enter)
-  const showDescription = titles.length === 0
+  // Hide description when multiple titles or when AI generation is on
+  const showDescription = titles.length === 0 && !generateDescription
 
   const addTitle = () => {
     const t = titleInput.trim()
@@ -52,7 +55,7 @@ export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalPr
 
   const handleSubmit = () => {
     if (!canSubmit) return
-    const payload = { titles: effectiveTitles, description: showDescription ? description.trim() : undefined }
+    const payload = { titles: effectiveTitles, description: showDescription ? description.trim() : undefined, generateDescription: generateDescription && effectiveTitles.length === 1 }
     onSubmit(payload)
   }
 
@@ -116,6 +119,19 @@ export default function NodeAddModal({ open, onClose, onSubmit }: NodeAddModalPr
             />
           </div>
         )}
+
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white">Generate AI Description</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Hide the field and let AI write a short description.</div>
+          </div>
+          <Toggle
+            checked={generateDescription}
+            onChange={(val) => setGenerateDescription(!!val)}
+            disabled={description.trim().length > 0}
+            aria-label="Generate AI Description"
+          />
+        </div>
       </div>
     </Modal>
   )

@@ -1861,11 +1861,24 @@ function BoardContent({
             setPendingNodePosition(null)
             setPendingSourceNodeId(null)
           }}
-          onSubmit={async ({ titles, description }) => {
+          onSubmit={async ({ titles, description, generateDescription }) => {
             const center = pendingNodePosition || getViewportCenter()
+            // Optionally generate AI description for single node
+            let desc = (description || '').trim()
+            if (generateDescription && titles.length === 1 && !desc) {
+              try {
+                const service = getOpenAIService()
+                if (service) {
+                  const titleForAI = titles[0]
+                  const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
+                  const res = await service.generate({ prompt, maxTokens: 120 })
+                  desc = (res.content || '').trim()
+                }
+              } catch {}
+            }
             // If we have a parent (right-clicked node), use AI fan placement centered under parent
             if (pendingSourceNodeId) {
-              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? description : '', type: 'default' as const, parentId: pendingSourceNodeId }))
+              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? desc : '', type: 'default' as const, parentId: pendingSourceNodeId }))
               try {
                 const result = await placeAINodes(nodesToPlace, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40 })
                 if (result.success && result.placements.length > 0) {
@@ -1894,7 +1907,7 @@ function BoardContent({
                 id: `node-${Date.now()}`,
                 type: 'default',
                 position: target,
-                data: { title: titles[0], content: description },
+                data: { title: titles[0], content: desc },
               }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             } else {
