@@ -298,7 +298,7 @@ export default function ImageNode({
                 transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
                 transformOrigin: '0 0',
               }}
-              onLoadingComplete={() => setIsLoaded(true)}
+              onLoad={() => setIsLoaded(true)}
               unoptimized
             />
           ) : (

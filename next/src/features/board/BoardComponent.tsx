@@ -234,8 +234,8 @@ function BoardContent({
           user_id: user.id,
           x,
           y,
-          last_updated: new Date().toISOString(),
-        }).then(({ error, data }) => {
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'board_id,user_id' }).then(({ error, data }) => {
           if (error) {
           } else {
           }

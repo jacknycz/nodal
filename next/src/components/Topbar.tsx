@@ -112,7 +112,7 @@ export default function Topbar({
         board_id: currentBoardId,
         user_id: user.id,
         last_seen: new Date().toISOString(),
-      })
+      }, { onConflict: 'board_id,user_id' })
     }
     upsertPresence()
     interval = setInterval(upsertPresence, 15000)
