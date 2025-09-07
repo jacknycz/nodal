@@ -58,6 +58,11 @@ import { Info, X } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
+import useBoardRealtime from './useBoardRealtime'
+import useBoardAutosave from './useBoardAutosave'
+import useNodeActions from './useNodeActions'
+import useDocumentUpload from './useDocumentUpload'
+import useBoardShortcuts from './useBoardShortcuts'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -133,8 +138,25 @@ function BoardContent({
   const router = useRouter() // Add this line
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
-  const [remoteCursors, setRemoteCursors] = useState<any[]>([])
   const [myCursor, setMyCursor] = useState<{ x: number; y: number } | null>(null)
+
+  // Centralized realtime subscriptions: cursors, locks, and board updates
+  const {
+    remoteCursors,
+    nodeLocks,
+    isNodeLocked,
+    getNodeLockOwner,
+    isNodeLockedByMe,
+    acquireNodeLock: acquireNodeLockRaw,
+    releaseNodeLock: releaseNodeLockRaw,
+  } = useBoardRealtime({
+    boardId,
+    userId: user?.id || null,
+    supabase,
+    applyRemoteNodeContent: (nodeId, data) => {
+      setNodes((nds) => nds.map((node) => node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node))
+    }
+  })
 
   // Basic state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -168,7 +190,6 @@ function BoardContent({
   
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [showTips, setShowTips] = useState(false)
   const [showAINodeGenerator, setShowAINodeGenerator] = useState(false)
@@ -186,9 +207,7 @@ function BoardContent({
     position: null,
   })
   
-  // Autosave state - simplified
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Autosave state handled by useBoardAutosave
   const isInitializedRef = useRef(false)
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
@@ -232,215 +251,18 @@ function BoardContent({
     }
   }, [boardId, user?.id])
 
-  // Subscribe to remote cursors
-  useEffect(() => {
-    if (!boardId) return
-
-    // Define fetchCursors first!
-    const fetchCursors = async () => {
-      const { data } = await supabase
-        .from('board_cursors')
-        .select('*')
-        .eq('board_id', boardId)
-      setRemoteCursors(data || [])
-    }
-
-    const channel = supabase
-      .channel('board-cursors-' + boardId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'board_cursors',
-          filter: `board_id=eq.${boardId}`,
-        },
-        payload => {
-          fetchCursors()
-        }
-      )
-      .subscribe()
-
-    fetchCursors()
-    return () => { supabase.removeChannel(channel) }
-  }, [boardId])
-
-  // Add node locking state and functions
-  const [nodeLocks, setNodeLocks] = useState<any[]>([])
-
-  // Subscribe to node locks
-  useEffect(() => {
-    if (!boardId) return
-
-    const fetchLocks = async () => {
-      // Fetch ALL locks for this board (including expired ones) for debugging
-      const { data: allLocks, error: allError } = await supabase
-        .from('node_locks')
-        .select('*')
-        .eq('board_id', boardId)
-      
-      // Fetch only active locks (normal query)
-      const { data, error } = await supabase
-        .from('node_locks')
-        .select('*')
-        .eq('board_id', boardId)
-        .gt('expires_at', new Date().toISOString())
-      
-      // console.log('[BoardComponent] fetchLocks - ALL locks in DB:', allLocks)
-      // console.log('[BoardComponent] fetchLocks - ACTIVE locks:', { data, error, boardId })
-      setNodeLocks(data || [])
-    }
-
-    // Add manual refresh capability for debugging
-    ;(window as any).refreshLocks = fetchLocks
-
-    const channel = supabase
-      .channel('node-locks-' + boardId)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'node_locks',
-          filter: `board_id=eq.${boardId}`,
-        },
-        payload => {
-          fetchLocks()
-        }
-      )
-      .subscribe()
-
-    fetchLocks()
-    return () => { supabase.removeChannel(channel) }
-  }, [boardId])
-
-  // Subscribe to board updates for real-time content sync
-  useEffect(() => {
-    if (!boardId || !user?.id) return
-
-    // console.log('[BoardComponent] Setting up board_updates subscription for board:', boardId, 'user:', user.id)
-
-    const applyRemoteUpdate = (payload: any) => {
-      // console.log('[BoardComponent] RAW subscription payload received:', payload)
-      
-      const { node_id, update_type, data, user_id } = payload.new || {}
-      
-      // Don't apply our own updates
-      if (user_id === user.id) {
-        // console.log('[BoardComponent] Ignoring own update from user:', user_id)
-        return
-      }
-      
-      // console.log('[BoardComponent] Received remote update:', { node_id, update_type, data, user_id })
-      
-      if (update_type === 'content') {
-        setNodes((nds) => nds.map((node) => 
-          node.id === node_id ? { ...node, data: { ...node.data, ...data } } : node
-        ))
-        // console.log('[BoardComponent] Applied remote content update to node:', node_id)
-      }
-    }
-
-    const channel = supabase
-      .channel('board-updates-' + boardId)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'board_updates',
-          filter: `board_id=eq.${boardId}`,
-        },
-        applyRemoteUpdate
-      )
-      .subscribe((status) => {
-        // console.log('[BoardComponent] Board updates subscription status:', status)
-      })
-
-    // console.log('[BoardComponent] Board updates subscription channel created:', channel)
-
-    return () => { 
-      // console.log('[BoardComponent] Cleaning up board_updates subscription')
-      supabase.removeChannel(channel) 
-    }
-  }, [boardId, user?.id, setNodes, supabase])
-
-  // Create functions that get user from stableHandlers to avoid closure issues
+  // Wrappers for lock operations bound to current board/user
   const acquireNodeLock = useCallback(async (nodeId: string) => {
-    const currentUser = stableHandlers.currentUser
-    // console.log('[BoardComponent] acquireNodeLock useCallback executed with current user:', currentUser)
-    // console.log('[BoardComponent] acquireNodeLock called with:', { boardId, userId: currentUser?.id, nodeId })
-    
-    if (!boardId || !currentUser?.id) {
-      // console.log('[BoardComponent] Early return - missing boardId or user.id:', { boardId, userId: currentUser?.id })
-      return false
-    }
-    
-    // console.log('[BoardComponent] Attempting to acquire lock:', { boardId, nodeId, userId: currentUser.id })
-    
-    try {
-      const res = await fetch('/api/board/locks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boardId, nodeId, userId: currentUser.id })
-      })
-      
-      if (res.ok) {
-        // console.log('[BoardComponent] Lock acquired successfully for node:', nodeId)
-        return true
-      } else {
-        const error = await res.json()
-        // console.log('[BoardComponent] Failed to acquire lock:', error)
-        // console.log('[BoardComponent] Response status:', res.status, res.statusText)
-        return false
-      }
-    } catch (error) {
-      // console.error('[BoardComponent] Error acquiring lock:', error)
-      return false
-    }
-  }, [boardId])
+    if (!boardId) return false
+    return acquireNodeLockRaw(boardId, nodeId, user?.id || null)
+  }, [acquireNodeLockRaw, boardId, user?.id])
 
   const releaseNodeLock = useCallback(async (nodeId: string) => {
-    const currentUser = stableHandlers.currentUser
-    // console.log('[BoardComponent] releaseNodeLock called with user?.id:', currentUser?.id)
-    if (!boardId || !currentUser?.id) return
-    
-    // console.log('[BoardComponent] Attempting to release lock:', { boardId, nodeId, userId: currentUser.id })
-    
-    try {
-      const res = await fetch('/api/board/locks', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boardId, nodeId, userId: currentUser.id })
-      })
-      
-      if (res.ok) {
-        // console.log('[BoardComponent] Lock released successfully for node:', nodeId)
-      } else {
-        const error = await res.json()
-        // console.log('[BoardComponent] Failed to release lock:', error)
-      }
-    } catch (error) {
-      // console.error('[BoardComponent] Error releasing lock:', error)
-    }
-  }, [boardId])
+    if (!boardId) return
+    return releaseNodeLockRaw(boardId, nodeId, user?.id || null)
+  }, [releaseNodeLockRaw, boardId, user?.id])
 
-  // Helper to check if node is locked
-  const isNodeLocked = useCallback((nodeId: string) => {
-    return nodeLocks.some(lock => lock.node_id === nodeId)
-  }, [nodeLocks])
-
-  // Helper to get who locked a node
-  const getNodeLockOwner = useCallback((nodeId: string) => {
-    const lock = nodeLocks.find(lock => lock.node_id === nodeId)
-    return lock?.user_id
-  }, [nodeLocks])
-
-  // Helper to check if current user locked a node
-  const isNodeLockedByMe = useCallback((nodeId: string) => {
-    const currentUser = stableHandlers.currentUser
-    return nodeLocks.some(lock => lock.node_id === nodeId && lock.user_id === currentUser?.id)
-  }, [nodeLocks])
+  // isNodeLocked, getNodeLockOwner, isNodeLockedByMe provided by useBoardRealtime
 
   // Helper to get avatar for a user_id
   const getCursorAvatar = (userId: string) => {
@@ -490,68 +312,16 @@ function BoardContent({
     )
   }
   
-  // Simple autosave function - KISS principle
-  const triggerAutosave = useCallback(() => {
-    if (autosaveTimeoutRef.current) {
-      clearTimeout(autosaveTimeoutRef.current)
-    }
-    
-    autosaveTimeoutRef.current = setTimeout(async () => {
-      if (!localBoardIdRef.current) {
-        // console.log('⏭️ Autosave skipped - no board ID')
-        return
-      }
-      
-      try {
-        // console.log('🚀 Starting autosave...')
-        setSaveStatus('saving')
-        
-        const boardData = {
-          nodes,
-          edges,
-          viewport: reactFlowInstance.getViewport(),
-        }
-        
-        // console.log('💾 Saving board data:', {
-        //   boardId: localBoardIdRef.current,
-        //   nodesCount: boardData.nodes.length,
-        //   edgesCount: boardData.edges.length
-        // })
-        
-        await boardStorage.updateBoard(localBoardIdRef.current, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
-        // If this board was created from a template, autosave template data as well
-        try {
-          if (typeof window !== 'undefined') {
-            const tplId = localStorage.getItem(`templateMapping:${localBoardIdRef.current}`)
-            if (tplId) {
-              // Only update template data during autosave; avoid overwriting template name
-              await templateStorage.updateTemplate(tplId, { data: boardData })
-            }
-          }
-        } catch (err) {
-          // Don't block board save on template save failures
-        }
-        
-        // console.log('✅ Autosave completed successfully')
-        setSaveStatus('saved')
-        setHasUnsavedChanges(false)
-        
-        if (onBoardStateChange) {
-          onBoardStateChange(currentBoardName, 'saved', false)
-        }
-      } catch (error) {
-        // console.error('❌ Autosave failed:', error)
-        setSaveStatus('error')
-        setHasUnsavedChanges(true)
-        
-        if (onBoardStateChange) {
-          onBoardStateChange(currentBoardName, 'error', true)
-        }
-      }
-    }, 2000) // 2 second delay
-  }, [nodes, edges, reactFlowInstance, currentBoardName])
-  
-  // Store the current triggerAutosave function in a ref to avoid dependency issues
+  // Autosave and manual save via hook
+  const { saveStatus, hasUnsavedChanges, setHasUnsavedChanges, triggerAutosave, manualSave } = useBoardAutosave({
+    boardStorage,
+    templateStorage,
+    getViewport: () => reactFlowInstance.getViewport(),
+    getColorgories: () => useBoardStore.getState().colorgories || [],
+    localBoardIdRef,
+    onBoardStateChange,
+    currentBoardName,
+  })
   const triggerAutosaveRef = useRef(triggerAutosave)
   triggerAutosaveRef.current = triggerAutosave
   
@@ -591,7 +361,7 @@ function BoardContent({
       if (onBoardStateChangeRef.current) {
         onBoardStateChangeRef.current(currentBoardName, 'saving', true)
       }
-      triggerAutosaveRef.current()
+      triggerAutosaveRef.current(nodes, edges)
     }
     
     // Update previous values
@@ -599,14 +369,7 @@ function BoardContent({
     prevEdgesRef.current = edges
   }, [nodes, edges, currentBoardName, saveStatus])
   
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current)
-      }
-    }
-  }, [])
+  // No local autosave timeout cleanup needed; handled in hook
 
   // Thumbnails removed
 
@@ -676,7 +439,7 @@ function BoardContent({
             if (generatedEdges.length > 0) setEdges(generatedEdges)
             const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
             await boardStorage.updateBoard(boardId, boardData)
-            setSaveStatus('saved')
+            // Save state handled by autosave hook; avoid using setSaveStatus here
             setHasUnsavedChanges(false)
             if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
             router.push(`/board/${boardId}`)
@@ -702,7 +465,7 @@ function BoardContent({
         setEdges(generatedEdges as any)
         const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
         await boardStorage.updateBoard(boardId, boardData)
-        setSaveStatus('saved')
+        // Save state handled by autosave hook; avoid using setSaveStatus here
         setHasUnsavedChanges(false)
         if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
         router.push(`/board/${boardId}`)
@@ -815,7 +578,7 @@ function BoardContent({
           }
           
           // Update save status
-          setSaveStatus('saved')
+          // Save state handled by autosave hook; avoid using setSaveStatus here
           setHasUnsavedChanges(false)
           
           if (onBoardStateChange) {
@@ -841,7 +604,7 @@ function BoardContent({
         // console.log('✅ Single generated node saved successfully')
         
         // Update save status
-        setSaveStatus('saved')
+        // Save state handled by autosave hook
         setHasUnsavedChanges(false)
         
         if (onBoardStateChange) {
@@ -858,6 +621,7 @@ function BoardContent({
     }
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
+  const nodeActions = useNodeActions({ setNodes, setEdges })
   const { placeAINodes, placeBoardNodes, placeManualNode, findBestPosition } = usePlacement()
   
   // Initialize board
@@ -914,7 +678,7 @@ function BoardContent({
           await boardStorage.saveBoardWithId(boardId, boardName, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
           // console.log('🔵 CREATING BLANK BOARD with ID:', boardId, 'for name:', boardName)
           setCurrentBoardName(boardName)
-          setSaveStatus('saved')
+          // Save state handled by autosave hook; avoid using setSaveStatus here
           if (onBoardStateChange) {
             onBoardStateChange(boardName, 'saved', false)
           }
@@ -926,7 +690,7 @@ function BoardContent({
           }
         } catch (error) {
           // console.error('Failed to create blank board:', error)
-          setSaveStatus('error')
+          // Save state handled by autosave hook
           if (onBoardStateChange) {
             onBoardStateChange(boardName, 'error', false)
           }
@@ -1039,211 +803,21 @@ function BoardContent({
     })
   }, [setNodes])
   
-  // Save board function
   const saveBoard = useCallback(async (name?: string) => {
-    // console.log('💾 saveBoard called with name:', name, 'localBoardId:', localBoardIdRef.current)
-    try {
-      // console.log('🚀 Starting manual save...')
-      setSaveStatus('saving')
-      setHasUnsavedChanges(false)
-      
-      const boardData = {
-        nodes,
-        edges,
-        viewport: reactFlowInstance.getViewport(),
-        colorgories: useBoardStore.getState().colorgories || []
-      }
-      
-      // console.log('💾 Manual save data:', {
-      //   nodesCount: boardData.nodes.length,
-      //   edgesCount: boardData.edges.length,
-      //   boardId: localBoardIdRef.current
-      // })
-      
-      if (localBoardIdRef.current && !name) {
-        await boardStorage.updateBoard(localBoardIdRef.current, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
-        // console.log('✅ Updated existing board:', localBoardIdRef.current)
-      } else {
-        const boardName = name || `Board ${new Date().toLocaleDateString()}`
-        const boardId = await boardStorage.saveBoard(boardName, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
-        // console.log('🆕 Created new board:', boardId, 'with name:', boardName)
-        localBoardIdRef.current = boardId
-        setCurrentBoardName(boardName)
-      }
-      
-      // console.log('✅ Manual save completed successfully')
-      setSaveStatus('saved')
-      
-      if (onBoardStateChange) {
-        // console.log('🔄 Updating board state: saved, false')
-        onBoardStateChange(currentBoardName, 'saved', false)
-      }
-    } catch (error) {
-      // console.error('❌ Manual save failed:', error)
-      setSaveStatus('error')
-      setHasUnsavedChanges(true)
-      
-      if (onBoardStateChange) {
-        // console.log('🔄 Updating board state: error, true')
-        onBoardStateChange(currentBoardName, 'error', true)
-      }
-    }
-  }, [nodes, edges, localBoardIdRef.current, currentBoardName, reactFlowInstance, onBoardStateChange])
+    await manualSave(nodes, edges, name)
+  }, [manualSave, nodes, edges])
 
 
   
-  // Handle document upload - Memoize to prevent event listener recreation
-  const handleDocumentUpload = useCallback(async (file: File, position?: { x: number; y: number }) => {
-    const dropPosition = position || getViewportCenter()
-    const nodeId = `document-${Date.now()}`
-    
-    // Upload file to Supabase Storage first
-    try {
-      // console.log('📤 Uploading file to Supabase Storage:', file.name)
-      const documentId = await boardStorage.saveDocument(
-        file.name,
-        file,
-        '', // Empty extracted text for now
-        localBoardIdRef.current || 'temp',
-        nodeId
-      )
-      
-      // console.log('✅ File uploaded successfully, documentId:', documentId)
-      
-      // Create the node with file metadata (no File object)
-      const signedUrl = await supabaseStorage.getSignedUrl(documentId);
-      const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
-      const newNode: any = {
-        id: nodeId,
-        type: isImage ? 'image' : 'document',
-        position: dropPosition,
-        data: {
-          title: file.name,
-          type: isImage ? 'image' : 'document',
-          fileName: file.name,
-          fileType: file.type || 'unknown',
-          fileSize: file.size,
-          status: 'processing' as const,
-          extractedText: '',
-          documentId, // Store the document ID instead of File object
-          previewUrl: signedUrl, // Store the signed URL
-        },
-      }
-      handleAddNodeToStore(newNode)
-      
-      // Extract text: prefer server-side extraction for PDFs; fall back to client for others
-      if (isTextExtractable(file.type, file.name)) {
-        try {
-          let extractedText = ''
-          if (file.type.includes('pdf')) {
-            try {
-              // Prefer server route using pdf-parse against a signed URL
-              const resp = await fetch('/api/documents/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ signedUrl, fileName: file.name, fileType: file.type }),
-              })
-              if (!resp.ok) {
-                const errText = await resp.text().catch(() => '')
-                throw new Error(`Extraction request failed (${resp.status}): ${errText}`)
-              }
-              const json = await resp.json()
-              if (typeof json?.extractedText === 'string' && json.extractedText.length > 0) {
-                extractedText = json.extractedText
-              } else {
-                if (json?.error) {
-                  console.warn('PDF extraction returned no text:', json.error)
-                }
-              }
-            } catch (e) {
-              console.error('Server PDF extraction failed, skipping to ready state', e)
-            }
-          } else {
-            // Dynamic import to avoid SSR issues for non-PDF
-            const { extractTextFromFile } = await import('../storage/textExtractor')
-            extractedText = await extractTextFromFile(file, file.type, file.name)
-          }
-          
-          if (extractedText && extractedText.length > 0) {
-            // console.log(`✅ Text extracted successfully: ${extractedText.length} characters`)
-            
-            // Persist extracted text to Supabase
-            try {
-              await supabaseStorage.updateDocumentExtractedText(documentId, extractedText)
-            } catch (e) {
-              console.warn('Failed to persist extracted text; continuing with node update only', e)
-            }
-
-            // Update the node with extracted text
-            setNodes((currentNodes) => {
-              if (!Array.isArray(currentNodes)) return currentNodes
-              return currentNodes.map(node => 
-                node.id === nodeId 
-                  ? { ...node, data: { ...node.data, extractedText, status: 'ready' } }
-                  : node
-              )
-            })
-          } else {
-            // console.log('⚠️ No text was extracted from the file')
-            setNodes((currentNodes) => {
-              if (!Array.isArray(currentNodes)) return currentNodes
-              return currentNodes.map(node => 
-                node.id === nodeId 
-                  ? { ...node, data: { ...node.data, status: 'ready' } }
-                  : node
-              )
-            })
-          }
-        } catch (error) {
-          // console.error('❌ Client-side text extraction failed:', error)
-          setNodes((currentNodes) => {
-            if (!Array.isArray(currentNodes)) return currentNodes
-            return currentNodes.map(node => 
-              node.id === nodeId 
-                ? { 
-                    ...node, 
-                    data: { 
-                      ...node.data, 
-                      extractedText: `Text extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                      status: 'error' 
-                    } 
-                  }
-                : node
-            )
-          })
-        }
-      } else {
-        // For non-extractable files, mark as ready
-        setNodes((currentNodes) => {
-          if (!Array.isArray(currentNodes)) return currentNodes
-          return currentNodes.map(node => 
-            node.id === nodeId 
-              ? { ...node, data: { ...node.data, status: 'ready' } }
-              : node
-          )
-        })
-      }
-    } catch (error) {
-      // console.error('❌ Failed to upload file to Supabase:', error)
-      // Create node with error status
-      const isImage2 = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
-      const newNode: any = {
-        id: nodeId,
-        type: isImage2 ? 'image' : 'document',
-        position: dropPosition,
-        data: {
-          title: file.name,
-          type: isImage2 ? 'image' : 'document',
-          fileName: file.name,
-          fileType: file.type || 'unknown',
-          fileSize: file.size,
-          status: 'error' as const,
-          extractedText: 'File upload failed',
-        },
-      }
-      handleAddNodeToStore(newNode)
-    }
-  }, [handleAddNodeToStore, isTextExtractable, setNodes, localBoardIdRef])
+  // Document upload via hook
+  const { handleDocumentUpload } = useDocumentUpload({
+    boardStorage,
+    supabaseStorage,
+    isTextExtractable,
+    localBoardIdRef,
+    addNodeToStore: handleAddNodeToStore,
+    setNodes,
+  })
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -1384,18 +958,8 @@ function BoardContent({
     }
   }, [handleDocumentUpload])
   
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-        event.preventDefault()
-        saveBoard()
-      }
-    }
-    
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [saveBoard])
+  // Keyboard shortcuts via hook
+  useBoardShortcuts(() => { saveBoard() })
   
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
@@ -1525,7 +1089,7 @@ function BoardContent({
       if (onBoardStateChangeRef.current) {
         onBoardStateChangeRef.current(currentBoardName, 'saving', true)
       }
-      triggerAutosaveRef.current()
+      triggerAutosaveRef.current(nodes, edges)
     }
     window.addEventListener('nodal:chat-updated', handler as EventListener)
     return () => {
