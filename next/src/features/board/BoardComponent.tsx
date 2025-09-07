@@ -25,6 +25,7 @@ import DocumentNode from '../nodes/DocumentNode'
 import ImageNode from '../nodes/ImageNode'
 import NodalNode from '../nodes/nodalNode'
 import TaskNode from '../nodes/TaskNode'
+import VideoNode from '../nodes/VideoNode'
 import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
@@ -109,6 +110,7 @@ export const nodeTypes = {
   document: (props: any) => <DocumentNode {...props} {...stableHandlers} />,
   image: (props: any) => <ImageNode {...props} {...stableHandlers} />,
   task: (props: any) => <TaskNode {...props} {...stableHandlers} />,
+  video: (props: any) => <VideoNode {...props} {...stableHandlers} />,
 };
 
 export const edgeTypes = {
@@ -2103,6 +2105,17 @@ function BoardContent({
                 }
               }
             } catch {}
+            setShowUnifiedAddModal(false)
+          }}
+          onVideoSubmit={(url) => {
+            const center = pendingNodePosition || getViewportCenter()
+            const newNode: Node = {
+              id: `video-${Date.now()}`,
+              type: 'video',
+              position: center,
+              data: { title: 'Video', videoUrl: url, status: 'idle' } as any,
+            }
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
           }}
         />
