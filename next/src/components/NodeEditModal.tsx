@@ -102,14 +102,14 @@ export default function NodeEditModal({
           fullWidth
           label="Title"
         />
-        <MultiSelect
+        {/* <MultiSelect
           label="Colorgories"
           values={selectedColorgoryIds}
           onChange={setSelectedColorgoryIds}
           options={colorgories.map((c: any) => ({ value: c.id, label: c.name }))}
           size="sm"
           fullWidth
-        />
+        /> */}
         <div>
           <label htmlFor="edit-content" aria-description="Content" className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Content

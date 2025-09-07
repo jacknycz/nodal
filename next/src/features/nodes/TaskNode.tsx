@@ -176,9 +176,11 @@ export default function TaskNode({
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer open={drawerOpen}>
         <ColorgoryQuickMenu
+          nodeId={id}
           selectedIds={(data as any).colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
           disabled={isLocked && !lockedByMe}
+          onNodeUpdate={onNodeUpdate}
         />
         <IconButton
           variant="danger"

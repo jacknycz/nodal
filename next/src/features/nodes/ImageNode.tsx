@@ -383,9 +383,11 @@ export default function ImageNode({
             <DownloadSimple size={14} />
           </IconButton>
           <ColorgoryQuickMenu
+            nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
             onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
             disabled={isLocked && !isLockedByMe}
+            onNodeUpdate={onNodeUpdate}
           />
           <IconButton
             variant="danger"
