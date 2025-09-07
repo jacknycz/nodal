@@ -18,6 +18,7 @@ interface AddNodesModalProps {
   onManualSubmit: (payload: { titles: string[]; description?: string; generateDescription?: boolean }) => void
   onAIConfirm: (items: { title: string; content?: string }[]) => void
   onVideoSubmit?: (url: string) => void
+  onUploadSubmit?: (file: File) => void
 }
 
 type PendingPoint = { title: string; content: string; selected: boolean }
@@ -30,8 +31,9 @@ export default function AddNodesModal({
   onManualSubmit,
   onAIConfirm,
   onVideoSubmit,
+  onUploadSubmit,
 }: AddNodesModalProps) {
-  const [tab, setTab] = React.useState<'manual' | 'ai' | 'video'>('manual')
+  const [tab, setTab] = React.useState<'manual' | 'ai' | 'video' | 'upload'>('manual')
 
   // Manual state
   const [titleInput, setTitleInput] = React.useState('')
@@ -47,6 +49,8 @@ export default function AddNodesModal({
   const [isLoading, setIsLoading] = React.useState(false)
   const nodes = useBoardStore((s) => s.nodes || [])
   const [videoUrl, setVideoUrl] = React.useState('')
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
+  const [isDragOver, setIsDragOver] = React.useState(false)
 
   React.useEffect(() => {
     if (open) {
@@ -56,6 +60,8 @@ export default function AddNodesModal({
       setDescription('')
       setGenerateDescription(false)
       setVideoUrl('')
+      setSelectedFile(null)
+      setIsDragOver(false)
       setPrompt(initialAIContext ? [
         initialAIContext.topic && `Topic: ${initialAIContext.topic}`,
         initialAIContext.description && `Description: ${initialAIContext.description}`,
@@ -132,10 +138,15 @@ export default function AddNodesModal({
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={handleCreateSelected} disabled={generated.filter(g => g.selected).length === 0}>Create</Button>
         </>
-      ) : (
+      ) : tab === 'video' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={() => { if (onVideoSubmit && videoUrl.trim()) onVideoSubmit(videoUrl.trim()) }} disabled={!videoUrl.trim()}>Create</Button>
+        </>
+      ) : (
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { if (onUploadSubmit && selectedFile) onUploadSubmit(selectedFile) }} disabled={!selectedFile}>Create</Button>
         </>
       )}
     >
@@ -152,6 +163,10 @@ export default function AddNodesModal({
           className={`px-3 py-1.5 rounded-md text-sm ${tab === 'video' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('video')}
         >Video</button>
+        <button
+          className={`px-3 py-1.5 rounded-md text-sm ${tab === 'upload' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          onClick={() => setTab('upload')}
+        >Upload</button>
       </div>
 
       {tab === 'manual' && (
@@ -244,6 +259,42 @@ export default function AddNodesModal({
             fullWidth
           />
           <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title and thumbnail automatically.</div>
+        </div>
+      )}
+      {tab === 'upload' && (
+        <div className="space-y-4 py-2">
+          <div
+            className={`border-2 border-dashed rounded-md p-6 text-center ${isDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700'}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              const file = e.dataTransfer.files && e.dataTransfer.files[0]
+              if (file) setSelectedFile(file)
+            }}
+          >
+            <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop a file here</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
+            <div className="mt-3">
+              <label className="inline-block px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = (e.target as HTMLInputElement).files?.[0] || null
+                    setSelectedFile(f)
+                  }}
+                  accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json"
+                />
+                <span className="text-sm">Choose file</span>
+              </label>
+            </div>
+            {selectedFile && (
+              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFile.name}</div>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">We’ll create an Image or Document node based on the file type.</div>
         </div>
       )}
     </Modal>

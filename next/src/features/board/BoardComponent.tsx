@@ -1682,6 +1682,11 @@ function BoardContent({
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
           }}
+          onUploadSubmit={(file) => {
+            const center = pendingNodePosition || getViewportCenter()
+            handleDocumentUpload(file as File, center)
+            setShowUnifiedAddModal(false)
+          }}
         />
       )}
       
