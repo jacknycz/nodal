@@ -1566,24 +1566,49 @@ function BoardContent({
         <AddNodesModal
           open={showUnifiedAddModal}
           onClose={() => setShowUnifiedAddModal(false)}
-          parentNodeTitle={aiParentNodeId ? (nodes.find(n => n.id === aiParentNodeId)?.data as any)?.title : undefined}
+          parentNodeTitle={(aiParentNodeId || pendingSourceNodeId) ? (nodes.find(n => n.id === (aiParentNodeId || pendingSourceNodeId))?.data as any)?.title : undefined}
+          parentNodeContent={(aiParentNodeId || pendingSourceNodeId) ? (() => {
+            const n = nodes.find(n => n.id === (aiParentNodeId || pendingSourceNodeId))
+            const d: any = n?.data || {}
+            return (d.content || d.extractedText || d.extracted_text || '') as string
+          })() : undefined}
           initialAIContext={pendingBoardBrief ? { topic: pendingBoardBrief.boardTopic, description: pendingBoardBrief.description } : undefined}
+          hideVideoTab={Boolean(pendingSourceNodeId)}
           onManualSubmit={async ({ titles, description, generateDescription }) => {
             const center = pendingNodePosition || getViewportCenter()
             let desc = (description || '').trim()
-            if (generateDescription && titles.length === 1 && !desc) {
+            // Build per-title descriptions when needed
+            const descriptionsByTitle: Record<string, string> = {}
+            if (titles.length === 1) {
+              if (generateDescription && !desc) {
+                try {
+                  const service = getOpenAIService()
+                  if (service) {
+                    const titleForAI = titles[0]
+                    const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
+                    const res = await service.generate({ prompt, maxTokens: 120 })
+                    desc = (res.content || '').trim()
+                  }
+                } catch {}
+              }
+              if (desc) {
+                descriptionsByTitle[titles[0]] = desc
+              }
+            } else if (generateDescription) {
               try {
                 const service = getOpenAIService()
                 if (service) {
-                  const titleForAI = titles[0]
-                  const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
-                  const res = await service.generate({ prompt, maxTokens: 120 })
-                  desc = (res.content || '').trim()
+                  for (const t of titles) {
+                    const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
+                    const res = await service.generate({ prompt, maxTokens: 120 })
+                    const d = (res.content || '').trim()
+                    if (d) descriptionsByTitle[t] = d
+                  }
                 }
               } catch {}
             }
             if (pendingSourceNodeId) {
-              const nodesToPlace = titles.map((t) => ({ title: t, content: titles.length === 1 ? desc : '', type: 'default' as const, parentId: pendingSourceNodeId }))
+              const nodesToPlace = titles.map((t) => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const, parentId: pendingSourceNodeId }))
               try {
                 const result = await placeAINodes(nodesToPlace, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40 })
                 if (result.success && result.placements.length > 0) {
@@ -1615,13 +1640,13 @@ function BoardContent({
                     if (idx >= count) break
                     const x = startX + c * spacingX
                     const y = startY + r * spacingY
-                    created.push({ id: `node-${Date.now()}-${idx}`, type: 'default', position: { x, y }, data: { title: titles[idx], content: '' } })
+                    created.push({ id: `node-${Date.now()}-${idx}`, type: 'default', position: { x, y }, data: { title: titles[idx], content: descriptionsByTitle[titles[idx]] || '' } })
                     idx++
                   }
                 }
                 setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
               } else {
-                const nodesToPlace = titles.map(t => ({ title: t, content: '', type: 'default' as const }))
+                const nodesToPlace = titles.map(t => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const }))
                 let placed = false
                 try {
                   const placementResult = await placeBoardNodes(nodesToPlace)

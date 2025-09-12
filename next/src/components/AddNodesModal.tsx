@@ -9,16 +9,20 @@ import Checkbox from './ui/Checkbox'
 import Toggle from './ui/Toggle'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useBoardStore } from '../features/board/boardSlice'
+import { Pencil, Robot, Upload, Video } from '@phosphor-icons/react'
+import Image from 'next/image'
 
 interface AddNodesModalProps {
   open: boolean
   onClose: () => void
   parentNodeTitle?: string
+  parentNodeContent?: string
   initialAIContext?: { topic?: string; description?: string }
   onManualSubmit: (payload: { titles: string[]; description?: string; generateDescription?: boolean }) => void
   onAIConfirm: (items: { title: string; content?: string }[]) => void
   onVideoSubmit?: (url: string) => void
   onUploadSubmit?: (file: File) => void
+  hideVideoTab?: boolean
 }
 
 type PendingPoint = { title: string; content: string; selected: boolean }
@@ -27,11 +31,13 @@ export default function AddNodesModal({
   open,
   onClose,
   parentNodeTitle,
+  parentNodeContent,
   initialAIContext,
   onManualSubmit,
   onAIConfirm,
   onVideoSubmit,
   onUploadSubmit,
+  hideVideoTab,
 }: AddNodesModalProps) {
   const [tab, setTab] = React.useState<'manual' | 'ai' | 'video' | 'upload'>('manual')
 
@@ -72,6 +78,13 @@ export default function AddNodesModal({
     }
   }, [open, initialAIContext])
 
+  // If video tab is hidden but currently selected, switch to manual
+  React.useEffect(() => {
+    if (hideVideoTab && tab === 'video') {
+      setTab('manual')
+    }
+  }, [hideVideoTab, tab])
+
   const effectiveTitles = React.useMemo(() => {
     const t = titleInput.trim()
     return t ? [...titles, t] : [...titles]
@@ -102,7 +115,10 @@ export default function AddNodesModal({
     if (!prompt.trim()) return
     setIsLoading(true)
     try {
-      const topicForAI = prompt.trim()
+      const trimmedContent = parentNodeContent ? String(parentNodeContent).slice(0, 4000) : ''
+      const topicForAI = parentNodeTitle
+        ? `Parent topic: ${parentNodeTitle}\n${trimmedContent ? `Parent content: ${trimmedContent}\n` : ''}Instruction: ${prompt.trim()}`
+        : prompt.trim()
       const points = await generateFromTopic(topicForAI, 6, nodes as any)
       const pending = (points || []).slice(0, 10).map(p => ({
         title: p.title || '',
@@ -150,23 +166,41 @@ export default function AddNodesModal({
         </>
       )}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className={`grid ${hideVideoTab ? 'grid-cols-3' : 'grid-cols-4'} gap-3 mb-3`}>
         <button
-          className={`px-3 py-1.5 rounded-md text-sm ${tab === 'manual' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'manual' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('manual')}
-        >Manual</button>
+        >
+          <Pencil size={32} weight="duotone" />
+          Manual
+        </button>
+
         <button
-          className={`px-3 py-1.5 rounded-md text-sm ${tab === 'ai' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'ai' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('ai')}
-        >AI Generate</button>
+        >
+         {/* <Image src="/nodal-nobot.svg" alt="AI" width={32} height={32} unoptimized /> */}
+         <Robot size={32} weight="duotone" />
+          AI Generate
+        </button>
+
+        {!hideVideoTab && (
+          <button
+            className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'video' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+            onClick={() => setTab('video')}
+          >
+            <Video size={32} weight="duotone" />
+            Video
+          </button>
+        )}
+
         <button
-          className={`px-3 py-1.5 rounded-md text-sm ${tab === 'video' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('video')}
-        >Video</button>
-        <button
-          className={`px-3 py-1.5 rounded-md text-sm ${tab === 'upload' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'upload' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('upload')}
-        >Upload</button>
+        >
+          <Upload size={32} weight="duotone" />
+          Upload
+        </button>
       </div>
 
       {tab === 'manual' && (
@@ -184,6 +218,7 @@ export default function AddNodesModal({
                 }
               }}
               placeholder={titles.length > 0 ? 'Type and press Enter to add' : 'e.g., Research Topic, Idea, Task...'}
+              description="Hit enter to create multiple nodes."
               fullWidth
             />
             {titles.length > 0 && (
@@ -223,14 +258,22 @@ export default function AddNodesModal({
       )}
 
       {tab === 'ai' && (
-        <div className="space-y-3">
+        <div className="space-y-3 py-2">
           {parentNodeTitle && (
             <div className="rounded-md border border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900/40 text-sm">
-              <div className="text-gray-700 dark:text-gray-200 font-medium">Parent node:</div>
+              <div className="text-gray-700 dark:text-gray-200 font-medium">Selected node:</div>
               <div className="text-gray-900 dark:text-gray-100">{parentNodeTitle}</div>
             </div>
           )}
-          <TextArea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the topic or paste bullets to expand..." rows={4} fullWidth />
+          <TextArea 
+            value={prompt} 
+            onChange={(e) => setPrompt(e.target.value)} 
+            placeholder="Describe the topic or paste bullets to expand..." 
+            label="Description - tell us what nodes you want to generate..."
+            rows={4} 
+            fullWidth 
+            description="This is the name of your node and how it appears on the board." 
+          />
           <div className="flex justify-end gap-2 pt-1">
             <Button onClick={handleGenerate} loading={isLoading} disabled={!prompt.trim() || isLoading}>Generate</Button>
           </div>
@@ -249,7 +292,7 @@ export default function AddNodesModal({
           </div>
         </div>
       )}
-      {tab === 'video' && (
+      {tab === 'video' && !hideVideoTab && (
         <div className="space-y-4 py-2">
           <TextInput
             label="YouTube URL"
