@@ -1112,6 +1112,10 @@ function BoardContent({
       nodeLocks,
       currentUser: user, // Add current user to handlers
       onNodeShiftClickConnect: handleShiftClickConnect,
+      onQuickAddNodes: (nodeId: string) => {
+        setPendingSourceNodeId(nodeId)
+        setShowUnifiedAddModal(true)
+      },
     }
     
     // Force update stableHandlers immediately

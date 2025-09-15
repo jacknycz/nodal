@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { Trash, Pen } from "@phosphor-icons/react/ssr";
+import { Trash, Pen, PlusCircle } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -38,6 +38,7 @@ interface NodalNodeProps {
   isNodeLockedByMe?: (nodeId: string) => boolean
   nodeLocks?: any[]
   onNodeShiftClickConnect?: (targetId: string) => void
+  onQuickAddNodes?: (nodeId: string) => void
 }
 
 export default function NodalNode({
@@ -52,7 +53,8 @@ export default function NodalNode({
   getNodeLockOwner,
   isNodeLockedByMe,
   nodeLocks,
-  onNodeShiftClickConnect
+  onNodeShiftClickConnect,
+  onQuickAddNodes
 }: NodalNodeProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -262,6 +264,15 @@ export default function NodalNode({
           disabled={isLocked && !isLockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Quick AI Generate Nodes"
+          onClick={() => onQuickAddNodes?.(id)}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <PlusCircle size={14} weight="duotone" />
+        </IconButton>
         <IconButton
           variant="danger"
           size="sm"

@@ -10,6 +10,7 @@ import Toggle from './ui/Toggle'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useBoardStore } from '../features/board/boardSlice'
 import { Pencil, Robot, Upload, Video } from '@phosphor-icons/react'
+import Tag from './ui/Tag'
 // import Image from 'next/image'
 
 interface AddNodesModalProps {
@@ -166,6 +167,12 @@ export default function AddNodesModal({
         </>
       )}
     >
+      {parentNodeTitle && (
+        <div className="flex items-center gap-2 rounded-md border border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900/40 text-sm mb-3">
+          <span className="text-gray-700 dark:text-gray-200 font-medium">Adding nodes connected to:</span>
+          <Tag variant="primary">{parentNodeTitle}</Tag>
+        </div>
+      )}
       <div className={`grid ${hideVideoTab ? 'grid-cols-3' : 'grid-cols-4'} gap-3 mb-3`}>
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'manual' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
@@ -261,12 +268,6 @@ export default function AddNodesModal({
 
       {tab === 'ai' && (
         <div className="space-y-3 py-2">
-          {parentNodeTitle && (
-            <div className="rounded-md border border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900/40 text-sm">
-              <div className="text-gray-700 dark:text-gray-200 font-medium">Selected node:</div>
-              <div className="text-gray-900 dark:text-gray-100">{parentNodeTitle}</div>
-            </div>
-          )}
           <TextArea 
             value={prompt} 
             onChange={(e) => setPrompt(e.target.value)} 
