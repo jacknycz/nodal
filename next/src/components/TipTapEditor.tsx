@@ -11,6 +11,9 @@ import Underline from '@tiptap/extension-underline'
 import Strike from '@tiptap/extension-strike'
 import CodeBlock from '@tiptap/extension-code-block'
 import Blockquote from '@tiptap/extension-blockquote'
+import BulletList from '@tiptap/extension-bullet-list'
+import OrderedList from '@tiptap/extension-ordered-list'
+import ListItem from '@tiptap/extension-list-item'
 import { 
   Bold, 
   Italic, 
@@ -60,6 +63,9 @@ export default function TipTapEditor({
         // Disable extensions that we're adding separately
         codeBlock: false,
         blockquote: false,
+        bulletList: false,
+        orderedList: false,
+        listItem: false,
       }),
       Placeholder.configure({
         placeholder,
@@ -90,6 +96,17 @@ export default function TipTapEditor({
           class: 'border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic',
         },
       }),
+      BulletList.configure({
+        HTMLAttributes: {
+          class: 'list-disc pl-5 my-2',
+        },
+      }),
+      OrderedList.configure({
+        HTMLAttributes: {
+          class: 'list-decimal pl-5 my-2',
+        },
+      }),
+      ListItem,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -105,6 +122,13 @@ export default function TipTapEditor({
           onKeyDown(event as any)
         }
         return false // Let TipTap handle the event normally
+      },
+      handleDOMEvents: {
+        // Allow native context menu and prevent it from reaching board/pane handlers
+        contextmenu: (_view, event) => {
+          event.stopPropagation()
+          return false
+        },
       },
     },
     immediatelyRender: false,

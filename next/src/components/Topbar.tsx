@@ -214,10 +214,6 @@ export default function Topbar({
                 className="hidden sm:block h-8 w-auto"
                 priority
               />
-
-              <Tag variant="beta" className="ml-2">
-                BETA
-              </Tag>
             </button>
 
 
@@ -238,50 +234,52 @@ export default function Topbar({
           <div className="flex-1 min-w-0 flex justify-start sm:justify-center">
             {isBoardView && currentBoardName && (
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full">
-                <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
-                </div>
-                <div className="sm:hidden min-w-0 w-full text-left">
-                  <span className="font-medium text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
-                </div>
+                <div className="flex-col">
+                  <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
+                  </div>
+                  <div className="sm:hidden min-w-0 w-full text-left">
+                    <span className="font-medium text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
+                  </div>
 
-                {/* Save Status */}
-                <div className="hidden sm:flex items-center gap-2 text-xs">
-                  {saveStatus === 'saving' && (
-                    <div className="flex items-center text-blue-600 dark:text-blue-400">
-                      <div className="w-2 h-2 mr-2 bg-blue-600 rounded-full animate-pulse"></div>
-                      <span>Saving...</span>
-                    </div>
-                  )}
-                  {saveStatus === 'saved' && !hasUnsavedChanges && (
-                    <div className="flex items-center text-green-600 dark:text-green-400">
-                      <div className="w-2 h-2 mr-2 bg-green-600 rounded-full"></div>
-                      <span>Saved</span>
-                    </div>
-                  )}
-                  {saveStatus === 'unsaved' && hasUnsavedChanges && (
-                    <div className="flex items-center text-orange-600 dark:text-orange-400">
-                      <div className="w-2 h-2 mr-2 bg-orange-600 rounded-full"></div>
-                      <span>Unsaved changes</span>
-                    </div>
-                  )}
-                  {saveStatus === 'error' && (
-                    <div className="flex items-center text-red-600 dark:text-red-400">
-                      <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
-                      <span>Save failed</span>
-                    </div>
-                  )}
+                  {/* Save Status */}
+                  <div className="hidden sm:flex items-center gap-2 text-xs">
+                    {saveStatus === 'saving' && (
+                      <div className="flex items-center text-blue-600 dark:text-blue-400">
+                        <div className="w-2 h-2 mr-2 bg-blue-600 rounded-full animate-pulse"></div>
+                        <span>Saving...</span>
+                      </div>
+                    )}
+                    {saveStatus === 'saved' && !hasUnsavedChanges && (
+                      <div className="flex items-center text-green-600 dark:text-green-400">
+                        <div className="w-2 h-2 mr-2 bg-green-600 rounded-full"></div>
+                        <span>Saved</span>
+                      </div>
+                    )}
+                    {saveStatus === 'unsaved' && hasUnsavedChanges && (
+                      <div className="flex items-center text-orange-600 dark:text-orange-400">
+                        <div className="w-2 h-2 mr-2 bg-orange-600 rounded-full"></div>
+                        <span>Unsaved changes</span>
+                      </div>
+                    )}
+                    {saveStatus === 'error' && (
+                      <div className="flex items-center text-red-600 dark:text-red-400">
+                        <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
+                        <span>Save failed</span>
+                      </div>
+                    )}
 
-                  {/* Manual Save Button */}
-                  {hasUnsavedChanges && onSaveBoard && (
-                    <button
-                      onClick={onSaveBoard}
-                      disabled={saveStatus === 'saving'}
-                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Save
-                    </button>
-                  )}
+                    {/* Manual Save Button */}
+                    {hasUnsavedChanges && onSaveBoard && (
+                      <button
+                        onClick={onSaveBoard}
+                        disabled={saveStatus === 'saving'}
+                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Save
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {/* Presence Avatars
                 {presentUsers.length > 0 && (
@@ -310,6 +308,10 @@ export default function Topbar({
 
           {/* Right - Controls */}
           <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3 justify-end">
+            <Tag variant="beta" className="ml-2">
+              BETA
+            </Tag>
+
             {isBoardView && (
               <>
                 <div className="hidden sm:flex items-center gap-3">
