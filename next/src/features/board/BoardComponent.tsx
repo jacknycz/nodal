@@ -416,7 +416,7 @@ function BoardContent({
       const aiService = getOpenAIService()
       // Ensure a topic parent node exists
       const topicNodeId = `topic-${boardId}`
-      const topicNode = {
+      let topicNode = {
         id: topicNodeId,
         type: 'default' as const,
         position: { x: 500, y: 400 },
@@ -434,6 +434,27 @@ function BoardContent({
         topic: brief.boardTopic || null,
         colorgories: useBoardStore.getState().colorgories || []
       })
+      // If requested, auto-generate a concise board description when none provided
+      if (brief.generateDescriptionsForStarter && !brief.description) {
+        try {
+          if (aiService) {
+            const sys = 'You write concise, clear project summaries.'
+            const res = await aiService.generate({
+              systemPrompt: sys,
+              prompt: `Write a single 1-2 sentence description for a mind-map titled "${brief.boardTopic}". Be specific and helpful. Plain text only.`,
+              maxTokens: 120
+            })
+            const autoDesc = (res.content || '').trim()
+            if (autoDesc) {
+              // Update topic node content with the generated summary
+              setNodes((prev) => (Array.isArray(prev) ? prev.map((n: any) => n.id === topicNodeId ? { ...n, data: { ...(n.data||{}), content: autoDesc } } : n) : prev))
+              // Also update the local topicNode used later for placement/saves
+              topicNode = { ...topicNode, data: { ...(topicNode.data || {}), content: autoDesc } }
+            }
+          }
+        } catch {}
+      }
+
       // If user provided manual starter nodes, prioritize those and skip AI
       if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
         // Optionally generate descriptions for each starter node
@@ -442,7 +463,9 @@ function BoardContent({
           try {
             if (aiService) {
               for (const t of brief.starterNodes) {
-                const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
+                const prompt = brief.boardTopic
+                  ? `Given the board topic "${brief.boardTopic}", write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}" in that context. Keep it clear and actionable. Return plain text only.`
+                  : `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
                 const res = await aiService.generate({ prompt, maxTokens: 120 })
                 const d = (res.content || '').trim()
                 if (d) descriptionsByTitle[t] = d
@@ -1493,7 +1516,10 @@ function BoardContent({
                   const service = getOpenAIService()
                   if (service) {
                     const titleForAI = titles[0]
-                    const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
+                    const topicForAI = (pendingBoardBrief?.boardTopic || useBoardStore.getState().topic || '').trim()
+                    const prompt = topicForAI
+                      ? `The board topic is "${topicForAI}". Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}" specifically in the context of "${topicForAI}". Return plain text only.`
+                      : `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
                     const res = await service.generate({ prompt, maxTokens: 120 })
                     desc = (res.content || '').trim()
                   }
@@ -1507,7 +1533,10 @@ function BoardContent({
                 const service = getOpenAIService()
                 if (service) {
                   for (const t of titles) {
-                    const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
+                    const topicForAI = (pendingBoardBrief?.boardTopic || useBoardStore.getState().topic || '').trim()
+                    const prompt = topicForAI
+                      ? `The board topic is "${topicForAI}". Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}" specifically in the context of "${topicForAI}". Return plain text only.`
+                      : `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
                     const res = await service.generate({ prompt, maxTokens: 120 })
                     const d = (res.content || '').trim()
                     if (d) descriptionsByTitle[t] = d

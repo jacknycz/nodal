@@ -26,7 +26,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [boardId, setBoardId] = useState<string>('')
   const [starterInput, setStarterInput] = useState('')
   const [starterNodes, setStarterNodes] = useState<string[]>([])
-  const [generateDescriptionsForStarter, setGenerateDescriptionsForStarter] = useState(false)
+  const [generateDescriptionsForStarter, setGenerateDescriptionsForStarter] = useState(true)
 
   // Generate a new board ID when modal opens
   React.useEffect(() => {
@@ -39,7 +39,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       setDescription('')
       setStarterInput('')
       setStarterNodes([])
-      setGenerateDescriptionsForStarter(false)
+      setGenerateDescriptionsForStarter(true)
     }
   }, [isOpen])
 
@@ -87,17 +87,19 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         />
       </div>
       
-      <div>
-        <TextArea
-          value={description}
-          onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
-          placeholder="Tell us more about what you want to work on, your goals, or any specific ideas..."
-          label="Description (optional)"
-          rows={3}
-          fullWidth
-          description="This provides additional context for AI-generated starter nodes."
-        />
-      </div>
+      {!generateDescriptionsForStarter && (
+        <div>
+          <TextArea
+            value={description}
+            onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
+            placeholder="Tell us more about what you want to work on, your goals, or any specific ideas..."
+            label="Description (optional)"
+            rows={3}
+            fullWidth
+            description="This provides additional context for AI-generated starter nodes."
+          />
+        </div>
+      )}
 
       <div>
         <div className="flex gap-2">

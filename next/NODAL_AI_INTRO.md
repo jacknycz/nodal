@@ -18,7 +18,7 @@
 - 🔄 Real-time collaboration with board sharing, presence, cursors, and optimistic node locking
 - 📱 Responsive design that works across all devices
  
-- 🎯 Node selection and focus capabilities with AI chat integration
+- 🎯 Node selection integrated with AI chat
 
 ---
 
@@ -27,7 +27,7 @@
 - **Next.js** (App Router, SSR, API routes)
 - **TypeScript** (strict mode, no `any`)
 - **Zustand** (atomic, composable state slices)
-- **XYFlow** (graph visualization, successor to React Flow)
+- **XYFlow** (graph visualization)
 - **Tailwind CSS** (utility-first, themeable design)
 - **Supabase** (auth, database, file storage)
 - **Framer Motion** (UI animation)
@@ -45,7 +45,6 @@
 - **Board Room**: The dashboard for managing boards.
 - **Board Brief**: The object describing a new board's intent, topic, and AI setup.
 - **Single Source of Truth**: All board data and logic now live in `next/src/features/board/`.
-- **Focus Tree**: Hierarchical organization system for nodes and ideas.
 - **AI Context**: Persistent memory system for AI conversations and suggestions.
 - **Thumbnail System (Deferred)**: Thumbnail generation is currently removed and will be revisited later.
 - **Node Selection**: Multi-node selection system with AI chat integration and visual feedback.
@@ -87,7 +86,7 @@
 - **Zustand Slices**: Atomic, composable state management with clear separation of concerns
 - **Board Store**: Centralized board state with optimistic updates and conflict resolution
 - **AI Store**: Manages AI context, settings, and conversation state
-- **Focus Store**: Handles hierarchical focus tree and navigation state
+ 
 - **Theme Store**: Manages dark/light mode and UI preferences
 - **Multi-Node Selection**: Updated board store to handle multiple selected nodes with `selectedNodeIds` array
 
@@ -107,7 +106,6 @@ next/src/
 │   ├── ai/               # AI integration and context
 │   ├── auth/             # Authentication and Supabase client
 │   ├── board/            # Board management and XYFlow integration
-│   ├── focus/            # Focus tree and navigation
 │   ├── nodes/            # Node types and rendering
 │   └── storage/          # Supabase storage and data persistence
 ├── hooks/                # Custom React hooks
@@ -172,7 +170,7 @@ next/src/
 - **IconButton Component**: Specialized icon-only buttons with accessibility support
 - **Toggle Component**: Reusable toggle switch with proper ARIA attributes
 - **Menu Component**: Unified dropdown menu system with support for custom content, notifications, and consistent hover behavior
-- **Icon set**: Migrating from `lucide-react` to **Phosphor Icons** for consistent, expressive iconography across the app. Refer to `https://phosphoricons.com/` for icons and weights; update components to import Phosphor icons where appropriate.
+- **Icon set**: **Phosphor Icons** are the primary library across the app. TipTap editor specifically uses `lucide-react` due to editor-specific needs. Refer to `https://phosphoricons.com/` for icons and weights; update components to import Phosphor icons where appropriate.
 - **Tag Component**: Reusable tag/badge component with variants (default, primary, secondary, success, warning, danger, beta), pill-shaped design, and interactive features
 - **Consistent Styling**: All components support dark/light themes and responsive design
 - **TextInput Component**: Design-system input with label, description, error, left/right icons, sizes (sm|md|lg), variants (default|unstyled), and `fullWidth` support
@@ -183,23 +181,22 @@ next/src/
 ## Z-Index & Layering (updated)
 
 - **Topbar menus above overlays**: Topbar uses higher z-index than chat so menus always render above
-- **Chat/FAB stacking**: Chat is rendered as a sibling overlay above ReactFlow; FAB is also a sibling with lower z-index
+- **Chat/FAB stacking**: Chat is rendered as a sibling overlay above XYFlow; FAB is also a sibling with lower z-index
 - **Modal layering**: Modal/backdrop use high z-index and stop click-through
 
 ---
 
 ## Recent Improvements (Latest Session)
 
-- **Connection & Focus/Selection UX**
+- **Connection & Selection UX**
   - Entire-node drop targets when connecting; enlarged handle hit area for easier grabs
-  - Edge fading prioritization: connection mode > unified context (selection ∪ focus anchors)
-  - Focus anchors drive edge highlighting; nodes adjacent to anchors are also considered focused
+  - Edge fading prioritization: connection mode > selection context
 - **Mobile UX & Layout**
   - Topbar: flex layout on mobile; left/right shrink, center fills/truncates; symbol-only mobile logo; Plus icon for More menu
   - Hide MiniMap/Zoom Controls/Tips on mobile; move chat toggle bottom-right; chat defaults closed on mobile
   - Viewport meta disables zoom; chat height uses `100dvh` + safe-area padding; blur input on send to close keyboard
 - **Overlay/Stacking**
-  - Moved Chat and FAB outside ReactFlow for reliable z-index ordering
+  - Moved Chat and FAB outside XYFlow for reliable z-index ordering
   - Raised Topbar z-index so menus always overlay chat
 - **Handle/Hit Regions**
   - 16x16 visual handle with 32x32 interactive region implemented via CSS pseudo-element
@@ -249,12 +246,12 @@ next/src/
 ### Technical Architecture
 - **Supabase Realtime**: postgres_changes subscriptions for live updates
 - **RLS Policies**: Properly configured for collaborative access while maintaining security
-- **Stable Handlers Pattern**: Module-level stableHandlers object with Object.assign updates to prevent React Flow warnings
+- **Stable Handlers Pattern**: Module-level stableHandlers object with Object.assign updates to prevent XYFlow warnings
 - **Closure Management**: Dynamic user resolution via stableHandlers.currentUser to avoid stale closure issues
 - **Throttled Updates**: 200ms throttling for cursor positions to prevent database spam
 
 ### Key Implementation Lessons
-- **React Flow Integration**: Memoized nodeTypes/edgeTypes at module level with stable handler references
+- **XYFlow Integration**: Memoized nodeTypes/edgeTypes at module level with stable handler references
 - **Stale Closures Fix**: Functions read user from stableHandlers object instead of closure variables
 - **Modal-Driven Locking**: Simplified approach where modal open/close directly controls lock state
 - **Row Level Security**: Critical for collaborative features - must allow cross-user access for shared boards
@@ -270,7 +267,7 @@ next/src/
 ### Build Error Cleanup
 - **TypeScript Errors**: Fixed numerous `@typescript-eslint/no-explicit-any` errors by replacing with proper types
 - **ESLint Warnings**: Converted critical errors to warnings for `no-unescaped-entities`, `no-unused-vars`, `react-hooks/exhaustive-deps`
-- **React Flow Types**: Pragmatically reverted complex `nodeTypes` and `edgeTypes` to `any` to unblock build
+- **XYFlow Types**: Pragmatically reverted complex `nodeTypes` and `edgeTypes` to `any` to unblock build
 - **Configuration**: Updated `next.config.ts` to ignore TypeScript build errors during deployment
 
 ### Deployment & Runtime Fixes
@@ -318,7 +315,7 @@ next/src/
 - **Canvas API**: Prefer Canvas API over html2canvas for client-side image generation to avoid CSS parsing issues.
 - **Error Handling**: Graceful fallbacks when thumbnails fail to load or generate.
 - **XYFlow Selection**: Use native XYFlow selection instead of custom state management for reliability.
-- **Component Memoization**: Memoize nodeTypes and edgeTypes to prevent React Flow warnings.
+- **Component Memoization**: Memoize nodeTypes and edgeTypes to prevent XYFlow warnings.
 - **Z-Index Management**: Proper layering ensures topbar menus appear above chat panel.
 - **Drag & Drop**: Always call `e.preventDefault()` in drag event handlers to prevent browser default actions.
 - **Build Configuration**: Use ESLint warnings instead of errors for development, and ignore TypeScript errors during build for deployment.
@@ -335,8 +332,8 @@ next/src/
 ### Latest Session Improvements (December 2024)
 
 - **BokehBackground Integration**: 
-  - Fixed dark mode visibility issues by removing conflicting ReactFlow `<Background />` component
-  - Added transparent background to ReactFlow with `style={{ background: 'transparent' }}`
+  - Fixed dark mode visibility issues by removing conflicting XYFlow `<Background />` component
+  - Added transparent background to XYFlow with `style={{ background: 'transparent' }}`
   - Improved canvas rendering with proper background handling for light/dark themes
   - Maintained existing particle system and theme-specific styling (light: larger black dots, dark: smaller white dots)
   - Clean integration with XYFlow standards without breaking existing functionality
@@ -397,7 +394,7 @@ next/src/
 
 - **AI & Chat Updates (Today)**:
   - **ChatPanel2 — removed node generation**: Removed node-generation UI and parsing from `next/src/components/ChatPanel2.tsx` so the chat focuses on conversation and feedback. Node generation is handled by the dedicated `AINodeGenerator` and context-menu flows.
-  - **Board-aware chat context**: Chat messages now include the board title/topic and selected/focused node context (from `useBoardStore`) so the assistant can interpret references like "this" or "it" relative to the board and selection.
+  - **Board-aware chat context**: Chat messages now include the board title/topic and selected node context (from `useBoardStore`) so the assistant can interpret references like "this" or "it" relative to the board and selection.
   - **Unedited assistant responses**: We removed client-side sanitization/rewriting of assistant text—responses are shown raw from the AI unless explicitly prefixed with the hidden context wrapper.
   - **Streaming fix**: Fixed streaming handling in `next/src/features/ai/useUnifiedAI2.ts` and `next/src/features/ai/aiService.ts` to avoid duplicated output when providers emit full accumulated content per chunk; deltas are appended and full-content chunks replace the assistant message.
   - **System prompt relaxed**: The AI system prompt was simplified to provide minimal app grounding (nodes/edges/board context) and no editorial length/format restrictions.
@@ -419,10 +416,6 @@ next/src/
   - Fan layout fix: corrected angle step calculation and flipped default orientation downward via `angleCenter = Math.PI / 2`.
   - Spatial analysis prefers real `node.width`/`node.height` over estimates.
   - Drag/drop and placement use XYFlow-native coordinate conversions (`screenToFlowPosition`).
-
-- **Focus Mode & Chat Integration**
-  - Focus toggles on a node include its first-degree neighbors; non-focused nodes are dimmed/blurred.
-  - Focus and selection are reflected in ChatPanel context; added a banner clear (X) to deselect/clear focus quickly.
 
 - **Board Room Enhancements**
   - Pinned Boards: pin icon at `absolute top-2 right-2` toggles pin state; pinned boards sort first.
