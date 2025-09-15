@@ -77,7 +77,7 @@ const Toggle = React.forwardRef<HTMLButtonElement, ToggleProps>(
           />
         </button>
         {(label || description) && (
-          <div className="flex flex-col">
+          <div className="flex flex-col items-start">
             {label && (
               <span className="text-sm font-medium text-gray-900 dark:text-white">
                 {label}

@@ -10,7 +10,7 @@ import Toggle from './ui/Toggle'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useBoardStore } from '../features/board/boardSlice'
 import { Pencil, Robot, Upload, Video } from '@phosphor-icons/react'
-import Image from 'next/image'
+// import Image from 'next/image'
 
 interface AddNodesModalProps {
   open: boolean
@@ -107,7 +107,7 @@ export default function AddNodesModal({
     onManualSubmit({
       titles: effectiveTitles,
       description: showDescription ? description.trim() : undefined,
-      generateDescription: generateDescription && effectiveTitles.length === 1,
+      generateDescription: !!generateDescription,
     })
   }
 
@@ -247,12 +247,14 @@ export default function AddNodesModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-gray-900 dark:text-white">Generate AI Description</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Hide the field and let AI write a short description.</div>
-            </div>
-            <Toggle checked={generateDescription} onChange={(val) => setGenerateDescription(!!val)} disabled={description.trim().length > 0} aria-label="Generate AI Description" />
+          <div className="flex items-start">
+            <Checkbox
+              checked={generateDescription}
+              onChange={(checked) => setGenerateDescription(!!checked)}
+              disabled={description.trim().length > 0}
+              label="Generate AI Description"
+              description="Hide the field and let AI write a short description."
+            />
           </div>
         </div>
       )}

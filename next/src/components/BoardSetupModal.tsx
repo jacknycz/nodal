@@ -9,6 +9,8 @@ import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 import Tag from './ui/Tag'
 import { XCircle } from '@phosphor-icons/react/dist/ssr'
+import Toggle from './ui/Toggle'
+import Checkbox from './ui/Checkbox'
 
 interface BoardSetupModalProps {
   isOpen: boolean
@@ -24,6 +26,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [boardId, setBoardId] = useState<string>('')
   const [starterInput, setStarterInput] = useState('')
   const [starterNodes, setStarterNodes] = useState<string[]>([])
+  const [generateDescriptionsForStarter, setGenerateDescriptionsForStarter] = useState(false)
 
   // Generate a new board ID when modal opens
   React.useEffect(() => {
@@ -36,6 +39,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       setDescription('')
       setStarterInput('')
       setStarterNodes([])
+      setGenerateDescriptionsForStarter(false)
     }
   }, [isOpen])
 
@@ -60,6 +64,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         description: description.trim(),
         startWithAI: true,
         starterNodes,
+        generateDescriptionsForStarter,
       })
     }
   }
@@ -134,7 +139,15 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         </p>
       </div>
 
-      AI GENERATE DESCRIPTION
+      <div className="flex items-start">
+        <Checkbox
+          checked={generateDescriptionsForStarter}
+          onChange={(checked) => setGenerateDescriptionsForStarter(!!checked)}
+          aria-label="Generate AI Description"
+          description="Write short descriptions for starter nodes."
+          label="Generate AI Description"
+        />
+      </div>
     </div>
   )
 

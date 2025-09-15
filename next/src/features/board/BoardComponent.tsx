@@ -436,8 +436,22 @@ function BoardContent({
       })
       // If user provided manual starter nodes, prioritize those and skip AI
       if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
+        // Optionally generate descriptions for each starter node
+        const descriptionsByTitle: Record<string, string> = {}
+        if (brief.generateDescriptionsForStarter) {
+          try {
+            if (aiService) {
+              for (const t of brief.starterNodes) {
+                const prompt = `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
+                const res = await aiService.generate({ prompt, maxTokens: 120 })
+                const d = (res.content || '').trim()
+                if (d) descriptionsByTitle[t] = d
+              }
+            }
+          } catch {}
+        }
         // Use hierarchical GRID under the topic as parent
-        const nodesToPlace = brief.starterNodes.map(title => ({ title, content: '', type: 'default' as const, parentId: topicNodeId }))
+        const nodesToPlace = brief.starterNodes.map(title => ({ title, content: descriptionsByTitle[title] || '', type: 'default' as const, parentId: topicNodeId }))
         try {
           const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
           const viewport = reactFlowInstance.getViewport()

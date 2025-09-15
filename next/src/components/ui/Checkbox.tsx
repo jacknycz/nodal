@@ -150,7 +150,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         </span>
 
         {(label || description || error) && (
-          <span className="flex flex-col justify-center">
+          <span className="flex flex-col items-start">
             {label && (
               <span className={clsx('text-sm font-medium text-gray-900 dark:text-white', labelTextClassName)}>{label}</span>
             )}
