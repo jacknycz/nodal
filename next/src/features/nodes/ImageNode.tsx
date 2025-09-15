@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle } from '@phosphor-icons/react'
 import Image from 'next/image'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -41,6 +41,7 @@ interface ImageNodeProps {
   getNodeLockOwner?: (nodeId: string) => string | undefined
   isNodeLockedByMe?: (nodeId: string) => boolean
   nodeLocks?: any[]
+  onQuickAddNodes?: (nodeId: string) => void
 }
 
 export default function ImageNode({
@@ -54,7 +55,8 @@ export default function ImageNode({
   isNodeLocked,
   getNodeLockOwner,
   isNodeLockedByMe,
-  nodeLocks
+  nodeLocks,
+  onQuickAddNodes
 }: ImageNodeProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -381,6 +383,15 @@ export default function ImageNode({
             disabled={isLocked && !isLockedByMe}
           >
             <DownloadSimple size={14} />
+          </IconButton>
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Add Connected Nodes"
+            onClick={() => onQuickAddNodes?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <PlusCircle size={14} />
           </IconButton>
           <ColorgoryQuickMenu
             nodeId={id}

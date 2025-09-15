@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -44,6 +44,7 @@ interface DocumentNodeProps {
   getNodeLockOwner?: (nodeId: string) => string | undefined
   isNodeLockedByMe?: (nodeId: string) => boolean
   nodeLocks?: any[]
+  onQuickAddNodes?: (nodeId: string) => void
 }
 
 export default function DocumentNode({ 
@@ -57,7 +58,8 @@ export default function DocumentNode({
   isNodeLocked,
   getNodeLockOwner,
   isNodeLockedByMe,
-  nodeLocks
+  nodeLocks,
+  onQuickAddNodes
 }: DocumentNodeProps) {
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
@@ -300,6 +302,15 @@ export default function DocumentNode({
           disabled={isLocked && !isLockedByMe}
         >
           <Download size={14} weight="duotone" />
+        </IconButton>
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Add Connected Nodes"
+          onClick={() => onQuickAddNodes?.(id)}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <PlusCircle size={14} weight="duotone" />
         </IconButton>
         <ColorgoryQuickMenu
           nodeId={id}

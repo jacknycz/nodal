@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash } from '@phosphor-icons/react/ssr'
+import { Trash, PlusCircle } from '@phosphor-icons/react/ssr'
 import { ArrowsOut, ArrowsIn } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
@@ -28,9 +28,10 @@ interface VideoNodeProps {
   // Locking
   isNodeLocked?: (nodeId: string) => boolean
   isNodeLockedByMe?: (nodeId: string) => boolean
+  onQuickAddNodes?: (nodeId: string) => void
 }
 
-export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe }: VideoNodeProps) {
+export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onQuickAddNodes }: VideoNodeProps) {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
 
@@ -164,22 +165,31 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
       {!expanded && (
         <NodeActionDrawer>
-        <ColorgoryQuickMenu
-          nodeId={id}
-          selectedIds={(data as any).colorgoryIds || []}
-          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          disabled={isLocked && !isLockedByMe}
-          onNodeUpdate={onNodeUpdate}
-        />
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete node"
-          onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Trash size={14} />
-        </IconButton>
+          <ColorgoryQuickMenu
+            nodeId={id}
+            selectedIds={(data as any).colorgoryIds || []}
+            onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
+            disabled={isLocked && !isLockedByMe}
+            onNodeUpdate={onNodeUpdate}
+          />
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Add Connected Nodes"
+            onClick={() => onQuickAddNodes?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <PlusCircle size={14} />
+          </IconButton>
+          <IconButton
+            variant="danger"
+            size="sm"
+            aria-label="Delete node"
+            onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Trash size={14} />
+          </IconButton>
         </NodeActionDrawer>
       )}
 

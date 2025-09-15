@@ -257,6 +257,17 @@ export default function NodalNode({
         >
           <Pen size={14} weight="duotone" />
         </IconButton>
+       
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Add Connected Nodes"
+          onClick={() => onQuickAddNodes?.(id)}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <PlusCircle size={14} weight="duotone" />
+        </IconButton>
+
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={data.colorgoryIds || []}
@@ -264,15 +275,7 @@ export default function NodalNode({
           disabled={isLocked && !isLockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Quick AI Generate Nodes"
-          onClick={() => onQuickAddNodes?.(id)}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <PlusCircle size={14} weight="duotone" />
-        </IconButton>
+
         <IconButton
           variant="danger"
           size="sm"
