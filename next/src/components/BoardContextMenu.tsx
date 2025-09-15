@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, CheckCircle } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, CheckCircle, TreeStructure, CheckSquare } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -86,7 +86,7 @@ export default function BoardContextMenu({
             onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
-            <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
+            <TreeStructure size={24} weight="duotone" className="w-4 h-4" />
             Add connected node(s)
           </button>
         )}
@@ -116,7 +116,7 @@ export default function BoardContextMenu({
             onClick={() => handleAction(onAddTaskNode)}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
-            <CheckCircle size={24} weight="duotone" className="w-4 h-4" />
+            <CheckSquare size={24} weight="duotone" className="w-4 h-4" />
             Add task
           </button>
         )}

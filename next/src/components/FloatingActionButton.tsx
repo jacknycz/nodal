@@ -35,7 +35,9 @@ export default function FloatingActionButton({
           <IconButton
             aria-label="Quick Actions"
             size="lg"
-            className="w-14 h-14 bg-gray-800 hover:bg-gray-900 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 group relative"
+            className="w-14 h-14 bg-white/70 border border-gray-200/50 dark:border-none dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-900 text-white rounded-full 
+            shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-gray-950/80 
+            flex items-center justify-center transition-all duration-200 group relative"
           >
             <img src="/nodal.svg" alt="Nodal" className="w-8 h-8" />
             <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
