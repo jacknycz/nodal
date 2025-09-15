@@ -198,6 +198,40 @@ function BoardContent({
   const [aiParentNodeId, setAiParentNodeId] = useState<string | null>(null)
   const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
   
+  // Close LeftDock panels on click-away / Escape / external right-click
+  useEffect(() => {
+    if (!isBoardView) return
+
+    const handleGlobalPointer = (e: MouseEvent | TouchEvent) => {
+      if (!leftDockActive) return
+      const target = e.target as Element | null
+      if (!target) return
+      const insideDock = target.closest?.('[data-left-dock]')
+      const insidePanel = target.closest?.('[data-left-dock-panel]')
+      if (!insideDock && !insidePanel) {
+        setLeftDockActive(null)
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && leftDockActive) {
+        setLeftDockActive(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleGlobalPointer, true)
+    document.addEventListener('touchstart', handleGlobalPointer, true)
+    document.addEventListener('contextmenu', handleGlobalPointer, true)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleGlobalPointer, true)
+      document.removeEventListener('touchstart', handleGlobalPointer, true)
+      document.removeEventListener('contextmenu', handleGlobalPointer, true)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [leftDockActive, isBoardView])
+  
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
