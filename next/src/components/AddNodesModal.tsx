@@ -12,12 +12,16 @@ import { useBoardStore } from '../features/board/boardSlice'
 import { Pencil, Robot, Upload, Video } from '@phosphor-icons/react'
 import Tag from './ui/Tag'
 // import Image from 'next/image'
+import { getOpenAIService } from '../features/ai/aiService'
+import { useAIPlacement } from '../features/board/usePlacement'
+import { useReactFlow, type Node, type Edge } from '@xyflow/react'
 
 interface AddNodesModalProps {
   open: boolean
   onClose: () => void
   parentNodeTitle?: string
   parentNodeContent?: string
+  parentNodeId?: string
   initialAIContext?: { topic?: string; description?: string }
   onManualSubmit: (payload: { titles: string[]; description?: string; generateDescription?: boolean }) => void
   onAIConfirm: (items: { title: string; content?: string }[]) => void
@@ -33,6 +37,7 @@ export default function AddNodesModal({
   onClose,
   parentNodeTitle,
   parentNodeContent,
+  parentNodeId,
   initialAIContext,
   onManualSubmit,
   onAIConfirm,
@@ -55,9 +60,13 @@ export default function AddNodesModal({
   const [generated, setGenerated] = React.useState<PendingPoint[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const nodes = useBoardStore((s) => s.nodes || [])
+  const topic = useBoardStore((s) => s.topic || '')
   const [videoUrl, setVideoUrl] = React.useState('')
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [isDragOver, setIsDragOver] = React.useState(false)
+  const { placeGeneratedNodes } = useAIPlacement()
+  const { setNodes: setFlowNodes, setEdges: setFlowEdges } = useReactFlow()
+  const [quickGenerating, setQuickGenerating] = React.useState(false)
 
   React.useEffect(() => {
     if (open) {
@@ -136,6 +145,45 @@ export default function AddNodesModal({
   const handleCreateSelected = () => {
     const items = generated.filter(g => g.selected).map(g => ({ title: g.title, content: g.content }))
     onAIConfirm(items)
+  }
+
+  const handleQuickGenerate = async () => {
+    const attachParentId = parentNodeId || (useBoardStore.getState().selectedNodeIds?.[0] ?? undefined)
+    if (!attachParentId) return
+    setQuickGenerating(true)
+    try {
+      const ai = getOpenAIService()
+      if (!ai) return
+      const trimmedContent = parentNodeContent ? String(parentNodeContent).slice(0, 4000) : ''
+      const promptParts = [
+        topic && `Board topic: ${topic}`,
+        parentNodeTitle && `Selected node: ${parentNodeTitle}`,
+        trimmedContent && `Context: ${trimmedContent}`,
+        'Generate 4-6 concise related nodes (JSON only): { "nodes": [ { "title": "...", "content": "..." } ] }'
+      ].filter(Boolean)
+      const prompt = promptParts.join('\n\n')
+      const sys = 'You generate contextually relevant child ideas. Return strict JSON only.'
+      const res = await ai.generate({ prompt, systemPrompt: sys, temperature: 0.8 })
+      const raw = (res.content || '').trim()
+      const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
+      let parsed: any = null
+      try { parsed = JSON.parse(fenced ? fenced[1] : raw) } catch {}
+      const items = Array.isArray(parsed?.nodes) ? parsed.nodes : []
+      if (items.length === 0) return
+      const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
+      const result = await placeGeneratedNodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 } as any)
+      if (result && result.success && result.placements.length > 0) {
+        const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: (p.node as any).type || 'default', position: p.position, data: { ...(p.node as any).data } }))
+        setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+        if (result.connections && result.connections.length > 0) {
+          const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id, target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id, type: (c.edge as any).type || 'floating' }))
+          setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+        }
+        onClose()
+      }
+    } finally {
+      setQuickGenerating(false)
+    }
   }
 
   return (
@@ -278,6 +326,7 @@ export default function AddNodesModal({
             description="This is the name of your node and how it appears on the board." 
           />
           <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={handleQuickGenerate} loading={quickGenerating} disabled={prompt.trim().length > 0 || quickGenerating}>Quick AI Generate</Button>
             <Button onClick={handleGenerate} loading={isLoading} disabled={!prompt.trim() || isLoading}>Generate</Button>
           </div>
 
