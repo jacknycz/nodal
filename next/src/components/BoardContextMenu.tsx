@@ -24,13 +24,6 @@ export default function BoardContextMenu({
   onAddConnectedNodes,
   onAddTaskNode,
 }: BoardContextMenuProps) {
-  if (!isOpen || !position) return null
-
-  const handleAction = (action: () => void) => {
-    action()
-    onClose()
-  }
-
   const menuRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
@@ -66,6 +59,13 @@ export default function BoardContextMenu({
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isOpen, onClose])
+
+  if (!isOpen || !position) return null
+
+  const handleAction = (action: () => void) => {
+    action()
+    onClose()
+  }
 
   return (
     <>
