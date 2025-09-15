@@ -1395,6 +1395,55 @@ function BoardContent({
           handleOpenAINodeGenerator()
           setContextMenu({ isOpen: false, position: null })
         }}
+        onQuickAIGenerateNodes={async (nodeId?: string | null) => {
+          try {
+            const store = useBoardStore.getState()
+            const nodesList = store.nodes || []
+            const edgesList = store.edges || []
+            const topic = store.topic || pendingBoardBrief?.boardTopic || ''
+            const parentOf: Record<string, string> = {}
+            edgesList.forEach((e: any) => {
+              const s = e?.source; const t = e?.target
+              if (typeof s === 'string' && typeof t === 'string' && !parentOf[t]) parentOf[t] = s
+            })
+            const selectedId = nodeId || (store.selectedNodeIds?.[0] ?? null)
+            const selectedNode = nodesList.find(n => n.id === selectedId)
+            // Attach generated nodes to the selected node itself (not its parent)
+            const attachParentId = selectedNode ? selectedNode.id : undefined
+            const contextTitle = selectedNode?.data?.title || ''
+            const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
+
+            const ai = getOpenAIService()
+            if (!ai) return
+            const promptParts = [
+              topic && `Board topic: ${topic}`,
+              contextTitle && `Selected node: ${contextTitle}`,
+              contextContent && `Context: ${contextContent}`,
+              'Generate 4-6 concise related nodes (JSON only): { "nodes": [ { "title": "...", "content": "..." } ] }'
+            ].filter(Boolean)
+            const prompt = promptParts.join('\n\n')
+            const sys = 'You generate contextually relevant child ideas. Return strict JSON only.'
+            const res = await ai.generate({ prompt, systemPrompt: sys, temperature: 0.8 })
+            const raw = (res.content || '').trim()
+            const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
+            let parsed: any = null
+            try {
+              parsed = JSON.parse(fenced ? fenced[1] : raw)
+            } catch {}
+            const items = Array.isArray(parsed?.nodes) ? parsed.nodes : []
+            if (items.length === 0) return
+            const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
+            const result = await placeAINodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 })
+            if (result.success && result.placements.length > 0) {
+              const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+              if (result.connections.length > 0) {
+                const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
+                setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+              }
+            }
+          } catch {}
+        }}
       />
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}

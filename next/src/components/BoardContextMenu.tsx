@@ -12,6 +12,7 @@ interface BoardContextMenuProps {
   nodeId?: string | null
   onAddConnectedNodes?: (nodeId: string, position: { x: number; y: number }) => void
   onAddTaskNode?: () => void
+  onQuickAIGenerateNodes?: (nodeId?: string | null) => void
 }
 
 export default function BoardContextMenu({
@@ -23,6 +24,7 @@ export default function BoardContextMenu({
   nodeId,
   onAddConnectedNodes,
   onAddTaskNode,
+  onQuickAIGenerateNodes,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -86,6 +88,16 @@ export default function BoardContextMenu({
           >
             <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
             Add connected node(s)
+          </button>
+        )}
+
+        {nodeId && onQuickAIGenerateNodes && (
+          <button
+            onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
+            className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          >
+            <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
+            Quick AI Generate Nodes
           </button>
         )}
 
