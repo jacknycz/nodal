@@ -133,6 +133,8 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           Add any starting ideas. These will be created as nodes on your new board.
         </p>
       </div>
+
+      AI GENERATE DESCRIPTION
     </div>
   )
 
