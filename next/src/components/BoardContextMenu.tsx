@@ -31,13 +31,44 @@ export default function BoardContextMenu({
     onClose()
   }
 
+  const menuRef = React.useRef<HTMLDivElement | null>(null)
+
+  React.useEffect(() => {
+    if (!isOpen) return
+
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+
+    const handleContextMenu = (e: MouseEvent) => {
+      if (!menuRef.current) return
+      if (!menuRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+
+    document.addEventListener('mousedown', handleMouseDown, true)
+    document.addEventListener('contextmenu', handleContextMenu, true)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown, true)
+      document.removeEventListener('contextmenu', handleContextMenu, true)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, onClose])
+
   return (
     <>
-      {/* Backdrop to close menu when clicking outside */}
-      <div
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      />
       
       {/* Context menu */}
       <div
@@ -46,6 +77,7 @@ export default function BoardContextMenu({
           left: position.x,
           top: position.y,
         }}
+        ref={menuRef}
       >
         {nodeId && onAddConnectedNodes && (
           <button
