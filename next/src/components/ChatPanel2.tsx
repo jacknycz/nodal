@@ -5,7 +5,7 @@ import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import { useBoardStore } from '../features/board/boardSlice'
-import { X, Chat, Spinner, Key, Target, PaperPlaneTilt, Resize } from '@phosphor-icons/react'
+import { X, Chat, Spinner, Key, Target, PaperPlaneTilt, Resize, XCircle } from '@phosphor-icons/react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 // Node generation UI and placement imports removed
@@ -206,7 +206,7 @@ export default function ChatPanel2() {
 
           {/* AI Status */}
           <div className="flex items-center space-x-4">
-            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <button onClick={() => setIsOpen(false)} className="cursor-pointer text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-300">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -266,9 +266,9 @@ export default function ChatPanel2() {
               </div>
               <button
                 onClick={() => { clearSelectedNodes() }}
-                className="text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
+                className="cursor-pointer text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-200"
               >
-                <X className="w-3 h-3" />
+                <XCircle className="w-3 h-3" />
               </button>
             </div>
           </div>
