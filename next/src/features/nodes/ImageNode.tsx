@@ -58,6 +58,7 @@ export default function ImageNode({
   nodeLocks,
   onQuickAddNodes
 }: ImageNodeProps) {
+  const SHOW_ADD_CONNECTED = false
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -384,15 +385,17 @@ export default function ImageNode({
           >
             <DownloadSimple size={14} />
           </IconButton>
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Add Connected Nodes"
-            onClick={() => onQuickAddNodes?.(id)}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <PlusCircle size={14} />
-          </IconButton>
+          {SHOW_ADD_CONNECTED && (
+            <IconButton
+              variant="default"
+              size="sm"
+              aria-label="Add Connected Nodes"
+              onClick={() => onQuickAddNodes?.(id)}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <PlusCircle size={14} />
+            </IconButton>
+          )}
           <ColorgoryQuickMenu
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}

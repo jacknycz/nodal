@@ -61,6 +61,7 @@ export default function DocumentNode({
   nodeLocks,
   onQuickAddNodes
 }: DocumentNodeProps) {
+  const SHOW_ADD_CONNECTED = false
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -303,15 +304,17 @@ export default function DocumentNode({
         >
           <Download size={14} weight="duotone" />
         </IconButton>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Add Connected Nodes"
-          onClick={() => onQuickAddNodes?.(id)}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <PlusCircle size={14} weight="duotone" />
-        </IconButton>
+        {SHOW_ADD_CONNECTED && (
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Add Connected Nodes"
+            onClick={() => onQuickAddNodes?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <PlusCircle size={14} weight="duotone" />
+          </IconButton>
+        )}
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={data.colorgoryIds || []}

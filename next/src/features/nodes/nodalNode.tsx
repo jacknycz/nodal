@@ -56,6 +56,7 @@ export default function NodalNode({
   onNodeShiftClickConnect,
   onQuickAddNodes
 }: NodalNodeProps) {
+  const SHOW_ADD_CONNECTED = false
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const justOpenedRef = useRef(false)
@@ -258,15 +259,17 @@ export default function NodalNode({
           <Pen size={14} weight="duotone" />
         </IconButton>
        
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Add Connected Nodes"
-          onClick={() => onQuickAddNodes?.(id)}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <PlusCircle size={14} weight="duotone" />
-        </IconButton>
+        {SHOW_ADD_CONNECTED && (
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Add Connected Nodes"
+            onClick={() => onQuickAddNodes?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <PlusCircle size={14} weight="duotone" />
+          </IconButton>
+        )}
 
         <ColorgoryQuickMenu
           nodeId={id}

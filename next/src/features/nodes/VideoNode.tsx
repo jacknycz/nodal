@@ -172,15 +172,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             disabled={isLocked && !isLockedByMe}
             onNodeUpdate={onNodeUpdate}
           />
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Add Connected Nodes"
-            onClick={() => onQuickAddNodes?.(id)}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <PlusCircle size={14} />
-          </IconButton>
+        {/* Hidden for now */}
           <IconButton
             variant="danger"
             size="sm"

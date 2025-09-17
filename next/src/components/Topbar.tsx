@@ -233,13 +233,14 @@ export default function Topbar({
           {/* Center - Board Info (truly centered) */}
           <div className="flex-1 min-w-0 flex justify-start sm:justify-center">
             {isBoardView && currentBoardName && (
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-full">
+              <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
                 <div className="flex-col">
                   <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
+
+                    <span className="font-semibold text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
                   </div>
                   <div className="sm:hidden min-w-0 w-full text-left">
-                    <span className="font-medium text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
                   </div>
 
                   {/* Save Status */}
