@@ -482,6 +482,149 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         </div>
       </div>
 
+      {/* HTML Node Examples for marketing site (copy/paste ready) */}
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-12">
+        <h2 className="text-2xl md:text-3xl font-fredoka font-medium text-gray-900 dark:text-white mb-2">HTML node examples</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Copy/paste these into the informational site. Tailwind classes included; swap content as needed.</p>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Default (Nodal) Node */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Default Node (title + rich text)</div>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">How to tame your inner raccoon</h3>
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-200 mb-2">
+                  Raccoons are just night pandas with more opinions. Start small: close tabs. Hydrate. Wear softer pants.
+                </div>
+              </div>
+            </div>
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+  <div class="flex items-center gap-2 mb-1">
+    <h3 class="text-sm font-medium text-gray-900 dark:text-white">How to tame your inner raccoon</h3>
+  </div>
+  <div class="text-xs text-gray-600 dark:text-gray-200 mb-2">
+    Raccoons are just night pandas with more opinions. Start small: close tabs. Hydrate. Wear softer pants.
+  </div>
+</div>`}</code></pre>
+          </div>
+
+          {/* Image Node */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Image Node</div>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+                <div className="relative w-full">
+                  <img src="/nodal.png" alt="Nodal" className="w-full h-[160px] rounded-md object-cover" />
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">brand_magic.png</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">420 KB • image/png</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+  <div class="relative w-full">
+    <img src="/nodal.png" alt="Nodal" class="w-full h-[160px] rounded-md object-cover" />
+  </div>
+  <div class="mt-2 flex items-center gap-2">
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-medium text-gray-900 dark:text-white truncate">brand_magic.png</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 truncate">420 KB • image/png</div>
+    </div>
+  </div>
+</div>`}</code></pre>
+          </div>
+
+          {/* Document Node (PDF) */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Document Node (PDF)</div>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px]">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-11 h-11 flex items-center justify-center text-red-600">📄</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">Jurassic Hiring Packet.pdf</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">1.8 MB • application/pdf</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mb-2">
+                  <span className="inline-flex w-3 h-3 rounded-full bg-green-500" aria-hidden></span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Ready</span>
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded p-2">
+                  Extracted Text: “Welcome to the Cretaceous. Benefits include ferns, sun lamps, and not being eaten.”
+                </div>
+              </div>
+            </div>
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px]">
+  <div class="flex items-center gap-3 mb-2">
+    <div class="w-11 h-11 flex items-center justify-center text-red-600">📄</div>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-semibold text-gray-900 dark:text-white truncate">Jurassic Hiring Packet.pdf</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">1.8 MB • application/pdf</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-1 mb-2">
+    <span class="inline-flex w-3 h-3 rounded-full bg-green-500"></span>
+    <span class="text-xs text-gray-600 dark:text-gray-400">Ready</span>
+  </div>
+  <div class="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded p-2">
+    Extracted Text: “Welcome to the Cretaceous. Benefits include ferns, sun lamps, and not being eaten.”
+  </div>
+</div>`}</code></pre>
+          </div>
+
+          {/* Task Node */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Task Node</div>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px]">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900" aria-hidden></span>
+                  <input className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500" placeholder="Pitch rocket raccoon self‑care plan" />
+                </div>
+              </div>
+            </div>
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px]">
+  <div class="flex items-center gap-2">
+    <span class="inline-flex w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900"></span>
+    <input class="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500" placeholder="Pitch rocket raccoon self‑care plan" />
+  </div>
+</div>`}</code></pre>
+          </div>
+
+          {/* Video Node */}
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Video Node</div>
+            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+                <div className="relative w-full">
+                  <div className="w-full h-[160px] rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">Video thumbnail</div>
+                </div>
+                <div className="mt-2">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white truncate">How to not get eaten on demo day</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">https://youtu.be/please‑dont‑run</div>
+                </div>
+              </div>
+            </div>
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+  <div class="relative w-full">
+    <div class="w-full h-[160px] rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">Video thumbnail</div>
+  </div>
+  <div class="mt-2">
+    <div class="text-sm font-medium text-gray-900 dark:text-white truncate">How to not get eaten on demo day</div>
+    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">https://youtu.be/please‑dont‑run</div>
+  </div>
+</div>`}</code></pre>
+          </div>
+        </div>
+      </div>
+
       
 
       {/* Sophisticated board setup modal */}
