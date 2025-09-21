@@ -53,7 +53,7 @@ export default function BoardsTab({
                 // icon={<PlusIcon weight="duotone" className="w-4 h-4" />}
                 variant="primary"
                 onClick={() => onOpenBoard(null)}
-                className="hidden md:block flex-none"
+                className="block md:hidden flex-none"
               >
                 new board
               </Button>
