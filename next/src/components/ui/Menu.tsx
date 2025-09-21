@@ -92,7 +92,14 @@ export default function Menu({
       onBlur={handleBlur}
     >
       {/* Trigger */}
-      <div className={`relative flex cursor-pointer ${triggerClassName}`}>
+      <div
+        className={`relative flex cursor-pointer ${triggerClassName}`}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setIsOpen((v) => !v)
+        }}
+      >
         {trigger}
         {showNotification && (
           <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
@@ -104,7 +111,7 @@ export default function Menu({
         onMouseEnter={() => { cancelClose(); setIsOpen(true) }}
         onMouseLeave={() => closeMenuWithDelay(150)}
         className={`
-          ${fixedCenterAbove ? 'fixed left-1/2 bottom-20 transform -translate-x-1/2 z-50' : 'absolute z-50'} ${width || 'w-56'} rounded-2xl overflow-hidden 
+          ${fixedCenterAbove ? 'fixed left-1/2 bottom-20 transform -translate-x-1/2 z-[350]' : 'absolute z-[350]'} ${width || 'w-56'} rounded-2xl overflow-hidden 
           bg-[linear-gradient(165deg,rgba(241,245,249,1)_0%,rgba(255,255,255,1)_20%,rgba(255,255,255,1)_80%,rgba(241,245,249,1)_100%)]
           dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-950
           shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none
@@ -129,6 +136,12 @@ export default function Menu({
                 <button
                   key={index}
                   onClick={() => {
+                    item.onClick?.()
+                    setIsOpen(false)
+                  }}
+                  onMouseDown={(e) => {
+                    // Fire action early to avoid losing click due to focus/blur
+                    e.preventDefault()
                     item.onClick?.()
                     setIsOpen(false)
                   }}

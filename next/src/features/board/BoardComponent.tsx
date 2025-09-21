@@ -1279,8 +1279,20 @@ function BoardContent({
       {isBoardView && (
         <FloatingActionButton
           onAddNode={() => {
-            // Use unified modal directly
-            setShowUnifiedAddModal(true)
+            try {
+              // Ensure we're adding from a clean state like the context menu's blank add
+              setPendingSourceNodeId(null)
+              try {
+                const center = getViewportCenter()
+                setPendingNodePosition(center)
+              } catch {
+                setPendingNodePosition(null)
+              }
+              // Defer opening to avoid any event ordering conflicts with the menu
+              setTimeout(() => setShowUnifiedAddModal(true), 0)
+            } catch {
+              setShowUnifiedAddModal(true)
+            }
           }}
           onAIGenerate={() => setShowUnifiedAddModal(true)}
           onUploadDocument={() => {
