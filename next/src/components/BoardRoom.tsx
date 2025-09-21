@@ -311,18 +311,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       </div>
 
       {/* Sticky Welcome Section */}
-      <div className="sticky top-12 z-10 pb-8">
-        <div className="w-full mx-auto py-10 px-4 sm:px-6 lg:px-8">
+      <div className="sticky top-12 z-10">
+        <div className="w-full mx-auto py-8 md:pt-8 pb-2 px-4 sm:px-6 lg:px-8">
           {/* Welcome + Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-1 rounded-xl">
               <h1 id="welcome-heading" className="mb-4 text-2xl md:text-3xl xl:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
                 <span className="font-normal">welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
               </h1>
-              <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">Pick up where you left off or create something new.</p>
+              {/* <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">Pick up where you left off or create something new.</p> */}
             </div>
 
-            <div className="grid grid-cols-3 mt-4 md:mt-0 gap-2 md:gap-3">
+            {/* <div className="grid grid-cols-3 mt-4 md:mt-0 gap-2 md:gap-3">
               <div className="relative rounded-xl px-2 lg:px-4 py-2 lg:py-4 bg-white/80 dark:bg-gray-900/60 border border-primary-500/80 dark:border-primary-700/80">
                 <div className="flex absolute bottom-2 lg:bottom-4 right-2 lg:right-4 w-8 h-8 lg:w-10 lg:h-10 items-center text-primary-500/80">
                   <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-12 h-12" aria-hidden="true">
@@ -353,7 +353,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                   {boards.reduce((total, board) => total + (board.edgeCount || 0), 0)}
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -425,7 +425,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         </Tabs>
         
         {/* SIDEBAR */}
-        <div className="w-96 -mt-8 min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-1 self-start z-30">
+        <div className="w-full md:w-96 mt-8 md:-mt-16 min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-1 self-start z-30">
           <div className="flex flex-none justify-end">
             <Button
               onClick={handleNewBoardClick}
@@ -481,171 +481,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           </div>
         </div>
       </div>
-
-      {/* HTML Node Examples for marketing site (copy/paste ready) */}
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-12">
-        <h2 className="text-2xl md:text-3xl font-fredoka font-medium text-gray-900 dark:text-white mb-2">HTML node examples</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Copy/paste these into the informational site. Tailwind classes included; swap content as needed.</p>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Default (Nodal) Node */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Default Node (title + rich text)</div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">How to tame your inner raccoon</h3>
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-200 mb-2">
-                  Raccoons are just night pandas with more opinions. Start small: close tabs. Hydrate. Wear softer pants.
-                </div>
-              </div>
-            </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
-  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
-  <div class="flex items-center gap-2 mb-1">
-    <h3 class="text-sm font-medium text-gray-900 dark:text-white">How to tame your inner raccoon</h3>
-  </div>
-  <div class="text-xs text-gray-600 dark:text-gray-200 mb-2">
-    Raccoons are just night pandas with more opinions. Start small: close tabs. Hydrate. Wear softer pants.
-  </div>
-</div>`}</code></pre>
-          </div>
-
-          {/* Image Node */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Image Node</div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="relative w-full">
-                  <img src="/nodal.png" alt="Nodal" className="w-full h-[160px] rounded-md object-cover" />
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">brand_magic.png</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">420 KB • image/png</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
-  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
-  <div class="relative w-full">
-    <img src="/nodal.png" alt="Nodal" class="w-full h-[160px] rounded-md object-cover" />
-  </div>
-  <div class="mt-2 flex items-center gap-2">
-    <div class="flex-1 min-w-0">
-      <div class="text-sm font-medium text-gray-900 dark:text-white truncate">brand_magic.png</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 truncate">420 KB • image/png</div>
-    </div>
-  </div>
-</div>`}</code></pre>
-          </div>
-
-          {/* Document Node (PDF) */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Document Node (PDF)</div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-11 h-11 flex items-center justify-center text-red-600">📄</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">Jurassic Hiring Packet.pdf</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">1.8 MB • application/pdf</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 mb-2">
-                  <span className="inline-flex w-3 h-3 rounded-full bg-green-500" aria-hidden></span>
-                  <span className="text-xs text-gray-600 dark:text-gray-400">Ready</span>
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded p-2">
-                  Extracted Text: “Welcome to the Cretaceous. Benefits include ferns, sun lamps, and not being eaten.”
-                </div>
-              </div>
-            </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
-  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
-  <div class="flex items-center gap-3 mb-2">
-    <div class="w-11 h-11 flex items-center justify-center text-red-600">📄</div>
-    <div class="flex-1 min-w-0">
-      <div class="text-sm font-semibold text-gray-900 dark:text-white truncate">Jurassic Hiring Packet.pdf</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400">1.8 MB • application/pdf</div>
-    </div>
-  </div>
-  <div class="flex items-center gap-1 mb-2">
-    <span class="inline-flex w-3 h-3 rounded-full bg-green-500"></span>
-    <span class="text-xs text-gray-600 dark:text-gray-400">Ready</span>
-  </div>
-  <div class="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded p-2">
-    Extracted Text: “Welcome to the Cretaceous. Benefits include ferns, sun lamps, and not being eaten.”
-  </div>
-</div>`}</code></pre>
-          </div>
-
-          {/* Task Node */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Task Node</div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900" aria-hidden></span>
-                  <input className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500" placeholder="Pitch rocket raccoon self‑care plan" />
-                </div>
-              </div>
-            </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
-  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
-  <div class="flex items-center gap-2">
-    <span class="inline-flex w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900"></span>
-    <input class="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500" placeholder="Pitch rocket raccoon self‑care plan" />
-  </div>
-</div>`}</code></pre>
-          </div>
-
-          {/* Video Node */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Video Node</div>
-            <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-                <div className="relative w-full">
-                  <div className="w-full h-[160px] rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">Video thumbnail</div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white truncate">How to not get eaten on demo day</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">https://youtu.be/please‑dont‑run</div>
-                </div>
-              </div>
-            </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
-  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
-  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
-  <div class="relative w-full">
-    <div class="w-full h-[160px] rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">Video thumbnail</div>
-  </div>
-  <div class="mt-2">
-    <div class="text-sm font-medium text-gray-900 dark:text-white truncate">How to not get eaten on demo day</div>
-    <div class="text-xs text-gray-500 dark:text-gray-400 truncate">https://youtu.be/please‑dont‑run</div>
-  </div>
-</div>`}</code></pre>
-          </div>
-        </div>
-      </div>
-
-      
 
       {/* Sophisticated board setup modal */}
       <BoardSetupModal

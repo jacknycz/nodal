@@ -39,6 +39,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     loading = false,
     disabled = false,
     fullWidth = false,
+    icon,
     className = '',
     ...props
   }, ref) => {
@@ -62,6 +63,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
         )}
+        {icon && <span className="mr-2">{icon}</span>}
         {children}
       </button>
     )

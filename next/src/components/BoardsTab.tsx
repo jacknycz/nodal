@@ -5,6 +5,8 @@ import React from 'react'
 import Checkbox from './ui/Checkbox'
 import Loader from './ui/Loader'
 import BoardCard from './BoardCard'
+import Button from './ui/Button'
+import { PlusIcon } from '@phosphor-icons/react'
 
 interface BoardsTabProps {
   searchQuery: string
@@ -45,8 +47,17 @@ export default function BoardsTab({
         </div>
       ) : (
         <>
-          <div className="flex justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
-            <div className="flex justify-center w-full max-w-xl">
+          <div className="flex flex-col justify-between items-center gap-4 md:gap-6 xl:gap-8 mb-8">
+            <div className="flex justify-center w-full max-w-xl gap-4">
+              <Button
+                // icon={<PlusIcon weight="duotone" className="w-4 h-4" />}
+                variant="primary"
+                onClick={() => onOpenBoard(null)}
+                className="hidden md:block flex-none"
+              >
+                new board
+              </Button>
+
               <Search
                 placeholder="search boards..."
                 value={searchQuery}
@@ -69,29 +80,29 @@ export default function BoardsTab({
           {error && (
             <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
           )}
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-          {sortedBoards.length === 0 ? (
-            <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-              No boards found. Create a new board to get started!
-            </div>
-          ) : (
-            (sortedBoards).map((board: any) => (
-              <BoardCard
-                key={board.id}
-                id={board.id}
-                name={board.name}
-                lastModified={board.lastModified}
-                nodeCount={board.nodeCount}
-                edgeCount={board.edgeCount}
-                onLoad={() => onOpenBoard(board)}
-                onRename={newName => onRename(board.id, newName)}
-                onDelete={() => onDelete(board.id)}
-                isPinned={pinnedBoardIds.includes(board.id)}
-                onTogglePin={() => togglePin(board.id)}
-              />
-            ))
-          )}
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+            {sortedBoards.length === 0 ? (
+              <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
+                No boards found. Create a new board to get started!
+              </div>
+            ) : (
+              (sortedBoards).map((board: any) => (
+                <BoardCard
+                  key={board.id}
+                  id={board.id}
+                  name={board.name}
+                  lastModified={board.lastModified}
+                  nodeCount={board.nodeCount}
+                  edgeCount={board.edgeCount}
+                  onLoad={() => onOpenBoard(board)}
+                  onRename={newName => onRename(board.id, newName)}
+                  onDelete={() => onDelete(board.id)}
+                  isPinned={pinnedBoardIds.includes(board.id)}
+                  onTogglePin={() => togglePin(board.id)}
+                />
+              ))
+            )}
+          </div>
         </>
       )}
     </div>
