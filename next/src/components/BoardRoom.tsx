@@ -492,7 +492,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Default Node (title + rich text)</div>
             <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
+                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-sm font-medium text-gray-900 dark:text-white">How to tame your inner raccoon</h3>
                 </div>
@@ -501,7 +503,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                 </div>
               </div>
             </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
+  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
   <div class="flex items-center gap-2 mb-1">
     <h3 class="text-sm font-medium text-gray-900 dark:text-white">How to tame your inner raccoon</h3>
   </div>
@@ -515,7 +519,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Image Node</div>
             <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
+                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
                 <div className="relative w-full">
                   <img src="/nodal.png" alt="Nodal" className="w-full h-[160px] rounded-md object-cover" />
                 </div>
@@ -527,7 +533,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                 </div>
               </div>
             </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
+  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
   <div class="relative w-full">
     <img src="/nodal.png" alt="Nodal" class="w-full h-[160px] rounded-md object-cover" />
   </div>
@@ -544,7 +552,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Document Node (PDF)</div>
             <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px]">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
+                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-11 h-11 flex items-center justify-center text-red-600">📄</div>
                   <div className="flex-1 min-w-0">
@@ -561,7 +571,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                 </div>
               </div>
             </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px]">
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[320px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
+  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
   <div class="flex items-center gap-3 mb-2">
     <div class="w-11 h-11 flex items-center justify-center text-red-600">📄</div>
     <div class="flex-1 min-w-0">
@@ -583,14 +595,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Task Node</div>
             <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px]">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
+                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
                 <div className="flex items-center gap-2">
                   <span className="inline-flex w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900" aria-hidden></span>
                   <input className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500" placeholder="Pitch rocket raccoon self‑care plan" />
                 </div>
               </div>
             </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px]">
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[360px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
+  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
   <div class="flex items-center gap-2">
     <span class="inline-flex w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900"></span>
     <input class="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500" placeholder="Pitch rocket raccoon self‑care plan" />
@@ -602,7 +618,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Video Node</div>
             <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800">
-              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+              <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+                <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
+                <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
                 <div className="relative w-full">
                   <div className="w-full h-[160px] rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">Video thumbnail</div>
                 </div>
@@ -612,7 +630,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                 </div>
               </div>
             </div>
-            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px]">
+            <pre className="text-xs whitespace-pre-wrap bg-gray-950/90 text-gray-100 p-3 rounded-lg overflow-auto"><code>{`<div class="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
+  <div class="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2"></div>
+  <div class="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2"></div>
   <div class="relative w-full">
     <div class="w-full h-[160px] rounded-md bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500">Video thumbnail</div>
   </div>

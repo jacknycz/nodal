@@ -16,8 +16,19 @@ export function getUserRoleFromMetadata(user: User | null | undefined): UserRole
   return 'User'
 }
 
+// Allow both role-based and email-allowlist admin detection
+const DEFAULT_ADMIN_EMAILS = ['jack.nycz@gmail.com']
+const ENV_ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '')
+  .split(',')
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean)
+const ADMIN_EMAIL_SET = new Set<string>([...DEFAULT_ADMIN_EMAILS, ...ENV_ADMIN_EMAILS].map(e => e.toLowerCase()))
+
 export function isAdmin(user: User | null | undefined): boolean {
-  return getUserRoleFromMetadata(user) === 'Admin'
+  if (!user) return false
+  if (getUserRoleFromMetadata(user) === 'Admin') return true
+  const email = (user.email || '').toLowerCase()
+  return ADMIN_EMAIL_SET.has(email)
 }
 
 export function useUserRole(): { role: UserRole; isAdmin: boolean; user: User | null } {
