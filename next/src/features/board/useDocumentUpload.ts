@@ -1,4 +1,6 @@
 import { useCallback } from 'react'
+import { getOpenAIService } from '../ai/aiService'
+import { useBoardStore } from './boardSlice'
 
 interface BoardStorageLike {
   saveDocument: (name: string, file: File, extracted: string, boardId: string, nodeId: string) => Promise<string>
@@ -68,7 +70,7 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
 
           if (extractedText && extractedText.length > 0) {
             try { await supabaseStorage.updateDocumentExtractedText(documentId, extractedText) } catch {}
-            setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, status: 'ready' } } : n))
+            setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
             console.log('[Upload] extraction complete', { nodeId, length: extractedText.length })
           } else {
             setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
@@ -79,8 +81,29 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
           console.warn('[Upload] extraction failed', error)
         }
       } else {
-        setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
-        console.log('[Upload] not extractable, marked ready', { nodeId })
+        // Non-text (likely image): attempt AI captioning using vision if available
+        try {
+          const ai = getOpenAIService()
+          const topic = (useBoardStore.getState().topic || '').trim()
+          if (ai && signedUrl) {
+            const prompt = topic
+              ? `Provide a concise, helpful 1-2 sentence description of this image in the context of the board topic "${topic}". Avoid guessing the person's identity.`
+              : `Provide a concise, helpful 1-2 sentence description of this image. Avoid guessing the person's identity.`
+            const res = await ai.generate({ prompt, maxTokens: 120, model: 'gpt-4o-mini', imageUrl: signedUrl })
+            const caption = (res.content || '').trim()
+            if (caption) {
+              setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, content: caption, status: 'ready' } } : n))
+              console.log('[Upload] vision caption ready', { nodeId })
+            } else {
+              setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+            }
+          } else {
+            setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+          }
+        } catch (err) {
+          console.warn('[Upload] AI caption failed; marking ready', err)
+          setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+        }
       }
     } catch (error) {
       // Update optimistic node to error state

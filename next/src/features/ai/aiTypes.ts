@@ -32,6 +32,7 @@ export interface AIRequest {
   model?: OpenAIModel
   stream?: boolean
   context?: AIContext
+  imageUrl?: string
 }
 
 export interface AIResponse {

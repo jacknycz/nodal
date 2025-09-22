@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil } from '@phosphor-icons/react'
 import Image from 'next/image'
 import Modal from '../../components/ui/Modal'
+import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
@@ -14,6 +15,7 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+import TextArea from '../../components/ui/TextArea'
 
 interface ImageNodeData {
   label: string
@@ -27,6 +29,7 @@ interface ImageNodeData {
   documentId?: string
   uploadedAt?: number
   colorgoryIds?: string[]
+  content?: string
 }
 
 interface ImageNodeProps {
@@ -59,6 +62,7 @@ export default function ImageNode({
   onQuickAddNodes
 }: ImageNodeProps) {
   const SHOW_ADD_CONNECTED = false
+  const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -359,6 +363,12 @@ export default function ImageNode({
               </div>
             </div>
 
+            {data.content && (
+              <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                {data.content.length > 200 ? `${data.content.slice(0, 200)}…` : data.content}
+              </div>
+            )}
+
             {data.status && (
               <div className={`mt-2 flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
                 {getStatusIcon()}
@@ -378,6 +388,15 @@ export default function ImageNode({
       {/* Slide-out action panel on hover (hidden when expanded) */}
       {!expanded && (
         <NodeActionDrawer open={drawerOpen}>
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Edit image"
+            onClick={() => setShowEditModal(true)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Pencil size={14} />
+          </IconButton>
           <IconButton
             variant="default"
             size="sm"
@@ -416,6 +435,47 @@ export default function ImageNode({
           </IconButton>
         </NodeActionDrawer>
       )}
+
+      {/* Edit Modal */}
+      <Modal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Image"
+        description="Update the image title and description."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              const titleInput = (document.getElementById(`image-edit-title-${id}`) as HTMLInputElement | null)
+              const descInput = (document.getElementById(`image-edit-desc-${id}`) as HTMLTextAreaElement | null)
+              const nextTitle = titleInput?.value?.trim() || data.fileName || data.title || 'Image'
+              const nextContent = descInput?.value?.trim() || ''
+              onNodeUpdate?.(id, { title: nextTitle, content: nextContent })
+              setShowEditModal(false)
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <TextInput
+            id={`image-edit-title-${id}`}
+            type="text"
+            defaultValue={data.title || data.fileName || ''}
+            label="Title"
+            fullWidth
+          />
+          <div>
+            <TextArea
+              id={`image-edit-desc-${id}`}
+              defaultValue={data.content || ''}
+              className="w-full min-h-[100px] rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-400"
+              placeholder="Add a short description..."
+              label="Description"
+              fullWidth
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal

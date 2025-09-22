@@ -395,12 +395,22 @@ export class OpenAIService {
     model: OpenAIModel,
     signal: AbortSignal
   ): Promise<AIResponse> {
-    const { prompt, systemPrompt, temperature, maxTokens } = request
+    const { prompt, systemPrompt, temperature, maxTokens, imageUrl } = request
 
-    const messages = [
-      ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
-      { role: 'user' as const, content: prompt }
+    const messages: any[] = [
+      ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : [])
     ]
+    if (imageUrl && MODEL_INFO[model].capabilities.vision) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      })
+    } else {
+      messages.push({ role: 'user' as const, content: prompt })
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || 'https://api.openai.com/v1'
     const response = await fetch(`${baseUrl}/chat/completions`, {
