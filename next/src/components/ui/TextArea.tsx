@@ -100,7 +100,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
               onBlur={() => setIsFocused(false)}
               className={clsx(
                 'peer w-full bg-transparent border-none outline-none resize-none pl-5',
-                'text-gray-900 dark:text-white placeholder-transparent',
+                'text-gray-900 dark:text-white text-base! md:text-sm! placeholder-transparent',
                 leftIcon && 'pl-9',
                 rightIcon && 'pr-9',
                 sizeClasses[size],

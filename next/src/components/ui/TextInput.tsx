@@ -96,7 +96,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
               onBlur={() => setIsFocused(false)}
               placeholder={label ? " " : props.placeholder} // keeps floating label working
               className={clsx(
-                "peer w-full h-full bg-transparent border-none outline-none pl-1",
+                "peer w-full text-base! md:text-sm! h-full bg-transparent border-none outline-none pl-1",
                 "text-gray-900 dark:text-white placeholder-transparent",
                 leftIcon && "pl-8",
                 rightIcon && "pr-8",
