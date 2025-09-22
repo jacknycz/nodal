@@ -4,7 +4,7 @@ import type { User } from '@supabase/supabase-js'
 import { useSupabaseUser } from './authUtils'
 import { useMemo } from 'react'
 
-export type UserRole = 'Admin' | 'User'
+export type UserRole = 'Admin' | 'Pro' | 'User'
 
 export function getUserRoleFromMetadata(user: User | null | undefined): UserRole {
   if (!user) return 'User'
@@ -13,6 +13,7 @@ export function getUserRoleFromMetadata(user: User | null | undefined): UserRole
   const metaRole = (user.user_metadata as any)?.role
   const role = (appRole || metaRole || '').toString().trim()
   if (/^admin$/i.test(role)) return 'Admin'
+  if (/^pro$/i.test(role) || /^pro[-_ ]?user$/i.test(role)) return 'Pro'
   return 'User'
 }
 
@@ -31,10 +32,10 @@ export function isAdmin(user: User | null | undefined): boolean {
   return ADMIN_EMAIL_SET.has(email)
 }
 
-export function useUserRole(): { role: UserRole; isAdmin: boolean; user: User | null } {
+export function useUserRole(): { role: UserRole; isAdmin: boolean; isPro: boolean; user: User | null } {
   const user = useSupabaseUser()
   const role = useMemo(() => getUserRoleFromMetadata(user), [user])
-  return { role, isAdmin: role === 'Admin', user }
+  return { role, isAdmin: role === 'Admin', isPro: role === 'Pro', user }
 }
 
 // Utility for gating UI
