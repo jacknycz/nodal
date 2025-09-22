@@ -14,9 +14,10 @@ interface TaskListProps {
   dock?: boolean
   leftOffsetPx?: number
   topOffsetPx?: number
+  anchored?: boolean
 }
 
-export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 72 }: TaskListProps) {
+export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 56, topOffsetPx = 72, anchored = false }: TaskListProps) {
   const [internalOpen, setInternalOpen] = useState(false)
   const isOpen = typeof open === 'boolean' ? open : internalOpen
   const setIsOpen = (next: boolean) => {
@@ -55,8 +56,8 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
 
   return (
     <>
-      {/* Toggle Button hidden in dock mode */}
-      {!dock && (
+      {/* Toggle Button hidden in dock/anchored mode */}
+      {!dock && !anchored && (
         <button
           onClick={() => setIsOpen(true)}
           className={`fixed left-4 z-40 bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}
@@ -68,8 +69,8 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
 
       {/* Panel */}
       <div
-        className={`fixed rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
-        style={{ top: topOffsetPx, left: dock ? leftOffsetPx : 16 }}
+        className={`${anchored ? '' : 'fixed'} rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
+        style={anchored ? undefined : { top: topOffsetPx, left: dock ? leftOffsetPx : 16 }}
         data-left-dock-panel
       >
         {/* Header */}
