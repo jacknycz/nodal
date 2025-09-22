@@ -23,7 +23,7 @@ interface DocumentNodeData {
   fileName?: string
   fileType?: string
   fileSize?: number
-  status?: 'processing' | 'ready' | 'error'
+  status?: 'uploading' | 'processing' | 'ready' | 'error'
   extractedText?: string
   previewUrl?: string
   documentId?: string // Store document ID instead of File object
@@ -119,6 +119,8 @@ export default function DocumentNode({
 
   const getStatusIcon = () => {
     switch (data.status) {
+      case 'uploading':
+        return <SpinnerGap weight="duotone" className="w-4 h-4 animate-spin text-primary-500" />
       case 'processing':
         return <SpinnerGap weight="duotone" className="w-4 h-4 animate-spin text-primary-500" />
       case 'ready':
@@ -132,6 +134,8 @@ export default function DocumentNode({
 
   const getStatusText = () => {
     switch (data.status) {
+      case 'uploading':
+        return 'Uploading…'
       case 'processing':
         return 'Processing...'
       case 'ready':

@@ -22,7 +22,7 @@ interface ImageNodeData {
   fileName?: string
   fileType?: string
   fileSize?: number
-  status?: 'processing' | 'ready' | 'error'
+  status?: 'uploading' | 'processing' | 'ready' | 'error'
   previewUrl?: string
   documentId?: string
   uploadedAt?: number
@@ -93,6 +93,8 @@ export default function ImageNode({
 
   const getStatusIcon = () => {
     switch (data.status) {
+      case 'uploading':
+        return <Spinner className="w-4 h-4 animate-spin text-blue-500" />
       case 'processing':
         return <Spinner className="w-4 h-4 animate-spin text-blue-500" />
       case 'ready':
@@ -361,7 +363,7 @@ export default function ImageNode({
               <div className={`mt-2 flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
                 {getStatusIcon()}
                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                  {data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+                  {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
                 </span>
               </div>
             )}
