@@ -449,7 +449,7 @@ function BoardContent({
               // Update topic node content with the generated summary
               setNodes((prev) => (Array.isArray(prev) ? prev.map((n: any) => n.id === topicNodeId ? { ...n, data: { ...(n.data||{}), content: autoDesc } } : n) : prev))
               // Also update the local topicNode used later for placement/saves
-              topicNode = { ...topicNode, data: { ...(topicNode.data || {}), content: autoDesc } }
+              topicNode = { ...topicNode, data: { ...topicNode.data, content: autoDesc } }
             }
           }
         } catch {}
@@ -1279,6 +1279,7 @@ function BoardContent({
       {isBoardView && (
         <FloatingActionButton
           onAddNode={() => {
+            console.log('[BoardComponent] onAddNode called')
             try {
               // Ensure we're adding from a clean state like the context menu's blank add
               setPendingSourceNodeId(null)
@@ -1289,8 +1290,9 @@ function BoardContent({
                 setPendingNodePosition(null)
               }
               // Defer opening to avoid any event ordering conflicts with the menu
-              setTimeout(() => setShowUnifiedAddModal(true), 0)
+              setTimeout(() => { console.log('[BoardComponent] opening AddNodesModal now'); setShowUnifiedAddModal(true) }, 0)
             } catch {
+              console.warn('[BoardComponent] onAddNode fallback immediate open')
               setShowUnifiedAddModal(true)
             }
           }}
@@ -1530,8 +1532,20 @@ function BoardContent({
             <>
               <FloatingActionButton
                 onAddNode={() => {
-                  // Trigger next click/tap on the board to pick placement
-                  setAwaitingNodePlacement(true)
+                  console.log('[BoardComponent] onAddNode called (secondary FAB)')
+                  try {
+                    setPendingSourceNodeId(null)
+                    try {
+                      const center = getViewportCenter()
+                      setPendingNodePosition(center)
+                    } catch {
+                      setPendingNodePosition(null)
+                    }
+                    setTimeout(() => { console.log('[BoardComponent] opening AddNodesModal now (secondary FAB)'); setShowUnifiedAddModal(true) }, 0)
+                  } catch {
+                    console.warn('[BoardComponent] onAddNode fallback immediate open (secondary FAB)')
+                    setShowUnifiedAddModal(true)
+                  }
                 }}
                 onAIGenerate={handleOpenAINodeGenerator}
                 onUploadDocument={() => {

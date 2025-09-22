@@ -21,6 +21,7 @@ interface MenuProps {
   customContent?: React.ReactNode
   width?: string
   fixedCenterAbove?: boolean
+  openOnHover?: boolean
 }
 
 export default function Menu({
@@ -32,24 +33,32 @@ export default function Menu({
   showNotification = false,
   customContent,
   width
-  , fixedCenterAbove = false
+  , fixedCenterAbove = false,
+  openOnHover = false
 }: MenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handlePointerDownOutside = (event: Event) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      // Use capture phase so outside clicks close even if inner elements stopPropagation
+      document.addEventListener('pointerdown', handlePointerDownOutside, true)
+      document.addEventListener('mousedown', handlePointerDownOutside, true)
+      document.addEventListener('touchstart', handlePointerDownOutside, true)
+      return () => {
+        document.removeEventListener('pointerdown', handlePointerDownOutside, true)
+        document.removeEventListener('mousedown', handlePointerDownOutside, true)
+        document.removeEventListener('touchstart', handlePointerDownOutside, true)
+      }
     }
   }, [isOpen])
 
-  // Keep menu open when moving between trigger and dropdown by using a small close delay
+  // Remove hover close delay by default; only used if openOnHover is true
   const closeTimeoutRef = useRef<number | null>(null)
 
   const openMenu = () => {
@@ -60,7 +69,7 @@ export default function Menu({
     setIsOpen(true)
   }
 
-  const closeMenuWithDelay = (ms = 150) => {
+  const closeMenuWithDelay = (ms = 0) => {
     if (closeTimeoutRef.current) window.clearTimeout(closeTimeoutRef.current)
     closeTimeoutRef.current = window.setTimeout(() => {
       setIsOpen(false)
@@ -75,21 +84,14 @@ export default function Menu({
     }
   }
 
-  const handleFocus = () => openMenu()
-  const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-      setIsOpen(false)
-    }
-  }
+  // Remove focus/blur-based open/close to avoid flicker; rely on click + outside click only
 
   return (
     <div
       ref={menuRef}
       className={`relative ${className}`}
-      onMouseEnter={openMenu}
-      onMouseLeave={() => closeMenuWithDelay(150)}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
+      onMouseEnter={openOnHover ? openMenu : undefined}
+      onMouseLeave={openOnHover ? () => closeMenuWithDelay(150) : undefined}
     >
       {/* Trigger */}
       <div
@@ -108,8 +110,8 @@ export default function Menu({
 
       {/* Dropdown */}
       <div
-        onMouseEnter={() => { cancelClose(); setIsOpen(true) }}
-        onMouseLeave={() => closeMenuWithDelay(150)}
+        onMouseEnter={openOnHover ? () => { cancelClose(); setIsOpen(true) } : undefined}
+        onMouseLeave={openOnHover ? () => closeMenuWithDelay(150) : undefined}
         className={`
           ${fixedCenterAbove ? 'fixed left-1/2 bottom-20 transform -translate-x-1/2 z-[350]' : 'absolute z-[350]'} ${width || 'w-56'} rounded-2xl overflow-hidden 
           bg-[linear-gradient(165deg,rgba(241,245,249,1)_0%,rgba(255,255,255,1)_20%,rgba(255,255,255,1)_80%,rgba(241,245,249,1)_100%)]
@@ -135,10 +137,6 @@ export default function Menu({
               return (
                 <button
                   key={index}
-                  onClick={() => {
-                    item.onClick?.()
-                    setIsOpen(false)
-                  }}
                   onMouseDown={(e) => {
                     // Fire action early to avoid losing click due to focus/blur
                     e.preventDefault()

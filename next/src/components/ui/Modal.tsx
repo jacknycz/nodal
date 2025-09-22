@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import ReactDOM from 'react-dom'
 
 interface ModalProps {
@@ -29,6 +29,7 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
+  const openedAtRef = useRef<number>(0)
 
   useEffect(() => {
     if (open) {
@@ -36,6 +37,7 @@ const Modal: React.FC<ModalProps> = ({
       // Small delay to ensure the element is in the DOM before animating
       requestAnimationFrame(() => {
         setIsVisible(true)
+        openedAtRef.current = Date.now()
       })
     } else {
       setIsVisible(false)
@@ -68,7 +70,13 @@ const Modal: React.FC<ModalProps> = ({
         className={`absolute inset-0 bg-black backdrop-blur-sm transition-all duration-200 ease-out ${
           isVisible ? 'bg-opacity-40' : 'bg-opacity-0'
         }`}
-        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}
+        onClick={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          // Guard against immediate close when opened via click/tap
+          if (Date.now() - (openedAtRef.current || 0) < 200) return
+          onClose()
+        }}
         aria-label="Close modal"
       />
       {/* Modal content */}

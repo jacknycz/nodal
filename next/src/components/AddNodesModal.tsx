@@ -70,6 +70,7 @@ export default function AddNodesModal({
 
   React.useEffect(() => {
     if (open) {
+      console.log('[AddNodesModal] open=true – resetting state and focusing input')
       setTab('manual')
       setTitleInput('')
       setTitles([])

@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Plus, ClockCounterClockwise, FilePlus } from '@phosphor-icons/react'
+import { Plus, ClockCounterClockwise, FilePlus, DotsThreeCircle } from '@phosphor-icons/react'
 import IconButton from './ui/IconButton'
 import Menu from './ui/Menu'
 
@@ -23,9 +23,9 @@ export default function FloatingActionButton({
   nodeCount = 0,
 }: FloatingActionButtonProps) {
   const items = [
-    { label: 'Add node(s)', icon: Plus, onClick: () => onAddNode() },
-    { label: 'Upload document', icon: FilePlus, onClick: () => onUploadDocument() },
-    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, onClick: () => onReorganize?.() }] : []),
+    { label: 'Add node(s)', icon: Plus, onClick: () => { console.log('[FAB] Add node(s) clicked - invoking onAddNode'); try { onAddNode(); } catch (e) { console.error('[FAB] onAddNode threw', e) } } },
+    { label: 'Upload document', icon: FilePlus, onClick: onUploadDocument },
+    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, onClick: onReorganize }] : []),
   ]
 
   return (
@@ -33,24 +33,16 @@ export default function FloatingActionButton({
       <Menu
         trigger={
           <IconButton
-            aria-label="Quick Actions"
+            aria-label="Open Actions"
             size="lg"
-            className="w-14 h-14 bg-white/70 border border-gray-200/50 dark:border-none dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-900 text-white rounded-full 
-            shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-gray-950/80 
-            flex items-center justify-center transition-all duration-200 group relative"
+            className="w-14 h-14 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-2xl flex items-center justify-center"
           >
-            <img src="/nodal.svg" alt="Nodal" className="w-8 h-8" />
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-              <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                <circle cx="7" cy="12" r="2" className="fill-current text-cyan-400 animate-pulse" style={{ animationDelay: '0s', animationDuration: '0.9s' }} />
-                <circle cx="12" cy="12" r="2" className="fill-current text-yellow-400 animate-pulse" style={{ animationDelay: '0.3s', animationDuration: '0.9s' }} />
-                <circle cx="17" cy="12" r="2" className="fill-current text-pink-500 animate-pulse" style={{ animationDelay: '0.6s', animationDuration: '0.9s' }} />
-              </g>
-            </svg>
+            <DotsThreeCircle className="w-8 h-8" />
           </IconButton>
         }
         items={items}
         fixedCenterAbove
+        openOnHover={false}
         width="w-56"
       />
     </div>
