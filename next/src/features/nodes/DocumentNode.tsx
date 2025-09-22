@@ -8,7 +8,7 @@ import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
-import { supabaseStorage } from '../storage/supabaseStorage'
+// supabaseStorage is already imported above
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
@@ -68,6 +68,7 @@ export default function DocumentNode({
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const refreshAttemptsRef = useState(0)[0] as any
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
   useEffect(() => {
@@ -130,6 +131,14 @@ export default function DocumentNode({
       default:
         return <FileText weight="duotone" className="w-4 h-4 text-gray-500" />
     }
+  }
+
+  const refreshSignedUrl = async () => {
+    if (!data.documentId) return
+    try {
+      const url = await supabaseStorage.getSignedUrl(data.documentId)
+      ;(onNodeUpdate as any)?.(id, { previewUrl: url })
+    } catch {}
   }
 
   const getStatusText = () => {
@@ -359,8 +368,9 @@ export default function DocumentNode({
         <PDFPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
-          fileUrl={data.previewUrl}  // Use the signed URL instead of null file
+          fileUrl={data.previewUrl}
           fileName={data.fileName || ''}
+          onLoadError={refreshSignedUrl}
         />
       )}
 

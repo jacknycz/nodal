@@ -10,9 +10,10 @@ interface PDFPreviewModalProps {
   file?: File | null
   fileUrl?: string | null
   fileName: string
+  onLoadError?: () => void
 }
 
-export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileName }: PDFPreviewModalProps) {
+export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileName, onLoadError }: PDFPreviewModalProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const urlRef = useRef<string | null>(null)
   const [modalWidth, setModalWidth] = useState<number>(960)
@@ -133,6 +134,7 @@ export default function PDFPreviewModal({ isOpen, onClose, file, fileUrl, fileNa
               src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&zoom=page-fit`}
               className="w-full h-full min-h-64 border-0"
               title={fileName}
+              onError={onLoadError}
             />
           ) : (
             <div className="flex items-center justify-center h-64">

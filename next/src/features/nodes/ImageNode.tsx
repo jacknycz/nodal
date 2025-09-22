@@ -15,6 +15,7 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+import { supabaseStorage } from '../storage/supabaseStorage'
 import TextArea from '../../components/ui/TextArea'
 
 interface ImageNodeData {
@@ -75,6 +76,17 @@ export default function ImageNode({
   const panStartRef = React.useRef<{ x: number; y: number } | null>(null)
   const pointerCacheRef = React.useRef<Map<number, { x: number; y: number }>>(new Map())
   const pinchStartRef = React.useRef<{ distance: number; center: { x: number; y: number }; scale: number; translate: { x: number; y: number } } | null>(null)
+  const refreshAttemptsRef = React.useRef<number>(0)
+
+  const refreshSignedUrl = async () => {
+    if (!data.documentId) return
+    if (refreshAttemptsRef.current >= 2) return
+    try {
+      const url = await supabaseStorage.getSignedUrl(data.documentId)
+      refreshAttemptsRef.current += 1
+      onNodeUpdate?.(id, { previewUrl: url })
+    } catch {}
+  }
 
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
@@ -298,6 +310,7 @@ export default function ImageNode({
         >
           {data.previewUrl ? (
             <Image
+              key={data.previewUrl}
               src={data.previewUrl}
               alt={data.fileName || data.title || 'Image'}
               className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
@@ -308,6 +321,7 @@ export default function ImageNode({
                 transformOrigin: '0 0',
               }}
               onLoad={() => setIsLoaded(true)}
+              onError={() => refreshSignedUrl()}
               unoptimized
             />
           ) : (
