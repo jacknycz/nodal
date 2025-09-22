@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil } from '@phosphor-icons/react'
-import Image from 'next/image'
+// Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
@@ -31,6 +31,8 @@ interface ImageNodeData {
   uploadedAt?: number
   colorgoryIds?: string[]
   content?: string
+  variant800Url?: string
+  variant1920Url?: string
 }
 
 interface ImageNodeProps {
@@ -309,20 +311,23 @@ export default function ImageNode({
           }}
         >
           {data.previewUrl ? (
-            <Image
-              key={data.previewUrl}
-              src={data.previewUrl}
+            <img
+              key={`${data.previewUrl}|${data.variant800Url || ''}|${data.variant1920Url || ''}`}
+              src={data.variant800Url || data.previewUrl}
+              srcSet={[
+                data.variant800Url ? `${data.variant800Url} 800w` : null,
+                data.variant1920Url ? `${data.variant1920Url} 1920w` : null,
+              ].filter(Boolean).join(', ')}
+              sizes={expanded ? '100vw' : '260px'}
               alt={data.fileName || data.title || 'Image'}
               className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
-              width={expanded ? 800 : 240}
-              height={expanded ? 500 : 180}
               style={{
                 transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
                 transformOrigin: '0 0',
               }}
               onLoad={() => setIsLoaded(true)}
               onError={() => refreshSignedUrl()}
-              unoptimized
+              draggable={false}
             />
           ) : (
             <div className={`rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm ${expanded ? 'w-[800px] h-[400px]' : 'w-full h-[180px]'}`}>

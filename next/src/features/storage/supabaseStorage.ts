@@ -504,6 +504,43 @@ class SupabaseStorage {
       throw error
     }
   }
+
+  // Create or refresh a signed URL for an arbitrary storage path
+  async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 3600): Promise<string | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      const { data: signedUrl, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, expiresInSeconds)
+
+      if (error) throw error
+      return signedUrl.signedUrl
+    } catch (error) {
+      console.error('Failed to get signed URL for path:', error)
+      return null
+    }
+  }
+
+  // Upload an image variant for a given documentId under a stable path
+  async uploadImageVariant(documentId: string, blob: Blob, sizeLabel: '800' | '1920'): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+    const path = `${user.id}/variants/${documentId}-${sizeLabel}.webp`
+    const { error } = await supabase.storage
+      .from('documents')
+      .upload(path, blob, { contentType: 'image/webp', upsert: true })
+    if (error) throw error
+    return path
+  }
+
+  async getSignedUrlForVariant(documentId: string, sizeLabel: '800' | '1920', expiresInSeconds: number = 3600): Promise<string | null> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('User not authenticated')
+    const path = `${user.id}/variants/${documentId}-${sizeLabel}.webp`
+    return this.getSignedUrlForPath(path, expiresInSeconds)
+  }
 }
 
 export const supabaseStorage = new SupabaseStorage() 
