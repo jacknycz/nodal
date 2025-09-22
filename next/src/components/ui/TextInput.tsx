@@ -41,7 +41,12 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
       props.id || `input-${Math.random().toString(36).substr(2, 9)}`;
     const [isFocused, setIsFocused] = useState(false);
 
-    const isActive = isFocused || (value && value.toString().length > 0);
+    const hasValue = (() => {
+      if (typeof value !== 'undefined' && value !== null) return value.toString().length > 0;
+      if (typeof props.defaultValue !== 'undefined' && props.defaultValue !== null) return props.defaultValue.toString().length > 0;
+      return false;
+    })();
+    const isActive = isFocused || hasValue;
 
     return (
       <div className={clsx("flex flex-col gap-1.5", fullWidth && "w-full")}>

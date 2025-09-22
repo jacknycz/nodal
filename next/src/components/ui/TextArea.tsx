@@ -37,16 +37,21 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     const textareaId = props.id || `textarea-${Math.random().toString(36).substr(2, 9)}`
     const [isFocused, setIsFocused] = useState(false)
     
-    // Determine if label should be in "active" state (focused or has value)
-    const isActive = isFocused || (value && value.toString().length > 0)
+    // Determine if label should be in "active" state (focused or has value/defaultValue)
+    const hasValue = (() => {
+      if (typeof value !== 'undefined' && value !== null) return value.toString().length > 0
+      if (typeof props.defaultValue !== 'undefined' && props.defaultValue !== null) return props.defaultValue.toString().length > 0
+      return false
+    })()
+    const isActive = isFocused || hasValue
 
     return (
       <div className={clsx('flex flex-col gap-2', fullWidth && 'w-full')}>
         {/* Textarea container with label inside */}
         <div
           className={clsx(
-            'relative rounded-4xl border border-transparent transition-all duration-200 overflow-hidden',
-            'bg-gray-100 dark:bg-gray-800',
+            'relative rounded-4xl px-3 border border-transparent transition-all duration-200',
+            'bg-gray-100 dark:bg-gray-950/80',
             'focus-within:bg-white dark:focus-within:bg-gray-900',
             'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',
@@ -58,22 +63,17 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
             <label 
               htmlFor={textareaId}
               className={clsx(
-                'absolute left-5 font-medium transition-all duration-200',
-                'text-gray-500 dark:text-gray-400',
-                'peer-focus-within:text-primary-600 dark:peer-focus-within:text-primary-400',
-                error && 'text-red-500 dark:text-red-400 peer-focus-within:text-red-500 dark:peer-focus-within:text-red-400',
-                // Label positioning and size based on active state
-                isActive ? [
-                  'text-xs',
-                  size === 'sm' && 'top-2',
-                  size === 'md' && 'top-2',
-                  size === 'lg' && 'top-3'
-                ] : [
-                  'text-sm',
-                  size === 'sm' && 'top-3',
-                  size === 'md' && 'top-3.5',
-                  size === 'lg' && 'top-4'
-                ]
+                'absolute px-4 rounded-full left-2 font-medium transition-all duration-200',
+                'text-gray-500 dark:text-gray-400 dark:bg-gray-950/80',
+                error && 'text-red-500 dark:text-red-400 peer-focus:text-red-500 dark:peer-focus:text-red-400',
+                isActive
+                  ? '-top-2 left-0! bg-white text-xs'
+                  : clsx(
+                      'text-sm',
+                      size === 'sm' && 'top-2.5',
+                      size === 'md' && 'top-3',
+                      size === 'lg' && 'top-3.5'
+                    )
               )}
             >
               {label}
@@ -98,20 +98,15 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
               onChange={onChange}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
+              placeholder={label ? ' ' : props.placeholder}
               className={clsx(
-                'peer w-full bg-transparent border-none outline-none resize-none pl-5',
+                'peer w-full bg-transparent border-none outline-none resize-none pl-1',
                 'text-gray-900 dark:text-white text-base! md:text-sm! placeholder-transparent',
                 leftIcon && 'pl-9',
                 rightIcon && 'pr-9',
                 sizeClasses[size],
-                // Add padding-top when label is present to make room for it
-                label && size === 'sm' && 'pt-6 pb-2',
-                label && size === 'md' && 'pt-7 pb-3',
-                label && size === 'lg' && 'pt-8 pb-3',
-                // No label padding
-                !label && size === 'sm' && 'py-2',
-                !label && size === 'md' && 'py-3',
-                !label && size === 'lg' && 'py-3',
+                // Normalize padding to match TextInput spacing
+                'py-3 px-0',
                 className
               )}
               {...props}
