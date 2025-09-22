@@ -119,6 +119,7 @@ export default function AvatarMenu({
   return (
     <>
     <Menu
+      className="z-[500]"
       trigger={
         <IconButton
           aria-label="User menu"

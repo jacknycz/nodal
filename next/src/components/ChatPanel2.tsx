@@ -173,7 +173,7 @@ export default function ChatPanel2() {
       {/* Toggle */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed right-4 z-[200] p-3 bottom-4 sm:bottom-auto sm:top-16
+        className={`fixed right-4 z-[200] p-3 bottom-4 sm:bottom-auto sm:top-16 cursor-pointer
           bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out 
           ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
           }`}

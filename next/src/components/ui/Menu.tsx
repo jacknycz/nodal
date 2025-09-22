@@ -114,7 +114,7 @@ export default function Menu({
         onMouseEnter={openOnHover ? () => { cancelClose(); setIsOpen(true) } : undefined}
         onMouseLeave={openOnHover ? () => closeMenuWithDelay(150) : undefined}
         className={`
-          ${fixedCenterAbove ? 'fixed left-1/2 bottom-20 transform -translate-x-1/2 z-[350]' : 'absolute z-[350]'} ${width || 'w-56'} rounded-2xl overflow-hidden 
+          ${fixedCenterAbove ? 'fixed left-1/2 bottom-20 transform -translate-x-1/2 z-[500]' : 'absolute z-[500]'} ${width || 'w-56'} rounded-2xl overflow-hidden 
           bg-[linear-gradient(165deg,rgba(241,245,249,1)_0%,rgba(255,255,255,1)_20%,rgba(255,255,255,1)_80%,rgba(241,245,249,1)_100%)]
           dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-gray-950
           shadow-lg shadow-gray-400/20 dark:shadow-none focus:outline-none

@@ -74,7 +74,7 @@ export default function BoardContextMenu({
       
       {/* Context menu */}
       <div
-        className="fixed z-50 bg-white overflow-hidden dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[200px]"
+        className="fixed z-[500] bg-white overflow-hidden dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[200px]"
         style={{
           left: position.x,
           top: position.y,

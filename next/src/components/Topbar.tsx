@@ -173,7 +173,7 @@ export default function Topbar({
 
   return (
     <>
-      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[80] 
+      <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[600] 
       bg-gradient-to-b from-white via-white/70 to-white/0 dark:from-gray-950/50 dark:via-gray-900/10 dark:to-gray-950/0
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
@@ -298,7 +298,7 @@ export default function Topbar({
                   <div className="hidden sm:flex items-center ml-4">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
 
-                    <Tag variant="secondary" size="sm">
+                    <Tag variant="secondary" className="h-5 py-0 px-1.5 text-[10px] ml-1">
                       {topic}
                     </Tag>
                   </div>
