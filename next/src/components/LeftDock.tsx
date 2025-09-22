@@ -91,7 +91,7 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
       </button>
       {openKey === 'tips' && (
         <div className="absolute left-[52px] top-0">
-          <div className="rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
+          <div className="rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
             <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
               <div className="flex items-center space-x-2">
                 <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
