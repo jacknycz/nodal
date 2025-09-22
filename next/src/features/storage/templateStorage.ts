@@ -5,11 +5,13 @@ export interface TemplateRecord {
   id: string
   name: string
   description?: string | null
+  coverUrl?: string | null
   data: BoardData
   createdAt: number
   createdBy: string
   nodeCount: number
   edgeCount: number
+  published?: boolean
 }
 
 class TemplateStorage {
@@ -47,11 +49,13 @@ class TemplateStorage {
       id: t.id,
       name: t.name,
       description: t.description,
+      coverUrl: t.cover_url || null,
       data: t.data as BoardData,
       createdAt: t.created_at as number,
       createdBy: t.created_by as string,
       nodeCount: t.node_count as number,
       edgeCount: t.edge_count as number,
+      published: !!t.published,
     }))
   }
 
@@ -67,11 +71,13 @@ class TemplateStorage {
       id: data.id,
       name: data.name,
       description: data.description,
+      coverUrl: data.cover_url || null,
       data: data.data as BoardData,
       createdAt: data.created_at as number,
       createdBy: data.created_by as string,
       nodeCount: data.node_count as number,
       edgeCount: data.edge_count as number,
+      published: !!data.published,
     }
   }
 
@@ -86,13 +92,15 @@ class TemplateStorage {
     if (error) throw error
   }
 
-  async updateTemplate(id: string, updates: { name?: string; description?: string; data?: BoardData }): Promise<TemplateRecord> {
+  async updateTemplate(id: string, updates: { name?: string; description?: string | null; data?: BoardData; coverUrl?: string | null; published?: boolean }): Promise<TemplateRecord> {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) throw new Error('User not authenticated')
 
     const payload: any = {}
     if (typeof updates.name !== 'undefined') payload.name = updates.name
     if (typeof updates.description !== 'undefined') payload.description = updates.description
+    if (typeof updates.coverUrl !== 'undefined') payload.cover_url = updates.coverUrl
+    if (typeof updates.published !== 'undefined') payload.published = updates.published
     if (typeof updates.data !== 'undefined') {
       payload.data = updates.data
       payload.node_count = updates.data.nodes.length
@@ -111,11 +119,13 @@ class TemplateStorage {
       id: data.id,
       name: data.name,
       description: data.description,
+      coverUrl: data.cover_url || null,
       data: data.data as BoardData,
       createdAt: data.created_at as number,
       createdBy: data.created_by as string,
       nodeCount: data.node_count as number,
       edgeCount: data.edge_count as number,
+      published: !!data.published,
     }
   }
 }

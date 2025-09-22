@@ -2,10 +2,13 @@
 
 import Loader from './ui/Loader'
 import Button from './ui/Button'
-import BoardCard from './BoardCard'
+import TemplateCard from './TemplateCard'
 import { templateStorage } from '../features/storage/templateStorage'
 import { isAdmin } from '../features/auth/roles'
 import React from 'react'
+import Modal from './ui/Modal'
+import TextInput from './ui/TextInput'
+import TextArea from './ui/TextArea'
 
 interface TemplatesTabProps {
   templates: Array<any>
@@ -24,22 +27,33 @@ export default function TemplatesTab({
   setTemplates,
   onOpenBoard,
 }: TemplatesTabProps) {
-  const [visibleCount, setVisibleCount] = React.useState(() => Math.min(templates.length, 24))
+  const adminView = isAdmin(user)
+  const filteredTemplates = React.useMemo(() => adminView ? templates : templates.filter((t: any) => !!t.published), [adminView, templates])
+  const [visibleCount, setVisibleCount] = React.useState(() => Math.min(filteredTemplates.length, 24))
+  const [editOpen, setEditOpen] = React.useState(false)
+  const [editId, setEditId] = React.useState<string | null>(null)
+  const [editName, setEditName] = React.useState('')
+  const [editCoverUrl, setEditCoverUrl] = React.useState('')
+  const [editDescription, setEditDescription] = React.useState('')
+  const [editPublished, setEditPublished] = React.useState(false)
+  const [saving, setSaving] = React.useState(false)
+  const [uploadingCover, setUploadingCover] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
 
   React.useEffect(() => {
-    setVisibleCount(Math.min(templates.length, 24))
+    setVisibleCount(Math.min(filteredTemplates.length, 24))
     let cancelled = false
     const pump = () => {
       if (cancelled) return
-      if (visibleCount >= templates.length) return
-      setVisibleCount((c) => Math.min(templates.length, c + 24))
+      if (visibleCount >= filteredTemplates.length) return
+      setVisibleCount((c) => Math.min(filteredTemplates.length, c + 24))
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         ;(window as any).requestIdleCallback(pump, { timeout: 1200 })
       } else {
         setTimeout(pump, 0)
       }
     }
-    if (templates.length > 30) {
+    if (filteredTemplates.length > 30) {
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
         ;(window as any).requestIdleCallback(pump, { timeout: 1200 })
       } else {
@@ -48,7 +62,50 @@ export default function TemplatesTab({
     }
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templates])
+  }, [filteredTemplates])
+
+  const openEdit = (tpl: any) => {
+    setEditId(tpl.id)
+    setEditName(tpl.name || '')
+    setEditCoverUrl(tpl.coverUrl || '')
+    setEditDescription(tpl.description || '')
+    setEditPublished(!!tpl.published)
+    setEditOpen(true)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editId) return
+    try {
+      setSaving(true)
+      const updated = await templateStorage.updateTemplate(editId, { name: editName, description: editDescription || null, coverUrl: editCoverUrl || null, published: editPublished })
+      setTemplates(prev => prev.map((p: any) => p.id === editId ? updated : p))
+      setEditOpen(false)
+    } catch {
+      alert('Failed to update template')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleEditBoard = async () => {
+    if (!editId) return
+    const tpl = templates.find((x: any) => x.id === editId)
+    if (!tpl) return
+    try {
+      const { boardStorage } = await import('../features/storage/storage')
+      const id = await boardStorage.saveBoard(tpl.name, tpl.data)
+      try { localStorage.setItem(`templateMapping:${id}`, tpl.id) } catch {}
+      const newBoard = await boardStorage.loadBoard(id)
+      setEditOpen(false)
+      if (newBoard) {
+        onOpenBoard(newBoard)
+      } else if (typeof window !== 'undefined') {
+        window.location.href = `/board/${id}`
+      }
+    } catch (err) {
+      alert('Failed to open template for editing')
+    }
+  }
 
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10 min-h-screen">
@@ -61,37 +118,22 @@ export default function TemplatesTab({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-          {templates.length === 0 ? (
+          {filteredTemplates.length === 0 ? (
             <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
               No templates yet.
             </div>
           ) : (
-            (templates.slice(0, visibleCount)).map((t: any) => {
-              const admin = isAdmin(user)
+            (filteredTemplates.slice(0, visibleCount)).map((t: any) => {
+              const admin = adminView
               const footer = (
                 <>
                   {admin && (
                     <Button
                       variant="secondaryGhost"
                       size="small"
-                      onClick={async (e) => {
-                        e.stopPropagation()
-                        try {
-                          const { boardStorage } = await import('../features/storage/storage')
-                          const id = await boardStorage.saveBoard(t.name, t.data)
-                          try { localStorage.setItem(`templateMapping:${id}`, t.id) } catch { }
-                          const newBoard = await boardStorage.loadBoard(id)
-                          if (newBoard) {
-                            onOpenBoard(newBoard)
-                          } else if (typeof window !== 'undefined') {
-                            window.location.href = `/board/${id}`
-                          }
-                        } catch (err) {
-                          alert('Failed to open template for editing')
-                        }
-                      }}
+                      onClick={(e) => { e.stopPropagation(); openEdit(t) }}
                     >
-                      Edit
+                      Edit Template
                     </Button>
                   )}
                   <Button
@@ -119,12 +161,18 @@ export default function TemplatesTab({
                 </>
               )
               return (
-                <BoardCard
+                <TemplateCard
                   key={t.id}
                   id={t.id}
                   name={t.name}
                   nodeCount={t.nodeCount}
                   edgeCount={t.edgeCount}
+                  coverUrl={t.coverUrl}
+                  description={t.description}
+                  published={admin ? t.published : undefined}
+                  admin={admin}
+                  // Show cover and description under the counts
+                  // We wedge in via name by appending description visually below using a custom footer
                   onLoad={async () => {
                     try {
                       const newName = `${t.name} (copy)`
@@ -156,6 +204,78 @@ export default function TemplatesTab({
           )}
         </div>
       )}
+
+      {/* Edit Template Modal */}
+      <Modal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Edit Template"
+        description="Update template details. Use Edit Template Board to modify the underlying board."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} loading={saving} disabled={saving}>Save Changes</Button>
+          </>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <TextInput label="Name" value={editName} onChange={(e) => setEditName((e.target as HTMLInputElement).value)} fullWidth />
+          <div className="space-y-3">
+            {editCoverUrl ? (
+              <img src={editCoverUrl} alt="Template cover" className="w-full h-40 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
+            ) : (
+              <div className="w-full h-40 rounded-md border border-dashed border-gray-300 dark:border-gray-700 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+                No cover image
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  try {
+                    setUploadingCover(true)
+                    const fd = new FormData()
+                    fd.append('file', f)
+                    const res = await fetch('/api/admin/template-cover', { method: 'POST', body: fd })
+                    const json = await res.json()
+                    if (!res.ok) throw new Error(json.error || 'Upload failed')
+                    setEditCoverUrl(json.url)
+                  } catch (err) {
+                    alert('Failed to upload cover image')
+                  } finally {
+                    setUploadingCover(false)
+                    if (fileInputRef.current) fileInputRef.current.value = ''
+                  }
+                }}
+              />
+              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} loading={uploadingCover} disabled={uploadingCover}>
+                {editCoverUrl ? 'Replace Image' : 'Upload Image'}
+              </Button>
+              {editCoverUrl && (
+                <Button variant="dangerGhost" onClick={() => setEditCoverUrl('')} disabled={uploadingCover}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+          <TextArea label="Description" value={editDescription} onChange={(e) => setEditDescription((e.target as HTMLTextAreaElement).value)} rows={3} fullWidth />
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
+          </div>
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input id="tpl-published" type="checkbox" checked={editPublished} onChange={(e) => setEditPublished(e.target.checked)} />
+              <label htmlFor="tpl-published" className="text-sm text-gray-700 dark:text-gray-300">Published</label>
+            </div>
+            <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

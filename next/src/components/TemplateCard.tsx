@@ -8,7 +8,7 @@ import TextInput from './ui/TextInput'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
 import { PushPin, CheckCircle, Copy, Plus } from '@phosphor-icons/react/dist/ssr'
 
-interface BoardCardProps {
+interface TemplateCardProps {
   id: string
   name: string
   lastModified?: number
@@ -25,9 +25,10 @@ interface BoardCardProps {
   onDelete?: () => void
   enableSharing?: boolean
   footerActions?: React.ReactNode
+  admin?: boolean
 }
 
-function BoardCard({
+function TemplateCard({
   id,
   name,
   lastModified,
@@ -44,7 +45,8 @@ function BoardCard({
   onDelete,
   enableSharing = true,
   footerActions,
-}: BoardCardProps) {
+  admin,
+}: TemplateCardProps) {
   const [newName, setNewName] = useState(name)
   
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -178,7 +180,7 @@ function BoardCard({
 
       <div className="flex space-x-6 items-center">
         <div className="flex flex-col flex-1 w-full items-start">
-          {(typeof nodeCount !== 'undefined' || typeof edgeCount !== 'undefined') && (
+          {admin && (typeof nodeCount !== 'undefined' || typeof edgeCount !== 'undefined') && (
             <div className="flex space-x-4 font-medium text-gray-500 dark:text-gray-200">
               {typeof nodeCount !== 'undefined' && (
                 <div className="flex items-center gap-1">
@@ -197,11 +199,10 @@ function BoardCard({
         </div>
       </div>
 
-      {/* Cover image and description for templates */}
       {(coverUrl || description) && (
         <div className="mt-3 space-y-2">
           {coverUrl && (
-            <img src={coverUrl} alt="Template cover" className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
+            <img src={coverUrl} alt="Template cover" className="w-full h-64 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
           )}
           {description && (
             <div className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3">{description}</div>
@@ -209,7 +210,6 @@ function BoardCard({
         </div>
       )}
 
-      {/* Footer actions */}
       <div className="col-span-2 mt-3 flex items-center justify-between gap-2">
         {footerActions ? footerActions : (
           <>
@@ -237,7 +237,6 @@ function BoardCard({
         )}
       </div>
 
-      {/* Delete Modal */}
       {onDelete && (
         <DynamicModal
           open={showDeleteModal}
@@ -252,7 +251,6 @@ function BoardCard({
         </DynamicModal>
       )}
 
-      {/* Share Modal */}
       {enableSharing && (
         <DynamicModal
           open={showShareModal}
@@ -328,4 +326,6 @@ function BoardCard({
   )
 }
 
-export default memo(BoardCard)
+export default memo(TemplateCard)
+
+
