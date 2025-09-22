@@ -200,10 +200,12 @@ export default function AddNodesModal({
           <Button variant="primary" onClick={handleManualSubmit} disabled={!manualCanSubmit}>Add</Button>
         </>
       ) : tab === 'ai' ? (
-        <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreateSelected} disabled={generated.filter(g => g.selected).length === 0}>Create</Button>
-        </>
+        generated.length > 0 ? (
+          <>
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button onClick={handleCreateSelected} disabled={generated.filter(g => g.selected).length === 0}>Create</Button>
+          </>
+        ) : undefined
       ) : tab === 'video' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -317,32 +319,44 @@ export default function AddNodesModal({
 
       {tab === 'ai' && (
         <div className="space-y-3 py-2">
-          <TextArea 
-            value={prompt} 
-            onChange={(e) => setPrompt(e.target.value)} 
-            placeholder="Describe the topic or paste bullets to expand..." 
-            label="Description - tell us what nodes you want to generate..."
-            rows={4} 
-            fullWidth 
-            description="This is the name of your node and how it appears on the board." 
-          />
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" onClick={handleQuickGenerate} loading={quickGenerating} disabled={prompt.trim().length > 0 || quickGenerating}>Quick AI Generate</Button>
-            <Button onClick={handleGenerate} loading={isLoading} disabled={!prompt.trim() || isLoading}>Generate</Button>
-          </div>
-
-          <div className="max-h-64 overflow-auto space-y-2">
-            {generated.map((p, idx) => (
-              <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
-                <Checkbox
-                  checked={p.selected}
-                  onChange={(checked) => setGenerated(prev => prev.map((g, i) => i === idx ? { ...g, selected: !!checked } : g))}
-                  label={p.title || '(untitled)'}
-                  labelTextClassName="text-sm"
-                />
+          {generated.length === 0 ? (
+            <>
+              <div className="flex justify-center">
+                <Button onClick={handleQuickGenerate} loading={quickGenerating} disabled={quickGenerating || prompt.trim().length > 0}>Quick AI Generate</Button>
               </div>
-            ))}
-          </div>
+              <div className="my-2 flex items-center gap-2 text-xs text-gray-500">
+                <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+                <span>OR</span>
+                <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+              </div>
+              <TextArea 
+                value={prompt} 
+                onChange={(e) => setPrompt(e.target.value)} 
+                placeholder="Describe the topic or paste bullets to expand..." 
+                label="Description - tell us what nodes you want to generate..."
+                rows={4} 
+                fullWidth 
+                description="This is the name of your node and how it appears on the board." 
+              />
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                <Button onClick={handleGenerate} loading={isLoading} disabled={!prompt.trim() || isLoading}>Generate Nodes</Button>
+              </div>
+            </>
+          ) : (
+            <div className="max-h-64 overflow-auto space-y-2">
+              {generated.map((p, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1">
+                  <Checkbox
+                    checked={p.selected}
+                    onChange={(checked) => setGenerated(prev => prev.map((g, i) => i === idx ? { ...g, selected: !!checked } : g))}
+                    label={p.title || '(untitled)'}
+                    labelTextClassName="text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {tab === 'video' && !hideVideoTab && (

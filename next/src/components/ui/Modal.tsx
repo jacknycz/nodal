@@ -113,7 +113,12 @@ const Modal: React.FC<ModalProps> = ({
         {title && <h2 className="text-lg md:text-xl font-fredoka font-medium text-gray-900 dark:text-white mb-2">{title}</h2>}
         {description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{description}</p>}
         <div className="flex-1">{children}</div>
-        {actions && <div className="mt-6 flex gap-2 justify-end">{actions}</div>}
+        {(() => {
+          const hasActions = !!actions && (React.Children.count(actions as any) > 0)
+          return hasActions ? (
+            <div className="mt-6 flex gap-2 justify-end">{actions}</div>
+          ) : null
+        })()}
       </div>
     </div>,
     document.body
