@@ -441,44 +441,54 @@ function calculateHierarchicalGridLayout(
       if (arr && arr.length > 0) groups.push(arr)
     })
     // If no matching parents (e.g., roots when no focus), treat entire tier as one group
-    if (groups.length === 0) groups.push(idsInTier)
-
-    // Compute total columns = sum of group sizes; center the row
-    const columns = groups.reduce((sum, g) => sum + g.length, 0)
-    const totalWidth = columns * cellWidth + Math.max(0, columns - 1) * padding
-    rowWidths.push(totalWidth)
-    let currentX = center.x - totalWidth / 2 + cellWidth / 2
-    const y = rowY(t)
-
-    // Place nodes group by group
-    for (const group of groups) {
-      for (const id of group) {
-        const nodeToPlace = idMap.get(id)
-        if (!nodeToPlace) {
-          currentX += cellWidth + padding
-          continue
-        }
-
-        const basePosition = { x: currentX, y }
-        const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
-        const finalPosition = findAvailablePosition(
-          basePosition,
-          dimensions,
-          context.existingNodes,
-          { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
-        )
-        const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
-
-        placements.push({
-          node: createNodeFromToPlace(nodeToPlace),
-          position: finalPosition,
-          reason: `Hierarchical grid tier ${t + 1}`,
-          confidence
-        })
-
-        currentX += cellWidth + padding
+    if (groups.length === 0) {
+      // For top tier roots, separate each root into its own family block for better visual separation
+      if (t === 0 && idsInTier.length > 0) {
+        idsInTier.forEach(id => groups.push([id]))
+      } else {
+        groups.push(idsInTier)
       }
     }
+
+    // Compute total width accounting for intra-group padding and inter-group gap
+    const blockGap = padding * 2
+    const groupWidths = groups.map(g => (g.length * cellWidth) + Math.max(0, g.length - 1) * padding)
+    const totalWidth = groupWidths.reduce((sum, w) => sum + w, 0) + Math.max(0, groups.length - 1) * blockGap
+    rowWidths.push(totalWidth)
+    let cursorX = center.x - totalWidth / 2
+    const y = rowY(t)
+
+    // Place nodes group by group with block spacing
+    groups.forEach((group, gi) => {
+      const gWidth = groupWidths[gi]
+      // group starts at cursorX, ends at cursorX + gWidth
+      let gx = cursorX
+      group.forEach((id, idx) => {
+        const nodeToPlace = idMap.get(id)
+        const baseX = gx + idx * (cellWidth + padding) + cellWidth / 2
+        if (nodeToPlace) {
+          const basePosition = { x: baseX, y }
+          const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+          const finalPosition = findAvailablePosition(
+            basePosition,
+            dimensions,
+            context.existingNodes,
+            { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'right' }
+          )
+          // Lock Y to row to keep rows perfectly aligned
+          const lockedPosition = { x: finalPosition.x, y }
+          const confidence = calculatePlacementConfidence(lockedPosition, basePosition, context.existingNodes)
+          placements.push({
+            node: createNodeFromToPlace(nodeToPlace),
+            position: lockedPosition,
+            reason: `Hierarchical grid tier ${t + 1}`,
+            confidence
+          })
+        }
+      })
+      // advance cursor by group width + block gap
+      cursorX += gWidth + blockGap
+    })
   }
 
   // Place singleton nodes (no edges, no parent/children) to the right in their own grid
