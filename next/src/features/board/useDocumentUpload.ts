@@ -70,8 +70,24 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
 
           if (extractedText && extractedText.length > 0) {
             try { await supabaseStorage.updateDocumentExtractedText(documentId, extractedText) } catch {}
-            setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
-            console.log('[Upload] extraction complete', { nodeId, length: extractedText.length })
+            // Summarize extracted text with AI
+            try {
+              const ai = getOpenAIService()
+              if (ai) {
+                const topic = (useBoardStore.getState().topic || '').trim()
+                const prompt = topic
+                  ? `Summarize the following document in 2-3 concise sentences, in the context of the board topic "${topic}". Focus on what it is and why it matters.\n\n---\n${extractedText.slice(0, 8000)}`
+                  : `Summarize the following document in 2-3 concise sentences. Focus on what it is and why it matters.\n\n---\n${extractedText.slice(0, 8000)}`
+                const res = await ai.generate({ prompt, maxTokens: 160, model: 'gpt-4o-mini' })
+                const summary = (res.content || '').trim()
+                setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: summary || extractedText, status: 'ready' } } : n))
+                console.log('[Upload] extraction + summary complete', { nodeId })
+              } else {
+                setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
+              }
+            } catch {
+              setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
+            }
           } else {
             setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
             console.log('[Upload] no extractable text, marked ready', { nodeId })

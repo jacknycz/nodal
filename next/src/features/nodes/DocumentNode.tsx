@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -15,6 +15,8 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+import TextInput from '../../components/ui/TextInput'
+import TextArea from '../../components/ui/TextArea'
 
 interface DocumentNodeData {
   label: string
@@ -29,6 +31,7 @@ interface DocumentNodeData {
   documentId?: string // Store document ID instead of File object
   uploadedAt?: number
   colorgoryIds?: string[]
+  content?: string
 }
 
 interface DocumentNodeProps {
@@ -69,6 +72,7 @@ export default function DocumentNode({
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const refreshAttemptsRef = useState(0)[0] as any
+  const [showEditModal, setShowEditModal] = useState(false)
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
   useEffect(() => {
@@ -106,7 +110,7 @@ export default function DocumentNode({
     data.fileName?.match(/\.(doc|docx|txt|md|csv|json)$/i)
   )
 
-  const hasExtractedText = data.extractedText && data.extractedText.length > 0 && !data.extractedText.includes('Text extraction failed')
+  const hasContent = typeof data.content === 'string' && data.content.trim().length > 0
 
   // Focus removed
 
@@ -277,18 +281,10 @@ export default function DocumentNode({
 
         {/* Preview is handled by PDFPreviewModal to preserve PDF interactivity */}
 
-        {/* Extracted text preview */}
-        {hasExtractedText && (
-          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs">
-            <div className="text-gray-500 dark:text-gray-400 mb-1 font-medium">
-              Extracted Text:
-            </div>
-            <div className="text-gray-700 dark:text-gray-300 leading-relaxed">
-              {data.extractedText.length > 250 
-                ? `${data.extractedText.substring(0, 250)}...` 
-                : data.extractedText
-              }
-            </div>
+        {/* Document description */}
+        {hasContent && (
+          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+            {data.content!.length > 280 ? `${data.content!.slice(0, 280)}…` : data.content}
           </div>
         )}
       </div>
@@ -299,6 +295,15 @@ export default function DocumentNode({
 
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer open={drawerOpen}>
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Edit document"
+          onClick={() => setShowEditModal(true)}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <Pencil size={14} weight="duotone" />
+        </IconButton>
         <IconButton
           variant="default"
           size="sm"
@@ -347,6 +352,43 @@ export default function DocumentNode({
       </NodeActionDrawer>
 
       {/* Modals */}
+      {/* Edit Modal */}
+      <Modal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Document"
+        description="Update the document title and description."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              const titleInput = (document.getElementById(`doc-edit-title-${id}`) as HTMLInputElement | null)
+              const descInput = (document.getElementById(`doc-edit-desc-${id}`) as HTMLTextAreaElement | null)
+              const nextTitle = titleInput?.value?.trim() || data.fileName || data.title || 'Document'
+              const nextContent = descInput?.value?.trim() || ''
+              onNodeUpdate?.(id, { title: nextTitle, content: nextContent })
+              setShowEditModal(false)
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <TextInput
+            id={`doc-edit-title-${id}`}
+            type="text"
+            defaultValue={data.title || data.fileName || ''}
+            label="Title"
+            fullWidth
+          />
+          <TextArea
+            id={`doc-edit-desc-${id}`}
+            defaultValue={data.content || ''}
+            label="Description"
+            fullWidth
+          />
+        </div>
+      </Modal>
+
       <Modal 
         open={showDeleteModal} 
         onClose={() => setShowDeleteModal(false)}
