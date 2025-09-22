@@ -9,6 +9,7 @@ export interface MenuItem {
   disabled?: boolean
   danger?: boolean
   divider?: boolean
+  nativeClick?: boolean
 }
 
 interface MenuProps {
@@ -137,7 +138,8 @@ export default function Menu({
               return (
                 <button
                   key={index}
-                  onMouseDown={(e) => {
+                  onClick={item.nativeClick ? () => { item.onClick?.(); setIsOpen(false) } : undefined}
+                  onMouseDown={item.nativeClick ? undefined : (e) => {
                     // Fire action early to avoid losing click due to focus/blur
                     e.preventDefault()
                     item.onClick?.()

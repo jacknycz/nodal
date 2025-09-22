@@ -877,6 +877,8 @@ function BoardContent({
     await manualSave(nodes, edges, name)
   }, [manualSave, nodes, edges])
 
+  
+
 
   
   // Document upload via hook
@@ -888,6 +890,40 @@ function BoardContent({
     addNodeToStore: handleAddNodeToStore,
     setNodes,
   })
+
+  // Open a mobile-safe file picker and handle upload
+  const openUploadPicker = useCallback(() => {
+    try {
+      const input = document.createElement('input')
+      input.type = 'file'
+      // Include common doc types and broad image/* for iOS
+      input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp,.heic,image/*'
+      // Ensure element stays alive during native picker
+      input.style.position = 'fixed'
+      input.style.left = '-9999px'
+      document.body.appendChild(input)
+
+      const cleanup = () => {
+        try { document.body.removeChild(input) } catch {}
+      }
+
+      input.addEventListener('change', () => {
+        const file = input.files?.[0]
+        if (file) {
+          const viewportCenter = getViewportCenter()
+          handleDocumentUpload(file, viewportCenter)
+        }
+        cleanup()
+      }, { once: true })
+
+      // Some browsers fire 'cancel' when user closes picker without selecting
+      input.addEventListener('cancel', () => cleanup(), { once: true } as any)
+
+      input.click()
+    } catch (err) {
+      console.error('Failed to open file picker', err)
+    }
+  }, [getViewportCenter, handleDocumentUpload])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -1297,19 +1333,7 @@ function BoardContent({
             }
           }}
           onAIGenerate={() => setShowUnifiedAddModal(true)}
-          onUploadDocument={() => {
-            const input = document.createElement('input')
-            input.type = 'file'
-            input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0]
-              if (file) {
-                const viewportCenter = getViewportCenter()
-                handleDocumentUpload(file, viewportCenter)
-              }
-            }
-            input.click()
-          }}
+          onUploadDocument={openUploadPicker}
           onReorganize={() => setShowReorganizeMenu(true)}
           aiInitialized={aiInitialized}
           nodeCount={nodes.length}
@@ -1548,20 +1572,7 @@ function BoardContent({
                   }
                 }}
                 onAIGenerate={handleOpenAINodeGenerator}
-                onUploadDocument={() => {
-                  const input = document.createElement('input')
-                  input.type = 'file'
-                  input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp'
-                  input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0]
-                    if (file) {
-                      // Use viewport center for manual uploads
-                      const viewportCenter = getViewportCenter()
-                      handleDocumentUpload(file, viewportCenter)
-                    }
-                  }
-                  input.click()
-                }}
+                onUploadDocument={openUploadPicker}
                 onReorganize={() => setShowReorganizeMenu(true)}
                 aiInitialized={aiInitialized}
                 nodeCount={nodes.length}

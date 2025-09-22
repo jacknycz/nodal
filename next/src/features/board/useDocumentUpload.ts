@@ -22,16 +22,34 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
   const handleDocumentUpload = useCallback(async (file: File, position: { x: number; y: number }) => {
     const nodeId = `document-${Date.now()}`
     try {
-      const documentId = await boardStorage.saveDocument(file.name, file, '', localBoardIdRef.current || 'temp', nodeId)
-      const signedUrl = await supabaseStorage.getSignedUrl(documentId)
+      console.log('[Upload] start', { name: file.name, type: file.type, size: file.size, position })
       const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
-      const newNode: any = {
+      // Optimistically add node immediately so user sees progress
+      const optimisticNode: any = {
         id: nodeId,
         type: isImage ? 'image' : 'document',
         position,
-        data: { title: file.name, type: isImage ? 'image' : 'document', fileName: file.name, fileType: file.type || 'unknown', fileSize: file.size, status: 'processing' as const, extractedText: '', documentId, previewUrl: signedUrl },
+        data: {
+          title: file.name,
+          type: isImage ? 'image' : 'document',
+          fileName: file.name,
+          fileType: file.type || 'unknown',
+          fileSize: file.size,
+          status: 'uploading' as const,
+          extractedText: '',
+          documentId: undefined,
+          previewUrl: undefined,
+        },
       }
-      addNodeToStore(newNode)
+      addNodeToStore(optimisticNode)
+      console.log('[Upload] node added to store (optimistic)', { nodeId, type: optimisticNode.type })
+
+      // Persist file
+      const documentId = await boardStorage.saveDocument(file.name, file, '', localBoardIdRef.current || 'temp', nodeId)
+      console.log('[Upload] saved to storage', { documentId })
+      const signedUrl = await supabaseStorage.getSignedUrl(documentId)
+      // Update node with documentId and preview after upload
+      setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, documentId, previewUrl: signedUrl, status: 'processing' } } : n))
 
       if (isTextExtractable(file.type, file.name)) {
         try {
@@ -51,19 +69,23 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
           if (extractedText && extractedText.length > 0) {
             try { await supabaseStorage.updateDocumentExtractedText(documentId, extractedText) } catch {}
             setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, status: 'ready' } } : n))
+            console.log('[Upload] extraction complete', { nodeId, length: extractedText.length })
           } else {
             setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+            console.log('[Upload] no extractable text, marked ready', { nodeId })
           }
         } catch (error: any) {
           setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, extractedText: `Text extraction failed: ${error?.message || 'Unknown error'}`, status: 'error' } } : n))
+          console.warn('[Upload] extraction failed', error)
         }
       } else {
         setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+        console.log('[Upload] not extractable, marked ready', { nodeId })
       }
     } catch (error) {
-      const isImage2 = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
-      const newNode: any = { id: nodeId, type: isImage2 ? 'image' : 'document', position, data: { title: file.name, type: isImage2 ? 'image' : 'document', fileName: file.name, fileType: file.type || 'unknown', fileSize: file.size, status: 'error' as const, extractedText: 'File upload failed' } }
-      addNodeToStore(newNode)
+      // Update optimistic node to error state
+      setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'error', extractedText: 'File upload failed' } } : n))
+      console.error('[Upload] failed; error node added', error)
     }
   }, [boardStorage, supabaseStorage, isTextExtractable, localBoardIdRef, addNodeToStore, setNodes])
 

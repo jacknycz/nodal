@@ -23,9 +23,9 @@ export default function FloatingActionButton({
   nodeCount = 0,
 }: FloatingActionButtonProps) {
   const items = [
-    { label: 'Add node(s)', icon: Plus, onClick: () => { console.log('[FAB] Add node(s) clicked - invoking onAddNode'); try { onAddNode(); } catch (e) { console.error('[FAB] onAddNode threw', e) } } },
-    { label: 'Upload document', icon: FilePlus, onClick: onUploadDocument },
-    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, onClick: onReorganize }] : []),
+    { label: 'Add node(s)', icon: Plus, nativeClick: true, onClick: () => { console.log('[FAB] Add node(s) clicked - invoking onAddNode'); try { onAddNode(); } catch (e) { console.error('[FAB] onAddNode threw', e) } } },
+    { label: 'Upload document', icon: FilePlus, nativeClick: true, onClick: onUploadDocument },
+    ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, nativeClick: true, onClick: onReorganize }] : []),
   ]
 
   return (
