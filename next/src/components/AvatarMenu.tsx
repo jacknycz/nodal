@@ -105,6 +105,7 @@ export default function AvatarMenu({
 
   const roleLabel = getUserRoleFromMetadata(user)
   const admin = isAdmin(user)
+  const displayRole = admin ? 'Admin' : roleLabel
 
   // Get user avatar
   const getUserAvatar = () => {
@@ -167,7 +168,7 @@ export default function AvatarMenu({
                   {getUserDisplayName()}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {roleLabel} • {user?.email || 'user'}
+                  {displayRole} • {user?.email || 'user'}
                 </p>
               </div>
             </div>
@@ -204,29 +205,13 @@ export default function AvatarMenu({
             </button>
           )}
 
-        
-
-          {/* Separator - Only show when we have content above and below
-          {isBoardView && (
-            <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
-          )} */}
-
-          {/* Settings
-          <button
-            onClick={onOpenSettings}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
-          >
-            <GearSix size={24} weight="duotone" className="text-gray-600 dark:text-gray-400" />
-            <span className="text-sm text-gray-900 dark:text-white">Settings</span>
-          </button> */}
-
-          {/* Admin: Templates */}
-          {admin && (
+          {/* Admin: Templates (only on board view) */}
+          {admin && isBoardView && (
             <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Templates (Admin)</div>
               <div className="flex gap-2">
                 <button
-                  className="px-2 py-1 text-xs rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  className="px-2 cursor-pointer py-1 text-xs rounded bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700"
                   onClick={async () => {
                     try {
                       const name = window.prompt('Template name?')?.trim()
@@ -239,9 +224,14 @@ export default function AvatarMenu({
                         nodes: boardNodes,
                         edges: boardEdges,
                         viewport: { x: 0, y: 0, zoom: 1 },
-                        topic: state.currentBoardName || undefined
+                        topic: state.topic || undefined
                       }
-                      await templateStorage.saveTemplate(name, data as any)
+                      const res = await fetch('/api/admin/templates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, data, description: null })
+                      })
+                      if (!res.ok) throw new Error('Template save failed')
                       alert('Template saved')
                     } catch (e) {
                       alert('Failed to save template')
@@ -258,15 +248,6 @@ export default function AvatarMenu({
           <div className="px-4 py-2">
             <ThemeToggle />
           </div>
-
-          {/* Help & Support
-          <button
-            onClick={() => window.open('https://help.nodal.app', '_blank')}
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-3"
-          >
-            <HelpCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <span className="text-sm text-gray-900 dark:text-white">Help & Support</span>
-          </button> */}
 
           {/* Separator */}
           <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
@@ -288,7 +269,6 @@ export default function AvatarMenu({
           </button>
         </div>
       }
-      className={className}
     />
     {showTemplatePicker && (
       <TemplatePickerModal
