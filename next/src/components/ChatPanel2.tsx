@@ -19,10 +19,10 @@ export default function ChatPanel2() {
   const modelKey = currentBoardId ? `nodal.chatpanel.${currentBoardId}.model` : 'nodal.chatpanel.global.model'
 
   const [isOpen, setIsOpen] = useState(() => {
-    if (typeof window === 'undefined') return true
+    if (typeof window === 'undefined') return false
     const saved = localStorage.getItem(panelKey)
     if (saved === 'true' || saved === 'false') return saved === 'true'
-    return window.innerWidth >= 640
+    return window.matchMedia('(min-width: 1024px)').matches
   })
   const [inputValue, setInputValue] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -173,7 +173,9 @@ export default function ChatPanel2() {
       {/* Toggle */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed right-4 z-[200] bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out bottom-4 sm:bottom-auto sm:top-16 ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+        className={`fixed right-4 z-[200] p-3 bottom-4 sm:bottom-auto sm:top-16
+          bg-primary-600 text-white rounded-full shadow-lg hover:bg-primary-700 transition-all duration-200 ease-out 
+          ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
           }`}
         title="Open Chat"
       >
