@@ -303,7 +303,7 @@ export default function ChatPanel2() {
                 : 'Chat with Nodal...'}
               rows={1}
               fullWidth
-              className="resize-none scrollbar-none"
+              className="resize-none scrollbar-none text-base! md:text-sm!"
             />
             <Button onClick={() => handleSend()} disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} className="w-12! h-12! p-0! flex-none">
               <PaperPlaneTilt weight="duotone" size={32} className="w-6! h-6!" />
