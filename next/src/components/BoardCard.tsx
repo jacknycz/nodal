@@ -6,7 +6,7 @@ import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
-import { PushPin, CheckCircle, Copy, Plus } from '@phosphor-icons/react/dist/ssr'
+import { PushPin, CheckCircle, Copy, Plus, Pen } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardCardProps {
   id: string
@@ -150,12 +150,15 @@ function BoardCard({
               </IconButton>
             </div>
           ) : (
-            <div className="flex items-center gap-2 group">
+            <div className="flex items-center gap-1 group">
               <h3
-                className="text-xl font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="text-xl flex items-center gap-2 font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 onClick={(e) => { if (!onRename) return; e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
               >
                 {newName}
+                {onRename && (
+                  <Pen size={16} weight="duotone" className="ml-2 w-4 h-4 opacity-0 group-hover:opacity-100 text-gray-700 dark:text-gray-500 transition-opacity pointer-events-none" />
+                )}
               </h3>
             </div>
           )}
