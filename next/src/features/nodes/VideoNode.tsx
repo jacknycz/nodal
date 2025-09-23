@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle } from '@phosphor-icons/react/ssr'
 import { ArrowsOut, ArrowsIn, Pencil } from '@phosphor-icons/react'
@@ -39,6 +39,8 @@ interface VideoNodeProps {
 export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onQuickAddNodes }: VideoNodeProps) {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [inView, setInView] = useState(false)
+  const viewRef = useRef<HTMLDivElement | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
 
   const isLocked = isNodeLocked?.(id) || false
@@ -88,6 +90,17 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.videoUrl])
 
+  // Lazy mount video/iframe when in viewport
+  useEffect(() => {
+    const el = viewRef.current
+    if (!el) return
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) setInView(true) })
+    }, { root: null, rootMargin: '200px', threshold: 0 })
+    obs.observe(el)
+    return () => { try { obs.disconnect() } catch {} }
+  }, [])
+
   const extractYouTubeId = (url?: string): string | null => {
     if (!url) return null
     try {
@@ -107,11 +120,12 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   const videoId = extractYouTubeId(data.videoUrl)
   const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0` : ''
+  const isMp4 = !videoId && typeof data.videoUrl === 'string' && /\.mp4($|\?)/i.test(data.videoUrl)
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
 
   return (
-    <div className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: false, extra: containerWidthClass })}>
+    <div className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: false, extra: containerWidthClass })} ref={viewRef}>
       {/* Colorgory ring overlay (hidden when expanded) */}
       {!expanded && swatchColors.length > 0 && (
         <div
@@ -147,6 +161,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           <div className="relative w-full">
             {embedSrc ? (
               <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
+                {inView && (
                 <iframe
                   width="800"
                   height="450"
@@ -155,7 +170,23 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
-                />
+                />)}
+              </div>
+            ) : isMp4 ? (
+              <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
+                {inView ? (
+                  <video
+                    width={800}
+                    height={450}
+                    controls
+                    preload="metadata"
+                    poster={data.thumbnailUrl}
+                    src={data.videoUrl}
+                    className="w-[800px] h-[450px] object-contain bg-black"
+                  />
+                ) : (
+                  <div className="w-[800px] h-[450px] bg-black text-gray-100 rounded-md flex items-center justify-center">Video</div>
+                )}
               </div>
             ) : (
               <div className="w-[800px] h-[450px] bg-gray-900 text-gray-100 rounded-md flex items-center justify-center">No video URL</div>

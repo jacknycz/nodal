@@ -10,6 +10,7 @@ import Toggle from './ui/Toggle'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useBoardStore } from '../features/board/boardSlice'
 import { Pencil, Robot, Upload, Video, LinkSimple } from '@phosphor-icons/react'
+import { useUserRole } from '../features/auth/roles'
 import Tag from './ui/Tag'
 // import Image from 'next/image'
 import { getOpenAIService } from '../features/ai/aiService'
@@ -70,6 +71,9 @@ export default function AddNodesModal({
   const { placeGeneratedNodes } = useAIPlacement()
   const { setNodes: setFlowNodes, setEdges: setFlowEdges } = useReactFlow()
   const [quickGenerating, setQuickGenerating] = React.useState(false)
+  const { isPro, isAdmin } = useUserRole()
+  const canUploadVideo = isPro || isAdmin
+  const [isVideoDragOver, setIsVideoDragOver] = React.useState(false)
 
   React.useEffect(() => {
     if (open) {
@@ -386,6 +390,52 @@ export default function AddNodesModal({
             fullWidth
           />
           <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title and thumbnail automatically.</div>
+
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700" />
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Or upload MP4 (max 200MB)</div>
+            <div
+              className={`border-2 border-dashed rounded-md p-6 text-center ${canUploadVideo ? (isVideoDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700') : 'border-gray-300/60 dark:border-gray-700/60 opacity-60'}`}
+              onDragOver={(e) => { if (!canUploadVideo) return; e.preventDefault(); setIsVideoDragOver(true) }}
+              onDragLeave={() => setIsVideoDragOver(false)}
+              onDrop={(e) => {
+                if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); return }
+                e.preventDefault(); setIsVideoDragOver(false)
+                const f = e.dataTransfer.files && e.dataTransfer.files[0]
+                if (!f) return
+                if (f.type !== 'video/mp4' && !/\.mp4$/i.test(f.name)) { alert('Only MP4 videos are supported.'); return }
+                if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); return }
+                onUploadSubmit?.(f); onClose()
+              }}
+            >
+              <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop an MP4 here</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
+              <div className="mt-3">
+                <label className={`inline-block px-3 py-1.5 rounded-md border ${canUploadVideo ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer' : 'bg-gray-100/60 dark:bg-gray-800/60 border-gray-300/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
+                  onClick={(e) => { if (!canUploadVideo) { e.preventDefault(); alert('Uploading videos is a Pro feature. Upgrade to upload videos.') } }}
+                >
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="video/mp4"
+                    onChange={(e) => {
+                      const f = (e.target as HTMLInputElement).files?.[0]
+                      if (!f) return
+                      if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); (e.target as HTMLInputElement).value = ''; return }
+                      if (f.type !== 'video/mp4') { alert('Only MP4 videos are supported.'); (e.target as HTMLInputElement).value = ''; return }
+                      if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); (e.target as HTMLInputElement).value = ''; return }
+                      onUploadSubmit?.(f); onClose()
+                    }}
+                    disabled={!canUploadVideo}
+                  />
+                  <span className="text-sm">Choose MP4</span>
+                </label>
+              </div>
+              {!canUploadVideo && (
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Upgrade to upload videos</div>
+              )}
+            </div>
+          </div>
         </div>
       )}
       {tab === 'link' && (
@@ -416,7 +466,7 @@ export default function AddNodesModal({
             <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop a file here</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
             <div className="mt-3">
-              <label className="inline-block px-3 py-1.5 rounded-md bg-gray-100 dark:bg-gray-800 cursor-pointer">
+              <label className="inline-block px-3 py-1.5 rounded-md border bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer">
                 <input
                   type="file"
                   className="hidden"
@@ -424,7 +474,7 @@ export default function AddNodesModal({
                     const f = (e.target as HTMLInputElement).files?.[0] || null
                     setSelectedFile(f)
                   }}
-                  accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json"
+                  accept="image/*,video/mp4,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json"
                 />
                 <span className="text-sm">Choose file</span>
               </label>
