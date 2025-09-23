@@ -897,7 +897,7 @@ function BoardContent({
       const input = document.createElement('input')
       input.type = 'file'
       // Include common doc types and broad image/* for iOS
-      input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp,.heic,image/*'
+      input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp,.svg,.heic,image/*'
       // Ensure element stays alive during native picker
       input.style.position = 'fixed'
       input.style.left = '-9999px'
@@ -1015,7 +1015,8 @@ function BoardContent({
                 'image/jpeg',
                 'image/jpg',
                 'image/gif',
-                'image/webp'
+                'image/webp',
+                'image/svg+xml'
               ]
               return validTypes.includes(file.type) || 
                 file.name.endsWith('.pdf') || 
@@ -1028,7 +1029,8 @@ function BoardContent({
                 file.name.endsWith('.jpg') ||
                 file.name.endsWith('.jpeg') ||
                 file.name.endsWith('.gif') ||
-                file.name.endsWith('.webp')
+                file.name.endsWith('.webp') ||
+                file.name.endsWith('.svg')
             })
 
               if (validFiles.length > 0) {

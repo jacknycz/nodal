@@ -25,7 +25,8 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
     const nodeId = `document-${Date.now()}`
     try {
       console.log('[Upload] start', { name: file.name, type: file.type, size: file.size, position })
-      const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(file.name)
+      const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name)
+      const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
       // Optimistically add node immediately so user sees progress
       const optimisticNode: any = {
         id: nodeId,
@@ -99,6 +100,10 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       } else {
         // Non-text (likely image): generate variants and AI caption
         const generateVariants = async () => {
+          if (isSvg) {
+            // Skip raster/webp variants for SVG; serve original vector
+            return
+          }
           // Create 800 and 1920 webp variants from the local file
           const drawToCanvas = async (srcFile: File): Promise<HTMLCanvasElement> => {
             return new Promise((resolve, reject) => {
@@ -185,14 +190,44 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
                 setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, content: caption, status: 'ready' } } : n))
                 console.log('[Upload] vision caption ready', { nodeId })
               } else {
-                setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+                // Fallback: parse basic text from SVG if present, otherwise use filename
+                let fallback = ''
+                try {
+                  if (isSvg) {
+                    const text = await file.text()
+                    const titleMatch = text.match(/<title>([\s\S]*?)<\/title>/i)
+                    const descMatch = text.match(/<desc>([\s\S]*?)<\/desc>/i)
+                    const t = titleMatch?.[1]?.trim()
+                    const d = descMatch?.[1]?.trim()
+                    fallback = t || d || ''
+                  }
+                } catch {}
+                const nameOnly = file.name.replace(/\.[^.]+$/, '')
+                const content = (fallback || nameOnly || 'Image').toString()
+                setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, content, status: 'ready' } } : n))
               }
             } else {
-              setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+              // No AI available: set a reasonable default caption
+              const nameOnly = file.name.replace(/\.[^.]+$/, '')
+              setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, content: nameOnly, status: 'ready' } } : n))
             }
           } catch (err) {
             console.warn('[Upload] AI caption failed; marking ready', err)
-            setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
+            // On AI failure: fallback to SVG parsed text or filename
+            let fallback = ''
+            try {
+              if (isSvg) {
+                const text = await file.text()
+                const titleMatch = text.match(/<title>([\s\S]*?)<\/title>/i)
+                const descMatch = text.match(/<desc>([\s\S]*?)<\/desc>/i)
+                const t = titleMatch?.[1]?.trim()
+                const d = descMatch?.[1]?.trim()
+                fallback = t || d || ''
+              }
+            } catch {}
+            const nameOnly = file.name.replace(/\.[^.]+$/, '')
+            const content = (fallback || nameOnly || 'Image').toString()
+            setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, content, status: 'ready' } } : n))
           }
         }
 

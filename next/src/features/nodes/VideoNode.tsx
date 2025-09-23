@@ -3,7 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle } from '@phosphor-icons/react/ssr'
-import { ArrowsOut, ArrowsIn } from '@phosphor-icons/react'
+import { ArrowsOut, ArrowsIn, Pencil } from '@phosphor-icons/react'
+import Modal from '../../components/ui/Modal'
+import TextInput from '../../components/ui/TextInput'
+import TextArea from '../../components/ui/TextArea'
+import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { colorgoryHexById } from '../board/colorgoryColors'
@@ -17,6 +21,7 @@ interface VideoNodeData {
   thumbnailUrl?: string
   status?: 'idle' | 'loading' | 'ready' | 'error'
   colorgoryIds?: string[]
+  content?: string
 }
 
 interface VideoNodeProps {
@@ -34,6 +39,7 @@ interface VideoNodeProps {
 export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onQuickAddNodes }: VideoNodeProps) {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -158,13 +164,36 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         <div className="mt-2">
           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{data.title || 'Video'}</div>
           {data.videoUrl && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{data.videoUrl}</div>
+            <a
+              href={data.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary-600 dark:text-primary-400 hover:underline truncate inline-block w-full"
+              onClick={(e) => e.stopPropagation()}
+              title={data.videoUrl}
+            >
+              {data.videoUrl}
+            </a>
+          )}
+          {data.content && (
+            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+              {data.content.length > 200 ? `${data.content.slice(0, 200)}…` : data.content}
+            </div>
           )}
         </div>
       </div>
 
       {!expanded && (
         <NodeActionDrawer>
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Edit video"
+            onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Pencil size={14} />
+          </IconButton>
           <ColorgoryQuickMenu
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
@@ -184,6 +213,48 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           </IconButton>
         </NodeActionDrawer>
       )}
+
+      {/* Edit Modal */}
+      <Modal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Video"
+        description="Update the video title and description. To change the link, create a new node."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              const titleInput = (document.getElementById(`video-edit-title-${id}`) as HTMLInputElement | null)
+              const descInput = (document.getElementById(`video-edit-desc-${id}`) as HTMLTextAreaElement | null)
+              const nextTitle = titleInput?.value?.trim() || data.title || 'Video'
+              const nextContent = descInput?.value?.trim() || ''
+              onNodeUpdate?.(id, { title: nextTitle, content: nextContent })
+              setShowEditModal(false)
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <TextInput
+            id={`video-edit-title-${id}`}
+            label="Title"
+            defaultValue={data.title || ''}
+            fullWidth
+          />
+          <TextArea
+            id={`video-edit-desc-${id}`}
+            label="Description"
+            defaultValue={data.content || ''}
+            rows={3}
+            fullWidth
+          />
+          {data.videoUrl && (
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              Video URL: {data.videoUrl}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
     </div>
