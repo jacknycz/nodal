@@ -2,6 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSupabaseUser } from '../../src/features/auth/authUtils'
 import { isAdmin } from '../../src/features/auth/roles'
 
@@ -52,8 +53,8 @@ export default function ComponentsLibraryPage() {
             <div className="relative flex flex-col justify-start text-left p-3 bg-white dark:bg-gray-800 border border-transparent rounded-lg shadow-sm shadow-gray-400/20 dark:shadow-none group w-[260px] hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition">
               <div className="rf-handle-hit-32 absolute -top-2 left-1/2 -translate-x-1/2" aria-hidden></div>
               <div className="rf-handle-hit-32 absolute -bottom-2 left-1/2 -translate-x-1/2" aria-hidden></div>
-              <div className="relative w-full">
-                <img src="/nodal.png" alt="Nodal" className="w-full h-[160px] rounded-md object-cover" />
+              <div className="relative w-full h-[160px]">
+                <Image src="/nodal.png" alt="Nodal" fill className="rounded-md object-cover" priority />
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex-1 min-w-0">

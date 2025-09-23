@@ -204,6 +204,7 @@ function BoardCard({
       {(coverUrl || description) && (
         <div className="mt-3 space-y-2">
           {coverUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt="Template cover" className="w-full h-32 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
           )}
           {description && (

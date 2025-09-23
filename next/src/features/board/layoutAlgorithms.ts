@@ -462,7 +462,7 @@ function calculateHierarchicalGridLayout(
     groups.forEach((group, gi) => {
       const gWidth = groupWidths[gi]
       // group starts at cursorX, ends at cursorX + gWidth
-      let gx = cursorX
+      const gx = cursorX
       group.forEach((id, idx) => {
         const nodeToPlace = idMap.get(id)
         const baseX = gx + idx * (cellWidth + padding) + cellWidth / 2
