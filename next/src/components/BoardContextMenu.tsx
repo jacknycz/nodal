@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText } from '@phosphor-icons/react/dist/ssr'
+import { GearSix } from '@phosphor-icons/react'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -15,6 +16,7 @@ interface BoardContextMenuProps {
   onQuickAIGenerateNodes?: (nodeId?: string | null) => void
   onPasteNode?: (position: { x: number; y: number }) => void
   onPasteConnectedNode?: (nodeId: string, position: { x: number; y: number }) => void
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
 export default function BoardContextMenu({
@@ -29,6 +31,7 @@ export default function BoardContextMenu({
   onQuickAIGenerateNodes,
   onPasteNode,
   onPasteConnectedNode,
+  onOrganizeSubtree,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -112,6 +115,16 @@ export default function BoardContextMenu({
           >
             <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
             Quick AI Generate Nodes
+          </button>
+        )}
+
+        {nodeId && onOrganizeSubtree && (
+          <button
+            onClick={() => handleAction(() => onOrganizeSubtree(nodeId))}
+            className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          >
+            <GearSix size={24} weight="duotone" className="w-4 h-4" />
+            Organize this tree
           </button>
         )}
 

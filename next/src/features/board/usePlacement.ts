@@ -374,6 +374,73 @@ export function usePlacement() {
   }, [createPlacementContext, existingNodes, existingEdges, setNodes])
 
   /**
+   * Reorganize only a subtree: keep parent at current position, reposition its descendants under it
+   */
+  const reorganizeSubtree = useCallback(async (
+    parentNodeId: string,
+    algorithm: LayoutAlgorithm = LayoutAlgorithm.GRID,
+    constraints?: Partial<PlacementConstraints>
+  ): Promise<PlacementResult> => {
+    const freshNodes = useBoardStore.getState().nodes
+    const freshEdges = useBoardStore.getState().edges
+
+    // Build parent mapping target -> source
+    const parentOf: Record<string, string> = {}
+    freshEdges.forEach((edge: any) => {
+      const s = edge?.source; const t = edge?.target
+      if (typeof s === 'string' && typeof t === 'string' && !parentOf[t]) parentOf[t] = s
+    })
+
+    // Collect descendants of parentNodeId
+    const descendants = new Set<string>()
+    const queue: string[] = []
+    // seed with direct children
+    freshNodes.forEach(n => { if (parentOf[n.id] === parentNodeId) { descendants.add(n.id); queue.push(n.id) } })
+    while (queue.length) {
+      const current = queue.shift()!
+      freshNodes.forEach(n => {
+        if (!descendants.has(n.id) && parentOf[n.id] === current) {
+          descendants.add(n.id)
+          queue.push(n.id)
+        }
+      })
+    }
+
+    if (descendants.size === 0) {
+      return { placements: [], connections: [], metadata: { algorithm, strategy: LayoutAlgorithm.GRID as any, totalNodes: 0, collisionsAvoided: 0, executionTime: 0, bounds: { minX:0,minY:0,maxX:0,maxY:0 }, qualityScore: 1 }, success: true, warnings: [] }
+    }
+
+    const baseContext = createPlacementContext(parentNodeId, constraints)
+    const context = { ...baseContext, existingNodes: freshNodes, existingEdges: freshEdges }
+
+    const nodesToPlace: NodeToPlace[] = freshNodes
+      .filter(n => descendants.has(n.id))
+      .map(n => ({
+        id: n.id,
+        title: n.data.title || 'Node',
+        content: n.data.content,
+        type: n.data.type,
+        data: n.data,
+        parentId: parentOf[n.id]
+      }))
+
+    const result = await reorganizeBoard(nodesToPlace, context, algorithm)
+
+    if (result.success && result.placements.length > 0) {
+      const updatedNodes = freshNodes.map(node => {
+        if (!descendants.has(node.id)) return node
+        const placement = result.placements.find(p => p.node.id === node.id)
+        if (placement) {
+          return { ...node, position: placement.position }
+        }
+        return node
+      })
+      setNodes(updatedNodes)
+    }
+    return result
+  }, [createPlacementContext, setNodes])
+
+  /**
    * Gets the current viewport center in flow coordinates
    */
   const getViewportCenter = useCallback(() => {
@@ -449,6 +516,7 @@ export function usePlacement() {
     placeManualNode,
     placeDocumentNodes,
     reorganizeBoardLayout,
+    reorganizeSubtree,
     
     // Utility functions
     ...utilities,

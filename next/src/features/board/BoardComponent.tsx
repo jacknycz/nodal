@@ -695,6 +695,7 @@ function BoardContent({
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
   const nodeActions = useNodeActions({ setNodes, setEdges })
   const { placeAINodes, placeBoardNodes, placeManualNode, findBestPosition } = usePlacement()
+  const { reorganizeSubtree } = usePlacement()
   
   // Initialize board
   useEffect(() => {
@@ -1547,6 +1548,11 @@ function BoardContent({
                 setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
               }
             }
+          } catch {}
+        }}
+        onOrganizeSubtree={async (nodeId: string) => {
+          try {
+            await reorganizeSubtree(nodeId)
           } catch {}
         }}
         onPasteNode={async (screenPos: { x: number; y: number }) => {
