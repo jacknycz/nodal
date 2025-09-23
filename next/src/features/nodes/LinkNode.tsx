@@ -98,7 +98,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         />
       )}
 
-      <Handle type="target" position={Position.Top} className="w-3 h-3" />
+      <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
 
       <div className="cursor-default">
         <div className="relative w-full">
@@ -209,7 +209,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
+      <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
     </div>
   )
 }
