@@ -183,13 +183,22 @@ export default function NodalNode({
   // Build colorgory ring gradient
   const gradientStops = swatchColors.length <= 1
     ? (swatchColors[0] || '')
-    : swatchColors.map((color, index) => {
-        const t = (index / (swatchColors.length - 1))
-        const start = 20 // compress stops into 20%-80% band for stronger definition
-        const end = 80
-        const percentage = start + t * (end - start)
-        return `${color} ${percentage}%`
-      }).join(', ')
+    : (() => {
+        const n = swatchColors.length
+        const segment = 100 / n
+        const blendWidth = segment * 0.3 // 30% of each band blends into the next
+        const half = blendWidth / 2
+        const stops: string[] = []
+        stops.push(`${swatchColors[0]} 0%`)
+        for (let i = 0; i < n - 1; i++) {
+          const boundary = segment * (i + 1)
+          const p0 = Math.max(0, boundary - half)
+          const p1 = Math.min(100, boundary + half)
+          stops.push(`${swatchColors[i]} ${p0}%`, `${swatchColors[i + 1]} ${p1}%`)
+        }
+        stops.push(`${swatchColors[n - 1]} 100%`)
+        return stops.join(', ')
+      })()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
 
