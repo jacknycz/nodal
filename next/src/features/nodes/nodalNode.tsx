@@ -184,7 +184,10 @@ export default function NodalNode({
   const gradientStops = swatchColors.length <= 1
     ? (swatchColors[0] || '')
     : swatchColors.map((color, index) => {
-        const percentage = (index / (swatchColors.length - 1)) * 100
+        const t = (index / (swatchColors.length - 1))
+        const start = 20 // compress stops into 20%-80% band for stronger definition
+        const end = 80
+        const percentage = start + t * (end - start)
         return `${color} ${percentage}%`
       }).join(', ')
 

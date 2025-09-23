@@ -52,7 +52,10 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
   const gradientStops = swatchColors.length <= 1
     ? (swatchColors[0] || '')
     : swatchColors.map((color, index) => {
-        const percentage = (index / (swatchColors.length - 1)) * 100
+        const t = (index / (swatchColors.length - 1))
+        const start = 20
+        const end = 80
+        const percentage = start + t * (end - start)
         return `${color} ${percentage}%`
       }).join(', ')
 
