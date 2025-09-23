@@ -469,10 +469,10 @@ class SupabaseStorage {
         return null
       }
 
-      // Generate signed URL (valid for 1 hour)
+      // Generate signed URL (valid for 24 hours)
       const { data: signedUrl, error: urlError } = await supabase.storage
         .from('documents')
-        .createSignedUrl(docData.file_path, 3600) // 1 hour expiry
+        .createSignedUrl(docData.file_path, 86400) // 24 hour expiry
 
       if (urlError) {
         console.error('Failed to generate signed URL:', urlError)
@@ -506,7 +506,7 @@ class SupabaseStorage {
   }
 
   // Create or refresh a signed URL for an arbitrary storage path
-  async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 3600): Promise<string | null> {
+  async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 86400): Promise<string | null> {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
@@ -535,7 +535,7 @@ class SupabaseStorage {
     return path
   }
 
-  async getSignedUrlForVariant(documentId: string, sizeLabel: '800' | '1920', expiresInSeconds: number = 3600): Promise<string | null> {
+  async getSignedUrlForVariant(documentId: string, sizeLabel: '800' | '1920', expiresInSeconds: number = 86400): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')
     const path = `${user.id}/variants/${documentId}-${sizeLabel}.webp`

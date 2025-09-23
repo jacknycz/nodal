@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { Trash, Pen, PlusCircle } from "@phosphor-icons/react/ssr";
+import { Trash, Pen, PlusCircle, TreeView } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -39,6 +39,7 @@ interface NodalNodeProps {
   nodeLocks?: any[]
   onNodeShiftClickConnect?: (targetId: string) => void
   onQuickAddNodes?: (nodeId: string) => void
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
 export default function NodalNode({
@@ -54,7 +55,8 @@ export default function NodalNode({
   isNodeLockedByMe,
   nodeLocks,
   onNodeShiftClickConnect,
-  onQuickAddNodes
+  onQuickAddNodes,
+  onOrganizeSubtree
 }: NodalNodeProps) {
   const SHOW_ADD_CONNECTED = false
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -282,6 +284,16 @@ export default function NodalNode({
             <PlusCircle size={14} weight="duotone" />
           </IconButton>
         )}
+
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Reorganize nodes"
+          onClick={() => onOrganizeSubtree?.(id)}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <TreeView size={14} weight="duotone" />
+        </IconButton>
 
         <ColorgoryQuickMenu
           nodeId={id}

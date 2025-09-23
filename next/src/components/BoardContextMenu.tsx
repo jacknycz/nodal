@@ -1,8 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText } from '@phosphor-icons/react/dist/ssr'
-import { GearSix } from '@phosphor-icons/react'
+import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText, TreeView } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -123,8 +122,8 @@ export default function BoardContextMenu({
             onClick={() => handleAction(() => onOrganizeSubtree(nodeId))}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
           >
-            <GearSix size={24} weight="duotone" className="w-4 h-4" />
-            Organize this tree
+            <TreeView size={24} weight="duotone" className="w-4 h-4" />
+            Reorganize nodes
           </button>
         )}
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil, TreeView } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
@@ -48,6 +48,7 @@ interface DocumentNodeProps {
   isNodeLockedByMe?: (nodeId: string) => boolean
   nodeLocks?: any[]
   onQuickAddNodes?: (nodeId: string) => void
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
 export default function DocumentNode({ 
@@ -62,7 +63,8 @@ export default function DocumentNode({
   getNodeLockOwner,
   isNodeLockedByMe,
   nodeLocks,
-  onQuickAddNodes
+  onQuickAddNodes,
+  onOrganizeSubtree
 }: DocumentNodeProps) {
   const SHOW_ADD_CONNECTED = false
   const [showPreview, setShowPreview] = useState(false)
@@ -73,6 +75,7 @@ export default function DocumentNode({
   const [drawerOpen, setDrawerOpen] = useState(false)
   const refreshAttemptsRef = useState(0)[0] as any
   const [showEditModal, setShowEditModal] = useState(false)
+  const [signedPreviewUrl, setSignedPreviewUrl] = useState<string | null>(null)
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
   useEffect(() => {
@@ -85,6 +88,19 @@ export default function DocumentNode({
       if (timer) clearTimeout(timer)
     }
   }, [data.status])
+
+  useEffect(() => {
+    const refresh = async () => {
+      if (!data.documentId) return
+      try {
+        const url = await (await import('../storage/supabaseStorage')).supabaseStorage.getSignedUrl(data.documentId)
+        setSignedPreviewUrl(url)
+      } catch {}
+    }
+    refresh()
+    const t = setInterval(refresh, 45 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [data.documentId])
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -141,7 +157,7 @@ export default function DocumentNode({
     if (!data.documentId) return
     try {
       const url = await supabaseStorage.getSignedUrl(data.documentId)
-      ;(onNodeUpdate as any)?.(id, { previewUrl: url })
+      setSignedPreviewUrl(url)
     } catch {}
   }
 
@@ -173,10 +189,10 @@ export default function DocumentNode({
   }
 
   const handleDownload = () => {
-    if (data.previewUrl) {
+    if (data.previewUrl || signedPreviewUrl) {
       try {
         const a = document.createElement('a')
-        a.href = data.previewUrl
+        a.href = signedPreviewUrl || data.previewUrl!
         a.download = data.fileName || data.label
         document.body.appendChild(a)
         a.click()
@@ -345,6 +361,15 @@ export default function DocumentNode({
             <PlusCircle size={14} weight="duotone" />
           </IconButton>
         )}
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Reorganize nodes"
+          onClick={() => onOrganizeSubtree?.(id)}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <TreeView size={14} weight="duotone" />
+        </IconButton>
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={data.colorgoryIds || []}
@@ -422,7 +447,7 @@ export default function DocumentNode({
         <PDFPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
-          fileUrl={data.previewUrl}
+          fileUrl={signedPreviewUrl || data.previewUrl}
           fileName={data.fileName || ''}
           onLoadError={refreshSignedUrl}
         />

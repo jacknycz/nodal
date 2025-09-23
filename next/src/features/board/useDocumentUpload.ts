@@ -61,8 +61,8 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       const documentId = await boardStorage.saveDocument(file.name, file, '', localBoardIdRef.current || 'temp', nodeId)
       console.log('[Upload] saved to storage', { documentId })
       const signedUrl = await supabaseStorage.getSignedUrl(documentId)
-      // Update node with documentId and preview after upload
-      setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, documentId, previewUrl: signedUrl, status: 'processing' } } : n))
+      // Update node with documentId only (avoid persisting signed URLs that expire)
+      setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, documentId, status: 'processing' } } : n))
 
       if (!isVideo && isTextExtractable(file.type, file.name)) {
         try {
@@ -181,9 +181,7 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
             console.warn('[Upload] variant upload failed', e)
           }
 
-          if (v800Url || v1920Url) {
-            setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, variant800Url: v800Url || n.data.variant800Url, variant1920Url: v1920Url || n.data.variant1920Url } } : n))
-          }
+          // Do not persist signed variant URLs; nodes will resolve them on render
         }
 
         const generateCaption = async () => {
@@ -269,11 +267,10 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
         if (thumbBlob) {
           try {
             await supabaseStorage.uploadImageVariant(documentId, thumbBlob, '800')
-            const thumbUrl = await supabaseStorage.getSignedUrlForVariant(documentId, '800')
-            setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, thumbnailUrl: thumbUrl || undefined } } : n))
           } catch {}
         }
-        setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, type: 'video', data: { ...n.data, type: 'video', videoUrl: signedUrl, status: 'ready' } } : n))
+        // Keep documentId and mark ready; VideoNode will resolve a fresh signed URL for playback
+        setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, type: 'video', data: { ...n.data, type: 'video', status: 'ready' } } : n))
       }
     } catch (error) {
       // Update optimistic node to error state

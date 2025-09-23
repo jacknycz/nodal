@@ -5,7 +5,7 @@ import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
 import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
-import { Trash } from "@phosphor-icons/react/ssr";
+import { Trash, TreeView } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
@@ -37,6 +37,7 @@ interface TaskNodeProps {
   nodeLocks?: any[]
   // Connect helper
   onNodeShiftClickConnect?: (targetId: string) => void
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
 export default function TaskNode({
@@ -50,6 +51,7 @@ export default function TaskNode({
   isNodeLocked,
   isNodeLockedByMe,
   onNodeShiftClickConnect,
+  onOrganizeSubtree,
 }: TaskNodeProps) {
   const [title, setTitle] = useState(data.title || '')
   const [completed, setCompleted] = useState<boolean>(!!data.completed)
@@ -187,6 +189,15 @@ export default function TaskNode({
 
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer open={drawerOpen}>
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Reorganize nodes"
+          onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
+          disabled={isLocked && !lockedByMe}
+        >
+          <TreeView size={14} weight="duotone" />
+        </IconButton>
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={(data as any).colorgoryIds || []}

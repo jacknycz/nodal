@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, PlusCircle } from '@phosphor-icons/react/ssr'
+import { Trash, PlusCircle, TreeView } from '@phosphor-icons/react/ssr'
 import { ArrowsOut, ArrowsIn, Pencil } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
@@ -11,6 +11,7 @@ import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { colorgoryHexById } from '../board/colorgoryColors'
+import { supabaseStorage } from '../storage/supabaseStorage'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
@@ -34,14 +35,16 @@ interface VideoNodeProps {
   isNodeLocked?: (nodeId: string) => boolean
   isNodeLockedByMe?: (nodeId: string) => boolean
   onQuickAddNodes?: (nodeId: string) => void
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
-export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onQuickAddNodes }: VideoNodeProps) {
+export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onQuickAddNodes, onOrganizeSubtree }: VideoNodeProps) {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [inView, setInView] = useState(false)
   const viewRef = useRef<HTMLDivElement | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null)
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -113,6 +116,21 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
     return () => { try { obs.disconnect() } catch {} }
   }, [])
 
+  // Resolve signed URL for uploaded videos (document-backed)
+  useEffect(() => {
+    const refresh = async () => {
+      const docId = (data as any)?.documentId
+      if (!docId) return
+      try {
+        const url = await supabaseStorage.getSignedUrl(docId)
+        setSignedVideoUrl(url)
+      } catch {}
+    }
+    refresh()
+    const t = setInterval(refresh, 45 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [(data as any)?.documentId])
+
   const extractYouTubeId = (url?: string): string | null => {
     if (!url) return null
     try {
@@ -130,9 +148,10 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
     return null
   }
 
-  const videoId = extractYouTubeId(data.videoUrl)
+  const effectiveVideoUrl = (signedVideoUrl || data.videoUrl || '') as string
+  const videoId = extractYouTubeId(effectiveVideoUrl)
   const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0` : ''
-  const isMp4 = !videoId && typeof data.videoUrl === 'string' && /\.mp4($|\?)/i.test(data.videoUrl)
+  const isMp4 = !videoId && typeof effectiveVideoUrl === 'string' && /\.mp4($|\?)/i.test(effectiveVideoUrl)
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
 
@@ -193,8 +212,17 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                     controls
                     preload="metadata"
                     poster={data.thumbnailUrl}
-                    src={data.videoUrl}
+                    src={effectiveVideoUrl}
                     className="w-[800px] h-[450px] object-contain bg-black"
+                    onError={async () => {
+                      try {
+                        const docId = (data as any)?.documentId
+                        if (docId) {
+                          const url = await supabaseStorage.getSignedUrl(docId)
+                          setSignedVideoUrl(url)
+                        }
+                      } catch {}
+                    }}
                   />
                 ) : (
                   <div className="w-[800px] h-[450px] bg-black text-gray-100 rounded-md flex items-center justify-center">Video</div>
@@ -218,16 +246,16 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             )}
             <span className="truncate">{data.title || 'Video'}</span>
           </div>
-          {data.videoUrl && (
+          {effectiveVideoUrl && (
             <a
-              href={data.videoUrl}
+              href={effectiveVideoUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-primary-600 dark:text-primary-400 hover:underline truncate inline-block w-full"
               onClick={(e) => e.stopPropagation()}
-              title={data.videoUrl}
+              title={effectiveVideoUrl}
             >
-              {data.videoUrl}
+              {effectiveVideoUrl}
             </a>
           )}
           {data.content && (
@@ -256,6 +284,15 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             disabled={isLocked && !isLockedByMe}
             onNodeUpdate={onNodeUpdate}
           />
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Reorganize nodes"
+          onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <TreeView size={14} weight="duotone" />
+        </IconButton>
         {/* Hidden for now */}
           <IconButton
             variant="danger"

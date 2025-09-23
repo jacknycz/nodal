@@ -1216,6 +1216,7 @@ function BoardContent({
         setPendingSourceNodeId(nodeId)
         setShowUnifiedAddModal(true)
       },
+      onOrganizeSubtree: (nodeId: string) => reorganizeSubtree(nodeId),
     }
     
     // Force update stableHandlers immediately

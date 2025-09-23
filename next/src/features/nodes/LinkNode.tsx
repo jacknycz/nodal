@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash } from '@phosphor-icons/react/ssr'
+import { Trash, TreeView } from '@phosphor-icons/react/ssr'
 import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
@@ -33,9 +33,10 @@ interface LinkNodeProps {
   // Locking
   isNodeLocked?: (nodeId: string) => boolean
   isNodeLockedByMe?: (nodeId: string) => boolean
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
-export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe }: LinkNodeProps) {
+export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onOrganizeSubtree }: LinkNodeProps) {
   const [loading, setLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
 
@@ -168,6 +169,15 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           disabled={isLocked && !isLockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
+        <IconButton
+          variant="default"
+          size="sm"
+          aria-label="Reorganize nodes"
+          onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
+          disabled={isLocked && !isLockedByMe}
+        >
+          <TreeView size={14} weight="duotone" />
+        </IconButton>
         <IconButton
           variant="danger"
           size="sm"

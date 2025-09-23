@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView } from '@phosphor-icons/react'
 // Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
@@ -48,6 +48,7 @@ interface ImageNodeProps {
   isNodeLockedByMe?: (nodeId: string) => boolean
   nodeLocks?: any[]
   onQuickAddNodes?: (nodeId: string) => void
+  onOrganizeSubtree?: (nodeId: string) => void
 }
 
 export default function ImageNode({
@@ -62,7 +63,8 @@ export default function ImageNode({
   getNodeLockOwner,
   isNodeLockedByMe,
   nodeLocks,
-  onQuickAddNodes
+  onQuickAddNodes,
+  onOrganizeSubtree
 }: ImageNodeProps) {
   const SHOW_ADD_CONNECTED = false
   const [showEditModal, setShowEditModal] = useState(false)
@@ -80,21 +82,36 @@ export default function ImageNode({
   const pinchStartRef = React.useRef<{ distance: number; center: { x: number; y: number }; scale: number; translate: { x: number; y: number } } | null>(null)
   const refreshAttemptsRef = React.useRef<number>(0)
 
+  const [signedPreviewUrl, setSignedPreviewUrl] = useState<string | null>(null)
+  const [signedVariant800, setSignedVariant800] = useState<string | null>(null)
+  const [signedVariant1920, setSignedVariant1920] = useState<string | null>(null)
+
   const refreshSignedUrl = async () => {
     if (!data.documentId) return
     if (refreshAttemptsRef.current >= 2) return
     try {
-      const url = await supabaseStorage.getSignedUrl(data.documentId)
+      const [url, v800, v1920] = await Promise.all([
+        supabaseStorage.getSignedUrl(data.documentId),
+        supabaseStorage.getSignedUrlForVariant(data.documentId, '800'),
+        supabaseStorage.getSignedUrlForVariant(data.documentId, '1920')
+      ])
       refreshAttemptsRef.current += 1
-      onNodeUpdate?.(id, { previewUrl: url })
+      setSignedPreviewUrl(url)
+      setSignedVariant800(v800)
+      setSignedVariant1920(v1920)
     } catch {}
   }
 
   const handleImageError = async () => {
     await refreshSignedUrl()
-    // Drop stale variant URLs so we fall back to fresh previewUrl
-    onNodeUpdate?.(id, { variant800Url: null, variant1920Url: null } as any)
   }
+  useEffect(() => {
+    if (!data.documentId) return
+    refreshSignedUrl()
+    // Periodic refresh (every 45 minutes)
+    const t = setInterval(refreshSignedUrl, 45 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [data.documentId])
 
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
@@ -148,10 +165,10 @@ export default function ImageNode({
   }
 
   const handleDownload = () => {
-    if (!data.previewUrl) return
+    if (!(signedPreviewUrl || data.previewUrl)) return
     try {
       const a = document.createElement('a')
-      a.href = data.previewUrl
+      a.href = signedPreviewUrl || data.previewUrl!
       a.download = data.fileName || data.title || 'image'
       document.body.appendChild(a)
       a.click()
@@ -328,13 +345,13 @@ export default function ImageNode({
             pinchStartRef.current = null
           }}
         >
-          {data.previewUrl ? (
+          {(signedPreviewUrl || data.previewUrl) ? (
             <img
-              key={`${data.previewUrl}|${data.variant800Url || ''}|${data.variant1920Url || ''}`}
-              src={data.variant800Url || data.previewUrl}
+              key={`${signedPreviewUrl || data.previewUrl}|${signedVariant800 || data.variant800Url || ''}|${signedVariant1920 || data.variant1920Url || ''}`}
+              src={signedVariant800 || data.variant800Url || signedPreviewUrl || data.previewUrl!}
               srcSet={[
-                data.variant800Url ? `${data.variant800Url} 800w` : null,
-                data.variant1920Url ? `${data.variant1920Url} 1920w` : null,
+                (signedVariant800 || data.variant800Url) ? `${signedVariant800 || data.variant800Url} 800w` : null,
+                (signedVariant1920 || data.variant1920Url) ? `${signedVariant1920 || data.variant1920Url} 1920w` : null,
               ].filter(Boolean).join(', ')}
               sizes={expanded ? '100vw' : '260px'}
               alt={data.fileName || data.title || 'Image'}
@@ -443,7 +460,7 @@ export default function ImageNode({
           >
             <DownloadSimple size={14} />
           </IconButton>
-          {SHOW_ADD_CONNECTED && (
+        {SHOW_ADD_CONNECTED && (
             <IconButton
               variant="default"
               size="sm"
@@ -454,6 +471,15 @@ export default function ImageNode({
               <PlusCircle size={14} />
             </IconButton>
           )}
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Reorganize nodes"
+            onClick={() => onOrganizeSubtree?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <TreeView size={14} weight="duotone" />
+          </IconButton>
           <ColorgoryQuickMenu
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
