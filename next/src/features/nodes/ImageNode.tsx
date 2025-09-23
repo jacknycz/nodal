@@ -90,6 +90,12 @@ export default function ImageNode({
     } catch {}
   }
 
+  const handleImageError = async () => {
+    await refreshSignedUrl()
+    // Drop stale variant URLs so we fall back to fresh previewUrl
+    onNodeUpdate?.(id, { variant800Url: null, variant1920Url: null } as any)
+  }
+
   // Status visibility (auto-hide when status becomes 'ready')
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
   useEffect(() => {
@@ -326,7 +332,7 @@ export default function ImageNode({
                 transformOrigin: '0 0',
               }}
               onLoad={() => setIsLoaded(true)}
-              onError={() => refreshSignedUrl()}
+              onError={handleImageError}
               draggable={false}
             />
           ) : (
