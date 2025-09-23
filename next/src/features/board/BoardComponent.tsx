@@ -1019,7 +1019,8 @@ function BoardContent({
                 'image/jpg',
                 'image/gif',
                 'image/webp',
-                'image/svg+xml'
+                'image/svg+xml',
+                'video/mp4'
               ]
               return validTypes.includes(file.type) || 
                 file.name.endsWith('.pdf') || 
@@ -1033,7 +1034,8 @@ function BoardContent({
                 file.name.endsWith('.jpeg') ||
                 file.name.endsWith('.gif') ||
                 file.name.endsWith('.webp') ||
-                file.name.endsWith('.svg')
+                file.name.endsWith('.svg') ||
+                file.name.toLowerCase().endsWith('.mp4')
             })
 
               if (validFiles.length > 0) {
