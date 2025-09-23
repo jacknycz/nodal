@@ -26,6 +26,7 @@ import ImageNode from '../nodes/ImageNode'
 import NodalNode from '../nodes/nodalNode'
 import TaskNode from '../nodes/TaskNode'
 import VideoNode from '../nodes/VideoNode'
+import LinkNode from '../nodes/LinkNode'
 import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
 import CustomConnectionLine from './CustomConnectionLine'
@@ -115,6 +116,7 @@ export const nodeTypes = {
   image: (props: any) => <ImageNode {...props} {...stableHandlers} />,
   task: (props: any) => <TaskNode {...props} {...stableHandlers} />,
   video: (props: any) => <VideoNode {...props} {...stableHandlers} />,
+  link: (props: any) => <LinkNode {...props} {...stableHandlers} />,
 };
 
 export const edgeTypes = {
@@ -1066,6 +1068,65 @@ function BoardContent({
     }
   }, [handleDocumentUpload])
   
+  // Paste handler: supports URLs (video/link) and files (image/pdf/etc.)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      try {
+        const cd = e.clipboardData
+        if (!cd) return
+        const center = pendingNodePosition || getViewportCenter()
+
+        // If files are present, prefer files
+        if (cd.files && cd.files.length > 0) {
+          const files = Array.from(cd.files)
+          const hasProcessable = files.some(f => !!f.type)
+          if (hasProcessable) {
+            e.preventDefault()
+            files.forEach((file) => {
+              // Reuse existing upload pipeline
+              handleDocumentUpload(file as File, center)
+            })
+            return
+          }
+        }
+
+        // Otherwise, check for a URL in text
+        const text = cd.getData('text') || cd.getData('text/plain') || ''
+        const trimmed = (text || '').trim()
+        if (!trimmed) return
+        let url: URL | null = null
+        try { url = new URL(trimmed) } catch {}
+        if (!url) return
+        e.preventDefault()
+
+        const href = url.toString()
+        const host = url.hostname.toLowerCase()
+        const isYouTube = host.includes('youtube.com') || host.includes('youtu.be')
+
+        if (isYouTube) {
+          const newNode: Node = {
+            id: `video-${Date.now()}`,
+            type: 'video',
+            position: center,
+            data: { title: 'Video', videoUrl: href, status: 'idle' } as any,
+          }
+          setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+        } else {
+          const newNode: Node = {
+            id: `link-${Date.now()}`,
+            type: 'link',
+            position: center,
+            data: { title: 'Link', linkUrl: href, status: 'idle' } as any,
+          }
+          setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+        }
+      } catch {}
+    }
+
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [getViewportCenter, handleDocumentUpload, setNodes])
+
   // Keyboard shortcuts via hook
   useBoardShortcuts(() => { saveBoard() })
   
@@ -1488,6 +1549,115 @@ function BoardContent({
             }
           } catch {}
         }}
+        onPasteNode={async (screenPos: { x: number; y: number }) => {
+          try {
+            const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
+            const cd = await navigator.clipboard.read()
+            // Prefer files if present
+            let handled = false
+            for (const item of cd) {
+              const types = item.types
+              // Look for image/pdf or any file
+              if (types.some(t => t.startsWith('image/')) || types.includes('application/pdf')) {
+                const type = types.find(t => t.startsWith('image/')) || 'application/pdf'
+                const blob = await item.getType(type)
+                const file = new File([blob], `pasted-${Date.now()}.${type.includes('pdf') ? 'pdf' : type.split('/')[1] || 'bin'}`, { type })
+                handleDocumentUpload(file, flowPosition)
+                handled = true
+              }
+            }
+            if (handled) return
+
+            // Else try text
+            const text = await navigator.clipboard.readText()
+            const trimmed = (text || '').trim()
+            if (!trimmed) return
+
+            let url: URL | null = null
+            try { url = new URL(trimmed) } catch {}
+            if (url) {
+              const href = url.toString()
+              const host = url.hostname.toLowerCase()
+              const isYouTube = host.includes('youtube.com') || host.includes('youtu.be')
+              const newNode: Node = isYouTube ? {
+                id: `video-${Date.now()}`,
+                type: 'video',
+                position: flowPosition,
+                data: { title: 'Video', videoUrl: href, status: 'idle' } as any,
+              } : {
+                id: `link-${Date.now()}`,
+                type: 'link',
+                position: flowPosition,
+                data: { title: 'Link', linkUrl: href, status: 'idle' } as any,
+              }
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+              return
+            }
+
+            // Otherwise create a default node with description
+            const newNode: Node = {
+              id: `node-${Date.now()}`,
+              type: 'default',
+              position: flowPosition,
+              data: { title: 'New Node', content: trimmed } as any,
+            }
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          } catch {}
+        }}
+        onPasteConnectedNode={async (sourceNodeId: string, screenPos: { x: number; y: number }) => {
+          try {
+            const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
+            const cd = await navigator.clipboard.read()
+            let handled = false
+            for (const item of cd) {
+              const types = item.types
+              if (types.some(t => t.startsWith('image/')) || types.includes('application/pdf')) {
+                const type = types.find(t => t.startsWith('image/')) || 'application/pdf'
+                const blob = await item.getType(type)
+                const file = new File([blob], `pasted-${Date.now()}.${type.includes('pdf') ? 'pdf' : type.split('/')[1] || 'bin'}`, { type })
+                // Upload creates node asynchronously; we won't have id yet
+                // As a simpler approach, create a temporary node, then replace? For now, just drop without edge.
+                handleDocumentUpload(file, flowPosition)
+                handled = true
+              }
+            }
+            if (handled) return
+            const text = await navigator.clipboard.readText()
+            const trimmed = (text || '').trim()
+            if (!trimmed) return
+            let url: URL | null = null
+            try { url = new URL(trimmed) } catch {}
+            let newId = `node-${Date.now()}`
+            if (url) {
+              const href = url.toString()
+              const host = url.hostname.toLowerCase()
+              const isYouTube = host.includes('youtube.com') || host.includes('youtu.be')
+              const node: Node = isYouTube ? {
+                id: `video-${Date.now()}`,
+                type: 'video',
+                position: flowPosition,
+                data: { title: 'Video', videoUrl: href, status: 'idle' } as any,
+              } : {
+                id: `link-${Date.now()}`,
+                type: 'link',
+                position: flowPosition,
+                data: { title: 'Link', linkUrl: href, status: 'idle' } as any,
+              }
+              newId = node.id
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+            } else {
+              const node: Node = {
+                id: newId,
+                type: 'default',
+                position: flowPosition,
+                data: { title: 'New Node', content: trimmed } as any,
+              }
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+            }
+            // Connect source -> new node
+            setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: 'floating' }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: 'floating' }]))
+          } catch {}
+        }}
       />
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}
@@ -1732,6 +1902,17 @@ function BoardContent({
               type: 'video',
               position: center,
               data: { title: 'Video', videoUrl: url, status: 'idle' } as any,
+            }
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+            setShowUnifiedAddModal(false)
+          }}
+          onLinkSubmit={(url) => {
+            const center = pendingNodePosition || getViewportCenter()
+            const newNode: Node = {
+              id: `link-${Date.now()}`,
+              type: 'link',
+              position: center,
+              data: { title: 'Link', linkUrl: url, status: 'idle' } as any,
             }
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)

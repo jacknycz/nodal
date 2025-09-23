@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, CheckCircle, TreeStructure, CheckSquare } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -13,6 +13,8 @@ interface BoardContextMenuProps {
   onAddConnectedNodes?: (nodeId: string, position: { x: number; y: number }) => void
   onAddTaskNode?: () => void
   onQuickAIGenerateNodes?: (nodeId?: string | null) => void
+  onPasteNode?: (position: { x: number; y: number }) => void
+  onPasteConnectedNode?: (nodeId: string, position: { x: number; y: number }) => void
 }
 
 export default function BoardContextMenu({
@@ -25,6 +27,8 @@ export default function BoardContextMenu({
   onAddConnectedNodes,
   onAddTaskNode,
   onQuickAIGenerateNodes,
+  onPasteNode,
+  onPasteConnectedNode,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
 
@@ -91,6 +95,16 @@ export default function BoardContextMenu({
           </button>
         )}
 
+        {nodeId && onPasteConnectedNode && (
+          <button
+            onClick={() => handleAction(() => onPasteConnectedNode(nodeId, position))}
+            className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          >
+            <ClipboardText size={24} weight="duotone" className="w-4 h-4" />
+            Paste connected node
+          </button>
+        )}
+
         {nodeId && onQuickAIGenerateNodes && (
           <button
             onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
@@ -108,6 +122,16 @@ export default function BoardContextMenu({
         >
           <PlusCircle size={24} weight="duotone" className="w-4 h-4" />
           Add node(s)
+        </button>
+        )}
+
+        {!nodeId && onPasteNode && (
+        <button
+          onClick={async () => handleAction(() => onPasteNode(position))}
+          className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+        >
+          <ClipboardText size={24} weight="duotone" className="w-4 h-4" />
+          Paste node
         </button>
         )}
 

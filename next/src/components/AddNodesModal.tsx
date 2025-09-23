@@ -9,7 +9,7 @@ import Checkbox from './ui/Checkbox'
 import Toggle from './ui/Toggle'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useBoardStore } from '../features/board/boardSlice'
-import { Pencil, Robot, Upload, Video } from '@phosphor-icons/react'
+import { Pencil, Robot, Upload, Video, LinkSimple } from '@phosphor-icons/react'
 import Tag from './ui/Tag'
 // import Image from 'next/image'
 import { getOpenAIService } from '../features/ai/aiService'
@@ -26,6 +26,7 @@ interface AddNodesModalProps {
   onManualSubmit: (payload: { titles: string[]; description?: string; generateDescription?: boolean }) => void
   onAIConfirm: (items: { title: string; content?: string }[]) => void
   onVideoSubmit?: (url: string) => void
+  onLinkSubmit?: (url: string) => void
   onUploadSubmit?: (file: File) => void
   hideVideoTab?: boolean
 }
@@ -42,10 +43,11 @@ export default function AddNodesModal({
   onManualSubmit,
   onAIConfirm,
   onVideoSubmit,
+  onLinkSubmit,
   onUploadSubmit,
   hideVideoTab,
 }: AddNodesModalProps) {
-  const [tab, setTab] = React.useState<'manual' | 'ai' | 'video' | 'upload'>('manual')
+  const [tab, setTab] = React.useState<'manual' | 'ai' | 'video' | 'link' | 'upload'>('manual')
 
   // Manual state
   const [titleInput, setTitleInput] = React.useState('')
@@ -64,6 +66,7 @@ export default function AddNodesModal({
   const [videoUrl, setVideoUrl] = React.useState('')
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [isDragOver, setIsDragOver] = React.useState(false)
+  const [linkUrl, setLinkUrl] = React.useState('')
   const { placeGeneratedNodes } = useAIPlacement()
   const { setNodes: setFlowNodes, setEdges: setFlowEdges } = useReactFlow()
   const [quickGenerating, setQuickGenerating] = React.useState(false)
@@ -78,6 +81,7 @@ export default function AddNodesModal({
       setGenerateDescription(false)
       setVideoUrl('')
       setSelectedFile(null)
+      setLinkUrl('')
       setIsDragOver(false)
       setPrompt(initialAIContext ? [
         initialAIContext.topic && `Topic: ${initialAIContext.topic}`,
@@ -211,6 +215,11 @@ export default function AddNodesModal({
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={() => { if (onVideoSubmit && videoUrl.trim()) onVideoSubmit(videoUrl.trim()) }} disabled={!videoUrl.trim()}>Create</Button>
         </>
+      ) : tab === 'link' ? (
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => { if (onLinkSubmit && linkUrl.trim()) onLinkSubmit(linkUrl.trim()) }} disabled={!linkUrl.trim()}>Create</Button>
+        </>
       ) : (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -224,7 +233,7 @@ export default function AddNodesModal({
           <Tag variant="primary">{parentNodeTitle}</Tag>
         </div>
       )}
-      <div className={`grid ${hideVideoTab ? 'grid-cols-3' : 'grid-cols-4'} gap-3 mb-3`}>
+      <div className={`grid ${hideVideoTab ? 'grid-cols-4' : 'grid-cols-5'} gap-3 mb-3`}>
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'manual' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('manual')}
@@ -251,6 +260,14 @@ export default function AddNodesModal({
             Video
           </button>
         )}
+
+        <button
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'link' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          onClick={() => setTab('link')}
+        >
+          <LinkSimple size={32} weight="duotone" />
+          Link
+        </button>
 
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'upload' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
@@ -369,6 +386,18 @@ export default function AddNodesModal({
             fullWidth
           />
           <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title and thumbnail automatically.</div>
+        </div>
+      )}
+      {tab === 'link' && (
+        <div className="space-y-4 py-2">
+          <TextInput
+            label="Link URL"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl((e.target as HTMLInputElement).value)}
+            placeholder="https://example.com/article"
+            fullWidth
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title, image, and description if available.</div>
         </div>
       )}
       {tab === 'upload' && (

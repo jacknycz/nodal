@@ -69,7 +69,13 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         const json = await res.json()
         const title = (json?.title as string) || data.title || 'Video'
         const thumb = (json?.thumbnail_url as string) || ''
-        onNodeUpdate?.(id, { title, thumbnailUrl: thumb, status: 'ready' })
+        // Try to fetch favicon for the video page (host domain)
+        let faviconUrl: string | undefined
+        try {
+          const fav = `https://www.google.com/s2/favicons?sz=32&domain_url=${encodeURIComponent(url)}`
+          faviconUrl = fav
+        } catch {}
+        onNodeUpdate?.(id, { title, thumbnailUrl: thumb, status: 'ready', ...(faviconUrl ? { faviconUrl } : {}) } as any)
       } catch (e) {
         onNodeUpdate?.(id, { status: 'error' })
       } finally {
@@ -162,7 +168,13 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           </div>
         )}
         <div className="mt-2">
-          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{data.title || 'Video'}</div>
+          <div className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
+            {Boolean((data as any).faviconUrl) && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />
+            )}
+            <span className="truncate">{data.title || 'Video'}</span>
+          </div>
           {data.videoUrl && (
             <a
               href={data.videoUrl}
