@@ -36,7 +36,7 @@ import AddNodesModal from '../../components/AddNodesModal'
 import { useAIContext } from '../ai/aiContext'
 import { getOpenAIService } from '../ai/aiService'
 import BokehBackground from '../../components/BokehBackground'
-import ChatPanel2 from '../../components/ChatPanel2'
+import ChatPanel from '../../components/ChatPanel'
 import TaskList from '../../components/TaskList'
 import ColorgoryManager from '../../components/ColorgoryManager'
 import LeftDock from '../../components/LeftDock'
@@ -1425,7 +1425,7 @@ function BoardContent({
         />
       )}
       {isBoardView && (
-        <ChatPanel2 />
+        <ChatPanel />
       )}
       {isBoardView && (
         <TaskList dock open={leftDockActive === 'tasks'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={72} />
