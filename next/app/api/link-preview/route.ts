@@ -6,8 +6,19 @@ export async function GET(req: Request) {
     const target = url.searchParams.get('url')
     if (!target) return NextResponse.json({ error: 'Missing url' }, { status: 400 })
 
+    // Validate URL and ensure http/https only
+    let parsed: URL
+    try {
+      parsed = new URL(target)
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 })
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return NextResponse.json({ error: 'Unsupported protocol' }, { status: 400 })
+    }
+
     // Fetch the page HTML server-side
-    const resp = await fetch(target, { headers: { 'User-Agent': 'Mozilla/5.0 NodalBot' } })
+    const resp = await fetch(parsed.toString(), { headers: { 'User-Agent': 'Mozilla/5.0 NodalBot' } })
     if (!resp.ok) return NextResponse.json({ error: `Fetch failed (${resp.status})` }, { status: 400 })
     const html = await resp.text()
 

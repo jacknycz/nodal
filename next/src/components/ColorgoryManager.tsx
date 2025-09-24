@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import { X, Tag as TagIcon, DotsSix, Eye, EyeClosed } from '@phosphor-icons/react'
 import TextInput from './ui/TextInput'
@@ -39,6 +39,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
   }, [colorgories])
 
   const [dragId, setDragId] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDragId(id)
     e.dataTransfer.effectAllowed = 'move'
@@ -58,6 +59,47 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
     reorderColorgories(ids)
     setDragId(null)
   }
+
+  // Touch/pen pointer-based drag-swap (mobile fallback where HTML5 DnD is not supported)
+  useEffect(() => {
+    if (!dragId) return
+    let active = true
+    const onMove = (e: PointerEvent) => {
+      if (!active) return
+      e.stopPropagation()
+      try { e.preventDefault() } catch {}
+      if (!listRef.current) return
+      const y = e.clientY
+      const children = Array.from(listRef.current.querySelectorAll('[data-colorgory-row]')) as HTMLElement[]
+      const ids = ordered.map(c => c.id)
+      const from = ids.indexOf(dragId!)
+      if (from < 0) return
+      let overIdx = -1
+      for (let i = 0; i < children.length; i++) {
+        const rect = children[i].getBoundingClientRect()
+        if (y >= rect.top && y <= rect.bottom) { overIdx = i; break }
+      }
+      if (overIdx >= 0 && overIdx !== from) {
+        const next = [...ids]
+        next.splice(overIdx, 0, next.splice(from, 1)[0])
+        reorderColorgories(next)
+      }
+    }
+    const end = (e: PointerEvent) => {
+      active = false
+      e.stopPropagation()
+      try { e.preventDefault() } catch {}
+      setDragId(null)
+      window.removeEventListener('pointermove', onMove, true)
+      window.removeEventListener('pointerup', end, true)
+      window.removeEventListener('pointercancel', end, true)
+    }
+    window.addEventListener('pointermove', onMove, { capture: true, passive: false } as any)
+    window.addEventListener('pointerup', end, { capture: true, passive: false } as any)
+    window.addEventListener('pointercancel', end, { capture: true, passive: false } as any)
+    return () => end(new PointerEvent('pointercancel'))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragId])
 
   // While panel is open, aggressively trap touch/drag/pointer movement to prevent canvas panning
   useEffect(() => {
@@ -116,7 +158,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
         </div>
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2" ref={listRef}>
           {ordered.length === 0 && (
             <div className="text-sm text-gray-500 dark:text-gray-400">No colorgories.</div>
           )}
@@ -132,8 +174,21 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
               onTouchStart={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               title="Drag to reorder"
+              data-colorgory-row
             >
-              <DotsSix size={24} weight="duotone" className="text-gray-400" />
+              <span
+                onPointerDown={(e) => {
+                  // Start pointer-based drag on touch/pen only
+                  if ((e as any).pointerType && (e as any).pointerType !== 'mouse') {
+                    e.stopPropagation()
+                    try { e.preventDefault() } catch {}
+                    setDragId(c.id)
+                  }
+                }}
+                style={{ touchAction: 'none' } as any}
+              >
+                <DotsSix size={24} weight="duotone" className="text-gray-400" />
+              </span>
               <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
               <TextInput
                 value={c.name}

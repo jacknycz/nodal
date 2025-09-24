@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, TreeView } from '@phosphor-icons/react/ssr'
 import { Pencil } from '@phosphor-icons/react'
@@ -70,6 +70,21 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         return stops.join(', ')
       })()
 
+  const isValidHttpUrl = (maybeUrl?: string) => {
+    if (!maybeUrl) return false
+    try {
+      const u = new URL(maybeUrl)
+      return u.protocol === 'http:' || u.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }
+
+  const safeHostname = useMemo(() => {
+    if (!data.linkUrl) return 'Link'
+    try { return new URL(data.linkUrl).hostname } catch { return 'Link' }
+  }, [data.linkUrl])
+
   useEffect(() => {
     const fetchPreview = async (url: string) => {
       try {
@@ -78,7 +93,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
         if (!res.ok) throw new Error('preview failed')
         const json = await res.json()
-        const title = (json?.title as string) || data.title || new URL(url).hostname
+        const title = (json?.title as string) || data.title || (isValidHttpUrl(url) ? new URL(url).hostname : 'Link')
         const thumb = (json?.image as string) || (json?.firstImage as string) || ''
         const favicon = (json?.favicon as string) || ''
         const description = (json?.description as string) || data.description || ''
@@ -89,7 +104,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         setLoading(false)
       }
     }
-    if (data.linkUrl && (data.status !== 'ready' || !data.thumbnailUrl || !data.title)) {
+    if (isValidHttpUrl(data.linkUrl) && (data.status !== 'ready' || !data.thumbnailUrl || !data.title)) {
       fetchPreview(data.linkUrl)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,9 +146,9 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
               // eslint-disable-next-line @next/next/no-img-element
               <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />
             )}
-            <span className="truncate">{data.title || (data.linkUrl ? new URL(data.linkUrl).hostname : 'Link')}</span>
+            <span className="truncate">{data.title || safeHostname}</span>
           </div>
-          {data.linkUrl && (
+          {isValidHttpUrl(data.linkUrl) && (
             <a
               href={data.linkUrl}
               target="_blank"
