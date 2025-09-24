@@ -190,7 +190,11 @@ export default function ChatPanel2() {
       <div
         className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-[700] md:z-[300] max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
-        style={isMdUp ? { width: panelWidth, height: panelHeight, maxWidth: MAX_WIDTH, minWidth: MIN_WIDTH, minHeight: MIN_HEIGHT, maxHeight: getMaxHeight() } as React.CSSProperties : undefined}
+        style={
+          (isMdUp
+            ? ({ width: panelWidth, height: panelHeight, maxWidth: MAX_WIDTH, minWidth: MIN_WIDTH, minHeight: MIN_HEIGHT, maxHeight: getMaxHeight() } as React.CSSProperties)
+            : ({ height: 'calc(100dvh - 80px)' } as React.CSSProperties))
+        }
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 border-b border-gray-100 dark:border-gray-950/50">

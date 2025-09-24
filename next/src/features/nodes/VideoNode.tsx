@@ -47,6 +47,8 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const [showEditModal, setShowEditModal] = useState(false)
   const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null)
   const [signedThumbUrl, setSignedThumbUrl] = useState<string | null>(null)
+  const [showMobilePlayer, setShowMobilePlayer] = useState(false)
+  const mobileVideoRef = useRef<HTMLVideoElement | null>(null)
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -148,6 +150,28 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
     return () => clearInterval(t)
   }, [(data as any)?.documentId])
 
+  // Attempt to enter fullscreen and play when mobile overlay appears
+  useEffect(() => {
+    if (!showMobilePlayer || !mobileVideoRef.current) return
+    const v = mobileVideoRef.current
+    const tryFullscreen = async () => {
+      try {
+        // iOS/Safari specific
+        const anyV: any = v
+        if (anyV?.webkitEnterFullscreen) {
+          try { anyV.webkitEnterFullscreen() } catch {}
+        } else if (v.requestFullscreen) {
+          try { await v.requestFullscreen() } catch {}
+        }
+      } catch {}
+    }
+    try { v.play().catch(() => {}) } catch {}
+    tryFullscreen()
+    const onEnded = () => setShowMobilePlayer(false)
+    v.addEventListener('ended', onEnded)
+    return () => { v.removeEventListener('ended', onEnded); try { v.pause() } catch {} }
+  }, [showMobilePlayer])
+
   const extractYouTubeId = (url?: string): string | null => {
     if (!url) return null
     try {
@@ -195,11 +219,8 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             e.stopPropagation()
             const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
             if (isMobile) {
-              const href = data.videoUrl || effectiveVideoUrl
-              if (href) {
-                try { window.open(href, '_blank', 'noopener,noreferrer') } catch {}
-                return
-              }
+              const href = effectiveVideoUrl || data.videoUrl
+              if (href) { setShowMobilePlayer(true); return }
             }
             setExpanded(true)
           }}>
@@ -215,11 +236,8 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                 e.stopPropagation()
                 const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
                 if (isMobile) {
-                  const href = data.videoUrl || effectiveVideoUrl
-                  if (href) {
-                    try { window.open(href, '_blank', 'noopener,noreferrer') } catch {}
-                    return
-                  }
+                  const href = effectiveVideoUrl || data.videoUrl
+                  if (href) { setShowMobilePlayer(true); return }
                 }
                 setExpanded(true)
               }}>
@@ -346,6 +364,27 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             </IconButton>
           </Tooltip>
         </NodeActionDrawer>
+      )}
+
+      {/* Mobile fullscreen overlay player */}
+      {showMobilePlayer && (
+        <div className="fixed inset-0 z-[1000] bg-black flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setShowMobilePlayer(false) }}>
+          <video
+            ref={mobileVideoRef}
+            src={effectiveVideoUrl || data.videoUrl}
+            poster={signedThumbUrl || data.thumbnailUrl}
+            className="w-full h-full object-contain"
+            controls
+            playsInline={false as any}
+            preload="auto"
+          />
+          <button
+            className="absolute top-3 right-3 text-white bg-black/50 hover:bg-black/70 rounded px-3 py-1 text-sm"
+            onClick={(e) => { e.stopPropagation(); setShowMobilePlayer(false) }}
+          >
+            Close
+          </button>
+        </div>
       )}
 
       {/* Edit Modal */}
