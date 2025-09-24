@@ -7,7 +7,7 @@ import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
-import { House, Info, Plus } from '@phosphor-icons/react'
+import { House, Info, Plus, Pen } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
@@ -61,8 +61,12 @@ export default function Topbar({
   const currentBoardId = useBoardStore(state => state.currentBoardId)
   const topic = useBoardStore(state => state.topic)
   const [linkCopied, setLinkCopied] = useState(false)
+  const setTopic = useBoardStore(state => state.setTopic)
+  const [showTopicModal, setShowTopicModal] = useState(false)
+  const [pendingTopic, setPendingTopic] = useState('')
   const [presentUsers, setPresentUsers] = useState<{ user_id: string; last_seen: string }[]>([])
   const supabase = getSupabaseClient()
+  const [showSavedStatus, setShowSavedStatus] = useState(true)
 
   useEffect(() => {
     if (headerRef.current) {
@@ -118,6 +122,18 @@ export default function Topbar({
     interval = setInterval(upsertPresence, 15000)
     return () => { if (interval) clearInterval(interval) }
   }, [currentBoardId, user?.id, supabase])
+
+  // Fade out Saved status text after 2s
+  useEffect(() => {
+    if (saveStatus === 'saved' && !hasUnsavedChanges) {
+      setShowSavedStatus(true)
+      const t = setTimeout(() => setShowSavedStatus(false), 2000)
+      return () => clearTimeout(t)
+    } else {
+      // Ensure other statuses are fully visible
+      setShowSavedStatus(true)
+    }
+  }, [saveStatus, hasUnsavedChanges])
 
   // Presence: subscribe to changes
   useEffect(() => {
@@ -178,8 +194,9 @@ export default function Topbar({
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
-          <div className="flex-shrink-0 flex-col space-y-1 items-center gap-3 sm:gap-6">
-            <button
+          <div className="flex-shrink-0 flex md:flex-col space-y-2 items-center gap-3 sm:gap-6">
+            <div className="flex gap-2">
+              <button
               onClick={onOpenBoardRoom}
               className="focus:outline-none cursor-pointer flex items-center gap-2"
               aria-label="Go to Board Room"
@@ -204,12 +221,29 @@ export default function Topbar({
               />
             </button>
 
+            {topic && (
+                  <div className="hidden sm:flex items-center ml-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
+
+                    <button
+                      onClick={() => { setPendingTopic(topic || ''); setShowTopicModal(true) }}
+                      className="h-5 py-0 px-1.5 text-[10px] ml-1 inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors"
+                      title="Edit topic"
+                    >
+                      <Pen className="w-3 h-3" />
+                      <span className="truncate max-w-[20ch]" title={topic}>{topic}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            
+
             {isBoardView && currentBoardName && (
               <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
                 <div className="flex gap-2">
                   <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
 
-                    <span className="font-semibold text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
+                    <span className="font-medium font-fredoka text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
                   </div>
                   <div className="sm:hidden min-w-0 w-full text-left">
                     <span className="font-semibold text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
@@ -226,7 +260,7 @@ export default function Topbar({
                     {saveStatus === 'saved' && !hasUnsavedChanges && (
                       <div className="flex items-center text-green-600 dark:text-green-400">
                         <div className="w-2 h-2 mr-1 bg-green-600 rounded-full"></div>
-                        <span>Saved</span>
+                        <span className={`transition-opacity duration-500 ${showSavedStatus ? 'opacity-100' : 'opacity-0'}`}>Saved</span>
                       </div>
                     )}
                     {saveStatus === 'unsaved' && hasUnsavedChanges && (
@@ -266,15 +300,7 @@ export default function Topbar({
                   </div>
                 )} */}
 
-                {topic && (
-                  <div className="hidden sm:flex items-center ml-4">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
-
-                    <Tag variant="secondary" className="h-5 py-0 px-1.5 text-[10px] ml-1">
-                      {topic}
-                    </Tag>
-                  </div>
-                )}
+          
               </div>
             )}
           </div>
@@ -363,6 +389,40 @@ export default function Topbar({
           </div>
         </div>
       </header>
+      {/* Edit Topic Modal */}
+      {showTopicModal && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowTopicModal(false)} />
+          <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-4 border border-gray-200 dark:border-gray-700">
+            <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">Edit Board Topic</div>
+            <input
+              type="text"
+              value={pendingTopic}
+              onChange={(e) => setPendingTopic(e.target.value)}
+              placeholder="Enter topic..."
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => setShowTopicModal(false)}
+                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setTopic(pendingTopic.trim() || '')
+                  setShowTopicModal(false)
+                  try { onSaveBoard?.() } catch {}
+                }}
+                className="px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showFeedback && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl relative">
