@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import { X, Tag as TagIcon, DotsSix, Eye, EyeClosed } from '@phosphor-icons/react'
 import TextInput from './ui/TextInput'
@@ -59,6 +59,26 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
     setDragId(null)
   }
 
+  // While panel is open, aggressively trap touch/drag/pointer movement to prevent canvas panning
+  useEffect(() => {
+    if (!isOpen) return
+    const prevent = (e: Event) => {
+      try { e.preventDefault() } catch {}
+      e.stopPropagation()
+    }
+    const opts: AddEventListenerOptions = { passive: false, capture: true }
+    document.addEventListener('touchmove', prevent, opts)
+    document.addEventListener('pointermove', prevent, opts)
+    document.addEventListener('dragover', prevent, opts)
+    document.addEventListener('wheel', prevent, opts)
+    return () => {
+      document.removeEventListener('touchmove', prevent, opts as any)
+      document.removeEventListener('pointermove', prevent, opts as any)
+      document.removeEventListener('dragover', prevent, opts as any)
+      document.removeEventListener('wheel', prevent, opts as any)
+    }
+  }, [isOpen])
+
   
 
   return (
@@ -76,12 +96,13 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
 
       {/* Panel */}
       <div
-        className={`${anchored ? '' : 'fixed'} rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
+        className={`${anchored ? '' : 'fixed'} rounded-4xl z-[700] w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
         style={{ ...(anchored ? {} : { top: topOffsetPx, left: dock ? leftOffsetPx : 64 }), touchAction: 'none' } as any}
         data-left-dock-panel
-        onPointerDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => { e.stopPropagation() }}
+        onPointerMove={(e) => { e.stopPropagation() }}
+        onTouchStart={(e) => { e.stopPropagation() }}
+        onMouseDown={(e) => { e.stopPropagation() }}
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
@@ -105,7 +126,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
               className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white/70 dark:bg-gray-800/60 cursor-grab"
               draggable
               onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, c.id) }}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); handleDragOver(e) }}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); try { (e.dataTransfer as any).dropEffect = 'move' } catch {}; handleDragOver(e) }}
               onDrop={(e) => { e.stopPropagation(); handleDrop(e, c.id) }}
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
