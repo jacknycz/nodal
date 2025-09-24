@@ -39,6 +39,7 @@ interface TipTapEditorProps {
   placeholder?: string
   className?: string
   onKeyDown?: (e: React.KeyboardEvent) => void
+  editorHandleRef?: React.MutableRefObject<{ focus: () => void } | null>
 }
 
 export default function TipTapEditor({ 
@@ -46,7 +47,8 @@ export default function TipTapEditor({
   onChange, 
   placeholder = 'Start writing...', 
   className = '',
-  onKeyDown 
+  onKeyDown,
+  editorHandleRef
 }: TipTapEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [editorHeight, setEditorHeight] = useState(200)
@@ -133,6 +135,26 @@ export default function TipTapEditor({
     },
     immediatelyRender: false,
   })
+
+  // Expose a simple imperative focus handle to parent if requested
+  useEffect(() => {
+    if (!editorHandleRef) return
+    editorHandleRef.current = {
+      focus: () => {
+        try {
+          // Directly focus the editable DOM first, then ensure caret at end
+          const anyEditor: any = editor
+          if (anyEditor?.view?.dom) {
+            anyEditor.view.dom.focus()
+          }
+          editor?.commands.focus('end')
+        } catch {}
+      }
+    }
+    return () => {
+      if (editorHandleRef) editorHandleRef.current = null
+    }
+  }, [editor, editorHandleRef])
 
   // Handle resize functionality
   useEffect(() => {
@@ -345,7 +367,7 @@ export default function TipTapEditor({
       {/* Editor content with resize handle */}
       <div 
         ref={resizeRef}
-        className="relative bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+        className="relative bg-white dark:bg-gray-800 pb-4 text-gray-900 dark:text-white"
         style={{ height: `${editorHeight}px` }}
       >
         <div className="p-3 h-full overflow-y-auto">
@@ -357,7 +379,7 @@ export default function TipTapEditor({
         
         {/* Resize handle */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center z-10 border-t border-gray-200 dark:border-gray-600"
+          className="absolute -bottom-0 left-0 right-0 h-4 cursor-ns-resize bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center z-10 border-t border-gray-200 dark:border-gray-600"
           onMouseDown={handleResizeStart}
           title="Drag to resize"
         >

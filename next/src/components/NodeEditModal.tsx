@@ -29,6 +29,7 @@ export default function NodeEditModal({
   const [content, setContent] = useState(initialContent)
   const [selectedColorgoryIds, setSelectedColorgoryIds] = useState<string[]>(initialColorgoryIds)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const editorHandleRef = useRef<{ focus: () => void } | null>(null)
   const colorgories = useBoardStore.getState().colorgories || []
 
   useEffect(() => {
@@ -54,6 +55,12 @@ export default function NodeEditModal({
   }
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      setTimeout(() => editorHandleRef.current?.focus(), 0)
+      return
+    }
     if (e.key === 'Enter') {
       e.preventDefault()
       handleSave()
@@ -119,6 +126,7 @@ export default function NodeEditModal({
             onChange={setContent}
             placeholder="Start writing your node content..."
             onKeyDown={handleContentKeyDown}
+            editorHandleRef={editorHandleRef}
           />
         </div>
       </div>
