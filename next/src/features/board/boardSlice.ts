@@ -20,7 +20,7 @@ const initialState: BoardState = {
   freeChatMode: false, // Add default value
   topbarHeight: 49, // Default, can be updated dynamically
   connectingSourceId: null,
-  colorgories: COLORGORY_DEFS.map(d => ({ id: d.id, color: d.id, name: d.name })),
+  colorgories: COLORGORY_DEFS.map((d, idx) => ({ id: d.id, color: d.id, name: d.name, order: idx, visible: idx < 4 })),
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -43,6 +43,8 @@ export const useBoardStore = create<BoardState & BoardActions & {
   addColorgory: (c: Colorgory) => void
   renameColorgory: (id: string, name: string) => void
   removeColorgory: (id: string) => void
+  reorderColorgories: (idsInOrder: string[]) => void
+  setColorgoryVisible: (id: string, visible: boolean) => void
   assignNodeColorgory: (nodeId: string, colorgoryId: string) => void
   unassignNodeColorgory: (nodeId: string, colorgoryId: string) => void
 }>((set, _get) => ({
@@ -188,6 +190,12 @@ export const useBoardStore = create<BoardState & BoardActions & {
   addColorgory: (c) => set((state) => ({ colorgories: [...(state.colorgories || []), c] })),
   renameColorgory: (id, name) => set((state) => ({ colorgories: (state.colorgories || []).map(c => c.id === id ? { ...c, name } : c) })),
   removeColorgory: (id) => set((state) => ({ colorgories: (state.colorgories || []).filter(c => c.id !== id) })),
+  reorderColorgories: (idsInOrder) => set((state) => {
+    const map = new Map((state.colorgories || []).map(c => [c.id, c]))
+    const next = idsInOrder.map((id, idx) => ({ ...(map.get(id) as any), order: idx }))
+    return { colorgories: next }
+  }),
+  setColorgoryVisible: (id, visible) => set((state) => ({ colorgories: (state.colorgories || []).map(c => c.id === id ? { ...c, visible } : c) })),
   assignNodeColorgory: (nodeId, colorgoryId) => set((state) => ({
     nodes: (state.nodes || []).map(n => n.id === nodeId ? ({
       ...n,

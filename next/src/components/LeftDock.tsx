@@ -13,7 +13,7 @@ interface LeftDockProps {
 }
 
 export default function LeftDock({ active, onToggle }: LeftDockProps) {
-  const baseBtn = "w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-150"
+  const baseBtn = "w-10 h-10 cursor-pointer rounded-lg flex items-center justify-center transition-colors duration-150"
   const neutral = "bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 dark:text-gray-200"
   const activeCls = "bg-primary-600 text-white hover:bg-primary-600"
   const [openKey, setOpenKey] = useState<DockKey>(null)

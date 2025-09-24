@@ -36,6 +36,8 @@ export interface Colorgory {
   id: string
   color: string // e.g., 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'
   name: string // default to color, editable by user
+  order?: number
+  visible?: boolean
 }
 
 export interface BoardBrief {

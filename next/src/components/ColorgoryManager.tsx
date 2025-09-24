@@ -2,9 +2,10 @@
 
 import React, { useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
-import { X, Tag as TagIcon } from '@phosphor-icons/react'
+import { X, Tag as TagIcon, DotsSix, Eye, EyeClosed } from '@phosphor-icons/react'
 import TextInput from './ui/TextInput'
 import { colorgoryHexById } from '../features/board/colorgoryColors'
+import IconButton from './ui/IconButton'
 
 interface ColorgoryManagerProps {
   open?: boolean
@@ -28,8 +29,35 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
   const colorgories = useBoardStore((s) => s.colorgories || [])
   const renameColorgory = useBoardStore((s: any) => s.renameColorgory)
   const setColorgories = useBoardStore((s: any) => s.setColorgories)
+  const reorderColorgories = useBoardStore((s: any) => s.reorderColorgories)
+  const setColorgoryVisible = useBoardStore((s: any) => s.setColorgoryVisible)
 
-  const ordered = useMemo(() => colorgories, [colorgories])
+  const ordered = useMemo(() => {
+    const list = [...(colorgories || [])]
+    list.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+    return list
+  }, [colorgories])
+
+  const [dragId, setDragId] = useState<string | null>(null)
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDragId(id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    if (!dragId || dragId === targetId) return
+    const ids = ordered.map(c => c.id)
+    const from = ids.indexOf(dragId)
+    const to = ids.indexOf(targetId)
+    if (from < 0 || to < 0) return
+    ids.splice(to, 0, ids.splice(from, 1)[0])
+    reorderColorgories(ids)
+    setDragId(null)
+  }
 
   
 
@@ -69,8 +97,16 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
             <div className="text-sm text-gray-500 dark:text-gray-400">No colorgories.</div>
           )}
           {ordered.map((c) => (
-            <div key={c.id} className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white/70 dark:bg-gray-800/60">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
+            <div
+              key={c.id}
+              className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white/70 dark:bg-gray-800/60"
+              draggable
+              onDragStart={(e) => handleDragStart(e, c.id)}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, c.id)}
+            >
+              <DotsSix size={16} weight="duotone" className="text-gray-400 cursor-grab" />
+              <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
               <TextInput
                 value={c.name}
                 onChange={(e) => renameColorgory(c.id, (e.target as HTMLInputElement).value)}
@@ -78,6 +114,13 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
                 className="h-[28px]"
                 fullWidth
               />
+              <IconButton
+                variant={c.visible === false ? 'secondary' : 'secondary'}
+                aria-label={c.visible === false ? 'Show colorgory' : 'Hide colorgory'}
+                onClick={() => setColorgoryVisible(c.id, !(c.visible === false))}
+              >
+                {c.visible === false ? <EyeClosed size={16} weight="duotone" /> : <Eye size={16} weight="duotone" />}
+              </IconButton>
             </div>
           ))}
         </div>

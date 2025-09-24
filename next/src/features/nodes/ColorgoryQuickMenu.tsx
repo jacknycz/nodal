@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useMemo } from 'react'
 import IconButton from '../../components/ui/IconButton'
 import Tooltip from '../../components/ui/Tooltip'
 import Checkbox from '../../components/ui/Checkbox'
@@ -37,7 +37,12 @@ export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disa
       closeTimeoutRef.current = null
     }, 180)
   }
-  const colorgories = useBoardStore((s) => s.colorgories || [])
+  const colorgoriesAll = useBoardStore((s) => s.colorgories || [])
+  const colorgories = useMemo(() => {
+    const list = [...(colorgoriesAll || [])].filter((c: any) => c.visible !== false)
+    list.sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+    return list
+  }, [colorgoriesAll])
   const edges = useBoardStore.getState().edges || []
 
   const toggle = (id: string, checked: boolean) => {
