@@ -79,6 +79,8 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
         className={`${anchored ? '' : 'fixed'} rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
         style={anchored ? undefined : { top: topOffsetPx, left: dock ? leftOffsetPx : 64 }}
         data-left-dock-panel
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
@@ -100,12 +102,21 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
             <div
               key={c.id}
               className="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 bg-white/70 dark:bg-gray-800/60"
-              draggable
-              onDragStart={(e) => handleDragStart(e, c.id)}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, c.id)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
-              <DotsSix size={16} weight="duotone" className="text-gray-400 cursor-grab" />
+              <div
+                draggable
+                onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, c.id) }}
+                className="text-gray-400 cursor-grab"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                title="Drag to reorder"
+              >
+                <DotsSix size={24} weight="duotone" />
+              </div>
               <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
               <TextInput
                 value={c.name}
@@ -115,9 +126,9 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
                 fullWidth
               />
               <IconButton
-                variant={c.visible === false ? 'secondary' : 'secondary'}
+                variant="secondary"
                 aria-label={c.visible === false ? 'Show colorgory' : 'Hide colorgory'}
-                onClick={() => setColorgoryVisible(c.id, !(c.visible === false))}
+                onClick={(e) => { e.stopPropagation(); setColorgoryVisible(c.id, c.visible === false ? true : false) }}
               >
                 {c.visible === false ? <EyeClosed size={16} weight="duotone" /> : <Eye size={16} weight="duotone" />}
               </IconButton>

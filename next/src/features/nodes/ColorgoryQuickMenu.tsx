@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef, useState, useMemo } from 'react'
+import React, { useRef, useState, useMemo, useEffect } from 'react'
 import IconButton from '../../components/ui/IconButton'
 import Tooltip from '../../components/ui/Tooltip'
 import Checkbox from '../../components/ui/Checkbox'
@@ -20,6 +20,7 @@ interface ColorgoryQuickMenuProps {
 export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disabled, onNodeUpdate }: ColorgoryQuickMenuProps) {
   const [open, setOpen] = useState(false)
   const closeTimeoutRef = useRef<number | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const clearCloseTimeout = () => {
     if (closeTimeoutRef.current) {
       window.clearTimeout(closeTimeoutRef.current)
@@ -87,15 +88,31 @@ export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disa
     setOpen(false)
   }
 
+  // Click/touch outside to close (mobile friendly)
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: Event) => {
+      const el = rootRef.current
+      if (!el) return
+      if (!el.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler, true)
+    document.addEventListener('touchstart', handler, true)
+    return () => {
+      document.removeEventListener('mousedown', handler, true)
+      document.removeEventListener('touchstart', handler, true)
+    }
+  }, [open])
+
   return (
-    <div className="relative" onMouseEnter={openMenu} onMouseLeave={scheduleClose}>
+    <div ref={rootRef} className="relative" onMouseEnter={openMenu} onMouseLeave={scheduleClose}>
       <Tooltip content="Colorgories">
         <IconButton
           variant="default"
           aria-label="Manage colorgories"
           onMouseEnter={openMenu}
           onMouseLeave={scheduleClose}
-          onClick={(e) => { e.stopPropagation() }}
+          onClick={(e) => { e.stopPropagation(); setOpen((prev) => !prev) }}
           disabled={disabled}
         >
           <TagIcon size={14} weight="duotone" />
@@ -104,9 +121,11 @@ export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disa
 
       {/* Hover Panel */}
       <div
-        className={`absolute left-1/2 -translate-x-1/2 top-full mt-1 z-20 min-w-[280px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 shadow-xl backdrop-blur-xs transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+        className={`absolute left-1/2 -translate-x-1/2 top-full mt-1 z-20 min-w-[280px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 shadow-xl backdrop-blur-xs transition-all duration-150 ${open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
         onMouseDown={(e) => e.preventDefault()}
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => { e.stopPropagation() }}
+        onTouchStart={(e) => { e.stopPropagation() }}
         onMouseEnter={openMenu}
         onMouseLeave={scheduleClose}
       >
