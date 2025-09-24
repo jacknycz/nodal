@@ -194,49 +194,49 @@ export default function Topbar({
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
-          <div className="flex-shrink-0 flex md:flex-col space-y-2 items-center gap-3 sm:gap-6">
-            <div className="flex gap-2">
+          <div className="flex-shrink-0 flex md:flex-col md:space-y-2 items-center justify-center gap-3 sm:gap-6">
+            <div className="flex justify-center">
               <button
-              onClick={onOpenBoardRoom}
-              className="focus:outline-none cursor-pointer flex items-center gap-2"
-              aria-label="Go to Board Room"
-            >
-              {/* Mobile: symbol-only logo */}
-              <Image
-                src="/nodal.svg"
-                alt="Nodal Logo"
-                width={40}
-                height={40}
-                className="h-7 w-auto sm:hidden"
-                priority
-              />
-              {/* Desktop/tablet: wordmark with dark/light */}
-              <Image
-                src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"}
-                alt="Nodal Logo"
-                width={48}
-                height={48}
-                className="hidden sm:block h-4 w-auto"
-                priority
-              />
-            </button>
+                onClick={onOpenBoardRoom}
+                className="focus:outline-none cursor-pointer flex items-center gap-2"
+                aria-label="Go to Board Room"
+              >
+                {/* Mobile: symbol-only logo */}
+                <Image
+                  src="/nodal.svg"
+                  alt="Nodal Logo"
+                  width={40}
+                  height={40}
+                  className="h-7 w-auto sm:hidden"
+                  priority
+                />
+                {/* Desktop/tablet: wordmark with dark/light */}
+                <Image
+                  src={isDark ? "/nodal-white.svg" : "/nodal-black.svg"}
+                  alt="Nodal Logo"
+                  width={48}
+                  height={48}
+                  className="hidden sm:block h-4 w-auto"
+                  priority
+                />
+              </button>
 
-            {topic && (
-                  <div className="hidden sm:flex items-center ml-4">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
+              {topic && (
+                <div className="hidden sm:flex items-center ml-4">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
 
-                    <button
-                      onClick={() => { setPendingTopic(topic || ''); setShowTopicModal(true) }}
-                      className="h-5 py-0 px-1.5 text-[10px] ml-1 inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors"
-                      title="Edit topic"
-                    >
-                      <Pen className="w-3 h-3" />
-                      <span className="truncate max-w-[20ch]" title={topic}>{topic}</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            
+                  <button
+                    onClick={() => { setPendingTopic(topic || ''); setShowTopicModal(true) }}
+                    className="h-5 py-0 px-1.5 text-[10px] ml-1 inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors"
+                    title="Edit topic"
+                  >
+                    <Pen className="w-3 h-3" />
+                    <span className="truncate max-w-[20ch]" title={topic}>{topic}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
 
             {isBoardView && currentBoardName && (
               <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
@@ -250,7 +250,7 @@ export default function Topbar({
                   </div>
 
                   {/* Save Status */}
-                  <div className="hidden sm:flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-xs">
                     {saveStatus === 'saving' && (
                       <div className="flex items-center text-blue-600 dark:text-blue-400">
                         <div className="w-2 h-2 mr-1 bg-blue-600 rounded-full animate-pulse"></div>
@@ -300,14 +300,14 @@ export default function Topbar({
                   </div>
                 )} */}
 
-          
+
               </div>
             )}
           </div>
 
           {/* Center - Board Info (truly centered) */}
           <div className="flex-1 min-w-0 flex justify-start sm:justify-center">
-            
+
           </div>
 
           {/* Right - Controls */}
@@ -413,7 +413,7 @@ export default function Topbar({
                 onClick={() => {
                   setTopic(pendingTopic.trim() || '')
                   setShowTopicModal(false)
-                  try { onSaveBoard?.() } catch {}
+                  try { onSaveBoard?.() } catch { }
                 }}
                 className="px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
               >
