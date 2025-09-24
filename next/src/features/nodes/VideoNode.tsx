@@ -191,7 +191,18 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
       <div className="cursor-default">
         {!expanded ? (
-          <div className="relative w-full" onClick={(e) => { e.stopPropagation(); setExpanded(true) }}>
+          <div className="relative w-full" onClick={(e) => {
+            e.stopPropagation()
+            const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
+            if (isMobile) {
+              const href = data.videoUrl || effectiveVideoUrl
+              if (href) {
+                try { window.open(href, '_blank', 'noopener,noreferrer') } catch {}
+                return
+              }
+            }
+            setExpanded(true)
+          }}>
             {(signedThumbUrl || data.thumbnailUrl) ? (
               <img src={signedThumbUrl || data.thumbnailUrl!} alt={data.title || 'Video'} className="w-full h-[160px] rounded-md object-cover cursor-pointer" />
             ) : (
@@ -200,7 +211,18 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               </div>
             )}
             <div className="absolute top-1 left-1">
-              <IconButton variant="default" size="sm" aria-label="Expand video" onClick={(e) => { e.stopPropagation(); setExpanded(true) }}>
+              <IconButton variant="default" size="sm" aria-label="Expand video" onClick={(e) => {
+                e.stopPropagation()
+                const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
+                if (isMobile) {
+                  const href = data.videoUrl || effectiveVideoUrl
+                  if (href) {
+                    try { window.open(href, '_blank', 'noopener,noreferrer') } catch {}
+                    return
+                  }
+                }
+                setExpanded(true)
+              }}>
                 <ArrowsOut size={14} />
               </IconButton>
             </div>
