@@ -45,6 +45,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const viewRef = useRef<HTMLDivElement | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [signedVideoUrl, setSignedVideoUrl] = useState<string | null>(null)
+  const [signedThumbUrl, setSignedThumbUrl] = useState<string | null>(null)
 
   const isLocked = isNodeLocked?.(id) || false
   const isLockedByMe = isNodeLockedByMe?.(id) || false
@@ -131,6 +132,21 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
     return () => clearInterval(t)
   }, [(data as any)?.documentId])
 
+  // Resolve thumbnail variant URL dynamically
+  useEffect(() => {
+    const refreshThumb = async () => {
+      const docId = (data as any)?.documentId
+      if (!docId) return
+      try {
+        const url = await supabaseStorage.getSignedUrlForVariant(docId, '800')
+        setSignedThumbUrl(url)
+      } catch {}
+    }
+    refreshThumb()
+    const t = setInterval(refreshThumb, 45 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [(data as any)?.documentId])
+
   const extractYouTubeId = (url?: string): string | null => {
     if (!url) return null
     try {
@@ -175,8 +191,8 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
       <div className="cursor-default">
         {!expanded ? (
           <div className="relative w-full" onClick={(e) => { e.stopPropagation(); setExpanded(true) }}>
-            {data.thumbnailUrl ? (
-              <img src={data.thumbnailUrl} alt={data.title || 'Video'} className="w-full h-[160px] rounded-md object-cover cursor-pointer" />
+            {(signedThumbUrl || data.thumbnailUrl) ? (
+              <img src={signedThumbUrl || data.thumbnailUrl!} alt={data.title || 'Video'} className="w-full h-[160px] rounded-md object-cover cursor-pointer" />
             ) : (
               <div className="w-full h-[160px] rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm">
                 {loading ? 'Loading…' : 'No thumbnail'}
@@ -211,7 +227,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                     height={450}
                     controls
                     preload="metadata"
-                    poster={data.thumbnailUrl}
+                    poster={signedThumbUrl || data.thumbnailUrl}
                     src={effectiveVideoUrl}
                     className="w-[800px] h-[450px] object-contain bg-black"
                     onError={async () => {
