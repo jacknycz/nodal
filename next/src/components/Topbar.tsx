@@ -178,19 +178,7 @@ export default function Topbar({
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
-          <div className="flex-shrink-0 flex items-center gap-3 sm:gap-6">
-            {/* <button
-              onClick={onOpenBoardRoom}
-              className={`focus:outline-none cursor-pointer flex items-center gap-2 rounded-full p-1 ${
-                isBoardView 
-                  ? 'text-gray-900 dark:text-white' 
-                  : 'bg-primary-500 text-white dark:bg-primary-500'
-              }`}
-              aria-label="Go to Board Room"
-            >
-              <House size={16} />
-            </button> */}
-
+          <div className="flex-shrink-0 flex-col space-y-1 items-center gap-3 sm:gap-6">
             <button
               onClick={onOpenBoardRoom}
               className="focus:outline-none cursor-pointer flex items-center gap-2"
@@ -211,30 +199,14 @@ export default function Topbar({
                 alt="Nodal Logo"
                 width={48}
                 height={48}
-                className="hidden sm:block h-8 w-auto"
+                className="hidden sm:block h-4 w-auto"
                 priority
               />
             </button>
 
-
-
-            {/* <div className="hidden sm:block">
-              <ShareMenu
-                onShareBoard={handleShareBoard}
-                onCopyLink={handleCopyLink}
-                onShowFeedback={() => setShowFeedback(true)}
-              />
-            </div>
-            {linkCopied && (
-              <span className="ml-2 text-green-600 text-xs">Link copied!</span>
-            )} */}
-          </div>
-
-          {/* Center - Board Info (truly centered) */}
-          <div className="flex-1 min-w-0 flex justify-start sm:justify-center">
             {isBoardView && currentBoardName && (
               <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
-                <div className="flex-col">
+                <div className="flex gap-2">
                   <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
 
                     <span className="font-semibold text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
@@ -247,13 +219,13 @@ export default function Topbar({
                   <div className="hidden sm:flex items-center gap-2 text-xs">
                     {saveStatus === 'saving' && (
                       <div className="flex items-center text-blue-600 dark:text-blue-400">
-                        <div className="w-2 h-2 mr-2 bg-blue-600 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 mr-1 bg-blue-600 rounded-full animate-pulse"></div>
                         <span>Saving...</span>
                       </div>
                     )}
                     {saveStatus === 'saved' && !hasUnsavedChanges && (
                       <div className="flex items-center text-green-600 dark:text-green-400">
-                        <div className="w-2 h-2 mr-2 bg-green-600 rounded-full"></div>
+                        <div className="w-2 h-2 mr-1 bg-green-600 rounded-full"></div>
                         <span>Saved</span>
                       </div>
                     )}
@@ -305,6 +277,11 @@ export default function Topbar({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Center - Board Info (truly centered) */}
+          <div className="flex-1 min-w-0 flex justify-start sm:justify-center">
+            
           </div>
 
           {/* Right - Controls */}
