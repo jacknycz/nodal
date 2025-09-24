@@ -14,6 +14,7 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
+import Tooltip from '../../components/ui/Tooltip'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
 
 interface NodalNodeProps {
@@ -263,37 +264,43 @@ export default function NodalNode({
       {/* Colorgories button moved to drawer */}
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer open={drawerOpen}>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Edit node"
-          onClick={handleEdit}
-          disabled={isLocked && !isLockedByMe || showEditModal}
-        >
-          <Pen size={14} weight="duotone" />
-        </IconButton>
-       
-        {SHOW_ADD_CONNECTED && (
+        <Tooltip content="Edit">
           <IconButton
             variant="default"
-            size="sm"
-            aria-label="Add Connected Nodes"
-            onClick={() => onQuickAddNodes?.(id)}
-            disabled={isLocked && !isLockedByMe}
+            
+            aria-label="Edit node"
+            onClick={handleEdit}
+            disabled={isLocked && !isLockedByMe || showEditModal}
           >
-            <PlusCircle size={14} weight="duotone" />
+            <Pen size={14} weight="duotone" />
           </IconButton>
+        </Tooltip>
+       
+        {SHOW_ADD_CONNECTED && (
+          <Tooltip content="Add connected">
+            <IconButton
+              variant="default"
+              
+              aria-label="Add Connected Nodes"
+              onClick={() => onQuickAddNodes?.(id)}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <PlusCircle size={14} weight="duotone" />
+            </IconButton>
+          </Tooltip>
         )}
 
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Reorganize nodes"
-          onClick={() => onOrganizeSubtree?.(id)}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <TreeView size={14} weight="duotone" />
-        </IconButton>
+        <Tooltip content="Reorganize nodes">
+          <IconButton
+            variant="default"
+            
+            aria-label="Reorganize nodes"
+            onClick={() => onOrganizeSubtree?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <TreeView size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
 
         <ColorgoryQuickMenu
           nodeId={id}
@@ -303,15 +310,17 @@ export default function NodalNode({
           onNodeUpdate={onNodeUpdate}
         />
 
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete node"
-          onClick={handleDelete}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Trash size={14} weight="duotone" />
-        </IconButton>
+        <Tooltip content="Delete">
+          <IconButton
+            variant="danger"
+            
+            aria-label="Delete node"
+            onClick={handleDelete}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Trash size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
       </NodeActionDrawer>
 
       {/* Modals */}

@@ -1,5 +1,5 @@
 export interface ColorgoryDef {
-  id: 'cyan' | 'magenta' | 'yellow' | 'green' | 'blue' | 'orange' | 'purple' | 'slate'
+  id: 'cyan' | 'magenta' | 'yellow' | 'red' | 'green' | 'blue' | 'orange' | 'purple' | 'slate' 
   name: string
   hex: string
 }
@@ -8,6 +8,7 @@ export const COLORGORY_DEFS: ColorgoryDef[] = [
   { id: 'cyan', name: 'Cyan', hex: '#00CFF5' },
   { id: 'magenta', name: 'Magenta', hex: '#FF00A8' },
   { id: 'yellow', name: 'Yellow', hex: '#FFDE00' },
+  { id: 'red', name: 'Red', hex: '#EF4444' },
   { id: 'green', name: 'Green', hex: '#34D399' },
   { id: 'blue', name: 'Blue', hex: '#3B82F6' },
   { id: 'orange', name: 'Orange', hex: '#F97316' },

@@ -14,6 +14,7 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+import Tooltip from '../../components/ui/Tooltip'
 
 interface TaskNodeData {
   title?: string
@@ -189,15 +190,16 @@ export default function TaskNode({
 
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer open={drawerOpen}>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Reorganize nodes"
-          onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-          disabled={isLocked && !lockedByMe}
-        >
-          <TreeView size={14} weight="duotone" />
-        </IconButton>
+        <Tooltip content="Reorganize nodes">
+          <IconButton
+            variant="default"
+            aria-label="Reorganize nodes"
+            onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
+            disabled={isLocked && !lockedByMe}
+          >
+            <TreeView size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={(data as any).colorgoryIds || []}
@@ -205,18 +207,19 @@ export default function TaskNode({
           disabled={isLocked && !lockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete task"
-          onClick={(e) => {
-            e.stopPropagation()
-            setShowDeleteModal(true)
-          }}
-          disabled={isLocked && !lockedByMe}
-        >
-          <Trash size={14} weight="duotone" />
-        </IconButton>
+        <Tooltip content="Delete">
+          <IconButton
+            variant="danger"
+            aria-label="Delete task"
+            onClick={(e) => {
+              e.stopPropagation()
+              setShowDeleteModal(true)
+            }}
+            disabled={isLocked && !lockedByMe}
+          >
+            <Trash size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
       </NodeActionDrawer>
 
       <Modal

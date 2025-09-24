@@ -15,6 +15,7 @@ import { supabaseStorage } from '../storage/supabaseStorage'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+import Tooltip from '../../components/ui/Tooltip'
 
 interface VideoNodeData {
   title?: string
@@ -284,15 +285,16 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
       {!expanded && (
         <NodeActionDrawer>
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Edit video"
-            onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <Pencil size={14} />
-          </IconButton>
+          <Tooltip content="Edit">
+            <IconButton
+              variant="default"
+              aria-label="Edit video"
+              onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <Pencil size={14} />
+            </IconButton>
+          </Tooltip>
           <ColorgoryQuickMenu
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
@@ -300,25 +302,27 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             disabled={isLocked && !isLockedByMe}
             onNodeUpdate={onNodeUpdate}
           />
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Reorganize nodes"
-          onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <TreeView size={14} weight="duotone" />
-        </IconButton>
-        {/* Hidden for now */}
+        <Tooltip content="Reorganize nodes">
           <IconButton
-            variant="danger"
-            size="sm"
-            aria-label="Delete node"
-            onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
+            variant="default"
+            aria-label="Reorganize nodes"
+            onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
             disabled={isLocked && !isLockedByMe}
           >
-            <Trash size={14} />
+            <TreeView size={14} weight="duotone" />
           </IconButton>
+        </Tooltip>
+        {/* Hidden for now */}
+          <Tooltip content="Delete">
+            <IconButton
+              variant="danger"
+              aria-label="Delete node"
+              onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <Trash size={14} />
+            </IconButton>
+          </Tooltip>
         </NodeActionDrawer>
       )}
 

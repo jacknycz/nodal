@@ -14,6 +14,7 @@ import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
 import Button from '../../components/ui/Button'
+import Tooltip from '../../components/ui/Tooltip'
 
 interface LinkNodeData {
   title?: string
@@ -153,15 +154,16 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
       </div>
 
       <NodeActionDrawer>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Edit link"
-          onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Pencil size={14} />
-        </IconButton>
+        <Tooltip content="Edit">
+          <IconButton
+            variant="default"
+            aria-label="Edit link"
+            onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Pencil size={14} />
+          </IconButton>
+        </Tooltip>
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={(data as any).colorgoryIds || []}
@@ -169,24 +171,26 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           disabled={isLocked && !isLockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Reorganize nodes"
-          onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <TreeView size={14} weight="duotone" />
-        </IconButton>
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete node"
-          onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Trash size={14} />
-        </IconButton>
+        <Tooltip content="Reorganize nodes">
+          <IconButton
+            variant="default"
+            aria-label="Reorganize nodes"
+            onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <TreeView size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip content="Delete">
+          <IconButton
+            variant="danger"
+            aria-label="Delete node"
+            onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Trash size={14} />
+          </IconButton>
+        </Tooltip>
       </NodeActionDrawer>
 
       {/* Edit Modal */}

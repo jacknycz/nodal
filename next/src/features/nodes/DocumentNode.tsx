@@ -15,6 +15,7 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
 import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+import Tooltip from '../../components/ui/Tooltip'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
 
@@ -323,53 +324,58 @@ export default function DocumentNode({
 
       {/* Slide-out action panel on hover */}
       <NodeActionDrawer open={drawerOpen}>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Edit document"
-          onClick={() => setShowEditModal(true)}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Pencil size={14} weight="duotone" />
-        </IconButton>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Preview document"
-          onClick={handlePreview}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <FrameCorners size={14} weight="duotone" />
-        </IconButton>
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Download document"
-          onClick={handleDownload}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Download size={14} weight="duotone" />
-        </IconButton>
-        {SHOW_ADD_CONNECTED && (
+        <Tooltip content="Edit">
           <IconButton
             variant="default"
-            size="sm"
-            aria-label="Add Connected Nodes"
-            onClick={() => onQuickAddNodes?.(id)}
+            aria-label="Edit document"
+            onClick={() => setShowEditModal(true)}
             disabled={isLocked && !isLockedByMe}
           >
-            <PlusCircle size={14} weight="duotone" />
+            <Pencil size={14} weight="duotone" />
           </IconButton>
+        </Tooltip>
+        <Tooltip content="Preview">
+          <IconButton
+            variant="default"
+            aria-label="Preview document"
+            onClick={handlePreview}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <FrameCorners size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip content="Download">
+          <IconButton
+            variant="default"
+            aria-label="Download document"
+            onClick={handleDownload}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Download size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
+        {SHOW_ADD_CONNECTED && (
+          <Tooltip content="Add connected">
+            <IconButton
+              variant="default"
+              aria-label="Add Connected Nodes"
+              onClick={() => onQuickAddNodes?.(id)}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <PlusCircle size={14} weight="duotone" />
+            </IconButton>
+          </Tooltip>
         )}
-        <IconButton
-          variant="default"
-          size="sm"
-          aria-label="Reorganize nodes"
-          onClick={() => onOrganizeSubtree?.(id)}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <TreeView size={14} weight="duotone" />
-        </IconButton>
+        <Tooltip content="Reorganize nodes">
+          <IconButton
+            variant="default"
+            aria-label="Reorganize nodes"
+            onClick={() => onOrganizeSubtree?.(id)}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <TreeView size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
         <ColorgoryQuickMenu
           nodeId={id}
           selectedIds={data.colorgoryIds || []}
@@ -377,15 +383,16 @@ export default function DocumentNode({
           disabled={isLocked && !isLockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
-        <IconButton
-          variant="danger"
-          size="sm"
-          aria-label="Delete document"
-          onClick={handleDelete}
-          disabled={isLocked && !isLockedByMe}
-        >
-          <Trash size={14} weight="duotone" />
-        </IconButton>
+        <Tooltip content="Delete">
+          <IconButton
+            variant="danger"
+            aria-label="Delete document"
+            onClick={handleDelete}
+            disabled={isLocked && !isLockedByMe}
+          >
+            <Trash size={14} weight="duotone" />
+          </IconButton>
+        </Tooltip>
       </NodeActionDrawer>
 
       {/* Modals */}

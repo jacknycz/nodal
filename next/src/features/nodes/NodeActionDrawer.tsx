@@ -9,7 +9,9 @@ export default function NodeActionDrawer({ children, className = '', open = fals
   const forceOpen = "pointer-events-auto translate-x-0 opacity-100 delay-0"
   return (
     <div className={`${base} ${open ? forceOpen : hoverControlled} ${className}`}>
-      <div className="flex items-center gap-1 bg-white/90 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1">
+      <div className="flex items-center gap-2 p-2
+      bg-white/90 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 
+      rounded-lg shadow-lg">
         {children}
       </div>
     </div>

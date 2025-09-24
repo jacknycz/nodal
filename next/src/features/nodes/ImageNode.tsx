@@ -17,6 +17,7 @@ import NodeActionDrawer from './NodeActionDrawer'
 import ColorgoryQuickMenu from './ColorgoryQuickMenu'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import TextArea from '../../components/ui/TextArea'
+import Tooltip from '../../components/ui/Tooltip'
 
 interface ImageNodeData {
   label: string
@@ -90,10 +91,11 @@ export default function ImageNode({
     if (!data.documentId) return
     if (refreshAttemptsRef.current >= 2) return
     try {
+      const isSvg = (data.fileType === 'image/svg+xml') || /\.svg$/i.test(data.fileName || '')
       const [url, v800, v1920] = await Promise.all([
         supabaseStorage.getSignedUrl(data.documentId),
-        supabaseStorage.getSignedUrlForVariant(data.documentId, '800'),
-        supabaseStorage.getSignedUrlForVariant(data.documentId, '1920')
+        isSvg ? Promise.resolve(null) : supabaseStorage.getSignedUrlForVariant(data.documentId, '800'),
+        isSvg ? Promise.resolve(null) : supabaseStorage.getSignedUrlForVariant(data.documentId, '1920')
       ])
       refreshAttemptsRef.current += 1
       setSignedPreviewUrl(url)
@@ -442,44 +444,48 @@ export default function ImageNode({
       {/* Slide-out action panel on hover (hidden when expanded) */}
       {!expanded && (
         <NodeActionDrawer open={drawerOpen}>
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Edit image"
-            onClick={() => setShowEditModal(true)}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <Pencil size={14} />
-          </IconButton>
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Download image"
-            onClick={handleDownload}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <DownloadSimple size={14} />
-          </IconButton>
-        {SHOW_ADD_CONNECTED && (
+          <Tooltip content="Edit">
             <IconButton
               variant="default"
-              size="sm"
-              aria-label="Add Connected Nodes"
-              onClick={() => onQuickAddNodes?.(id)}
+              aria-label="Edit image"
+              onClick={() => setShowEditModal(true)}
               disabled={isLocked && !isLockedByMe}
             >
-              <PlusCircle size={14} />
+              <Pencil size={14} />
             </IconButton>
+          </Tooltip>
+          <Tooltip content="Download">
+            <IconButton
+              variant="default"
+              aria-label="Download image"
+              onClick={handleDownload}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <DownloadSimple size={14} />
+            </IconButton>
+          </Tooltip>
+        {SHOW_ADD_CONNECTED && (
+            <Tooltip content="Add connected">
+              <IconButton
+                variant="default"
+                aria-label="Add Connected Nodes"
+                onClick={() => onQuickAddNodes?.(id)}
+                disabled={isLocked && !isLockedByMe}
+              >
+                <PlusCircle size={14} />
+              </IconButton>
+            </Tooltip>
           )}
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Reorganize nodes"
-            onClick={() => onOrganizeSubtree?.(id)}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <TreeView size={14} weight="duotone" />
-          </IconButton>
+          <Tooltip content="Reorganize nodes">
+            <IconButton
+              variant="default"
+              aria-label="Reorganize nodes"
+              onClick={() => onOrganizeSubtree?.(id)}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <TreeView size={14} weight="duotone" />
+            </IconButton>
+          </Tooltip>
           <ColorgoryQuickMenu
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
@@ -487,15 +493,16 @@ export default function ImageNode({
             disabled={isLocked && !isLockedByMe}
             onNodeUpdate={onNodeUpdate}
           />
-          <IconButton
-            variant="danger"
-            size="sm"
-            aria-label="Delete image"
-            onClick={handleDelete}
-            disabled={isLocked && !isLockedByMe}
-          >
-            <Trash size={14} />
-          </IconButton>
+          <Tooltip content="Delete">
+            <IconButton
+              variant="danger"
+              aria-label="Delete image"
+              onClick={handleDelete}
+              disabled={isLocked && !isLockedByMe}
+            >
+              <Trash size={14} />
+            </IconButton>
+          </Tooltip>
         </NodeActionDrawer>
       )}
 

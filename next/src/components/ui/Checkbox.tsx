@@ -21,6 +21,8 @@ interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>
   labelTextClassName?: string
   descriptionClassName?: string
   controlClassName?: string
+  controlStyle?: React.CSSProperties
+  checkColor?: string
 }
 
 const boxSize: Record<CheckboxSize, string> = {
@@ -56,6 +58,8 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
       labelTextClassName = '',
       descriptionClassName = '',
       controlClassName = '',
+      controlStyle,
+      checkColor,
       checked,
       defaultChecked,
       onChange,
@@ -95,6 +99,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           controlClassName
         )}
         aria-hidden="true"
+        style={controlStyle}
       >
         {/* Check icon */}
         <svg
@@ -104,6 +109,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           )}
           viewBox="0 0 20 20"
           fill="currentColor"
+          style={checkColor ? { color: checkColor } : undefined}
         >
           <path
             fillRule="evenodd"
