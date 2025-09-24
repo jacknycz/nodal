@@ -5,7 +5,7 @@ import { useUnifiedAI2 } from '../features/ai/useUnifiedAI2'
 import { useAIContext } from '../features/ai/aiContext'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import { useBoardStore } from '../features/board/boardSlice'
-import { X, Chat, Spinner, Key, Target, PaperPlaneTilt, Resize, XCircle } from '@phosphor-icons/react'
+import { X, Chat, Spinner, Key, Target, PaperPlaneTilt, Resize, XCircle, ArrowSquareIn } from '@phosphor-icons/react'
 import TextArea from './ui/TextArea'
 import Button from './ui/Button'
 // Node generation UI and placement imports removed
@@ -66,9 +66,13 @@ export default function ChatPanel2() {
   const MIN_WIDTH = 320
   const MAX_WIDTH = 640
   const MIN_HEIGHT = 240
-  const getMaxHeight = () => (typeof window !== 'undefined' ? Math.min(window.innerHeight - 80, 900) : 700)
+  const getMaxHeight = () => (typeof window !== 'undefined' ? Math.max(MIN_HEIGHT, window.innerHeight - 80) : 700)
   const [panelWidth, setPanelWidth] = useState<number>(384)
-  const [panelHeight, setPanelHeight] = useState<number>(() => (typeof window !== 'undefined' ? Math.min(Math.max(480, window.innerHeight - 80), getMaxHeight()) : 560))
+  const [panelHeight, setPanelHeight] = useState<number>(() => (
+    typeof window !== 'undefined'
+      ? Math.max(MIN_HEIGHT, Math.min(500, getMaxHeight()))
+      : 500
+  ))
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -184,7 +188,7 @@ export default function ChatPanel2() {
 
       {/* Panel */}
       <div
-        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-[300] h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-[300] max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
         style={isMdUp ? { width: panelWidth, height: panelHeight, maxWidth: MAX_WIDTH, minWidth: MIN_WIDTH, minHeight: MIN_HEIGHT, maxHeight: getMaxHeight() } as React.CSSProperties : undefined}
       >
@@ -209,7 +213,7 @@ export default function ChatPanel2() {
           {/* AI Status */}
           <div className="flex items-center space-x-4">
             <button onClick={() => setIsOpen(false)} className="cursor-pointer text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-300">
-              <X className="w-4 h-4" />
+            <ArrowSquareIn size={24} weight="duotone" />
             </button>
           </div>
         </div>
@@ -322,11 +326,13 @@ export default function ChatPanel2() {
         {/* Resize handle (md and above) */}
         {isMdUp && (
           <div
-            className="hidden md:flex absolute -bottom-1 -left-1 w-5 h-5 items-center justify-center rounded-full bg-white/90 dark:bg-gray-600/50 text-gray-600 dark:text-gray-200 cursor-sw-resize"
+            className="hidden md:flex absolute -bottom-2 -left-2 w-6 h-6 items-center justify-center rounded-full
+            bg-white dark:bg-primary-900 text-primary-600 dark:text-white 
+            cursor-sw-resize shadow-lg hover:shadow-xl transition-all duration-200 ease-out"
             onMouseDown={onResizeMouseDown}
             title="Resize"
           >
-            <Resize size={32} weight="duotone" className="w-3 h-3" />
+            <Resize size={32} weight="duotone" className="w-4 h-4" />
           </div>
         )}
 
