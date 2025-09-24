@@ -198,7 +198,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                 {loading ? 'Loading…' : 'No thumbnail'}
               </div>
             )}
-            <div className="absolute bottom-1 left-1">
+            <div className="absolute top-1 left-1">
               <IconButton variant="default" size="sm" aria-label="Expand video" onClick={(e) => { e.stopPropagation(); setExpanded(true) }}>
                 <ArrowsOut size={14} />
               </IconButton>
@@ -247,7 +247,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             ) : (
               <div className="w-[800px] h-[450px] bg-gray-900 text-gray-100 rounded-md flex items-center justify-center">No video URL</div>
             )}
-            <div className="absolute bottom-1 left-1">
+            <div className="absolute top-1 left-1">
               <IconButton variant="default" size="sm" aria-label="Minimize video" onClick={(e) => { e.stopPropagation(); setExpanded(false) }}>
                 <ArrowsIn size={14} />
               </IconButton>

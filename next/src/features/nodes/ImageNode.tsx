@@ -371,7 +371,7 @@ export default function ImageNode({
           )}
 
           {/* Minimize/Expand control overlay */}
-          <div className="absolute bottom-1 left-1">
+          <div className="absolute top-1 left-1">
             {expanded ? (
               <IconButton
                 variant="default"
