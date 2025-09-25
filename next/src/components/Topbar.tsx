@@ -16,6 +16,8 @@ import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import Tag from './ui/Tag'
+import Modal from './ui/Modal'
+import TextInput from './ui/TextInput'
 import { isAdmin } from '../features/auth/roles'
 import { templateStorage } from '../features/storage/templateStorage'
 
@@ -391,39 +393,32 @@ export default function Topbar({
         </div>
       </header>
       {/* Edit Topic Modal */}
-      {showTopicModal && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowTopicModal(false)} />
-          <div className="relative bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-4 border border-gray-200 dark:border-gray-700">
-            <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">Edit Board Topic</div>
-            <input
-              type="text"
-              value={pendingTopic}
-              onChange={(e) => setPendingTopic(e.target.value)}
-              placeholder="Enter topic..."
-              className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            <div className="mt-3 flex justify-end gap-2">
-              <button
-                onClick={() => setShowTopicModal(false)}
-                className="px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setTopic(pendingTopic.trim() || '')
-                  setShowTopicModal(false)
-                  try { onSaveBoard?.() } catch { }
-                }}
-                className="px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
+      <Modal
+        open={showTopicModal}
+        onClose={() => setShowTopicModal(false)}
+        title="Edit Board Topic"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowTopicModal(false)}>Cancel</Button>
+            <Button onClick={() => {
+              setTopic(pendingTopic.trim() || '')
+              setShowTopicModal(false)
+              try { onSaveBoard?.() } catch {}
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="py-2">
+          <TextInput
+            label="Topic"
+            value={pendingTopic}
+            onChange={(e) => setPendingTopic((e.target as HTMLInputElement).value)}
+            placeholder="Enter topic..."
+            fullWidth
+            autoFocus
+          />
         </div>
-      )}
+      </Modal>
       {showFeedback && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl relative">

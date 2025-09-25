@@ -519,7 +519,8 @@ class SupabaseStorage {
       return signedUrl.signedUrl
     } catch (error: any) {
       const msg = String(error?.message || '')
-      const isNotFound = msg.toLowerCase().includes('object not found') || (error?.status === 404)
+      const status = Number(error?.status || 0)
+      const isNotFound = msg.toLowerCase().includes('object not found') || status === 404 || status === 400
       if (!isNotFound) {
         console.error('Failed to get signed URL for path:', error)
       }
