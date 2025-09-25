@@ -197,8 +197,8 @@ export default function Topbar({
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
-          <div className="flex-shrink-0 flex space-y-0 md:flex-col md:space-y-2 items-center justify-center">
-            <div className="flex justify-center">
+          <div className="flex-shrink-0 flex space-y-0 md:flex-col md:space-y-2 items-center">
+            <div className="flex">
               <button
                 onClick={onOpenBoardRoom}
                 className="focus:outline-none cursor-pointer flex items-center gap-2"
