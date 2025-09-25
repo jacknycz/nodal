@@ -224,7 +224,7 @@ export default function ImageNode({
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
           style={{
-            padding: 3,
+            padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
             ...( { WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any )
           }}
