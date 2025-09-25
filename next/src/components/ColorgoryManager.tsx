@@ -41,8 +41,9 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
   const [dragId, setDragId] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDragId(id)
+    // Desktop HTML5 DnD: use dataTransfer only (do not set dragId to avoid pointer trap)
     e.dataTransfer.effectAllowed = 'move'
+    try { e.dataTransfer.setData('text/plain', id) } catch {}
   }
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -50,9 +51,12 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
   }
   const handleDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault()
-    if (!dragId || dragId === targetId) return
+    const sourceId = (() => {
+      try { return e.dataTransfer.getData('text/plain') } catch { return '' }
+    })() || dragId
+    if (!sourceId || sourceId === targetId) return
     const ids = ordered.map(c => c.id)
-    const from = ids.indexOf(dragId)
+    const from = ids.indexOf(sourceId)
     const to = ids.indexOf(targetId)
     if (from < 0 || to < 0) return
     ids.splice(to, 0, ids.splice(from, 1)[0])
@@ -111,12 +115,12 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
     const opts: AddEventListenerOptions = { passive: false, capture: true }
     document.addEventListener('touchmove', prevent, opts)
     document.addEventListener('pointermove', prevent, opts)
-    document.addEventListener('dragover', prevent, opts)
+    // Do NOT trap HTML5 dragover globally; it breaks desktop drop
     document.addEventListener('wheel', prevent, opts)
     return () => {
       document.removeEventListener('touchmove', prevent, opts as any)
       document.removeEventListener('pointermove', prevent, opts as any)
-      document.removeEventListener('dragover', prevent, opts as any)
+      // no dragover removal needed
       document.removeEventListener('wheel', prevent, opts as any)
     }
   }, [isOpen])
@@ -170,6 +174,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
               onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, c.id) }}
               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); try { (e.dataTransfer as any).dropEffect = 'move' } catch {}; handleDragOver(e) }}
               onDrop={(e) => { e.stopPropagation(); handleDrop(e, c.id) }}
+              onDragEnd={(e) => { e.stopPropagation(); setDragId(null) }}
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
