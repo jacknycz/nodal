@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
@@ -202,8 +203,16 @@ function TemplateCard({
       {(coverUrl || description) && (
         <div className="mt-3 space-y-2">
           {coverUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt="Template cover" className="w-full h-64 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
+            <div className="relative w-full h-64">
+              <Image
+                src={coverUrl}
+                alt="Template cover"
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="object-cover rounded-md border border-gray-200 dark:border-gray-700"
+                priority={false}
+              />
+            </div>
           )}
           {description && (
             <div className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3">{description}</div>

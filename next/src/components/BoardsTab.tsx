@@ -94,6 +94,7 @@ export default function BoardsTab({
                   lastModified={board.lastModified}
                   nodeCount={board.nodeCount}
                   edgeCount={board.edgeCount}
+                  topic={(board as any)?.data?.topic || null}
                   onLoad={() => onOpenBoard(board)}
                   onRename={newName => onRename(board.id, newName)}
                   onDelete={() => onDelete(board.id)}

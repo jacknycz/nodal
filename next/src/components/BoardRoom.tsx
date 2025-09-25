@@ -425,7 +425,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         </Tabs>
         
         {/* SIDEBAR */}
-        <div className="w-full md:w-96 mt-8 md:-mt-16 min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-1 self-start z-30">
+        <div className="w-full md:w-96 mt-8 md:-mt-16 min-h-screen rounded-t-4xl 
+        bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-12 self-start z-30">
           <div className="flex flex-none justify-end">
             <Button
               onClick={handleNewBoardClick}
@@ -438,8 +439,6 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               </svg>
             </Button>
           </div>
-
-
 
           <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">task nodes</h2>
@@ -478,6 +477,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
           <div className="flex flex-col gap-4 mt-8">
             <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Coming soon (for real, excited for this piece)</span>
           </div>
         </div>
       </div>

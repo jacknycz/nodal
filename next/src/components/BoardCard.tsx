@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
+import Tag from './ui/Tag'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
 import { PushPin, CheckCircle, Copy, Plus, Pen } from '@phosphor-icons/react/dist/ssr'
 
@@ -25,6 +26,7 @@ interface BoardCardProps {
   onDelete?: () => void
   enableSharing?: boolean
   footerActions?: React.ReactNode
+  topic?: string | null
 }
 
 function BoardCard({
@@ -44,9 +46,10 @@ function BoardCard({
   onDelete,
   enableSharing = true,
   footerActions,
+  topic,
 }: BoardCardProps) {
   const [newName, setNewName] = useState(name)
-  
+
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [originalName, setOriginalName] = useState(name)
   const titleInputRef = useRef<HTMLInputElement | null>(null)
@@ -104,7 +107,7 @@ function BoardCard({
 
   return (
     <div
-      className="group relative 
+      className="group relative flex flex-col 
       shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
       bg-white dark:bg-gray-950/60 dark:hover:bg-slate-700/98
       border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
@@ -152,7 +155,7 @@ function BoardCard({
           ) : (
             <div className="flex items-center gap-1 group">
               <h3
-                className="text-xl flex items-center gap-2 font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="text-xl lg:text-2xl flex items-center gap-2 font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 onClick={(e) => { if (!onRename) return; e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
               >
                 {newName}
@@ -163,35 +166,41 @@ function BoardCard({
             </div>
           )}
         </div>
+        {typeof topic === 'string' && topic.trim().length > 0 && (
+          <div className="mt-1">
+            <Tag variant="secondary" className="max-w-full truncate">{topic}</Tag>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
-        {lastModified !== undefined && (
-          <span className="flex mt-1 gap-1 items-center text-xs text-gray-400 dark:text-gray-400">
-            {formatDate(lastModified)}
-          </span>
-        )}
-        {published && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-[10px] font-medium mt-1">Published</span>
-        )}
+          {lastModified !== undefined && (
+            <span className="flex mt-1 gap-1 items-center text-xs text-gray-400 dark:text-gray-400">
+              {formatDate(lastModified)}
+            </span>
+          )}
+          {published && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-[10px] font-medium mt-1">Published</span>
+          )}
         </div>
+
         {invitedBy && (
           <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {invitedBy}</span>
         )}
       </div>
 
-      <div className="flex space-x-6 items-center">
+      <div className="flex my-4 space-x-6 items-center">
         <div className="flex flex-col flex-1 w-full items-start">
           {(typeof nodeCount !== 'undefined' || typeof edgeCount !== 'undefined') && (
             <div className="flex space-x-4 font-medium text-gray-500 dark:text-gray-200">
               {typeof nodeCount !== 'undefined' && (
                 <div className="flex items-center gap-1">
-                  <span className="flex items-center justify-center w-8 h-8 text-base font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{nodeCount}</span>
+                  <span className="text-lg font-fredoka font-medium">{nodeCount}</span>
                   <span className="">nodes</span>
                 </div>
               )}
               {typeof edgeCount !== 'undefined' && (
                 <div className="flex items-center gap-1">
-                  <span className="flex items-center justify-center w-8 h-8 text-base font-fredoka font-medium dark:bg-primary-900 border-2 border-primary-500 bg-primary-50/50 dark:border-none rounded-full text-primary-600 dark:text-primary-200">{edgeCount}</span>
+                  <span className="text-lg font-fredoka font-medium">{edgeCount}</span>
                   <span className="">connections</span>
                 </div>
               )}
@@ -214,7 +223,7 @@ function BoardCard({
       )}
 
       {/* Footer actions */}
-      <div className="col-span-2 mt-3 flex items-center justify-between gap-2">
+      <div className="col-span-2 mt-auto pt-3 flex items-center justify-between gap-2">
         {footerActions ? footerActions : (
           <>
             {enableSharing && (
