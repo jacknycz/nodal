@@ -198,13 +198,21 @@ export default function ChatPanel2() {
       >
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 border-b border-gray-100 dark:border-gray-950/50">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <img src="/nobot.svg" alt="Nodal" width={32} height={32} />
 
             {ai.isInitialized ? (
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center space-x-4">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
+
+                <Select
+                  size="xs"
+                  aria-label="AI Model"
+                  value={model}
+                  options={MODELS}
+                  onChange={(v) => setModel(v as OpenAIModel)}
+                  fullWidth
+                />
               </div>
             ) : (
               <div className="flex items-center space-x-1">
@@ -217,7 +225,7 @@ export default function ChatPanel2() {
           {/* AI Status */}
           <div className="flex items-center space-x-4">
             <button onClick={() => setIsOpen(false)} className="cursor-pointer text-gray-400 dark:text-slate-400 hover:text-gray-600 dark:hover:text-slate-300">
-            <ArrowSquareIn size={24} weight="duotone" />
+              <ArrowSquareIn size={24} weight="duotone" />
             </button>
           </div>
         </div>
@@ -286,17 +294,6 @@ export default function ChatPanel2() {
 
         {/* Input */}
         <div className="px-4 py-3">
-          <div className="flex mb-2 justify-center">
-            <Select
-              size="xs"
-              aria-label="AI Model"
-              value={model}
-              options={MODELS}
-              onChange={(v) => setModel(v as OpenAIModel)}
-              fullWidth
-            />
-          </div>
-
           <div className="flex space-x-2 items-end">
             <TextArea
               ref={inputRef}
