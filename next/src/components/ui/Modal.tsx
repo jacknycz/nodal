@@ -64,7 +64,7 @@ const Modal: React.FC<ModalProps> = ({
   if (typeof window === 'undefined') return null;
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[400] flex items-center justify-center">
+    <div className="fixed inset-0 z-[900] flex items-center justify-center">
       {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-black backdrop-blur-sm transition-all duration-200 ease-out ${
