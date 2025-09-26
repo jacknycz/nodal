@@ -36,7 +36,7 @@ export default function AISettingsMenu({
         <IconButton
           aria-label="AI Settings"
         >
-          <Robot size={24} className='w-4 h-4' />
+          <Robot size={24} className='w-5 h-5' />
         </IconButton>
       }
       width="w-64"

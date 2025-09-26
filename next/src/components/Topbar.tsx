@@ -355,7 +355,7 @@ export default function Topbar({
             )}
             {!isBoardView && (
               <IconButton aria-label="Product intro" size="md" onClick={() => router.push('/welcome')}>
-                <Info className="w-4 h-4" />
+                <Info className="w-5 h-5" />
               </IconButton>
             )}
             
