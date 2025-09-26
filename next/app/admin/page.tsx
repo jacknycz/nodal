@@ -73,7 +73,7 @@ export default function AdminUsersPage() {
               {users.map((u) => (
                 <tr key={u.id} className="border-t border-gray-800">
                   <td className="px-3 py-2">{u.email || '—'}</td>
-                  <td className="px-3 py-2">{u.role || 'User'}</td>
+                  <td className="px-3 py-2 capitalize">{u.role || 'User'}</td>
                   <td className="px-3 py-2">{new Date(u.createdAt).toLocaleString()}</td>
                   <td className="px-3 py-2">{u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleString() : '—'}</td>
                   <td className="px-3 py-2">
