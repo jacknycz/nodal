@@ -342,14 +342,18 @@ export default function AddNodesModal({
         <div className="space-y-3 py-2">
           {generated.length === 0 ? (
             <>
-              <div className="flex justify-center">
-                <Button onClick={handleQuickGenerate} loading={quickGenerating} disabled={quickGenerating || prompt.trim().length > 0}>Quick AI Generate</Button>
-              </div>
-              <div className="my-2 flex items-center gap-2 text-xs text-gray-500">
-                <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-                <span>OR</span>
-                <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
-              </div>
+              {parentNodeId && (
+                <>
+                  <div className="flex justify-center">
+                    <Button onClick={handleQuickGenerate} loading={quickGenerating} disabled={quickGenerating || prompt.trim().length > 0}>Quick AI Generate</Button>
+                  </div>
+                  <div className="my-2 flex items-center gap-2 text-xs text-gray-500">
+                    <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+                    <span>OR</span>
+                    <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
+                  </div>
+                </>
+              )}
               <TextArea 
                 value={prompt} 
                 onChange={(e) => setPrompt(e.target.value)} 

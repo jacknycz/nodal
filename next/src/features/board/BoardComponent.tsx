@@ -58,6 +58,7 @@ import { Info, X } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
+import Toast from '../../components/ui/Toast'
 import useBoardRealtime from './useBoardRealtime'
 import useBoardAutosave from './useBoardAutosave'
 import useNodeActions from './useNodeActions'
@@ -198,6 +199,18 @@ function BoardContent({
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
   const [aiParentNodeId, setAiParentNodeId] = useState<string | null>(null)
   const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
+  const [toastOpen, setToastOpen] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string>('')
+
+  const showAddToast = useCallback((kind: 'added' | 'generated', count: number) => {
+    if (!count || count < 1) return
+    const noun = count === 1 ? 'node' : 'nodes'
+    const verb = kind === 'generated' ? (count === 1 ? 'Generated' : 'Generated') : (count === 1 ? 'Added' : 'Added')
+    const article = count === 1 ? 'a ' : ''
+    const msg = `${verb} ${article}${count === 1 ? noun : count + ' ' + noun}!`
+    setToastMessage(msg)
+    setToastOpen(true)
+  }, [])
   
   // Close LeftDock panels on click-away / Escape / external right-click
   useEffect(() => {
@@ -933,6 +946,7 @@ function BoardContent({
         if (file) {
           const viewportCenter = getViewportCenter()
           handleDocumentUpload(file, viewportCenter)
+          showAddToast('added', 1)
         }
         cleanup()
       }, { once: true })
@@ -944,7 +958,7 @@ function BoardContent({
     } catch (err) {
       console.error('Failed to open file picker', err)
     }
-  }, [getViewportCenter, handleDocumentUpload])
+  }, [getViewportCenter, handleDocumentUpload, showAddToast])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -1065,6 +1079,7 @@ function BoardContent({
                   })
                   handleDocumentUpload(file, flowPosition)
                 })
+                showAddToast('added', validFiles.length)
               }
           }
         }
@@ -1087,7 +1102,7 @@ function BoardContent({
       window.removeEventListener("dragend", handleWindowDragEnd)
       window.removeEventListener("drop", handleWindowDrop)
     }
-  }, [handleDocumentUpload])
+  }, [handleDocumentUpload, showAddToast])
   
   // Paste handler: supports URLs (video/link) and files (image/pdf/etc.)
   useEffect(() => {
@@ -1107,6 +1122,7 @@ function BoardContent({
               // Reuse existing upload pipeline
               handleDocumentUpload(file as File, center)
             })
+            showAddToast('added', files.length)
             return
           }
         }
@@ -1132,6 +1148,7 @@ function BoardContent({
             data: { title: 'Video', videoUrl: href, status: 'idle' } as any,
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          showAddToast('added', 1)
         } else {
           const newNode: Node = {
             id: `link-${Date.now()}`,
@@ -1140,13 +1157,14 @@ function BoardContent({
             data: { title: 'Link', linkUrl: href, status: 'idle' } as any,
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          showAddToast('added', 1)
         }
       } catch {}
     }
 
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
-  }, [getViewportCenter, handleDocumentUpload, setNodes])
+  }, [getViewportCenter, handleDocumentUpload, setNodes, showAddToast])
 
   // Keyboard shortcuts via hook
   useBoardShortcuts(() => { saveBoard() })
@@ -1510,6 +1528,7 @@ function BoardContent({
             data: { title: 'New Task', completed: false },
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          showAddToast('added', 1)
           if (pendingSourceNodeId) {
             const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: 'floating' }
             setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
@@ -1568,6 +1587,7 @@ function BoardContent({
                 const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
                 setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
               }
+              showAddToast('generated', newNodes.length)
             }
           } catch {}
         }}
@@ -1618,6 +1638,7 @@ function BoardContent({
                 data: { title: 'Link', linkUrl: href, status: 'idle' } as any,
               }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+              showAddToast('added', 1)
               return
             }
 
@@ -1629,6 +1650,7 @@ function BoardContent({
               data: { title: 'New Node', content: trimmed } as any,
             }
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+            showAddToast('added', 1)
           } catch {}
         }}
         onPasteConnectedNode={async (sourceNodeId: string, screenPos: { x: number; y: number }) => {
@@ -1672,6 +1694,7 @@ function BoardContent({
               }
               newId = node.id
               setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+              showAddToast('added', 1)
             } else {
               const node: Node = {
                 id: newId,
@@ -1680,6 +1703,7 @@ function BoardContent({
                 data: { title: 'New Node', content: trimmed } as any,
               }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+              showAddToast('added', 1)
             }
             // Connect source -> new node
             setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: 'floating' }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: 'floating' }]))
@@ -1715,6 +1739,7 @@ function BoardContent({
                   data: { ...nodeData },
                 }
                 handleAddNodeToStore(newNode)
+              showAddToast('generated', 1)
                 setShowAINodeGenerator(false)
               }}
               initialContext={pendingBoardBrief ? {
@@ -1786,6 +1811,7 @@ function BoardContent({
         <AddNodesModal
           open={showUnifiedAddModal}
           onClose={() => setShowUnifiedAddModal(false)}
+          parentNodeId={aiParentNodeId || pendingSourceNodeId || undefined}
           parentNodeTitle={(aiParentNodeId || pendingSourceNodeId) ? (nodes.find(n => n.id === (aiParentNodeId || pendingSourceNodeId))?.data as any)?.title : undefined}
           parentNodeContent={(aiParentNodeId || pendingSourceNodeId) ? (() => {
             const n = nodes.find(n => n.id === (aiParentNodeId || pendingSourceNodeId))
@@ -1844,12 +1870,14 @@ function BoardContent({
                     const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
                     setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                   }
+                  showAddToast('added', newNodes.length)
                 }
               } catch {}
             } else if (titles.length === 1) {
               const target = pendingNodePosition || center
               const newNode: Node = { id: `node-${Date.now()}`, type: 'default', position: target, data: { title: titles[0], content: desc } }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+              showAddToast('added', 1)
             } else {
               if (pendingNodePosition) {
                 const count = titles.length
@@ -1871,6 +1899,7 @@ function BoardContent({
                   }
                 }
                 setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+                showAddToast('added', created.length)
               } else {
                 const nodesToPlace = titles.map(t => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const }))
                 let placed = false
@@ -1880,6 +1909,7 @@ function BoardContent({
                     const newNodes: Node[] = placementResult.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
                     setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
                     placed = true
+                    showAddToast('added', newNodes.length)
                   }
                 } catch {}
                 if (!placed) {
@@ -1902,6 +1932,7 @@ function BoardContent({
                     }
                   }
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
+                  showAddToast('added', fallbackNodes.length)
                 }
               }
             }
@@ -1918,6 +1949,7 @@ function BoardContent({
                   const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
                   setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                 }
+                showAddToast('generated', newNodes.length)
               }
             } catch {}
             setShowUnifiedAddModal(false)
@@ -1932,6 +1964,7 @@ function BoardContent({
             }
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
+            showAddToast('added', 1)
           }}
           onLinkSubmit={(url) => {
             const center = pendingNodePosition || getViewportCenter()
@@ -1943,11 +1976,13 @@ function BoardContent({
             }
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
+            showAddToast('added', 1)
           }}
           onUploadSubmit={(file) => {
             const center = pendingNodePosition || getViewportCenter()
             handleDocumentUpload(file as File, center)
             setShowUnifiedAddModal(false)
+            showAddToast('added', 1)
           }}
         />
       )}
@@ -1958,6 +1993,9 @@ function BoardContent({
         onClose={() => setShowReorganizeMenu(false)}
         nodeCount={nodes.length}
       />
+      <Toast open={toastOpen} onClose={() => setToastOpen(false)} variant="success" position="top-center">
+        {toastMessage}
+      </Toast>
     </div>
   )
 }
