@@ -19,6 +19,9 @@ import Tag from './ui/Tag'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import { isAdmin } from '../features/auth/roles'
+import LinkUI from './ui/Link'
+import Checkbox from './ui/Checkbox'
+import TextArea from './ui/TextArea'
 import { templateStorage } from '../features/storage/templateStorage'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
@@ -57,6 +60,12 @@ export default function Topbar({
   const { isDark } = useTheme()
   const router = useRouter()
   const [showFeedback, setShowFeedback] = useState(false)
+  const [fbIdea, setFbIdea] = useState(false)
+  const [fbBroken, setFbBroken] = useState(false)
+  const [fbQuick, setFbQuick] = useState('')
+  const [fbDetails, setFbDetails] = useState('')
+  const [fbSubmitting, setFbSubmitting] = useState(false)
+  const [fbError, setFbError] = useState<string | null>(null)
   const setTopbarHeight = useBoardStore(state => state.setTopbarHeight);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const user = useSupabaseUser()
@@ -318,6 +327,7 @@ export default function Topbar({
             <Tag variant="beta" className="ml-2">
               BETA
             </Tag>
+            <LinkUI onClick={() => setShowFeedback(true)}>Feedback</LinkUI>
 
             {isBoardView && (
               <>
@@ -419,21 +429,65 @@ export default function Topbar({
           />
         </div>
       </Modal>
-      {showFeedback && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl relative">
-            <button
-              onClick={() => setShowFeedback(false)}
-              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800 dark:hover:text-white text-2xl font-bold"
-              aria-label="Close feedback form"
-            >
-              ×
-            </button>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Feedback</h3>
-            <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSeOKZuFWTCDymdFLYA1ChDqerRfoV3ozH_5BDR1cmVizH_uNA/viewform?embedded=true" width="100%" height="600" frameBorder={0} marginHeight={0} marginWidth={0} title="Feedback Form">Loading…</iframe>
+      <Modal
+        open={showFeedback}
+        onClose={() => { if (!fbSubmitting) setShowFeedback(false) }}
+        title="Send Feedback"
+        description="Tell us what's on your mind."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowFeedback(false)} disabled={fbSubmitting}>Cancel</Button>
+            <Button onClick={async () => {
+              setFbError(null)
+              if (!fbQuick.trim()) { setFbError('Quick version is required'); return }
+              try {
+                setFbSubmitting(true)
+                await fetch('/api/admin/feedback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    quick: fbQuick.trim(),
+                    details: fbDetails.trim() || null,
+                    categories: { idea: fbIdea, broken: fbBroken },
+                    user: { id: user?.id || null, email: user?.email || null },
+                    board: { id: currentBoardId || null, name: currentBoardName || null },
+                  })
+                })
+                setShowFeedback(false)
+                setFbIdea(false); setFbBroken(false); setFbQuick(''); setFbDetails('')
+              } catch {
+                setFbError('Failed to submit')
+              } finally {
+                setFbSubmitting(false)
+              }
+            }} disabled={fbSubmitting}>Submit</Button>
+          </>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <div className="flex items-center gap-4">
+            <Checkbox checked={fbIdea} onChange={setFbIdea} label="I have an idea" />
+            <Checkbox checked={fbBroken} onChange={setFbBroken} label="Your thing is broken" />
           </div>
+          <TextInput
+            label="the quick version"
+            placeholder="Short summary (required)"
+            value={fbQuick}
+            onChange={(e) => setFbQuick((e.target as HTMLInputElement).value)}
+            required
+            fullWidth
+          />
+          <TextArea
+            label="give us the details"
+            placeholder="Optional details"
+            value={fbDetails}
+            onChange={(e) => setFbDetails((e.target as HTMLTextAreaElement).value)}
+            rows={4}
+            fullWidth
+          />
+          {fbError && <div className="text-xs text-red-600 dark:text-red-400">{fbError}</div>}
         </div>
-      )}
+      </Modal>
     </>
   )
 } 
