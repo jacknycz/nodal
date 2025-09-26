@@ -7,7 +7,7 @@ import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
-import { House, Info, Plus, Pen } from '@phosphor-icons/react'
+import { House, Info, Plus, Pen, GearSix } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
@@ -24,6 +24,7 @@ import Checkbox from './ui/Checkbox'
 import TextArea from './ui/TextArea'
 import { templateStorage } from '../features/storage/templateStorage'
 import Toast from './ui/Toast'
+import { boardStorage } from '../features/storage/storage'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -80,6 +81,9 @@ export default function Topbar({
   const [presentUsers, setPresentUsers] = useState<{ user_id: string; last_seen: string }[]>([])
   const supabase = getSupabaseClient()
   const [showSavedStatus, setShowSavedStatus] = useState(true)
+  const [showBoardSettings, setShowBoardSettings] = useState(false)
+  const [pendingBoardName, setPendingBoardName] = useState('')
+  const [pendingBoardTopic2, setPendingBoardTopic2] = useState('')
 
   useEffect(() => {
     if (headerRef.current) {
@@ -208,8 +212,8 @@ export default function Topbar({
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
-          <div className="flex-shrink-0 flex space-y-0 md:flex-col md:space-y-1">
-            <div className="flex">
+          <div className="flex-shrink-0 flex space-y-0 md:flex-col">
+            <div className="flex gap-4">
               <button
                 onClick={onOpenBoardRoom}
                 className="focus:outline-none cursor-pointer flex items-center gap-2"
@@ -235,88 +239,52 @@ export default function Topbar({
                 />
               </button>
 
-              {topic && (
-                <div className="hidden sm:flex items-center ml-4">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Topic:</span>
+              {isBoardView && currentBoardName && (
+                <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
+                  <div className="flex gap-1">
+                    <div className="flex gap-0">
+                      <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); setShowBoardSettings(true) }}>
+                        <GearSix className="w-4 h-4" />
+                      </IconButton>
+                      <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-medium font-fredoka text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
+                      </div>
+                      <div className="sm:hidden min-w-0 w-full text-left">
+                        <span className="font-semibold text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
+                      </div>
+                    </div>
 
-                  <button
-                    onClick={() => { setPendingTopic(topic || ''); setShowTopicModal(true) }}
-                    className="h-5 py-0 px-1.5 text-[10px] ml-1 inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-700 hover:bg-gray-200/80 dark:hover:bg-gray-700/80 transition-colors"
-                    title="Edit topic"
-                  >
-                    <Pen className="w-3 h-3" />
-                    <span className="truncate max-w-[20ch]" title={topic}>{topic}</span>
-                  </button>
+                    {/* Save Status */}
+                    <div className="flex items-center gap-2 text-xs">
+                      {saveStatus === 'saving' && (
+                        <div className="flex items-center text-blue-600 dark:text-blue-400">
+                          <div className="w-2 h-2 mr-1 bg-blue-600 rounded-full animate-pulse"></div>
+                          <span>Saving...</span>
+                        </div>
+                      )}
+                      {saveStatus === 'saved' && !hasUnsavedChanges && (
+                        <div className="flex items-center text-green-600 dark:text-green-400">
+                          <div className="w-2 h-2 mr-1 bg-green-600 rounded-full"></div>
+                          <span className={`transition-opacity duration-500 ${showSavedStatus ? 'opacity-100' : 'opacity-0'}`}>Saved</span>
+                        </div>
+                      )}
+                      {saveStatus === 'unsaved' && hasUnsavedChanges && (
+                        <div className="flex items-center text-orange-600 dark:text-orange-400">
+                          <div className="w-2 h-2 mr-2 bg-orange-600 rounded-full"></div>
+                          <span>Unsaved changes</span>
+                        </div>
+                      )}
+                      {saveStatus === 'error' && (
+                        <div className="flex items-center text-red-600 dark:text-red-400">
+                          <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
+                          <span>Save failed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-
-
-            {isBoardView && currentBoardName && (
-              <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
-                <div className="flex gap-2">
-                  <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
-
-                    <span className="font-medium font-fredoka text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
-                  </div>
-                  <div className="sm:hidden min-w-0 w-full text-left">
-                    <span className="font-semibold text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
-                  </div>
-
-                  {/* Save Status */}
-                  <div className="flex items-center gap-2 text-xs">
-                    {saveStatus === 'saving' && (
-                      <div className="flex items-center text-blue-600 dark:text-blue-400">
-                        <div className="w-2 h-2 mr-1 bg-blue-600 rounded-full animate-pulse"></div>
-                        <span>Saving...</span>
-                      </div>
-                    )}
-                    {saveStatus === 'saved' && !hasUnsavedChanges && (
-                      <div className="flex items-center text-green-600 dark:text-green-400">
-                        <div className="w-2 h-2 mr-1 bg-green-600 rounded-full"></div>
-                        <span className={`transition-opacity duration-500 ${showSavedStatus ? 'opacity-100' : 'opacity-0'}`}>Saved</span>
-                      </div>
-                    )}
-                    {saveStatus === 'unsaved' && hasUnsavedChanges && (
-                      <div className="flex items-center text-orange-600 dark:text-orange-400">
-                        <div className="w-2 h-2 mr-2 bg-orange-600 rounded-full"></div>
-                        <span>Unsaved changes</span>
-                      </div>
-                    )}
-                    {saveStatus === 'error' && (
-                      <div className="flex items-center text-red-600 dark:text-red-400">
-                        <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
-                        <span>Save failed</span>
-                      </div>
-                    )}
-
-                    {/* Manual Save Button */}
-                    {hasUnsavedChanges && onSaveBoard && (
-                      <button
-                        onClick={onSaveBoard}
-                        disabled={saveStatus === 'saving'}
-                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Save
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {/* Presence Avatars
-                {presentUsers.length > 0 && (
-                  <div className="hidden sm:flex items-center ml-4 gap-1">
-                    {presentUsers.map((u) => (
-                      <span key={u.user_id} title={u.user_id}>
-                        {getPresenceAvatar(u.user_id)}
-                      </span>
-                    ))}
-                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">{presentUsers.length} online</span>
-                  </div>
-                )} */}
-
-
-              </div>
-            )}
           </div>
 
           {/* Center - Board Info (truly centered) */}
@@ -415,7 +383,7 @@ export default function Topbar({
             <Button onClick={() => {
               setTopic(pendingTopic.trim() || '')
               setShowTopicModal(false)
-              try { onSaveBoard?.() } catch {}
+              try { onSaveBoard?.() } catch { }
             }}>Save</Button>
           </>
         }
@@ -428,6 +396,49 @@ export default function Topbar({
             placeholder="Enter topic..."
             fullWidth
             autoFocus
+          />
+        </div>
+      </Modal>
+      {/* Board Settings Modal */}
+      <Modal
+        open={showBoardSettings}
+        onClose={() => setShowBoardSettings(false)}
+        title="Board Settings"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowBoardSettings(false)}>Cancel</Button>
+            <Button onClick={async () => {
+              try {
+                const newName = (pendingBoardName || '').trim()
+                const newTopic = (pendingBoardTopic2 || '').trim()
+                if (currentBoardId && newName && newName !== (currentBoardName || '')) {
+                  try { await boardStorage.renameBoard(currentBoardId, newName) } catch { }
+                }
+                if (typeof newTopic === 'string' && newTopic !== (topic || '')) {
+                  setTopic(newTopic)
+                }
+                setShowBoardSettings(false)
+                try { onSaveBoard?.() } catch { }
+              } catch { }
+            }}>Save</Button>
+          </>
+        }
+      >
+        <div className="space-y-3 py-2">
+          <TextInput
+            label="Board title"
+            value={pendingBoardName}
+            onChange={(e) => setPendingBoardName((e.target as HTMLInputElement).value)}
+            placeholder="Enter board title..."
+            fullWidth
+            autoFocus
+          />
+          <TextInput
+            label="Board topic"
+            value={pendingBoardTopic2}
+            onChange={(e) => setPendingBoardTopic2((e.target as HTMLInputElement).value)}
+            placeholder="Enter topic..."
+            fullWidth
           />
         </div>
       </Modal>
