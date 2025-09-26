@@ -23,6 +23,7 @@ import LinkUI from './ui/Link'
 import Checkbox from './ui/Checkbox'
 import TextArea from './ui/TextArea'
 import { templateStorage } from '../features/storage/templateStorage'
+import Toast from './ui/Toast'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -66,6 +67,7 @@ export default function Topbar({
   const [fbDetails, setFbDetails] = useState('')
   const [fbSubmitting, setFbSubmitting] = useState(false)
   const [fbError, setFbError] = useState<string | null>(null)
+  const [showFbThanks, setShowFbThanks] = useState(false)
   const setTopbarHeight = useBoardStore(state => state.setTopbarHeight);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const user = useSupabaseUser()
@@ -433,7 +435,7 @@ export default function Topbar({
         open={showFeedback}
         onClose={() => { if (!fbSubmitting) setShowFeedback(false) }}
         title="Send Feedback"
-        description="Tell us what's on your mind."
+        description="Hey! Thank you for doing this - give me all the feedback you can give! I will steal all the ideas and let me know if something is broken - or could just be better."
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowFeedback(false)} disabled={fbSubmitting}>Cancel</Button>
@@ -455,6 +457,8 @@ export default function Topbar({
                 })
                 setShowFeedback(false)
                 setFbIdea(false); setFbBroken(false); setFbQuick(''); setFbDetails('')
+                setShowFbThanks(true)
+                setTimeout(() => setShowFbThanks(false), 2200)
               } catch {
                 setFbError('Failed to submit')
               } finally {
@@ -488,6 +492,9 @@ export default function Topbar({
           {fbError && <div className="text-xs text-red-600 dark:text-red-400">{fbError}</div>}
         </div>
       </Modal>
+      <Toast open={showFbThanks} onClose={() => setShowFbThanks(false)} variant="success" autoHideMs={2200}>
+        Thank you SO MUCH for your feedback! We're making Nodal better as fast as we can!
+      </Toast>
     </>
   )
 } 
