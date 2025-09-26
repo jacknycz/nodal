@@ -185,6 +185,10 @@ function BoardContent({
           if (Array.isArray(savedColorgories) && savedColorgories.length > 0) {
             useBoardStore.getState().setColorgories(savedColorgories as any)
           }
+          const savedEdgeType = (saved?.data as any)?.meta?.edgeType as any
+          if (savedEdgeType) {
+            useBoardStore.getState().setEdgeType?.(savedEdgeType)
+          }
         } catch {}
       })()
     }
@@ -201,6 +205,7 @@ function BoardContent({
   const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
+  const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
 
   const showAddToast = useCallback((kind: 'added' | 'generated', count: number) => {
     if (!count || count < 1) return
@@ -382,6 +387,11 @@ function BoardContent({
   const prevEdgesRef = useRef<Edge[]>([])
   const colorgoriesState = useBoardStore((s: any) => s.colorgories || [])
   const prevColorgoriesRef = useRef<any[]>([])
+
+  // When edge type preference changes, update existing edges
+  useEffect(() => {
+    setEdges((eds) => (Array.isArray(eds) ? eds.map(e => ({ ...e, type: edgeTypePref as any })) : eds))
+  }, [edgeTypePref, setEdges])
   
   // Simple effect to trigger autosave when nodes/edges change
   useEffect(() => {
@@ -563,7 +573,7 @@ function BoardContent({
           const position = { x: startX + c * spacingX, y: startY + r * spacingY }
           return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: '' } }
         })
-        const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
+        const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: edgeTypePref as any }))
         setNodes([topicNode, ...generatedNodes])
         setEdges(generatedEdges as any)
         const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -655,7 +665,7 @@ function BoardContent({
                 const position = { x: startX + c * spacingX, y: startY + r * spacingY }
                 return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
               })
-              const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
+              const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: edgeTypePref as any }))
               setNodes([topicNode, ...generatedNodes])
               setEdges(generatedEdges as any)
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -673,7 +683,7 @@ function BoardContent({
               const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
               return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: nodeData.label, content: nodeData.content } }
             })
-            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: 'floating' as const }))
+            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: edgeTypePref as any }))
             setNodes([topicNode, ...generatedNodes])
             setEdges(generatedEdges as any)
             const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -695,7 +705,7 @@ function BoardContent({
         // console.error('Failed to parse AI response:', parseError)
         // console.log('Raw response content:', response.content)
         const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: response.content } }
-        const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: 'floating' as const }
+        const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: edgeTypePref as any }
         setNodes([topicNode, newNode])
         setEdges([newEdge] as any)
         
@@ -813,7 +823,7 @@ function BoardContent({
         id: `edge-${Date.now()}`,
         source: params.source!,
         target: params.target!,
-        type: 'floating',
+        type: edgeTypePref as any,
       }
       setEdges((eds) => {
         if (!Array.isArray(eds)) return [newEdge]
@@ -854,7 +864,7 @@ function BoardContent({
         id: `edge-${Date.now()}`,
         source: sourceId,
         target: targetId,
-        type: 'floating',
+        type: edgeTypePref as any,
       }
       setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
     }
@@ -1227,7 +1237,7 @@ function BoardContent({
         id: `edge-${Date.now()}`,
         source: sourceId,
         target: targetId,
-        type: 'floating',
+        type: edgeTypePref as any,
       }
       return [...list, newEdge]
     })
@@ -1525,12 +1535,20 @@ function BoardContent({
             id: newId,
             type: 'task',
             position: flowPosition,
-            data: { title: 'New Task', completed: false },
+            data: { title: 'New Task', completed: false, focusOnMount: true },
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)
+          // Focus the new task's text input once mounted
+          setTimeout(() => {
+            try {
+              const el = document.getElementById(`task-${newId}`) as HTMLInputElement | null
+              el?.focus()
+              el?.select()
+            } catch {}
+          }, 50)
           if (pendingSourceNodeId) {
-            const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: 'floating' }
+            const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: edgeTypePref as any }
             setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
           }
           setContextMenu({ isOpen: false, position: null })
@@ -1706,7 +1724,7 @@ function BoardContent({
               showAddToast('added', 1)
             }
             // Connect source -> new node
-            setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: 'floating' }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: 'floating' }]))
+                setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: edgeTypePref as any }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: edgeTypePref as any }]))
           } catch {}
         }}
       />

@@ -21,6 +21,7 @@ const initialState: BoardState = {
   topbarHeight: 49, // Default, can be updated dynamically
   connectingSourceId: null,
   colorgories: COLORGORY_DEFS.map((d, idx) => ({ id: d.id, color: d.id, name: d.name, order: idx, visible: idx < 4 })),
+  edgeType: 'floating',
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -184,6 +185,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setFreeChatMode: (free) => set({ freeChatMode: free }),
   setTopbarHeight: (height) => set({ topbarHeight: height }),
   setConnectingSource: (id) => set({ connectingSourceId: id }),
+  setEdgeType: (t) => set({ edgeType: t || 'floating' }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),

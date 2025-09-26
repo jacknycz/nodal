@@ -84,6 +84,19 @@ export default function TaskNode({
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  useEffect(() => {
+    if ((data as any)?.focusOnMount) {
+      // Defer to ensure mounted
+      setTimeout(() => {
+        try {
+          const el = document.getElementById(`task-${id}`) as HTMLInputElement | null
+          el?.focus()
+          el?.select()
+        } catch {}
+      }, 0)
+    }
+  }, [])
+
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
@@ -162,6 +175,7 @@ export default function TaskNode({
             size="sm"
             fullWidth
             className={`${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
+            autoFocus={Boolean((data as any)?.focusOnMount)}
           />
           {/* inline actions removed; moved to slide-out */}
           

@@ -38,7 +38,7 @@ export function calculateFanLayout(
     angleCenter = Math.PI / 2, // Downward by default (screen y increases downward)
     minDistance = 30,
     maxDistance = 800,
-    verticalOffset = 120,
+    verticalOffset = 180,
     adaptiveRadius = true,
     preventOverlap = true
   } = options
@@ -239,7 +239,7 @@ export function calculateGridLayout(
   const {
     columns = Math.ceil(Math.sqrt(nodesToPlace.length)),
     cellWidth = 300,
-    cellHeight = 200,
+    cellHeight = 300,
     padding = 60,
     alignment = 'center',
     fillDirection = 'row'
@@ -319,7 +319,7 @@ function calculateHierarchicalGridLayout(
 ): NodePlacement[] {
   const {
     cellWidth = 300,
-    cellHeight = 200,
+    cellHeight = 300,
     padding = 60
   } = options
 
@@ -418,84 +418,106 @@ function calculateHierarchicalGridLayout(
       ? baseY + rowIndex * (cellHeight + padding) // tier 2 is first placed row when focus exists
       : baseY - ((tierIds.length - 1) * (cellHeight + padding)) / 2 + rowIndex * (cellHeight + padding)
 
-  // For each tier, place nodes in groups side-by-side according to parent order from previous tier
-  const rowWidths: number[] = []
+  // New: Columnar family placement — keep each family/cluster in its own column, centered per tier
+  // Build parent mapping for quick root ancestor lookup
+  const parentOf = new Map<string, string | undefined>()
+  nodesToPlace.forEach((n, i) => {
+    const nid = idOf(n, i)
+    if (n.parentId) parentOf.set(nid, n.parentId)
+  })
+
+  const findRoot = (id: string): string => {
+    let cur: string | undefined = id
+    const seen = new Set<string>()
+    while (cur && parentOf.get(cur) && idMap.has(parentOf.get(cur)!)) {
+      if (seen.has(cur)) break
+      seen.add(cur)
+      cur = parentOf.get(cur)!
+    }
+    return cur || id
+  }
+
+  const familyRoots: string[] = context.focusNode
+    ? [context.focusNode.id]
+    : (tierIds[0] || []) // top-tier roots
+
+  // Compute max width needed per family across all tiers
+  const familyMaxWidth = new Map<string, number>()
+  const blockGap = padding * 2
+  for (let t = 0; t < tierIds.length; t++) {
+    const idsInTier = tierIds[t]
+    const byFamily = new Map<string, number>()
+    idsInTier.forEach(id => {
+      const root = findRoot(id)
+      byFamily.set(root, (byFamily.get(root) || 0) + 1)
+    })
+    byFamily.forEach((count, root) => {
+      const width = (count * cellWidth) + Math.max(0, count - 1) * padding
+      familyMaxWidth.set(root, Math.max(familyMaxWidth.get(root) || 0, width))
+    })
+  }
+
+  // Compute column centers for families
+  const orderedFamilies = familyRoots.filter(r => (familyMaxWidth.get(r) || 0) >= 0)
+  const totalWidth = orderedFamilies.reduce((sum, r) => sum + (familyMaxWidth.get(r) || cellWidth), 0) + Math.max(0, orderedFamilies.length - 1) * blockGap
+  let colCursorX = center.x - totalWidth / 2
+  const columnCenterByRoot = new Map<string, number>()
+  orderedFamilies.forEach(root => {
+    const width = familyMaxWidth.get(root) || cellWidth
+    const centerX = colCursorX + width / 2
+    columnCenterByRoot.set(root, centerX)
+    colCursorX += width + blockGap
+  })
+
+  // Place tiers: for each family, center that tier's nodes under its column center
   for (let t = 0; t < tierIds.length; t++) {
     const idsInTier = tierIds[t]
     if (idsInTier.length === 0) continue
-
-    // Build groups by parent order
-    const prevParents = t > 0 ? tierParentOrder[t - 1] : tierParentOrder[0]
-    const groups: string[][] = []
-    const parentToChildren = new Map<string, string[]>()
-    prevParents.forEach(pid => parentToChildren.set(pid, []))
-    // Assign each id in tier to its parent bucket
-    idsInTier.forEach(id => {
-      const node = idMap.get(id)
-      const parentId = node?.parentId || 'root'
-      if (!parentToChildren.has(parentId)) parentToChildren.set(parentId, [])
-      parentToChildren.get(parentId)!.push(id)
-    })
-    prevParents.forEach(pid => {
-      const arr = parentToChildren.get(pid)
-      if (arr && arr.length > 0) groups.push(arr)
-    })
-    // If no matching parents (e.g., roots when no focus), treat entire tier as one group
-    if (groups.length === 0) {
-      // For top tier roots, separate each root into its own family block for better visual separation
-      if (t === 0 && idsInTier.length > 0) {
-        idsInTier.forEach(id => groups.push([id]))
-      } else {
-        groups.push(idsInTier)
-      }
-    }
-
-    // Compute total width accounting for intra-group padding and inter-group gap
-    const blockGap = padding * 2
-    const groupWidths = groups.map(g => (g.length * cellWidth) + Math.max(0, g.length - 1) * padding)
-    const totalWidth = groupWidths.reduce((sum, w) => sum + w, 0) + Math.max(0, groups.length - 1) * blockGap
-    rowWidths.push(totalWidth)
-    let cursorX = center.x - totalWidth / 2
     const y = rowY(t)
 
-    // Place nodes group by group with block spacing
-    groups.forEach((group, gi) => {
-      const gWidth = groupWidths[gi]
-      // group starts at cursorX, ends at cursorX + gWidth
-      const gx = cursorX
+    // Group ids in this tier by family root
+    const idsByFamily = new Map<string, string[]>()
+    idsInTier.forEach(id => {
+      const root = findRoot(id)
+      if (!idsByFamily.has(root)) idsByFamily.set(root, [])
+      idsByFamily.get(root)!.push(id)
+    })
+
+    orderedFamilies.forEach(root => {
+      const group = idsByFamily.get(root) || []
+      if (group.length === 0) return
+      const groupWidth = (group.length * cellWidth) + Math.max(0, group.length - 1) * padding
+      const centerX = columnCenterByRoot.get(root) || center.x
+      const startX = centerX - groupWidth / 2
       group.forEach((id, idx) => {
         const nodeToPlace = idMap.get(id)
-        const baseX = gx + idx * (cellWidth + padding) + cellWidth / 2
-        if (nodeToPlace) {
-          const basePosition = { x: baseX, y }
-          const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
-          const finalPosition = findAvailablePosition(
-            basePosition,
-            dimensions,
-            context.existingNodes,
-            { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'right' }
-          )
-          // Lock Y to row to keep rows perfectly aligned
-          const lockedPosition = { x: finalPosition.x, y }
-          const confidence = calculatePlacementConfidence(lockedPosition, basePosition, context.existingNodes)
-          placements.push({
-            node: createNodeFromToPlace(nodeToPlace),
-            position: lockedPosition,
-            reason: `Hierarchical grid tier ${t + 1}`,
-            confidence
-          })
-        }
+        if (!nodeToPlace) return
+        const baseX = startX + idx * (cellWidth + padding) + cellWidth / 2
+        const basePosition = { x: baseX, y }
+        const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+        const finalPosition = findAvailablePosition(
+          basePosition,
+          dimensions,
+          context.existingNodes,
+          { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'right' }
+        )
+        const lockedPosition = { x: finalPosition.x, y }
+        const confidence = calculatePlacementConfidence(lockedPosition, basePosition, context.existingNodes)
+        placements.push({
+          node: createNodeFromToPlace(nodeToPlace),
+          position: lockedPosition,
+          reason: `Hierarchical grid tier ${t + 1}`,
+          confidence
+        })
       })
-      // advance cursor by group width + block gap
-      cursorX += gWidth + blockGap
     })
   }
 
   // Place singleton nodes (no edges, no parent/children) to the right in their own grid
   if (singletonIds.length > 0) {
-    // Determine base starting X: to the right of the widest grouped row
-    const groupedExists = rowWidths.length > 0
-    const widest = groupedExists ? Math.max(...rowWidths) : 0
+    // Determine base starting X: to the right of the entire family block
+    const groupedExists = orderedFamilies.length > 0
+    const widest = groupedExists ? totalWidth : 0
     const gap = padding * 2
     const xStart = groupedExists
       ? center.x + widest / 2 + gap + cellWidth / 2
@@ -673,6 +695,7 @@ export function calculateLinearLayout(
   // Sort nodes by priority
   const sortedNodes = [...nodesToPlace].sort((a, b) => (b.priority || 0) - (a.priority || 0))
   
+  const vSpacing = direction === 'vertical' ? spacing * 1.5 : spacing
   sortedNodes.forEach((nodeToPlace, index) => {
     let basePosition: Position
     
@@ -682,7 +705,7 @@ export function calculateLinearLayout(
       basePosition = { x, y }
     } else if (direction === 'vertical') {
       const x = startPosition.x + (curve > 0 ? Math.sin((index / (nodesToPlace.length - 1)) * Math.PI) * curve : 0)
-      const y = startPosition.y + index * spacing
+      const y = startPosition.y + index * vSpacing
       basePosition = { x, y }
     } else { // diagonal
       const progress = index / Math.max(1, nodesToPlace.length - 1)

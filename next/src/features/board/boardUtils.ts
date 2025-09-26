@@ -1,4 +1,5 @@
 import type { BoardNode, BoardEdge } from './boardTypes'
+import { useBoardStore } from './boardSlice'
 
 export function createNode(
   titleOrNode: string | Omit<BoardNode, 'id'>,
@@ -44,7 +45,7 @@ export function createEdge(
   return {
     source,
     target,
-    type: 'floating', // Always use floating for React Flow edge type (Easy Connect)
+    type: (useBoardStore.getState().edgeType || 'floating') as any,
     animated: connectionType === 'ai', // Animate AI connections
     style: getEdgeStyle(connectionType), // Style based on connection type
     data: {

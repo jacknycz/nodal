@@ -15,6 +15,7 @@ import {
   LayoutAlgorithm
 } from './placementTypes'
 import type { BoardEdge } from './boardTypes'
+import { useBoardStore } from './boardSlice'
 import {
   calculateGridLayout,
   calculateLayoutQuality
@@ -273,11 +274,12 @@ export class PlacementEngine {
     // Create connections to parent/focus node
     if (context.focusNode) {
       placements.forEach(placement => {
+        const edgeType = (useBoardStore.getState().edgeType || 'floating') as any
         const edge: BoardEdge = {
           id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: context.focusNode!.id,
           target: placement.node.id,
-          type: 'floating',
+          type: edgeType,
           data: {
             type: 'ai',
             label: undefined
@@ -301,11 +303,12 @@ export class PlacementEngine {
         nodeToPlace.relationships.forEach(relatedId => {
           const relatedPlacement = placements.find(p => p.node.id === relatedId)
           if (relatedPlacement) {
+            const edgeType = (useBoardStore.getState().edgeType || 'floating') as any
             const edge: BoardEdge = {
               id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               source: placement.node.id,
               target: relatedPlacement.node.id,
-              type: 'floating',
+              type: edgeType,
               data: {
                 type: 'default',
                 label: undefined

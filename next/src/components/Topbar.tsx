@@ -25,6 +25,7 @@ import TextArea from './ui/TextArea'
 import { templateStorage } from '../features/storage/templateStorage'
 import Toast from './ui/Toast'
 import { boardStorage } from '../features/storage/storage'
+import Select from './ui/Select'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -84,6 +85,8 @@ export default function Topbar({
   const [showBoardSettings, setShowBoardSettings] = useState(false)
   const [pendingBoardName, setPendingBoardName] = useState('')
   const [pendingBoardTopic2, setPendingBoardTopic2] = useState('')
+  const edgeType = useBoardStore(state => state.edgeType || 'floating')
+  const setEdgeType = useBoardStore(state => state.setEdgeType)
 
   useEffect(() => {
     if (headerRef.current) {
@@ -442,6 +445,20 @@ export default function Topbar({
             onChange={(e) => setPendingBoardTopic2((e.target as HTMLInputElement).value)}
             placeholder="Enter topic..."
             fullWidth
+          />
+          <Select
+            label="Edge type"
+            value={edgeType as any}
+            onChange={(val) => setEdgeType?.((val as string) as any)}
+            options={[
+              { value: 'floating', label: 'Floating (Nodal default)' },
+              { value: 'bezier', label: 'Bezier' },
+              { value: 'straight', label: 'Straight' },
+              { value: 'step', label: 'Step' },
+              { value: 'smoothstep', label: 'Smooth Step' },
+            ]}
+            fullWidth
+            description="Choose how edges render on this board."
           />
         </div>
       </Modal>

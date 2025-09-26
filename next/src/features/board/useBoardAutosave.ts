@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useBoardStore } from './boardSlice'
 import type { Node, Edge } from '@xyflow/react'
 
 interface BoardStorageLike {
@@ -35,7 +36,8 @@ export function useBoardAutosave({ boardStorage, templateStorage, getViewport, g
       try {
         setSaveStatus('saving')
         const boardData = { nodes, edges, viewport: getViewport() }
-        await boardStorage.updateBoard(localBoardIdRef.current, { ...boardData, colorgories: getColorgories() })
+        const edgeType = useBoardStore.getState().edgeType
+        await boardStorage.updateBoard(localBoardIdRef.current, { ...boardData, colorgories: getColorgories(), meta: { ...(boardData as any).meta, edgeType } })
         try {
           if (typeof window !== 'undefined') {
             const tplId = localStorage.getItem(`templateMapping:${localBoardIdRef.current}`)
@@ -61,7 +63,8 @@ export function useBoardAutosave({ boardStorage, templateStorage, getViewport, g
     try {
       setSaveStatus('saving')
       setHasUnsavedChanges(false)
-      const boardData = { nodes, edges, viewport: getViewport(), colorgories: getColorgories() }
+      const edgeType = useBoardStore.getState().edgeType
+      const boardData = { nodes, edges, viewport: getViewport(), colorgories: getColorgories(), meta: { edgeType } }
       if (localBoardIdRef.current && !name) {
         await boardStorage.updateBoard(localBoardIdRef.current, boardData)
       } else {

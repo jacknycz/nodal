@@ -84,6 +84,8 @@ export interface BoardState {
   connectingSourceId?: string | null
   // Global colorgories for the board
   colorgories?: Colorgory[]
+  // Board-wide edge type preference
+  edgeType?: 'floating' | 'bezier' | 'straight' | 'step' | 'smoothstep'
 }
 
 export interface BoardActions {
@@ -106,4 +108,5 @@ export interface BoardActions {
   removeSelectedNode: (id: string) => void
   clearSelectedNodes: () => void
   setConnectingSource: (id: string | null) => void
+  setEdgeType?: (t: BoardState['edgeType']) => void
 } 
