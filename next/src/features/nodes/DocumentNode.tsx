@@ -41,13 +41,6 @@ interface DocumentNodeProps {
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Record<string, any>) => void
   selected?: boolean
-  // Add locking props
-  acquireNodeLock?: (nodeId: string) => Promise<boolean>
-  releaseNodeLock?: (nodeId: string) => Promise<void>
-  isNodeLocked?: (nodeId: string) => boolean
-  getNodeLockOwner?: (nodeId: string) => string | undefined
-  isNodeLockedByMe?: (nodeId: string) => boolean
-  nodeLocks?: any[]
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
 }
@@ -58,12 +51,6 @@ export default function DocumentNode({
   onNodeDelete, 
   onNodeUpdate,
   selected,
-  acquireNodeLock,
-  releaseNodeLock,
-  isNodeLocked,
-  getNodeLockOwner,
-  isNodeLockedByMe,
-  nodeLocks,
   onQuickAddNodes,
   onOrganizeSubtree
 }: DocumentNodeProps) {
@@ -103,9 +90,8 @@ export default function DocumentNode({
     return () => clearInterval(t)
   }, [data.documentId])
 
-  const isLocked = isNodeLocked?.(id) || false
-  const isLockedByMe = isNodeLockedByMe?.(id) || false
-  const lockOwner = getNodeLockOwner?.(id)
+  const isLocked = false
+  const isLockedByMe = false
 
   // Remove: const [imageUrl, setImageUrl] = useState<string | null>(null)
   // Remove: const [isLoadingImage, setIsLoadingImage] = useState(false)
@@ -252,7 +238,7 @@ export default function DocumentNode({
  
   return (
     <div 
-      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
           setDrawerOpen((prev) => !prev)
@@ -288,14 +274,7 @@ export default function DocumentNode({
               <span>{data.fileType || 'Unknown type'}</span>
             </div>
           </div>
-          {isLocked && (
-            <div className="flex items-center gap-1 text-xs">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-red-600 dark:text-red-400">
-                {isLockedByMe ? 'Editing...' : 'Locked'}
-              </span>
-            </div>
-          )}
+          
         </div>
         
         {/* Status indicator */}
@@ -329,7 +308,7 @@ export default function DocumentNode({
             variant="default"
             aria-label="Edit document"
             onClick={() => setShowEditModal(true)}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <Pencil size={14} weight="duotone" />
           </IconButton>
@@ -339,7 +318,7 @@ export default function DocumentNode({
             variant="default"
             aria-label="Preview document"
             onClick={handlePreview}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <FrameCorners size={14} weight="duotone" />
           </IconButton>
@@ -349,7 +328,7 @@ export default function DocumentNode({
             variant="default"
             aria-label="Download document"
             onClick={handleDownload}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <Download size={14} weight="duotone" />
           </IconButton>
@@ -360,7 +339,7 @@ export default function DocumentNode({
               variant="default"
               aria-label="Add Connected Nodes"
               onClick={() => onQuickAddNodes?.(id)}
-              disabled={isLocked && !isLockedByMe}
+              
             >
               <PlusCircle size={14} weight="duotone" />
             </IconButton>
@@ -371,7 +350,7 @@ export default function DocumentNode({
             variant="default"
             aria-label="Reorganize nodes"
             onClick={() => onOrganizeSubtree?.(id)}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <TreeView size={14} weight="duotone" />
           </IconButton>
@@ -380,7 +359,7 @@ export default function DocumentNode({
           nodeId={id}
           selectedIds={data.colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          disabled={isLocked && !isLockedByMe}
+          
           onNodeUpdate={onNodeUpdate}
         />
         <Tooltip content="Delete">
@@ -388,7 +367,7 @@ export default function DocumentNode({
             variant="danger"
             aria-label="Delete document"
             onClick={handleDelete}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <Trash size={14} weight="duotone" />
           </IconButton>

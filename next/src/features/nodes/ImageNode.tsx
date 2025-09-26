@@ -42,12 +42,6 @@ interface ImageNodeProps {
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Record<string, any>) => void
   selected?: boolean
-  acquireNodeLock?: (nodeId: string) => Promise<boolean>
-  releaseNodeLock?: (nodeId: string) => Promise<void>
-  isNodeLocked?: (nodeId: string) => boolean
-  getNodeLockOwner?: (nodeId: string) => string | undefined
-  isNodeLockedByMe?: (nodeId: string) => boolean
-  nodeLocks?: any[]
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
 }
@@ -58,12 +52,6 @@ export default function ImageNode({
   onNodeDelete,
   onNodeUpdate,
   selected,
-  acquireNodeLock,
-  releaseNodeLock,
-  isNodeLocked,
-  getNodeLockOwner,
-  isNodeLockedByMe,
-  nodeLocks,
   onQuickAddNodes,
   onOrganizeSubtree
 }: ImageNodeProps) {
@@ -129,8 +117,8 @@ export default function ImageNode({
     }
   }, [data.status])
 
-  const isLocked = isNodeLocked?.(id) || false
-  const isLockedByMe = isNodeLockedByMe?.(id) || false
+  const isLocked = false
+  const isLockedByMe = false
 
   // Focus removed
 
@@ -211,7 +199,7 @@ export default function ImageNode({
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
           setDrawerOpen((prev) => !prev)
@@ -397,7 +385,7 @@ export default function ImageNode({
                   e.stopPropagation()
                   setExpanded(true)
                 }}
-                disabled={isLocked && !isLockedByMe}
+                
               >
                 <ArrowsOut size={14} />
               </IconButton>
@@ -449,7 +437,7 @@ export default function ImageNode({
               variant="default"
               aria-label="Edit image"
               onClick={() => setShowEditModal(true)}
-              disabled={isLocked && !isLockedByMe}
+              
             >
               <Pencil size={14} />
             </IconButton>
@@ -459,7 +447,7 @@ export default function ImageNode({
               variant="default"
               aria-label="Download image"
               onClick={handleDownload}
-              disabled={isLocked && !isLockedByMe}
+              
             >
               <DownloadSimple size={14} />
             </IconButton>
@@ -470,7 +458,7 @@ export default function ImageNode({
                 variant="default"
                 aria-label="Add Connected Nodes"
                 onClick={() => onQuickAddNodes?.(id)}
-                disabled={isLocked && !isLockedByMe}
+                
               >
                 <PlusCircle size={14} />
               </IconButton>
@@ -481,7 +469,7 @@ export default function ImageNode({
               variant="default"
               aria-label="Reorganize nodes"
               onClick={() => onOrganizeSubtree?.(id)}
-              disabled={isLocked && !isLockedByMe}
+              
             >
               <TreeView size={14} weight="duotone" />
             </IconButton>
@@ -490,7 +478,7 @@ export default function ImageNode({
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
             onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-            disabled={isLocked && !isLockedByMe}
+            
             onNodeUpdate={onNodeUpdate}
           />
           <Tooltip content="Delete">
@@ -498,7 +486,7 @@ export default function ImageNode({
               variant="danger"
               aria-label="Delete image"
               onClick={handleDelete}
-              disabled={isLocked && !isLockedByMe}
+              
             >
               <Trash size={14} />
             </IconButton>

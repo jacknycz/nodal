@@ -29,13 +29,6 @@ interface TaskNodeProps {
   selected?: boolean
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Partial<TaskNodeData>) => void
-  // Locking
-  acquireNodeLock?: (nodeId: string) => Promise<boolean>
-  releaseNodeLock?: (nodeId: string) => Promise<void>
-  isNodeLocked?: (nodeId: string) => boolean
-  getNodeLockOwner?: (nodeId: string) => string | undefined
-  isNodeLockedByMe?: (nodeId: string) => boolean
-  nodeLocks?: any[]
   // Connect helper
   onNodeShiftClickConnect?: (targetId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
@@ -47,10 +40,6 @@ export default function TaskNode({
   selected,
   onNodeDelete,
   onNodeUpdate,
-  acquireNodeLock,
-  releaseNodeLock,
-  isNodeLocked,
-  isNodeLockedByMe,
   onNodeShiftClickConnect,
   onOrganizeSubtree,
 }: TaskNodeProps) {
@@ -60,8 +49,8 @@ export default function TaskNode({
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
 
-  const isLocked = isNodeLocked?.(id) || false
-  const lockedByMe = isNodeLockedByMe?.(id) || false
+  const isLocked = false
+  const lockedByMe = false
 
   // Focus removed
 
@@ -124,7 +113,7 @@ export default function TaskNode({
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe: lockedByMe, receiveMode: isReceiveMode, extra: 'min-w-[220px] max-w-[420px]' })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'min-w-[220px] max-w-[420px]' })}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -158,7 +147,7 @@ export default function TaskNode({
           <Checkbox
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}
-            disabled={isLocked && !lockedByMe}
+            
             size="lg"
             className="flex-none"
             shape="circle"
@@ -175,14 +164,7 @@ export default function TaskNode({
             className={`${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
           />
           {/* inline actions removed; moved to slide-out */}
-          {(isLocked) && (
-            <div className="flex items-center gap-1 text-[10px] ml-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-red-600 dark:text-red-400">
-                {lockedByMe ? 'Editing...' : 'Locked'}
-              </span>
-            </div>
-          )}
+          
         </div>
       </div>
 
@@ -195,7 +177,7 @@ export default function TaskNode({
             variant="default"
             aria-label="Reorganize nodes"
             onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-            disabled={isLocked && !lockedByMe}
+            
           >
             <TreeView size={14} weight="duotone" />
           </IconButton>
@@ -204,7 +186,7 @@ export default function TaskNode({
           nodeId={id}
           selectedIds={(data as any).colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          disabled={isLocked && !lockedByMe}
+          
           onNodeUpdate={onNodeUpdate}
         />
         <Tooltip content="Delete">
@@ -215,7 +197,7 @@ export default function TaskNode({
               e.stopPropagation()
               setShowDeleteModal(true)
             }}
-            disabled={isLocked && !lockedByMe}
+            
           >
             <Trash size={14} weight="duotone" />
           </IconButton>

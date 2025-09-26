@@ -74,7 +74,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
                 error &&
                   "text-red-500 dark:text-red-400 peer-focus:text-red-500 dark:peer-focus:text-red-400",
                 isActive
-                  ? "-top-2 left-0! bg-white text-xs"
+                  ? "-top-2 left-0! pl-0 bg-white text-xs"
                   : "top-1/2 -translate-y-1/2 text-sm"
               )}
             >

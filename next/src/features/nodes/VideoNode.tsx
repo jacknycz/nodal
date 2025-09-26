@@ -32,14 +32,11 @@ interface VideoNodeProps {
   selected?: boolean
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Partial<VideoNodeData>) => void
-  // Locking
-  isNodeLocked?: (nodeId: string) => boolean
-  isNodeLockedByMe?: (nodeId: string) => boolean
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
 }
 
-export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onQuickAddNodes, onOrganizeSubtree }: VideoNodeProps) {
+export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, onQuickAddNodes, onOrganizeSubtree }: VideoNodeProps) {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [inView, setInView] = useState(false)
@@ -50,8 +47,8 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const [showMobilePlayer, setShowMobilePlayer] = useState(false)
   const mobileVideoRef = useRef<HTMLVideoElement | null>(null)
 
-  const isLocked = isNodeLocked?.(id) || false
-  const isLockedByMe = isNodeLockedByMe?.(id) || false
+  const isLocked = false
+  const isLockedByMe = false
 
   // Build colorgory ring colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -197,7 +194,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
 
   return (
-    <div className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: false, extra: containerWidthClass })} ref={viewRef}>
+    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef}>
       {/* Colorgory ring overlay (hidden when expanded) */}
       {!expanded && swatchColors.length > 0 && (
         <div
@@ -330,7 +327,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               variant="default"
               aria-label="Edit video"
               onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
-              disabled={isLocked && !isLockedByMe}
+              
             >
               <Pencil size={14} />
             </IconButton>
@@ -339,7 +336,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             nodeId={id}
             selectedIds={(data as any).colorgoryIds || []}
             onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-            disabled={isLocked && !isLockedByMe}
+            
             onNodeUpdate={onNodeUpdate}
           />
         <Tooltip content="Reorganize nodes">
@@ -347,7 +344,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             variant="default"
             aria-label="Reorganize nodes"
             onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <TreeView size={14} weight="duotone" />
           </IconButton>
@@ -358,7 +355,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               variant="danger"
               aria-label="Delete node"
               onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
-              disabled={isLocked && !isLockedByMe}
+            
             >
               <Trash size={14} />
             </IconButton>

@@ -6,15 +6,17 @@ import Button from './ui/Button'
 import TipTapEditor from './TipTapEditor'
 import TextInput from './ui/TextInput'
 import MultiSelect from './ui/MultiSelect'
+import ToggleGroup from './ui/ToggleGroup'
 import { useBoardStore } from '../features/board/boardSlice'
 
 interface NodeEditModalProps {
   open: boolean
   onClose: () => void
-  onSave: (title: string, content: string, colorgoryIds?: string[]) => void
+  onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg') => void
   initialTitle: string
   initialContent: string
   initialColorgoryIds?: string[]
+  initialTitleSize?: 'sm' | 'md' | 'lg'
 }
 
 export default function NodeEditModal({ 
@@ -23,11 +25,13 @@ export default function NodeEditModal({
   onSave, 
   initialTitle, 
   initialContent,
-  initialColorgoryIds = []
+  initialColorgoryIds = [],
+  initialTitleSize = 'sm'
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
   const [selectedColorgoryIds, setSelectedColorgoryIds] = useState<string[]>(initialColorgoryIds)
+  const [titleSize, setTitleSize] = useState<'sm' | 'md' | 'lg'>(initialTitleSize)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const editorHandleRef = useRef<{ focus: () => void } | null>(null)
   const colorgories = useBoardStore.getState().colorgories || []
@@ -36,6 +40,7 @@ export default function NodeEditModal({
     if (open) {
       setTitle(prev => (prev !== initialTitle ? initialTitle : prev))
       setContent(prev => (prev !== initialContent ? initialContent : prev))
+      setTitleSize(prev => (prev !== initialTitleSize ? initialTitleSize : prev))
       setSelectedColorgoryIds(prev => {
         const next = initialColorgoryIds
         const sameLength = prev.length === next.length
@@ -50,7 +55,7 @@ export default function NodeEditModal({
   }, [open, initialTitle, initialContent, initialColorgoryIds])
 
   const handleSave = () => {
-    onSave(title, content, selectedColorgoryIds)
+    onSave(title, content, selectedColorgoryIds, titleSize)
     onClose()
   }
 
@@ -98,17 +103,34 @@ export default function NodeEditModal({
       }
     >
       <div className="space-y-4 py-2">
-        <TextInput
-          ref={titleInputRef}
-          id="edit-title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={handleTitleKeyDown}
-          placeholder="Enter node title..."
-          fullWidth
-          label="Title"
-        />
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="flex-1">
+            <TextInput
+              ref={titleInputRef}
+              id="edit-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={handleTitleKeyDown}
+              placeholder="Enter node title..."
+              fullWidth
+              label="Title"
+            />
+          </div>
+          <div className="sm:w-auto">
+            <ToggleGroup
+              label="Size"
+              value={titleSize}
+              onChange={setTitleSize}
+              options={[
+                { value: 'sm', label: 'S' },
+                { value: 'md', label: 'M' },
+                { value: 'lg', label: 'L' },
+              ]}
+              size="sm"
+            />
+          </div>
+        </div>
         {/* <MultiSelect
           label="Colorgories"
           values={selectedColorgoryIds}

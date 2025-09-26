@@ -26,18 +26,12 @@ interface NodalNodeProps {
     expanded?: boolean
     aiGenerated?: boolean
     colorgoryIds?: string[]
+    titleSize?: 'sm' | 'md' | 'lg'
   }
   id: string
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Record<string, any>) => void
   selected?: boolean
-  // Add locking props
-  acquireNodeLock?: (nodeId: string) => Promise<boolean>
-  releaseNodeLock?: (nodeId: string) => Promise<void>
-  isNodeLocked?: (nodeId: string) => boolean
-  getNodeLockOwner?: (nodeId: string) => string | undefined
-  isNodeLockedByMe?: (nodeId: string) => boolean
-  nodeLocks?: any[]
   onNodeShiftClickConnect?: (targetId: string) => void
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
@@ -49,12 +43,6 @@ export default function NodalNode({
   onNodeDelete,
   onNodeUpdate,
   selected,
-  acquireNodeLock,
-  releaseNodeLock,
-  isNodeLocked,
-  getNodeLockOwner,
-  isNodeLockedByMe,
-  nodeLocks,
   onNodeShiftClickConnect,
   onQuickAddNodes,
   onOrganizeSubtree
@@ -62,17 +50,11 @@ export default function NodalNode({
   const SHOW_ADD_CONNECTED = false
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const justOpenedRef = useRef(false)
-  const lockReleasedRef = useRef(false)
   const user = useSupabaseUser()
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
 
   const displayTitle = data.label || data.title || 'Untitled'
-
-  // Use DB state for lock
-  const isLocked = isNodeLocked?.(id) || false
-  const isLockedByMe = isNodeLockedByMe?.(id) || false
 
   // Debug logs for lock state
   // console.log(`[NodalNode ${id}] isLocked: ${isLocked}, isLockedByMe: ${isLockedByMe}, showEditModal: ${showEditModal}, nodeLocks count: ${nodeLocks?.length || 0}`)
@@ -82,72 +64,21 @@ export default function NodalNode({
   //   console.log(`[NodalNode ${id}] Filtered nodeLocks for this node:`, nodeLocks.filter(lock => lock.node_id === id))
   // }
 
-  // Open modal and acquire lock
+  // Open modal (collab locks disabled)
   const handleEdit = async (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
-    if (isLocked && !isLockedByMe) return
-    if (showEditModal) return
-
-    // Check if user is authenticated before trying to lock
-    console.log('[DEBUG] handleEdit - user state:', user, 'user?.id:', user?.id)
-    if (!user || !user.id) {
-      alert('Please wait for authentication to complete before editing.')
-      return
-    }
-
-    if (acquireNodeLock) {
-      console.log('[DEBUG] About to call acquireNodeLock for node:', id)
-      const lockAcquired = await acquireNodeLock(id)
-      console.log('[DEBUG] Lock acquired?', lockAcquired, 'for node:', id)
-      if (!lockAcquired) {
-        alert('This node is being edited by another user. Please wait.')
-        return
-      }
-    } else {
-      console.log('[DEBUG] acquireNodeLock function not available')
-    }
     setShowEditModal(true)
-    lockReleasedRef.current = false // Reset lock release flag
-    console.log('[DEBUG] Modal opened for node:', id)
-    justOpenedRef.current = true
-    setTimeout(() => { justOpenedRef.current = false }, 100)
   }
 
-  // Close modal and release lock
+  // Close modal
   const handleCloseEdit = async () => {
-    if (justOpenedRef.current) return
     setShowEditModal(false)
-    console.log('[DEBUG] Modal closed for node:', id)
-    if (releaseNodeLock && !lockReleasedRef.current) {
-      try {
-        await releaseNodeLock(id)
-        lockReleasedRef.current = true
-        console.log('[DEBUG] Lock released (close) for node:', id)
-      } catch (error) {
-        console.error('[DEBUG] Failed to release lock (close) for node:', id, error)
-      }
-    } else if (lockReleasedRef.current) {
-      console.log('[DEBUG] Lock already released, skipping close release for node:', id)
-    }
   }
 
-  const handleSaveEdit = async (title: string, content: string, colorgoryIds?: string[]) => {
-    if (onNodeUpdate) onNodeUpdate(id, { title, content, ...(colorgoryIds ? { colorgoryIds } : {}) })
-    // Release lock BEFORE closing modal
-    if (releaseNodeLock && !lockReleasedRef.current) {
-      try {
-        await releaseNodeLock(id)
-        lockReleasedRef.current = true
-        console.log('[DEBUG] Lock released (save) for node:', id)
-      } catch (error) {
-        console.error('[DEBUG] Failed to release lock (save) for node:', id, error)
-      }
-    } else if (lockReleasedRef.current) {
-      console.log('[DEBUG] Lock already released, skipping save release for node:', id)
-    }
+  const handleSaveEdit = async (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg') => {
+    if (onNodeUpdate) onNodeUpdate(id, { title, content, ...(colorgoryIds ? { colorgoryIds } : {}), ...(titleSize ? { titleSize } : {}) })
     setShowEditModal(false)
-    console.log('[DEBUG] Modal closed (save) for node:', id)
   }
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -207,7 +138,7 @@ export default function NodalNode({
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: isReceiveMode, extra: 'min-w-[240px] max-w-[240px]' })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'min-w-[240px] max-w-[240px]' })}
       style={{ position: 'relative' }}
       onClick={(e) => {
         if (e.shiftKey) {
@@ -243,17 +174,9 @@ export default function NodalNode({
 
       <div className="nodal-drag-handle cursor-move">
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+          <h3 className={`${data.titleSize === 'lg' ? 'text-lg' : data.titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
             {displayTitle}
           </h3>
-          {(isLocked || showEditModal) && (
-            <div className="flex items-center gap-1 text-xs">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-red-600 dark:text-red-400">
-                {isLockedByMe || showEditModal ? 'Editing...' : 'Locked'}
-              </span>
-            </div>
-          )}
         </div>
         {data.content && (
           <div className="mb-3">
@@ -270,7 +193,6 @@ export default function NodalNode({
             
             aria-label="Edit node"
             onClick={handleEdit}
-            disabled={isLocked && !isLockedByMe || showEditModal}
           >
             <Pen size={14} weight="duotone" />
           </IconButton>
@@ -283,7 +205,6 @@ export default function NodalNode({
               
               aria-label="Add Connected Nodes"
               onClick={() => onQuickAddNodes?.(id)}
-              disabled={isLocked && !isLockedByMe}
             >
               <PlusCircle size={14} weight="duotone" />
             </IconButton>
@@ -296,7 +217,6 @@ export default function NodalNode({
             
             aria-label="Reorganize nodes"
             onClick={() => onOrganizeSubtree?.(id)}
-            disabled={isLocked && !isLockedByMe}
           >
             <TreeView size={14} weight="duotone" />
           </IconButton>
@@ -306,7 +226,6 @@ export default function NodalNode({
           nodeId={id}
           selectedIds={data.colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          disabled={isLocked && !isLockedByMe}
           onNodeUpdate={onNodeUpdate}
         />
 
@@ -316,7 +235,6 @@ export default function NodalNode({
             
             aria-label="Delete node"
             onClick={handleDelete}
-            disabled={isLocked && !isLockedByMe}
           >
             <Trash size={14} weight="duotone" />
           </IconButton>
@@ -349,6 +267,7 @@ export default function NodalNode({
           initialTitle={displayTitle}
           initialContent={data.content || ''}
           initialColorgoryIds={data.colorgoryIds || []}
+          initialTitleSize={data.titleSize || 'sm'}
         />
       )}
 

@@ -31,18 +31,14 @@ interface LinkNodeProps {
   selected?: boolean
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Partial<LinkNodeData>) => void
-  // Locking
-  isNodeLocked?: (nodeId: string) => boolean
-  isNodeLockedByMe?: (nodeId: string) => boolean
   onOrganizeSubtree?: (nodeId: string) => void
 }
 
-export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, isNodeLocked, isNodeLockedByMe, onOrganizeSubtree }: LinkNodeProps) {
+export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, onOrganizeSubtree }: LinkNodeProps) {
   const [loading, setLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-
-  const isLocked = isNodeLocked?.(id) || false
-  const isLockedByMe = isNodeLockedByMe?.(id) || false
+  const isLocked = false
+  const isLockedByMe = false
 
   // Build colorgory ring colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -113,7 +109,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
   const containerWidthClass = 'w-[260px]'
 
   return (
-    <div className={getNodeContainerClasses({ selected, isLocked, isLockedByMe, receiveMode: false, extra: containerWidthClass })}>
+    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })}>
       {/* Colorgory ring overlay */}
       {swatchColors.length > 0 && (
         <div
@@ -174,7 +170,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             variant="default"
             aria-label="Edit link"
             onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <Pencil size={14} />
           </IconButton>
@@ -183,7 +179,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           nodeId={id}
           selectedIds={(data as any).colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          disabled={isLocked && !isLockedByMe}
+          
           onNodeUpdate={onNodeUpdate}
         />
         <Tooltip content="Reorganize nodes">
@@ -191,7 +187,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             variant="default"
             aria-label="Reorganize nodes"
             onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <TreeView size={14} weight="duotone" />
           </IconButton>
@@ -201,7 +197,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             variant="danger"
             aria-label="Delete node"
             onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
-            disabled={isLocked && !isLockedByMe}
+            
           >
             <Trash size={14} />
           </IconButton>

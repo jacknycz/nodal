@@ -67,7 +67,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
                 'text-gray-500 dark:text-gray-400 dark:bg-gray-950/80',
                 error && 'text-red-500 dark:text-red-400 peer-focus:text-red-500 dark:peer-focus:text-red-400',
                 isActive
-                  ? '-top-2 left-0! bg-white text-xs'
+                  ? '-top-2 left-0! pl-0 bg-white text-xs'
                   : clsx(
                       'text-sm',
                       size === 'sm' && 'top-2.5',
