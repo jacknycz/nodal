@@ -310,7 +310,19 @@ export function usePlacement() {
     const freshEdges = useBoardStore.getState().edges
 
     const baseContext = createPlacementContext(undefined, constraints)
-    const context = { ...baseContext, existingNodes: freshNodes, existingEdges: freshEdges }
+    // Measure actual rendered sizes for all nodes (wait a frame to ensure layout is stable)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    const measuredNodes = freshNodes.map((n) => {
+      try {
+        const el = document.querySelector(`.react-flow__node[data-id="${n.id}"]`) as HTMLElement | null
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          return { ...(n as any), width: rect.width, height: rect.height }
+        }
+      } catch {}
+      return n as any
+    })
+    const context = { ...baseContext, existingNodes: measuredNodes as any, existingEdges: freshEdges }
     
     // Build parent relationships from edges (source -> parent, target -> child)
     const parentOf: Record<string, string> = {}

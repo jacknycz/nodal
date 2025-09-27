@@ -284,17 +284,9 @@ export function calculateGridLayout(
       y: startY + row * (cellHeight + padding) + cellHeight / 2
     }
     
-    const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
-    
-    // Fine-tune position to avoid overlaps
-    const finalPosition = findAvailablePosition(
-      basePosition,
-      dimensions,
-      context.existingNodes,
-      { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
-    )
-    
-    const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
+    // Deterministic placement: lock to grid cell without collision search
+    const finalPosition = basePosition
+    const confidence = 1
     
     placements.push({
       node: createNodeFromToPlace(nodeToPlace),
@@ -494,15 +486,9 @@ function calculateHierarchicalGridLayout(
         if (!nodeToPlace) return
         const baseX = startX + idx * (cellWidth + padding) + cellWidth / 2
         const basePosition = { x: baseX, y }
-        const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
-        const finalPosition = findAvailablePosition(
-          basePosition,
-          dimensions,
-          context.existingNodes,
-          { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'right' }
-        )
-        const lockedPosition = { x: finalPosition.x, y }
-        const confidence = calculatePlacementConfidence(lockedPosition, basePosition, context.existingNodes)
+        // Deterministic placement: lock to exact base position (no collision search)
+        const lockedPosition = basePosition
+        const confidence = 1
         placements.push({
           node: createNodeFromToPlace(nodeToPlace),
           position: lockedPosition,
@@ -541,33 +527,39 @@ function calculateHierarchicalGridLayout(
       .filter(t => (buckets[t] && buckets[t].length > 0))
 
     // Place each type bucket as a vertical column. If a bucket has many nodes, it simply grows downward.
-    let typeColIndex = 0
+    const maxRowsPerColumn = 10
+    // Deterministic column cursor – ensures types don't share columns
+    let columnCursor = 0
     for (const t of orderedTypes) {
       const ids = buckets[t]
       if (!ids || ids.length === 0) continue
-      const x = xStart + typeColIndex * (cellWidth + padding)
-      for (let r = 0; r < ids.length; r++) {
-        const id = ids[r]
-        const nodeToPlace = idMap.get(id)
-        if (!nodeToPlace) continue
-        const y = yStart + r * (cellHeight + padding)
-        const basePosition = { x, y }
-        const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
-        const finalPosition = findAvailablePosition(
-          basePosition,
-          dimensions,
-          context.existingNodes,
-          { minDistance: 20, maxSearchRadius: 100, searchStep: 30, preferredDirection: 'radial' }
-        )
-        const confidence = calculatePlacementConfidence(finalPosition, basePosition, context.existingNodes)
-        placements.push({
-          node: createNodeFromToPlace(nodeToPlace),
-          position: finalPosition,
-          reason: `Singleton ${t} column placement`,
-          confidence
-        })
+      const columnsNeeded = Math.ceil(ids.length / maxRowsPerColumn)
+      const baseCol = columnCursor
+      for (let c = 0; c < columnsNeeded; c++) {
+        const colIds = ids.slice(c * maxRowsPerColumn, (c + 1) * maxRowsPerColumn)
+        const x = xStart + (baseCol + c) * (cellWidth + padding)
+        let yCursor = yStart
+        for (let r = 0; r < colIds.length; r++) {
+          const id = colIds[r]
+          const nodeToPlace = idMap.get(id)
+          if (!nodeToPlace) continue
+          const existing = context.existingNodes.find(n => n.id === id)
+          const measuredH = (existing as any)?.height
+          const dims = measuredH && isFinite(measuredH)
+            ? { width: (existing as any)?.width || 0, height: measuredH as number }
+            : estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+          const basePosition = { x, y: yCursor }
+          const confidence = 1
+          placements.push({
+            node: createNodeFromToPlace(nodeToPlace),
+            position: basePosition,
+            reason: `Singleton ${t} column placement`,
+            confidence
+          })
+          yCursor += dims.height + 100
+        }
       }
-      typeColIndex++
+      columnCursor += columnsNeeded
     }
   }
 
