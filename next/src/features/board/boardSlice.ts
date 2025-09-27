@@ -22,6 +22,7 @@ const initialState: BoardState = {
   connectingSourceId: null,
   colorgories: COLORGORY_DEFS.map((d, idx) => ({ id: d.id, color: d.id, name: d.name, order: idx, visible: idx < 4 })),
   edgeType: 'floating',
+  hoveredEdgeId: null,
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -48,6 +49,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setColorgoryVisible: (id: string, visible: boolean) => void
   assignNodeColorgory: (nodeId: string, colorgoryId: string) => void
   unassignNodeColorgory: (nodeId: string, colorgoryId: string) => void
+  setHoveredEdgeId: (id: string | null) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -186,6 +188,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setTopbarHeight: (height) => set({ topbarHeight: height }),
   setConnectingSource: (id) => set({ connectingSourceId: id }),
   setEdgeType: (t) => set({ edgeType: t || 'floating' }),
+  setHoveredEdgeId: (id) => set({ hoveredEdgeId: id }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),

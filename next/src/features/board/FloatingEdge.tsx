@@ -43,6 +43,8 @@ export default function FloatingEdge({
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
+  const hoveredEdgeId = useBoardStore((s: any) => s.hoveredEdgeId)
+  const setHoveredEdgeId = useBoardStore((s: any) => s.setHoveredEdgeId)
   const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
   const isInConnectionMode = !!connectingSourceId
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
@@ -67,8 +69,11 @@ export default function FloatingEdge({
   // Dynamic styling based on edge type and state
   const getEdgeStyle = () => {
     const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)
+    const edgeHoverActive = typeof hoveredEdgeId === 'string'
+    const isHoverTarget = edgeHoverActive && hoveredEdgeId === id
+    const effectiveHighlight = edgeHoverActive ? isHoverTarget : isHighlighted
 
-    const opacity = isHighlighted ? 1 : 0.2
+    const opacity = effectiveHighlight ? 1 : 0.2
 
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
@@ -111,12 +116,14 @@ export default function FloatingEdge({
       clearTimeout(hoverTimeoutRef.current)
     }
     setIsHovered(true)
+    try { setHoveredEdgeId(id) } catch {}
   }
 
   const handleMouseLeave = () => {
     // Add a small delay before hiding to prevent flicker
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(false)
+      try { setHoveredEdgeId(null) } catch {}
     }, 100) // 100ms delay
   }
 
@@ -125,11 +132,13 @@ export default function FloatingEdge({
       clearTimeout(hoverTimeoutRef.current)
     }
     setIsHovered(true)
+    try { setHoveredEdgeId(id) } catch {}
   }
 
   const handleButtonMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(false)
+      try { setHoveredEdgeId(null) } catch {}
     }, 100)
   }
 
