@@ -1852,7 +1852,6 @@ function BoardContent({
             return (d.content || d.extractedText || d.extracted_text || '') as string
           })() : undefined}
           initialAIContext={pendingBoardBrief ? { topic: pendingBoardBrief.boardTopic, description: pendingBoardBrief.description } : undefined}
-          hideVideoTab={Boolean(pendingSourceNodeId)}
           onManualSubmit={async ({ titles, description, generateDescription }) => {
             const center = pendingNodePosition || getViewportCenter()
             let desc = (description || '').trim()

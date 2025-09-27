@@ -100,12 +100,7 @@ export default function AddNodesModal({
     }
   }, [open, initialAIContext])
 
-  // If video tab is hidden but currently selected, switch to basic
-  React.useEffect(() => {
-    if (hideVideoTab && tab === 'videos') {
-      setTab('basic')
-    }
-  }, [hideVideoTab, tab])
+  // Video tab is always visible; no auto-hide
 
   const effectiveTitles = React.useMemo(() => {
     const t = titleInput.trim()
@@ -179,7 +174,7 @@ export default function AddNodesModal({
       const raw = (res.content || '').trim()
       const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
       let parsed: any = null
-      try { parsed = JSON.parse(fenced ? fenced[1] : raw) } catch {}
+      try { parsed = JSON.parse(fenced ? fenced[1] : raw) } catch { }
       const items = Array.isArray(parsed?.nodes) ? parsed.nodes : []
       if (items.length === 0) return
       const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
@@ -231,7 +226,7 @@ export default function AddNodesModal({
                 try {
                   const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
                   if (res.ok) meta = await res.json()
-                } catch {}
+                } catch { }
                 const title = (meta?.title as string) || 'Image'
                 const description = (meta?.description as string) || ''
                 const parent = parentNodeId ? (nodes as any[]).find(n => n.id === parentNodeId) : null
@@ -251,14 +246,14 @@ export default function AddNodesModal({
                 }
                 onClose()
                 return
-              } catch {}
+              } catch { }
             }
             if (tab === 'videos') {
               if (onUploadSubmit && selectedFile) onUploadSubmit(selectedFile)
             } else if (onUploadSubmit && selectedFiles.length > 0) {
               selectedFiles.forEach(f => onUploadSubmit(f))
             }
-          }} disabled={!( (tab==='videos' ? (selectedFile || videoUrl.trim()) : (selectedFiles.length>0 || (tab==='images' && imageUrl.trim())) ) )}>Create</Button>
+          }} disabled={!((tab === 'videos' ? (selectedFile || videoUrl.trim()) : (selectedFiles.length > 0 || (tab === 'images' && imageUrl.trim()))))}>Create</Button>
         </>
       ) : tab === 'link' ? (
         <>
@@ -273,7 +268,7 @@ export default function AddNodesModal({
           <Tag variant="primary">{parentNodeTitle}</Tag>
         </div>
       )}
-      <div className={`grid ${hideVideoTab ? 'grid-cols-5' : 'grid-cols-6'} gap-3 mb-3`}>
+      <div className={`grid grid-cols-6 gap-3 mb-3`}>
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'basic' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('basic')}
@@ -286,8 +281,8 @@ export default function AddNodesModal({
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'ai' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('ai')}
         >
-         {/* <Image src="/nodal-nobot.svg" alt="AI" width={32} height={32} unoptimized /> */}
-         <Robot size={32} weight="duotone" />
+          {/* <Image src="/nodal-nobot.svg" alt="AI" width={32} height={32} unoptimized /> */}
+          <Robot size={32} weight="duotone" />
           AI
         </button>
 
@@ -299,15 +294,13 @@ export default function AddNodesModal({
           Images
         </button>
 
-        {!hideVideoTab && (
-          <button
-            className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'videos' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-            onClick={() => setTab('videos')}
-          >
-            <Video size={32} weight="duotone" />
-            Videos
-          </button>
-        )}
+        <button
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'videos' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          onClick={() => setTab('videos')}
+        >
+          <Video size={32} weight="duotone" />
+          Videos
+        </button>
 
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'docs' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
@@ -325,7 +318,7 @@ export default function AddNodesModal({
           Links
         </button>
 
-        
+
       </div>
 
       {tab === 'basic' && (
@@ -400,14 +393,14 @@ export default function AddNodesModal({
                   </div>
                 </>
               )}
-              <TextArea 
-                value={prompt} 
-                onChange={(e) => setPrompt(e.target.value)} 
-                placeholder="Describe the topic or paste bullets to expand..." 
+              <TextArea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe the topic or paste bullets to expand..."
                 label="Description - tell us what nodes you want to generate..."
-                rows={4} 
-                fullWidth 
-                description="This is the name of your node and how it appears on the board." 
+                rows={4}
+                fullWidth
+                description="This is the name of your node and how it appears on the board."
               />
               <div className="flex justify-end gap-2 pt-1">
                 <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -430,7 +423,7 @@ export default function AddNodesModal({
           )}
         </div>
       )}
-      {tab === 'videos' && !hideVideoTab && (
+      {tab === 'videos' && (
         <div className="space-y-4 py-2">
           <TextInput
             label="Video URL"
@@ -444,7 +437,7 @@ export default function AddNodesModal({
             onDragOver={(e) => { if (!canUploadVideo) return; e.preventDefault(); setIsVideoDragOver(true) }}
             onDragLeave={() => setIsVideoDragOver(false)}
             onDrop={(e) => {
-              if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); return }
+              if (!canUploadVideo) { return }
               e.preventDefault(); setIsVideoDragOver(false)
               const f = e.dataTransfer.files && e.dataTransfer.files[0]
               if (!f) return
@@ -457,7 +450,7 @@ export default function AddNodesModal({
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
             <div className="mt-3">
               <label className={`inline-block px-3 py-1.5 rounded-md border ${canUploadVideo ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer' : 'bg-gray-100/60 dark:bg-gray-800/60 border-gray-300/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
-                onClick={(e) => { if (!canUploadVideo) { e.preventDefault(); alert('Uploading videos is a Pro feature. Upgrade to upload videos.') } }}
+                onClick={(e) => { if (!canUploadVideo) { e.preventDefault() } }}
               >
                 <input
                   type="file"
@@ -477,7 +470,7 @@ export default function AddNodesModal({
               </label>
             </div>
             {!canUploadVideo && (
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Upgrade to upload videos</div>
+              <div className="mt-2"><Tag variant="beta">Pro Feature</Tag></div>
             )}
             {selectedFile && (
               <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFile.name}</div>
@@ -538,7 +531,7 @@ export default function AddNodesModal({
                     const filtered = files.filter(f => tab === 'images' ? f.type.startsWith('image/') : (f.type.includes('pdf') || f.type.includes('word') || f.type.includes('text') || /\.(pdf|doc|docx|txt|md|markdown|csv|json)$/i.test(f.name)))
                     if (filtered.length === 0) { (e.target as HTMLInputElement).value = ''; return }
                     setSelectedFiles(prev => [...prev, ...filtered])
-                    ;(e.target as HTMLInputElement).value = ''
+                      ; (e.target as HTMLInputElement).value = ''
                   }}
                   accept={tab === 'images' ? 'image/*' : '.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json'}
                 />
@@ -546,7 +539,7 @@ export default function AddNodesModal({
               </label>
             </div>
             {selectedFiles.length > 0 && (
-              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFiles.length} file{selectedFiles.length>1 ? 's' : ''}</div>
+              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''}</div>
             )}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">We’ll create a {tab === 'images' ? 'Image' : 'Document'} node based on the file.</div>
