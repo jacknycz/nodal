@@ -307,7 +307,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   return (
     <div className="relative min-h-screen pt-12" role="main" aria-labelledby="welcome-heading">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
+        <div className="absolute inset-0 
+        bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 
+        dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
       </div>
 
       {/* Sticky Welcome Section */}
@@ -316,8 +318,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           {/* Welcome + Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="col-span-1 rounded-xl">
-              <h1 id="welcome-heading" className="mb-4 text-2xl md:text-3xl xl:text-5xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
-                <span className="font-normal">welcome back</span>{greetingName ? `, ${greetingName}` : ''}!
+              <h1 id="welcome-heading" className="mb-4 text-2xl md:text-3xl xl:text-4xl font-fredoka text-transform-lowercase font-medium text-gray-900 dark:text-white">
+                <span className="font-normal">welcome to the boardroom</span>{greetingName ? `, ${greetingName}` : ''}
               </h1>
               {/* <p className="mt-1 text-sm text-gray-700 dark:text-gray-400">Pick up where you left off or create something new.</p> */}
             </div>
