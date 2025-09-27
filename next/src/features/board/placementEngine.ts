@@ -274,7 +274,8 @@ export class PlacementEngine {
     // Create connections to parent/focus node
     if (context.focusNode) {
       placements.forEach(placement => {
-        const edgeType = (useBoardStore.getState().edgeType || 'floating') as any
+        const pref = useBoardStore.getState().edgeType || 'floating'
+        const edgeType = (pref === 'straight' ? 'floating-straight' : pref === 'step' ? 'floating-step' : pref === 'smoothstep' ? 'floating-smoothstep' : 'floating') as any
         const edge: BoardEdge = {
           id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: context.focusNode!.id,
@@ -303,7 +304,8 @@ export class PlacementEngine {
         nodeToPlace.relationships.forEach(relatedId => {
           const relatedPlacement = placements.find(p => p.node.id === relatedId)
           if (relatedPlacement) {
-            const edgeType = (useBoardStore.getState().edgeType || 'floating') as any
+            const pref2 = useBoardStore.getState().edgeType || 'floating'
+            const edgeType = (pref2 === 'straight' ? 'floating-straight' : pref2 === 'step' ? 'floating-step' : pref2 === 'smoothstep' ? 'floating-smoothstep' : 'floating') as any
             const edge: BoardEdge = {
               id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               source: placement.node.id,

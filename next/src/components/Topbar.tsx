@@ -452,7 +452,6 @@ export default function Topbar({
             onChange={(val) => setEdgeType?.((val as string) as any)}
             options={[
               { value: 'floating', label: 'Floating (Nodal default)' },
-              { value: 'bezier', label: 'Bezier' },
               { value: 'straight', label: 'Straight' },
               { value: 'step', label: 'Step' },
               { value: 'smoothstep', label: 'Smooth Step' },

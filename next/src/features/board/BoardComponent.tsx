@@ -29,6 +29,9 @@ import VideoNode from '../nodes/VideoNode'
 import LinkNode from '../nodes/LinkNode'
 import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
+import FloatingStraightEdge from './FloatingStraightEdge'
+import FloatingStepEdge from './FloatingStepEdge'
+import FloatingSmoothEdge from './FloatingSmoothEdge'
 import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
 import AINodeGenerator from '../../components/AINodeGenerator'
@@ -122,6 +125,9 @@ export const nodeTypes = {
 
 export const edgeTypes = {
   floating: (props: any) => <FloatingEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
+  'floating-straight': (props: any) => <FloatingStraightEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
+  'floating-step': (props: any) => <FloatingStepEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
+  'floating-smoothstep': (props: any) => <FloatingSmoothEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
 };
 
 function BoardContent({
@@ -206,6 +212,15 @@ function BoardContent({
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
+  const toVisualEdgeType = useCallback((pref: string) => {
+    switch (pref) {
+      case 'straight': return 'floating-straight'
+      case 'step': return 'floating-step'
+      case 'smoothstep': return 'floating-smoothstep'
+      case 'floating': return 'floating'
+      case 'bezier': default: return 'floating'
+    }
+  }, [])
 
   const showAddToast = useCallback((kind: 'added' | 'generated', count: number) => {
     if (!count || count < 1) return
@@ -390,8 +405,8 @@ function BoardContent({
 
   // When edge type preference changes, update existing edges
   useEffect(() => {
-    setEdges((eds) => (Array.isArray(eds) ? eds.map(e => ({ ...e, type: edgeTypePref as any })) : eds))
-  }, [edgeTypePref, setEdges])
+    setEdges((eds) => (Array.isArray(eds) ? eds.map(e => ({ ...e, type: toVisualEdgeType(edgeTypePref) as any })) : eds))
+  }, [edgeTypePref, setEdges, toVisualEdgeType])
   
   // Simple effect to trigger autosave when nodes/edges change
   useEffect(() => {
@@ -573,7 +588,7 @@ function BoardContent({
           const position = { x: startX + c * spacingX, y: startY + r * spacingY }
           return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: '' } }
         })
-        const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: edgeTypePref as any }))
+        const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
         setNodes([topicNode, ...generatedNodes])
         setEdges(generatedEdges as any)
         const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -665,7 +680,7 @@ function BoardContent({
                 const position = { x: startX + c * spacingX, y: startY + r * spacingY }
                 return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
               })
-              const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: edgeTypePref as any }))
+              const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
               setNodes([topicNode, ...generatedNodes])
               setEdges(generatedEdges as any)
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -683,7 +698,7 @@ function BoardContent({
               const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
               return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: nodeData.label, content: nodeData.content } }
             })
-            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: edgeTypePref as any }))
+            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
             setNodes([topicNode, ...generatedNodes])
             setEdges(generatedEdges as any)
             const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -705,7 +720,7 @@ function BoardContent({
         // console.error('Failed to parse AI response:', parseError)
         // console.log('Raw response content:', response.content)
         const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: response.content } }
-        const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: edgeTypePref as any }
+        const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: toVisualEdgeType(edgeTypePref) as any }
         setNodes([topicNode, newNode])
         setEdges([newEdge] as any)
         
@@ -823,14 +838,14 @@ function BoardContent({
         id: `edge-${Date.now()}`,
         source: params.source!,
         target: params.target!,
-        type: edgeTypePref as any,
+        type: toVisualEdgeType(edgeTypePref) as any,
       }
       setEdges((eds) => {
         if (!Array.isArray(eds)) return [newEdge]
         return [...eds, newEdge]
       })
     },
-    [setEdges]
+    [setEdges, edgeTypePref, toVisualEdgeType]
   )
 
   // Node-wide drop connection support
@@ -864,7 +879,7 @@ function BoardContent({
         id: `edge-${Date.now()}`,
         source: sourceId,
         target: targetId,
-        type: edgeTypePref as any,
+        type: toVisualEdgeType(edgeTypePref) as any,
       }
       setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
     }
@@ -1237,7 +1252,7 @@ function BoardContent({
         id: `edge-${Date.now()}`,
         source: sourceId,
         target: targetId,
-        type: edgeTypePref as any,
+        type: toVisualEdgeType(edgeTypePref) as any,
       }
       return [...list, newEdge]
     })
@@ -1548,7 +1563,7 @@ function BoardContent({
             } catch {}
           }, 50)
           if (pendingSourceNodeId) {
-            const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: edgeTypePref as any }
+            const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }
             setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
           }
           setContextMenu({ isOpen: false, position: null })
@@ -1724,7 +1739,7 @@ function BoardContent({
               showAddToast('added', 1)
             }
             // Connect source -> new node
-                setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: edgeTypePref as any }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: edgeTypePref as any }]))
+                setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }]))
           } catch {}
         }}
       />

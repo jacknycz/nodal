@@ -42,10 +42,12 @@ export function createEdge(
 ): Omit<BoardEdge, 'id'> {
   const connectionType = options.type || 'default'
   
+  const pref = (useBoardStore.getState().edgeType || 'floating') as string
+  const rfType = pref === 'straight' ? 'floating-straight' : pref === 'step' ? 'floating-step' : pref === 'smoothstep' ? 'floating-smoothstep' : 'floating'
   return {
     source,
     target,
-    type: (useBoardStore.getState().edgeType || 'floating') as any,
+    type: rfType as any,
     animated: connectionType === 'ai', // Animate AI connections
     style: getEdgeStyle(connectionType), // Style based on connection type
     data: {
