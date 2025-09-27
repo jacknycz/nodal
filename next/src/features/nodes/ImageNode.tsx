@@ -13,8 +13,7 @@ import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
-import NodeActionDrawer from './NodeActionDrawer'
-import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+ 
 import { supabaseStorage } from '../storage/supabaseStorage'
 import TextArea from '../../components/ui/TextArea'
 import Tooltip from '../../components/ui/Tooltip'
@@ -62,7 +61,7 @@ export default function ImageNode({
   const [isLoaded, setIsLoaded] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
@@ -201,9 +200,6 @@ export default function ImageNode({
     <div
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
       onClick={(e) => {
-        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
-          setDrawerOpen((prev) => !prev)
-        }
       }}
     >
       {/* Colorgory ring overlay (hidden when expanded) */}
@@ -429,70 +425,7 @@ export default function ImageNode({
 
       {/* Colorgories button moved to drawer */}
 
-      {/* Slide-out action panel on hover (hidden when expanded) */}
-      {!expanded && (
-        <NodeActionDrawer open={drawerOpen} selected={!!selected}>
-          <Tooltip content="Edit">
-            <IconButton
-              variant="default"
-              aria-label="Edit image"
-              onClick={() => setShowEditModal(true)}
-              
-            >
-              <Pencil size={14} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip content="Download">
-            <IconButton
-              variant="default"
-              aria-label="Download image"
-              onClick={handleDownload}
-              
-            >
-              <DownloadSimple size={14} />
-            </IconButton>
-          </Tooltip>
-        {SHOW_ADD_CONNECTED && (
-            <Tooltip content="Add connected">
-              <IconButton
-                variant="default"
-                aria-label="Add Connected Nodes"
-                onClick={() => onQuickAddNodes?.(id)}
-                
-              >
-                <PlusCircle size={14} />
-              </IconButton>
-            </Tooltip>
-          )}
-          <Tooltip content="Reorganize nodes">
-            <IconButton
-              variant="default"
-              aria-label="Reorganize nodes"
-              onClick={() => onOrganizeSubtree?.(id)}
-              
-            >
-              <TreeView size={14} weight="duotone" />
-            </IconButton>
-          </Tooltip>
-          <ColorgoryQuickMenu
-            nodeId={id}
-            selectedIds={(data as any).colorgoryIds || []}
-            onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-            
-            onNodeUpdate={onNodeUpdate}
-          />
-          <Tooltip content="Delete">
-            <IconButton
-              variant="danger"
-              aria-label="Delete image"
-              onClick={handleDelete}
-              
-            >
-              <Trash size={14} />
-            </IconButton>
-          </Tooltip>
-        </NodeActionDrawer>
-      )}
+      
 
       {/* Edit Modal */}
       <Modal

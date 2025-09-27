@@ -13,8 +13,7 @@ import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
-import NodeActionDrawer from './NodeActionDrawer'
-import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+ 
 import Tooltip from '../../components/ui/Tooltip'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -60,7 +59,7 @@ export default function DocumentNode({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  
   const refreshAttemptsRef = useState(0)[0] as any
   const [showEditModal, setShowEditModal] = useState(false)
   const [signedPreviewUrl, setSignedPreviewUrl] = useState<string | null>(null)
@@ -301,78 +300,7 @@ export default function DocumentNode({
 
       {/* Colorgories button moved to drawer */}
 
-      {/* Slide-out action panel on hover */}
-      <NodeActionDrawer open={drawerOpen} selected={!!selected}>
-        <Tooltip content="Edit">
-          <IconButton
-            variant="default"
-            aria-label="Edit document"
-            onClick={() => setShowEditModal(true)}
-            
-          >
-            <Pencil size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Preview">
-          <IconButton
-            variant="default"
-            aria-label="Preview document"
-            onClick={handlePreview}
-            
-          >
-            <FrameCorners size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Download">
-          <IconButton
-            variant="default"
-            aria-label="Download document"
-            onClick={handleDownload}
-            
-          >
-            <Download size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        {SHOW_ADD_CONNECTED && (
-          <Tooltip content="Add connected">
-            <IconButton
-              variant="default"
-              aria-label="Add Connected Nodes"
-              onClick={() => onQuickAddNodes?.(id)}
-              
-            >
-              <PlusCircle size={14} weight="duotone" />
-            </IconButton>
-          </Tooltip>
-        )}
-        <Tooltip content="Reorganize nodes">
-          <IconButton
-            variant="default"
-            aria-label="Reorganize nodes"
-            onClick={() => onOrganizeSubtree?.(id)}
-            
-          >
-            <TreeView size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        <ColorgoryQuickMenu
-          nodeId={id}
-          selectedIds={data.colorgoryIds || []}
-          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          
-          onNodeUpdate={onNodeUpdate}
-        />
-        <Tooltip content="Delete">
-          <IconButton
-            variant="danger"
-            aria-label="Delete document"
-            onClick={handleDelete}
-            
-          >
-            <Trash size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-      </NodeActionDrawer>
+      
 
       {/* Modals */}
       {/* Edit Modal */}

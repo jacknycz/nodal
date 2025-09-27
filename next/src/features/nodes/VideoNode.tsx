@@ -13,8 +13,7 @@ import { useBoardStore } from '../board/boardSlice'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { getNodeContainerClasses } from './nodeStyles'
-import NodeActionDrawer from './NodeActionDrawer'
-import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+ 
 import Tooltip from '../../components/ui/Tooltip'
 
 interface VideoNodeData {
@@ -350,48 +349,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         </div>
       </div>
 
-      {!expanded && (
-        <NodeActionDrawer selected={!!selected}>
-          <Tooltip content="Edit">
-            <IconButton
-              variant="default"
-              aria-label="Edit video"
-              onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
-              
-            >
-              <Pencil size={14} />
-            </IconButton>
-          </Tooltip>
-          <ColorgoryQuickMenu
-            nodeId={id}
-            selectedIds={(data as any).colorgoryIds || []}
-            onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-            
-            onNodeUpdate={onNodeUpdate}
-          />
-        <Tooltip content="Reorganize nodes">
-          <IconButton
-            variant="default"
-            aria-label="Reorganize nodes"
-            onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-            
-          >
-            <TreeView size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        {/* Hidden for now */}
-          <Tooltip content="Delete">
-            <IconButton
-              variant="danger"
-              aria-label="Delete node"
-              onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
-            
-            >
-              <Trash size={14} />
-            </IconButton>
-          </Tooltip>
-        </NodeActionDrawer>
-      )}
+      
 
       {/* Mobile fullscreen overlay player */}
       {showMobilePlayer && (

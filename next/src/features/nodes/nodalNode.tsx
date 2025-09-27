@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { Trash, Pen, PlusCircle, TreeView } from "@phosphor-icons/react/ssr";
+import { } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -13,9 +13,7 @@ import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses } from './nodeStyles'
-import NodeActionDrawer from './NodeActionDrawer'
-import Tooltip from '../../components/ui/Tooltip'
-import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+ 
 
 interface NodalNodeProps {
   data: {
@@ -134,7 +132,7 @@ export default function NodalNode({
         return stops.join(', ')
       })()
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  
 
   return (
     <div
@@ -145,10 +143,6 @@ export default function NodalNode({
           e.preventDefault()
           e.stopPropagation()
           onNodeShiftClickConnect?.(id)
-        }
-        // Toggle drawer on tap for touch devices; keep desktop behavior via hover
-        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
-          setDrawerOpen((prev) => !prev)
         }
       }}
     >
@@ -184,63 +178,7 @@ export default function NodalNode({
           </div>
         )}
       </div>
-      {/* Colorgories button moved to drawer */}
-      {/* Slide-out action panel on hover */}
-      <NodeActionDrawer open={drawerOpen} selected={!!selected}>
-        <Tooltip content="Edit">
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Edit node"
-            onClick={handleEdit}
-          >
-            <Pen size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-       
-        {SHOW_ADD_CONNECTED && (
-          <Tooltip content="Add connected">
-            <IconButton
-              variant="default"
-              size="sm"              
-              aria-label="Add Connected Nodes"
-              onClick={() => onQuickAddNodes?.(id)}
-            >
-              <PlusCircle size={14} weight="duotone" />
-            </IconButton>
-          </Tooltip>
-        )}
-
-        <Tooltip content="Reorganize nodes">
-          <IconButton
-            variant="default"
-            size="sm"
-            aria-label="Reorganize nodes"
-            onClick={() => onOrganizeSubtree?.(id)}
-          >
-            <TreeView size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-
-        <ColorgoryQuickMenu
-          nodeId={id}
-          selectedIds={data.colorgoryIds || []}
-          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          onNodeUpdate={onNodeUpdate}
-          size="sm"
-        />
-
-        <Tooltip content="Delete">
-          <IconButton
-            variant="danger"
-            size="sm"            
-            aria-label="Delete node"
-            onClick={handleDelete}
-          >
-            <Trash size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-      </NodeActionDrawer>
+      
 
       {/* Modals */}
       <Modal

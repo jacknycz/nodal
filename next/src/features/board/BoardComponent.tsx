@@ -1521,6 +1521,13 @@ function BoardContent({
         onEditNode={(nodeId: string) => {
           setEditNodeId(nodeId)
         }}
+        onUpdateNode={(nodeId: string, updates: Record<string, any>) => {
+          handleNodeUpdate(nodeId, updates)
+        }}
+        onDeleteNode={(nodeId: string) => {
+          handleNodeDelete(nodeId)
+          setContextMenu({ isOpen: false, position: null })
+        }}
         onAddConnectedNodes={(nodeId: string, screenPos: { x: number; y: number }) => {
           try {
             const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)

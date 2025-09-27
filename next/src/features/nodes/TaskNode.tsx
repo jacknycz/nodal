@@ -12,8 +12,7 @@ import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
-import NodeActionDrawer from './NodeActionDrawer'
-import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+ 
 import Tooltip from '../../components/ui/Tooltip'
 
 interface TaskNodeData {
@@ -82,7 +81,7 @@ export default function TaskNode({
 
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  
 
   useEffect(() => {
     if ((data as any)?.focusOnMount) {
@@ -133,9 +132,7 @@ export default function TaskNode({
           e.stopPropagation()
           onNodeShiftClickConnect?.(id)
         }
-        if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
-          setDrawerOpen((prev) => !prev)
-        }
+        
       }}
     >
       <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
@@ -184,39 +181,7 @@ export default function TaskNode({
 
       {/* Colorgories button moved to drawer */}
 
-      {/* Slide-out action panel on hover */}
-      <NodeActionDrawer open={drawerOpen} selected={!!selected}>
-        <Tooltip content="Reorganize nodes">
-          <IconButton
-            variant="default"
-            aria-label="Reorganize nodes"
-            onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-            
-          >
-            <TreeView size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        <ColorgoryQuickMenu
-          nodeId={id}
-          selectedIds={(data as any).colorgoryIds || []}
-          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          
-          onNodeUpdate={onNodeUpdate}
-        />
-        <Tooltip content="Delete">
-          <IconButton
-            variant="danger"
-            aria-label="Delete task"
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowDeleteModal(true)
-            }}
-            
-          >
-            <Trash size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-      </NodeActionDrawer>
+      
 
       <Modal
         open={showDeleteModal}

@@ -8,8 +8,7 @@ import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
-import NodeActionDrawer from './NodeActionDrawer'
-import ColorgoryQuickMenu from './ColorgoryQuickMenu'
+ 
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -164,45 +163,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         </div>
       </div>
 
-      <NodeActionDrawer selected={!!selected}>
-        <Tooltip content="Edit">
-          <IconButton
-            variant="default"
-            aria-label="Edit link"
-            onClick={(e) => { e.stopPropagation(); setShowEditModal(true) }}
-            
-          >
-            <Pencil size={14} />
-          </IconButton>
-        </Tooltip>
-        <ColorgoryQuickMenu
-          nodeId={id}
-          selectedIds={(data as any).colorgoryIds || []}
-          onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
-          
-          onNodeUpdate={onNodeUpdate}
-        />
-        <Tooltip content="Reorganize nodes">
-          <IconButton
-            variant="default"
-            aria-label="Reorganize nodes"
-            onClick={(e) => { e.stopPropagation(); onOrganizeSubtree?.(id) }}
-            
-          >
-            <TreeView size={14} weight="duotone" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip content="Delete">
-          <IconButton
-            variant="danger"
-            aria-label="Delete node"
-            onClick={(e) => { e.stopPropagation(); onNodeDelete?.(id) }}
-            
-          >
-            <Trash size={14} />
-          </IconButton>
-        </Tooltip>
-      </NodeActionDrawer>
+      
 
       {/* Edit Modal */}
       <Modal
