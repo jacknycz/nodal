@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText, TreeView } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil } from '@phosphor-icons/react/dist/ssr'
 import { useBoardStore } from '../features/board/boardSlice'
 
 interface BoardContextMenuProps {
@@ -17,6 +17,7 @@ interface BoardContextMenuProps {
   onPasteNode?: (position: { x: number; y: number }) => void
   onPasteConnectedNode?: (nodeId: string, position: { x: number; y: number }) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onEditNode?: (nodeId: string) => void
 }
 
 export default function BoardContextMenu({
@@ -32,6 +33,7 @@ export default function BoardContextMenu({
   onPasteNode,
   onPasteConnectedNode,
   onOrganizeSubtree,
+  onEditNode,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
   const edges = useBoardStore((s: any) => s.edges || [])
@@ -93,6 +95,16 @@ export default function BoardContextMenu({
         }}
         ref={menuRef}
       >
+        {nodeId && onEditNode && (
+          <button
+            onClick={() => handleAction(() => onEditNode(nodeId))}
+            className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
+          >
+            <Pencil size={24} weight="duotone" className="w-4 h-4" />
+            Edit node
+          </button>
+        )}
+
         {nodeId && onAddConnectedNodes && (
           <button
             onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}

@@ -164,7 +164,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         </div>
       </div>
 
-      <NodeActionDrawer>
+      <NodeActionDrawer selected={!!selected}>
         <Tooltip content="Edit">
           <IconButton
             variant="default"

@@ -67,6 +67,7 @@ import useBoardAutosave from './useBoardAutosave'
 import useNodeActions from './useNodeActions'
 import useDocumentUpload from './useDocumentUpload'
 import useBoardShortcuts from './useBoardShortcuts'
+import NodeEditModal from '../../components/NodeEditModal'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -1309,6 +1310,7 @@ function BoardContent({
   const [pendingNodePosition, setPendingNodePosition] = useState<{ x: number; y: number } | null>(null)
   const [awaitingNodePlacement, setAwaitingNodePlacement] = useState(false)
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
+  const [editNodeId, setEditNodeId] = useState<string | null>(null)
 
   const handleOpenAINodeGenerator = useCallback(() => {
     // Prefer explicit pendingSourceNodeId from context menu; fallback to current selection
@@ -1516,6 +1518,9 @@ function BoardContent({
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
         nodeId={pendingSourceNodeId}
+        onEditNode={(nodeId: string) => {
+          setEditNodeId(nodeId)
+        }}
         onAddConnectedNodes={(nodeId: string, screenPos: { x: number; y: number }) => {
           try {
             const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
@@ -1743,6 +1748,26 @@ function BoardContent({
           } catch {}
         }}
       />
+      {/* Node edit modal for default nodes */}
+      {editNodeId && (() => {
+        const n = nodes.find(nn => nn.id === editNodeId)
+        const d: any = n?.data || {}
+        const isDefault = n?.type === 'default'
+        if (!n || !isDefault) return null
+        return (
+          <NodeEditModal
+            open={true}
+            onClose={() => setEditNodeId(null)}
+            initialTitle={d.title || ''}
+            initialContent={d.content || ''}
+            initialColorgoryIds={d.colorgoryIds || []}
+            initialTitleSize={d.titleSize || 'sm'}
+            onSave={(title, content, colorgoryIds, titleSize) => {
+              setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize } } : nn) : nds))
+            }}
+          />
+        )
+      })()}
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}
       {!screenshotMode && (

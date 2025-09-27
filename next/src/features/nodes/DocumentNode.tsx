@@ -302,7 +302,7 @@ export default function DocumentNode({
       {/* Colorgories button moved to drawer */}
 
       {/* Slide-out action panel on hover */}
-      <NodeActionDrawer open={drawerOpen}>
+      <NodeActionDrawer open={drawerOpen} selected={!!selected}>
         <Tooltip content="Edit">
           <IconButton
             variant="default"

@@ -351,7 +351,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
       </div>
 
       {!expanded && (
-        <NodeActionDrawer>
+        <NodeActionDrawer selected={!!selected}>
           <Tooltip content="Edit">
             <IconButton
               variant="default"

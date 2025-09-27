@@ -431,7 +431,7 @@ export default function ImageNode({
 
       {/* Slide-out action panel on hover (hidden when expanded) */}
       {!expanded && (
-        <NodeActionDrawer open={drawerOpen}>
+        <NodeActionDrawer open={drawerOpen} selected={!!selected}>
           <Tooltip content="Edit">
             <IconButton
               variant="default"
