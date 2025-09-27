@@ -9,7 +9,7 @@ import Checkbox from './ui/Checkbox'
 import Toggle from './ui/Toggle'
 import { useChatNodeGen2 } from '../features/ai/useChatNodeGen2'
 import { useBoardStore } from '../features/board/boardSlice'
-import { Pencil, Robot, Upload, Video, LinkSimple } from '@phosphor-icons/react'
+import { Pencil, Robot, Upload, Video, LinkSimple, ImageSquare, Files } from '@phosphor-icons/react'
 import { useUserRole } from '../features/auth/roles'
 import Tag from './ui/Tag'
 // import Image from 'next/image'
@@ -48,7 +48,7 @@ export default function AddNodesModal({
   onUploadSubmit,
   hideVideoTab,
 }: AddNodesModalProps) {
-  const [tab, setTab] = React.useState<'manual' | 'ai' | 'video' | 'link' | 'upload'>('manual')
+  const [tab, setTab] = React.useState<'basic' | 'ai' | 'images' | 'videos' | 'docs' | 'link'>('basic')
 
   // Manual state
   const [titleInput, setTitleInput] = React.useState('')
@@ -65,7 +65,9 @@ export default function AddNodesModal({
   const nodes = useBoardStore((s) => s.nodes || [])
   const topic = useBoardStore((s) => s.topic || '')
   const [videoUrl, setVideoUrl] = React.useState('')
+  const [imageUrl, setImageUrl] = React.useState('')
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
   const [isDragOver, setIsDragOver] = React.useState(false)
   const [linkUrl, setLinkUrl] = React.useState('')
   const { placeGeneratedNodes } = useAIPlacement()
@@ -78,13 +80,14 @@ export default function AddNodesModal({
   React.useEffect(() => {
     if (open) {
       console.log('[AddNodesModal] open=true – resetting state and focusing input')
-      setTab('manual')
+      setTab('basic')
       setTitleInput('')
       setTitles([])
       setDescription('')
       setGenerateDescription(false)
       setVideoUrl('')
       setSelectedFile(null)
+      setSelectedFiles([])
       setLinkUrl('')
       setIsDragOver(false)
       setPrompt(initialAIContext ? [
@@ -97,10 +100,10 @@ export default function AddNodesModal({
     }
   }, [open, initialAIContext])
 
-  // If video tab is hidden but currently selected, switch to manual
+  // If video tab is hidden but currently selected, switch to basic
   React.useEffect(() => {
-    if (hideVideoTab && tab === 'video') {
-      setTab('manual')
+    if (hideVideoTab && tab === 'videos') {
+      setTab('basic')
     }
   }, [hideVideoTab, tab])
 
@@ -202,7 +205,7 @@ export default function AddNodesModal({
       // title="Add Node(s)"
       // description={tab === 'manual' ? 'Manually add one or more nodes.' : 'Describe and generate nodes with AI.'}
       className="max-w-xl"
-      actions={tab === 'manual' ? (
+      actions={tab === 'basic' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={handleManualSubmit} disabled={!manualCanSubmit}>Add</Button>
@@ -214,22 +217,55 @@ export default function AddNodesModal({
             <Button onClick={handleCreateSelected} disabled={generated.filter(g => g.selected).length === 0}>Create</Button>
           </>
         ) : undefined
-      ) : tab === 'video' ? (
+      ) : (tab === 'images' || tab === 'videos' || tab === 'docs') ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => { if (onVideoSubmit && videoUrl.trim()) onVideoSubmit(videoUrl.trim()) }} disabled={!videoUrl.trim()}>Create</Button>
+          <Button onClick={async () => {
+            if (tab === 'videos' && videoUrl.trim() && onVideoSubmit) {
+              onVideoSubmit(videoUrl.trim()); return
+            }
+            if (tab === 'images' && imageUrl.trim()) {
+              try {
+                const url = imageUrl.trim()
+                let meta: any = {}
+                try {
+                  const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+                  if (res.ok) meta = await res.json()
+                } catch {}
+                const title = (meta?.title as string) || 'Image'
+                const description = (meta?.description as string) || ''
+                const parent = parentNodeId ? (nodes as any[]).find(n => n.id === parentNodeId) : null
+                const baseX = parent?.position?.x ?? 400
+                const baseY = (parent?.position?.y ?? 300) + 360
+                const newId = `image-${Date.now()}`
+                const newNode: Node = {
+                  id: newId,
+                  type: 'image' as any,
+                  position: { x: baseX, y: baseY },
+                  data: { title, content: description, previewUrl: url, type: 'image', status: 'ready' } as any,
+                }
+                setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+                if (parentNodeId) {
+                  const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
+                  setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+                }
+                onClose()
+                return
+              } catch {}
+            }
+            if (tab === 'videos') {
+              if (onUploadSubmit && selectedFile) onUploadSubmit(selectedFile)
+            } else if (onUploadSubmit && selectedFiles.length > 0) {
+              selectedFiles.forEach(f => onUploadSubmit(f))
+            }
+          }} disabled={!( (tab==='videos' ? (selectedFile || videoUrl.trim()) : (selectedFiles.length>0 || (tab==='images' && imageUrl.trim())) ) )}>Create</Button>
         </>
       ) : tab === 'link' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={() => { if (onLinkSubmit && linkUrl.trim()) onLinkSubmit(linkUrl.trim()) }} disabled={!linkUrl.trim()}>Create</Button>
         </>
-      ) : (
-        <>
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => { if (onUploadSubmit && selectedFile) onUploadSubmit(selectedFile) }} disabled={!selectedFile}>Create</Button>
-        </>
-      )}
+      ) : undefined}
     >
       {parentNodeTitle && (
         <div className="flex items-center gap-2 rounded-md border border-gray-200 dark:border-gray-700 p-2 bg-gray-50 dark:bg-gray-900/40 text-sm mb-3">
@@ -237,13 +273,13 @@ export default function AddNodesModal({
           <Tag variant="primary">{parentNodeTitle}</Tag>
         </div>
       )}
-      <div className={`grid ${hideVideoTab ? 'grid-cols-4' : 'grid-cols-5'} gap-3 mb-3`}>
+      <div className={`grid ${hideVideoTab ? 'grid-cols-5' : 'grid-cols-6'} gap-3 mb-3`}>
         <button
-          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'manual' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('manual')}
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'basic' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          onClick={() => setTab('basic')}
         >
           <Pencil size={32} weight="duotone" />
-          Manual
+          Basic
         </button>
 
         <button
@@ -252,37 +288,47 @@ export default function AddNodesModal({
         >
          {/* <Image src="/nodal-nobot.svg" alt="AI" width={32} height={32} unoptimized /> */}
          <Robot size={32} weight="duotone" />
-          AI Generate
+          AI
+        </button>
+
+        <button
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'images' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          onClick={() => setTab('images')}
+        >
+          <ImageSquare size={32} weight="duotone" />
+          Images
         </button>
 
         {!hideVideoTab && (
           <button
-            className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'video' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-            onClick={() => setTab('video')}
+            className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'videos' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+            onClick={() => setTab('videos')}
           >
             <Video size={32} weight="duotone" />
-            Video
+            Videos
           </button>
         )}
+
+        <button
+          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'docs' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+          onClick={() => setTab('docs')}
+        >
+          <Files size={32} weight="duotone" />
+          Docs
+        </button>
 
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'link' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('link')}
         >
           <LinkSimple size={32} weight="duotone" />
-          Link
+          Links
         </button>
 
-        <button
-          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'upload' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('upload')}
-        >
-          <Upload size={32} weight="duotone" />
-          Upload
-        </button>
+        
       </div>
 
-      {tab === 'manual' && (
+      {tab === 'basic' && (
         <div className="space-y-4 py-2">
           <div>
             <TextInput
@@ -384,61 +430,58 @@ export default function AddNodesModal({
           )}
         </div>
       )}
-      {tab === 'video' && !hideVideoTab && (
+      {tab === 'videos' && !hideVideoTab && (
         <div className="space-y-4 py-2">
           <TextInput
-            label="YouTube URL"
+            label="Video URL"
             value={videoUrl}
             onChange={(e) => setVideoUrl((e.target as HTMLInputElement).value)}
             placeholder="https://www.youtube.com/watch?v=..."
             fullWidth
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title and thumbnail automatically.</div>
-
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700" />
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">Or upload MP4 (max 200MB)</div>
-            <div
-              className={`border-2 border-dashed rounded-md p-6 text-center ${canUploadVideo ? (isVideoDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700') : 'border-gray-300/60 dark:border-gray-700/60 opacity-60'}`}
-              onDragOver={(e) => { if (!canUploadVideo) return; e.preventDefault(); setIsVideoDragOver(true) }}
-              onDragLeave={() => setIsVideoDragOver(false)}
-              onDrop={(e) => {
-                if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); return }
-                e.preventDefault(); setIsVideoDragOver(false)
-                const f = e.dataTransfer.files && e.dataTransfer.files[0]
-                if (!f) return
-                if (f.type !== 'video/mp4' && !/\.mp4$/i.test(f.name)) { alert('Only MP4 videos are supported.'); return }
-                if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); return }
-                onUploadSubmit?.(f); onClose()
-              }}
-            >
-              <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop an MP4 here</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
-              <div className="mt-3">
-                <label className={`inline-block px-3 py-1.5 rounded-md border ${canUploadVideo ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer' : 'bg-gray-100/60 dark:bg-gray-800/60 border-gray-300/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
-                  onClick={(e) => { if (!canUploadVideo) { e.preventDefault(); alert('Uploading videos is a Pro feature. Upgrade to upload videos.') } }}
-                >
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="video/mp4"
-                    onChange={(e) => {
-                      const f = (e.target as HTMLInputElement).files?.[0]
-                      if (!f) return
-                      if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); (e.target as HTMLInputElement).value = ''; return }
-                      if (f.type !== 'video/mp4') { alert('Only MP4 videos are supported.'); (e.target as HTMLInputElement).value = ''; return }
-                      if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); (e.target as HTMLInputElement).value = ''; return }
-                      onUploadSubmit?.(f); onClose()
-                    }}
-                    disabled={!canUploadVideo}
-                  />
-                  <span className="text-sm">Choose MP4</span>
-                </label>
-              </div>
-              {!canUploadVideo && (
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Upgrade to upload videos</div>
-              )}
+          <div
+            className={`border-2 border-dashed rounded-md p-6 text-center ${canUploadVideo ? (isVideoDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700') : 'border-gray-300/60 dark:border-gray-700/60 opacity-60'}`}
+            onDragOver={(e) => { if (!canUploadVideo) return; e.preventDefault(); setIsVideoDragOver(true) }}
+            onDragLeave={() => setIsVideoDragOver(false)}
+            onDrop={(e) => {
+              if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); return }
+              e.preventDefault(); setIsVideoDragOver(false)
+              const f = e.dataTransfer.files && e.dataTransfer.files[0]
+              if (!f) return
+              if (f.type !== 'video/mp4' && !/\.mp4$/i.test(f.name)) { alert('Only MP4 videos are supported.'); return }
+              if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); return }
+              setSelectedFile(f)
+            }}
+          >
+            <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop an MP4 here</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
+            <div className="mt-3">
+              <label className={`inline-block px-3 py-1.5 rounded-md border ${canUploadVideo ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer' : 'bg-gray-100/60 dark:bg-gray-800/60 border-gray-300/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
+                onClick={(e) => { if (!canUploadVideo) { e.preventDefault(); alert('Uploading videos is a Pro feature. Upgrade to upload videos.') } }}
+              >
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="video/mp4"
+                  onChange={(e) => {
+                    const f = (e.target as HTMLInputElement).files?.[0]
+                    if (!f) return
+                    if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); (e.target as HTMLInputElement).value = ''; return }
+                    if (f.type !== 'video/mp4') { alert('Only MP4 videos are supported.'); (e.target as HTMLInputElement).value = ''; return }
+                    if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); (e.target as HTMLInputElement).value = ''; return }
+                    setSelectedFile(f)
+                  }}
+                  disabled={!canUploadVideo}
+                />
+                <span className="text-sm">Choose MP4</span>
+              </label>
             </div>
+            {!canUploadVideo && (
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">Upgrade to upload videos</div>
+            )}
+            {selectedFile && (
+              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFile.name}</div>
+            )}
           </div>
         </div>
       )}
@@ -454,8 +497,17 @@ export default function AddNodesModal({
           <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title, image, and description if available.</div>
         </div>
       )}
-      {tab === 'upload' && (
+      {(tab === 'images' || tab === 'docs') && (
         <div className="space-y-4 py-2">
+          {tab === 'images' && (
+            <TextInput
+              label="Image URL"
+              value={imageUrl}
+              onChange={(e) => setImageUrl((e.target as HTMLInputElement).value)}
+              placeholder="https://example.com/image.jpg"
+              fullWidth
+            />
+          )}
           <div
             className={`border-2 border-dashed rounded-md p-6 text-center ${isDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700'}`}
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
@@ -463,31 +515,41 @@ export default function AddNodesModal({
             onDrop={(e) => {
               e.preventDefault();
               setIsDragOver(false);
-              const file = e.dataTransfer.files && e.dataTransfer.files[0]
-              if (file) setSelectedFile(file)
+              const list = e.dataTransfer.files
+              if (!list || list.length === 0) return
+              const files = Array.from(list)
+              const filtered = files.filter(f => tab === 'images' ? f.type.startsWith('image/') : (f.type.includes('pdf') || f.type.includes('word') || f.type.includes('text') || /\.(pdf|doc|docx|txt|md|markdown|csv|json)$/i.test(f.name)))
+              if (filtered.length === 0) return
+              setSelectedFiles(prev => [...prev, ...filtered])
             }}
           >
-            <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop a file here</div>
+            <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop a {tab === 'images' ? 'image' : 'document'} here</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
             <div className="mt-3">
               <label className="inline-block px-3 py-1.5 rounded-md border bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer">
                 <input
                   type="file"
                   className="hidden"
+                  multiple
                   onChange={(e) => {
-                    const f = (e.target as HTMLInputElement).files?.[0] || null
-                    setSelectedFile(f)
+                    const list = (e.target as HTMLInputElement).files
+                    if (!list) { setSelectedFiles([]); return }
+                    const files = Array.from(list)
+                    const filtered = files.filter(f => tab === 'images' ? f.type.startsWith('image/') : (f.type.includes('pdf') || f.type.includes('word') || f.type.includes('text') || /\.(pdf|doc|docx|txt|md|markdown|csv|json)$/i.test(f.name)))
+                    if (filtered.length === 0) { (e.target as HTMLInputElement).value = ''; return }
+                    setSelectedFiles(prev => [...prev, ...filtered])
+                    ;(e.target as HTMLInputElement).value = ''
                   }}
-                  accept="image/*,video/mp4,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json"
+                  accept={tab === 'images' ? 'image/*' : '.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json'}
                 />
                 <span className="text-sm">Choose file</span>
               </label>
             </div>
-            {selectedFile && (
-              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFile.name}</div>
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFiles.length} file{selectedFiles.length>1 ? 's' : ''}</div>
             )}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">We’ll create an Image or Document node based on the file type.</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">We’ll create a {tab === 'images' ? 'Image' : 'Document'} node based on the file.</div>
         </div>
       )}
     </Modal>
