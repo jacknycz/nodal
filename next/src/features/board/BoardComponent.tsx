@@ -1900,10 +1900,36 @@ function BoardContent({
                   const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
                   if (result.connections.length > 0) {
-                    const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
+                    const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
                     setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                   }
                   showAddToast('added', newNodes.length)
+                } else {
+                  // Fallback deterministic placement directly under parent with edges
+                  const parent = (useBoardStore.getState().nodes || []).find(n => n.id === pendingSourceNodeId)
+                  const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
+                  const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + 360
+                  const spacingX = 300
+                  const created: Node[] = []
+                  const edgesToAdd: Edge[] = []
+                  const count = titles.length
+                  const columns = Math.min(count, 4)
+                  const rows = Math.ceil(count / columns)
+                  const startX = baseX - ((columns - 1) * spacingX) / 2
+                  let idx = 0
+                  for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < columns; c++) {
+                      if (idx >= count) break
+                      const pos = { x: startX + c * spacingX, y: baseY + r * 300 }
+                      const id = `node-${Date.now()}-${idx}`
+                      created.push({ id, type: 'default', position: pos, data: { title: titles[idx], content: descriptionsByTitle[titles[idx]] || '' } } as any)
+                      edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: pendingSourceNodeId, target: id, type: toVisualEdgeType(edgeTypePref) as any } as any)
+                      idx++
+                    }
+                  }
+                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
+                  showAddToast('added', created.length)
                 }
               } catch {}
             } else if (titles.length === 1) {
