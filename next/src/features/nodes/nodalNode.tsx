@@ -190,7 +190,7 @@ export default function NodalNode({
         <Tooltip content="Edit">
           <IconButton
             variant="default"
-            
+            size="sm"
             aria-label="Edit node"
             onClick={handleEdit}
           >
@@ -202,7 +202,7 @@ export default function NodalNode({
           <Tooltip content="Add connected">
             <IconButton
               variant="default"
-              
+              size="sm"              
               aria-label="Add Connected Nodes"
               onClick={() => onQuickAddNodes?.(id)}
             >
@@ -214,7 +214,7 @@ export default function NodalNode({
         <Tooltip content="Reorganize nodes">
           <IconButton
             variant="default"
-            
+            size="sm"
             aria-label="Reorganize nodes"
             onClick={() => onOrganizeSubtree?.(id)}
           >
@@ -227,12 +227,13 @@ export default function NodalNode({
           selectedIds={data.colorgoryIds || []}
           onChange={(next) => onNodeUpdate?.(id, { colorgoryIds: next })}
           onNodeUpdate={onNodeUpdate}
+          size="sm"
         />
 
         <Tooltip content="Delete">
           <IconButton
             variant="danger"
-            
+            size="sm"            
             aria-label="Delete node"
             onClick={handleDelete}
           >

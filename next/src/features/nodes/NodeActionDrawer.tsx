@@ -13,13 +13,11 @@ export default function NodeActionDrawer({ children, className = '', open = fals
   const hiddenCls = "pointer-events-none opacity-0 scale-95 translate-y-1/2"
   const visibleCls = "pointer-events-auto opacity-100 scale-100"
 
-  if (!shouldShow && !open) {
-    return null
-  }
-
   return (
     <div className={`${base} ${shouldShow || open ? visibleCls : hiddenCls} ${className}`}>
-      <div className="flex items-center gap-2 p-2 bg-white/80 dark:bg-gray-900/80 border border-gray-200/80 dark:border-gray-700/80 rounded-lg shadow-lg">
+      <div className="flex items-center gap-1 p-1 
+      bg-white/80 dark:bg-gray-900/80 
+      rounded-t-lg shadow-lg">
         {children}
       </div>
     </div>

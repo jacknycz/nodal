@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useRef, useState, useMemo, useEffect } from 'react'
+import ReactDOM from 'react-dom'
 import IconButton from '../../components/ui/IconButton'
 import Tooltip from '../../components/ui/Tooltip'
 import Checkbox from '../../components/ui/Checkbox'
@@ -104,11 +105,44 @@ export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disa
     }
   }, [open])
 
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null)
+  const [panelPos, setPanelPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 })
+
+  // Ensure a single portal root exists
+  useEffect(() => {
+    let el = document.getElementById('colorgory-portal-root') as HTMLElement | null
+    if (!el) {
+      el = document.createElement('div')
+      el.id = 'colorgory-portal-root'
+      document.body.appendChild(el)
+    }
+    setPortalEl(el)
+  }, [])
+
+  // Position the panel while open
+  useEffect(() => {
+    if (!open) return
+    const root = rootRef.current
+    const update = () => {
+      if (!root) return
+      const r = root.getBoundingClientRect()
+      setPanelPos({ left: Math.round(r.left + r.width / 2), top: Math.round(r.bottom + 8) })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open])
+
   return (
     <div ref={rootRef} className="relative" onMouseEnter={openMenu} onMouseLeave={scheduleClose}>
       <Tooltip content="Colorgories">
         <IconButton
           variant="default"
+          size="sm"
           aria-label="Manage colorgories"
           onMouseEnter={openMenu}
           onMouseLeave={scheduleClose}
@@ -118,47 +152,49 @@ export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disa
           <TagIcon size={14} weight="duotone" />
         </IconButton>
       </Tooltip>
-
-      {/* Hover Panel */}
-      <div
-        className={`absolute left-1/2 -translate-x-1/2 top-full mt-1 z-20 min-w-[280px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 shadow-xl backdrop-blur-xs transition-all duration-150 ${open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => { e.stopPropagation() }}
-        onTouchStart={(e) => { e.stopPropagation() }}
-        onMouseEnter={openMenu}
-        onMouseLeave={scheduleClose}
-      >
-        <div className="p-2 pb-0 grid grid-cols-2 gap-1">
-          {colorgories.map((c: any) => {
-            const hex = colorgoryHexById[c.id] || '#9ca3af'
-            return (
-              <Checkbox
-                key={c.id}
-                checked={selectedIds.includes(c.id)}
-                onChange={(checked) => toggle(c.id, !!checked)}
-                label={c.name}
-                labelTextClassName="text-xs"
-                className="rounded px-2 py-1"
-                controlStyle={{ borderColor: hex, borderWidth: 2 }}
-                checkColor={hex}
-              />
-            )
-          })}
-          {colorgories.length === 0 && (
-            <div className="col-span-2 text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5">No colorgories</div>
-          )}
-        </div>
-        <div className="p-2 flex justify-end">
-          <Button
-            onClick={applyToTree}
-            disabled={!onNodeUpdate}
-            size="sm"
-          >
-            Apply to tree
-          </Button>
-        </div>
-      </div>
+      {open && portalEl && ReactDOM.createPortal(
+        <div
+          className={`min-w-[280px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 shadow-xl backdrop-blur-xs transition-all duration-150 ${open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => { e.stopPropagation() }}
+          onTouchStart={(e) => { e.stopPropagation() }}
+          onMouseEnter={openMenu}
+          onMouseLeave={scheduleClose}
+          style={{ position: 'fixed', zIndex: 1000, left: panelPos.left, top: panelPos.top, transform: 'translateX(-50%)' }}
+        >
+          <div className="p-2 pb-0 grid grid-cols-2 gap-1">
+            {colorgories.map((c: any) => {
+              const hex = colorgoryHexById[c.id] || '#9ca3af'
+              return (
+                <Checkbox
+                  key={c.id}
+                  checked={selectedIds.includes(c.id)}
+                  onChange={(checked) => toggle(c.id, !!checked)}
+                  label={c.name}
+                  labelTextClassName="text-xs"
+                  className="rounded px-2 py-1"
+                  controlStyle={{ borderColor: hex, borderWidth: 2 }}
+                  checkColor={hex}
+                />
+              )
+            })}
+            {colorgories.length === 0 && (
+              <div className="col-span-2 text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5">No colorgories</div>
+            )}
+          </div>
+          <div className="p-2 flex justify-end">
+            <Button
+              onClick={applyToTree}
+              disabled={!onNodeUpdate}
+              size="sm"
+            >
+              Apply to tree
+            </Button>
+          </div>
+        </div>,
+        portalEl
+      )}
     </div>
   )
 }
