@@ -46,6 +46,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const [signedThumbUrl, setSignedThumbUrl] = useState<string | null>(null)
   const [showMobilePlayer, setShowMobilePlayer] = useState(false)
   const mobileVideoRef = useRef<HTMLVideoElement | null>(null)
+  const [embedHtml, setEmbedHtml] = useState<string | null>(null)
 
   const isLocked = false
   const isLockedByMe = false
@@ -77,16 +78,39 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
       })()
 
   useEffect(() => {
+    const resolveOEmbedEndpoint = (url: string): string | null => {
+      try {
+        const u = new URL(url)
+        const host = u.hostname.toLowerCase()
+        if (host.includes('youtube.com') || host.includes('youtu.be')) {
+          return `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
+        }
+        if (host.includes('vimeo.com')) {
+          return `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`
+        }
+        if (host.includes('dailymotion.com') || host.includes('dai.ly')) {
+          return `https://www.dailymotion.com/services/oembed?url=${encodeURIComponent(url)}`
+        }
+        if (host.includes('loom.com')) {
+          return `https://www.loom.com/oembed?url=${encodeURIComponent(url)}`
+        }
+        return null
+      } catch { return null }
+    }
+
     const fetchOEmbed = async (url: string) => {
       try {
         setLoading(true)
         onNodeUpdate?.(id, { status: 'loading' })
-        const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
-        const res = await fetch(endpoint)
-        if (!res.ok) throw new Error('oEmbed failed')
-        const json = await res.json()
+        const endpoint = resolveOEmbedEndpoint(url)
+        const res = endpoint ? await fetch(endpoint) : null
+        let json: any = null
+        if (res && res.ok) {
+          json = await res.json()
+        }
         const title = (json?.title as string) || data.title || 'Video'
         const thumb = (json?.thumbnail_url as string) || ''
+        setEmbedHtml(typeof json?.html === 'string' ? json.html : null)
         // Try to fetch favicon for the video page (host domain)
         let faviconUrl: string | undefined
         try {
@@ -244,7 +268,13 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           </div>
         ) : (
           <div className="relative w-full">
-            {embedSrc ? (
+            {embedHtml ? (
+              <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
+                {inView && (
+                  <div className="w-[800px] h-[450px]" dangerouslySetInnerHTML={{ __html: embedHtml! }} />
+                )}
+              </div>
+            ) : embedSrc ? (
               <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
                 {inView && (
                 <iframe

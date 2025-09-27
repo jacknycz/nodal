@@ -431,6 +431,7 @@ export default function AddNodesModal({
             onChange={(e) => setVideoUrl((e.target as HTMLInputElement).value)}
             placeholder="https://www.youtube.com/watch?v=..."
             fullWidth
+            description="YouTube, Vimeo, DailyMotion and Loom supported."
           />
           <div
             className={`border-2 border-dashed rounded-md p-6 text-center ${canUploadVideo ? (isVideoDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700') : 'border-gray-300/60 dark:border-gray-700/60 opacity-60'}`}
