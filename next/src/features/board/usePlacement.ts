@@ -393,6 +393,7 @@ export function usePlacement() {
     algorithm: LayoutAlgorithm = LayoutAlgorithm.GRID,
     constraints?: Partial<PlacementConstraints>
   ): Promise<PlacementResult> => {
+    try { console.log('[reorganizeSubtree] start for', parentNodeId) } catch {}
     const freshNodes = useBoardStore.getState().nodes
     const freshEdges = useBoardStore.getState().edges
 
@@ -419,11 +420,26 @@ export function usePlacement() {
     }
 
     if (descendants.size === 0) {
+      try { console.log('[reorganizeSubtree] no descendants for', parentNodeId, '- reorganizing whole board') } catch {}
+      // Fallback: if this node has no descendants, reorganize the whole board instead
+      await reorganizeBoardLayout(LayoutAlgorithm.GRID, true)
       return { placements: [], connections: [], metadata: { algorithm, strategy: LayoutAlgorithm.GRID as any, totalNodes: 0, collisionsAvoided: 0, executionTime: 0, bounds: { minX:0,minY:0,maxX:0,maxY:0 }, qualityScore: 1 }, success: true, warnings: [] }
     }
 
+    // Measure actual rendered sizes before computing placement (ensures precise stacking/spacing)
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    const measuredNodes = freshNodes.map((n) => {
+      try {
+        const el = document.querySelector(`.react-flow__node[data-id="${n.id}"]`) as HTMLElement | null
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          return { ...(n as any), width: rect.width, height: rect.height }
+        }
+      } catch {}
+      return n as any
+    })
     const baseContext = createPlacementContext(parentNodeId, constraints)
-    const context = { ...baseContext, existingNodes: freshNodes, existingEdges: freshEdges }
+    const context = { ...baseContext, existingNodes: measuredNodes as any, existingEdges: freshEdges }
 
     const nodesToPlace: NodeToPlace[] = freshNodes
       .filter(n => descendants.has(n.id))
@@ -437,6 +453,7 @@ export function usePlacement() {
       }))
 
     const result = await reorganizeBoard(nodesToPlace, context, algorithm)
+    try { console.log('[reorganizeSubtree] result', { placements: result.placements.length, success: result.success }) } catch {}
 
     if (result.success && result.placements.length > 0) {
       const updatedNodes = freshNodes.map(node => {
@@ -448,8 +465,85 @@ export function usePlacement() {
         return node
       })
       setNodes(updatedNodes)
+      try { console.log('[reorganizeSubtree] applied updates to', updatedNodes.length, 'nodes') } catch {}
+      return result
     }
-    return result
+
+    // Fallback deterministic tiered placement under parent
+    try { console.log('[reorganizeSubtree] fallback tiered placement') } catch {}
+    const parentNode = measuredNodes.find(n => n.id === parentNodeId)
+    if (!parentNode) {
+      return { placements: [], connections: [], metadata: { algorithm, strategy: LayoutAlgorithm.GRID as any, totalNodes: 0, collisionsAvoided: 0, executionTime: 0, bounds: { minX:0,minY:0,maxX:0,maxY:0 }, qualityScore: 1 }, success: false, warnings: ['parent not found'] }
+    }
+
+    const cellWidth = 300
+    const cellHeight = 300
+    const padding = 60
+
+    // Build children lists for only descendant ids
+    const childrenMap = new Map<string, string[]>()
+    measuredNodes.forEach(n => { childrenMap.set(n.id, []) })
+    freshEdges.forEach((e: any) => {
+      const s = e?.source as string
+      const t = e?.target as string
+      if (descendants.has(t) && (s === parentNodeId || descendants.has(s))) {
+        const arr = childrenMap.get(s) || []
+        arr.push(t)
+        childrenMap.set(s, arr)
+      }
+    })
+
+    // Order children by current x to preserve relative order
+    const nodeById = new Map<string, any>(measuredNodes.map(n => [n.id, n]))
+    Array.from(childrenMap.keys()).forEach(pid => {
+      const arr = childrenMap.get(pid) || []
+      arr.sort((a, b) => (nodeById.get(a)?.position?.x || 0) - (nodeById.get(b)?.position?.x || 0))
+      childrenMap.set(pid, arr)
+    })
+
+    // BFS levels
+    const depth = new Map<string, number>()
+    const levelQueue: string[] = []
+    ;(childrenMap.get(parentNodeId) || []).forEach(id => { depth.set(id, 1); levelQueue.push(id) })
+    while (levelQueue.length) {
+      const cur = levelQueue.shift()!
+      const d = depth.get(cur) || 1
+      const kids = childrenMap.get(cur) || []
+      kids.forEach(k => { if (!depth.has(k)) { depth.set(k, d + 1); levelQueue.push(k) } })
+    }
+
+    // Group by depth
+    const idsByDepth = new Map<number, string[]>()
+    depth.forEach((d, id) => {
+      const arr = idsByDepth.get(d) || []
+      arr.push(id)
+      idsByDepth.set(d, arr)
+    })
+
+    const updates = new Map<string, { x: number; y: number }>()
+    for (const [d, ids] of Array.from(idsByDepth.entries()).sort((a, b) => a[0] - b[0])) {
+      const y = parentNode.position.y + d * (cellHeight + padding)
+      // Place per parent group centered under that parent
+      const parentsAtPrevDepth = new Set<string>()
+      ids.forEach(id => { const p = parentOf[id]; if (p) parentsAtPrevDepth.add(p) })
+      const orderedParents = Array.from(parentsAtPrevDepth)
+      orderedParents.forEach(pid => {
+        const children = (childrenMap.get(pid) || []).filter(id => depth.get(id) === d)
+        if (children.length === 0) return
+        const parentX = nodeById.get(pid)?.position?.x || parentNode.position.x
+        const groupWidth = (children.length * cellWidth) + Math.max(0, children.length - 1) * padding
+        let startX = parentX - groupWidth / 2 + cellWidth / 2
+        children.forEach((cid) => {
+          updates.set(cid, { x: startX, y })
+          startX += cellWidth + padding
+        })
+      })
+    }
+
+    const updatedNodes = freshNodes.map(n => updates.has(n.id) ? ({ ...n, position: updates.get(n.id)! }) : n)
+    setNodes(updatedNodes)
+    try { console.log('[reorganizeSubtree] fallback applied to', updates.size, 'nodes') } catch {}
+    return { placements: [], connections: [], metadata: { algorithm, strategy: LayoutAlgorithm.GRID as any, totalNodes: updates.size, collisionsAvoided: 0, executionTime: 0, bounds: { minX:0,minY:0,maxX:0,maxY:0 }, qualityScore: 1 }, success: true, warnings: [] }
   }, [createPlacementContext, setNodes])
 
   /**
