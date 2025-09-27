@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { PlusCircle, CheckCircle, TreeStructure, CheckSquare, ClipboardText, TreeView } from '@phosphor-icons/react/dist/ssr'
+import { useBoardStore } from '../features/board/boardSlice'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -33,6 +34,11 @@ export default function BoardContextMenu({
   onOrganizeSubtree,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
+  const edges = useBoardStore((s: any) => s.edges || [])
+  const hasChildren = React.useMemo(() => {
+    if (!nodeId) return false
+    return (edges || []).some((e: any) => e?.source === nodeId)
+  }, [edges, nodeId])
 
   React.useEffect(() => {
     if (!isOpen) return
@@ -117,7 +123,7 @@ export default function BoardContextMenu({
           </button>
         )}
 
-        {nodeId && onOrganizeSubtree && (
+        {nodeId && onOrganizeSubtree && hasChildren && (
           <button
             onClick={() => handleAction(() => onOrganizeSubtree(nodeId))}
             className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3 transition-colors"
