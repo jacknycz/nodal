@@ -1755,25 +1755,43 @@ function BoardContent({
           } catch {}
         }}
       />
-      {/* Node edit modal for default nodes */}
+      {/* Node edit modal for default and link nodes */}
       {editNodeId && (() => {
         const n = nodes.find(nn => nn.id === editNodeId)
-        const d: any = n?.data || {}
-        const isDefault = n?.type === 'default'
-        if (!n || !isDefault) return null
-        return (
-          <NodeEditModal
-            open={true}
-            onClose={() => setEditNodeId(null)}
-            initialTitle={d.title || ''}
-            initialContent={d.content || ''}
-            initialColorgoryIds={d.colorgoryIds || []}
-            initialTitleSize={d.titleSize || 'sm'}
-            onSave={(title, content, colorgoryIds, titleSize) => {
-              setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize } } : nn) : nds))
-            }}
-          />
-        )
+        if (!n) return null
+        const d: any = n.data || {}
+        if (n.type === 'default') {
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={() => setEditNodeId(null)}
+              initialTitle={d.title || ''}
+              initialContent={d.content || ''}
+              initialColorgoryIds={d.colorgoryIds || []}
+              initialTitleSize={d.titleSize || 'sm'}
+              onSave={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize } } : nn) : nds))
+              }}
+            />
+          )
+        }
+        if (n.type === 'link') {
+          const safeHostname = (() => { try { return d.linkUrl ? new URL(d.linkUrl).hostname : '' } catch { return '' } })()
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={() => setEditNodeId(null)}
+              initialTitle={d.title || safeHostname || ''}
+              initialContent={d.description || ''}
+              initialColorgoryIds={d.colorgoryIds || []}
+              initialTitleSize={'sm'}
+              onSave={(title, content, colorgoryIds) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
+              }}
+            />
+          )
+        }
+        return null
       })()}
       
       {/* Hide overlays, modals, and toolbars in screenshot mode */}
