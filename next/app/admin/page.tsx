@@ -269,6 +269,7 @@ export default function AdminUsersPage() {
                   if (!res.ok) throw new Error('failed')
                   setSelectedFeedback(prev => prev ? { ...prev, notes: notesDraft } : prev)
                   setFeedback(prev => prev.map(x => x.id === id ? { ...x, notes: notesDraft } : x))
+                  setSelectedFeedback(null)
                 } catch {
                   alert('Unable to save notes')
                 }
