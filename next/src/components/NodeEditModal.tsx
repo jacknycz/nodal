@@ -94,7 +94,8 @@ export default function NodeEditModal({
       onClose={onClose}
       title="Edit Node"
       description="Update the node's title and content with rich text formatting."
-      className="w-full max-w-7xl!"
+      className="w-full max-w-7xl! h-[85vh]!"
+      scrollBody={false}
       actions={
         <>
           <Button
@@ -112,8 +113,8 @@ export default function NodeEditModal({
         </>
       }
     >
-      <div className="space-y-4 py-2">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+      <div className="gap-4 py-2 flex-1 min-h-0 h-full flex flex-col overflow-hidden basis-0">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-none">
           <div className="flex-1">
             <TextInput
               ref={titleInputRef}
@@ -141,7 +142,7 @@ export default function NodeEditModal({
             />
           </div>
         </div>
-        <div>
+        <div className="flex-none">
           <Checkbox
             checked={pageMode}
             onChange={(v) => setPageMode(!!v)}
@@ -156,7 +157,7 @@ export default function NodeEditModal({
           size="sm"
           fullWidth
         /> */}
-        <div>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden basis-0">
           <label htmlFor="edit-content" aria-description="Content" className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Content
           </label>
@@ -166,6 +167,7 @@ export default function NodeEditModal({
             placeholder="Start writing your node content..."
             onKeyDown={handleContentKeyDown}
             editorHandleRef={editorHandleRef}
+            className="flex-1 min-h-[320px]"
           />
         </div>
       </div>

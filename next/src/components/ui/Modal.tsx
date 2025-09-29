@@ -13,6 +13,8 @@ interface ModalProps {
   currentStep?: number
   totalSteps?: number
   onStepChange?: (step: number) => void
+  // Control whether the body should scroll when content overflows
+  scrollBody?: boolean
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -25,7 +27,8 @@ const Modal: React.FC<ModalProps> = ({
   className,
   currentStep,
   totalSteps,
-  onStepChange
+  onStepChange,
+  scrollBody = true,
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
@@ -81,7 +84,7 @@ const Modal: React.FC<ModalProps> = ({
       />
       {/* Modal content */}
       <div
-        className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out ${
+        className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] overflow-hidden ${
           isVisible 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-95 -translate-y-1'
@@ -112,7 +115,7 @@ const Modal: React.FC<ModalProps> = ({
 
         {title && <h2 className="text-lg md:text-xl font-fredoka font-medium text-gray-900 dark:text-white mb-2">{title}</h2>}
         {description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{description}</p>}
-        <div className="flex-1">{children}</div>
+        <div className={`flex-1 min-h-0 h-full ${scrollBody ? 'overflow-y-auto' : 'overflow-hidden'}`}>{children}</div>
         {(() => {
           const hasActions = !!actions && (React.Children.count(actions as any) > 0)
           return hasActions ? (

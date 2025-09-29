@@ -308,7 +308,7 @@ export default function TipTapEditor({
       
       {/* Editor content with resize handle */}
       <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex-1 min-h-0 flex flex-col">
-        <div className="p-3 flex-1 min-h-0 flex">
+        <div className="p-3 flex-1 min-h-0 flex overflow-y-auto">
           <EditorContent
             editor={editor}
             className="tiptap-content flex-1 min-h-0 h-full focus:outline-none leading-relaxed"
