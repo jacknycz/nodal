@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
+import Checkbox from './ui/Checkbox'
 import TipTapEditor from './TipTapEditor'
 import TextInput from './ui/TextInput'
 import MultiSelect from './ui/MultiSelect'
@@ -12,11 +13,12 @@ import { useBoardStore } from '../features/board/boardSlice'
 interface NodeEditModalProps {
   open: boolean
   onClose: () => void
-  onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg') => void
+  onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
   initialTitle: string
   initialContent: string
   initialColorgoryIds?: string[]
   initialTitleSize?: 'sm' | 'md' | 'lg'
+  initialPageMode?: boolean
 }
 
 export default function NodeEditModal({ 
@@ -26,12 +28,14 @@ export default function NodeEditModal({
   initialTitle, 
   initialContent,
   initialColorgoryIds = [],
-  initialTitleSize = 'sm'
+  initialTitleSize = 'sm',
+  initialPageMode = false,
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
   const [selectedColorgoryIds, setSelectedColorgoryIds] = useState<string[]>(initialColorgoryIds)
   const [titleSize, setTitleSize] = useState<'sm' | 'md' | 'lg'>(initialTitleSize)
+  const [pageMode, setPageMode] = useState<boolean>(!!initialPageMode)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const editorHandleRef = useRef<{ focus: () => void } | null>(null)
   const colorgories = useBoardStore.getState().colorgories || []
@@ -41,6 +45,7 @@ export default function NodeEditModal({
       setTitle(prev => (prev !== initialTitle ? initialTitle : prev))
       setContent(prev => (prev !== initialContent ? initialContent : prev))
       setTitleSize(prev => (prev !== initialTitleSize ? initialTitleSize : prev))
+      setPageMode(prev => (prev !== initialPageMode ? !!initialPageMode : prev))
       setSelectedColorgoryIds(prev => {
         const next = initialColorgoryIds
         const sameLength = prev.length === next.length
@@ -59,7 +64,7 @@ export default function NodeEditModal({
   }, [open, initialTitle, initialContent, initialColorgoryIds])
 
   const handleSave = () => {
-    onSave(title, content, selectedColorgoryIds, titleSize)
+    onSave(title, content, selectedColorgoryIds, titleSize, pageMode)
     onClose()
   }
 
@@ -126,7 +131,7 @@ export default function NodeEditModal({
             <ToggleGroup
               label="Size"
               value={titleSize}
-              onChange={setTitleSize}
+              onChange={(v) => setTitleSize((v as any) as 'sm' | 'md' | 'lg')}
               options={[
                 { value: 'sm', label: 'S' },
                 { value: 'md', label: 'M' },
@@ -135,6 +140,13 @@ export default function NodeEditModal({
               size="sm"
             />
           </div>
+        </div>
+        <div>
+          <Checkbox
+            checked={pageMode}
+            onChange={(v) => setPageMode(!!v)}
+            label="Page Mode"
+          />
         </div>
         {/* <MultiSelect
           label="Colorgories"

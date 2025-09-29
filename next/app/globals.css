@@ -382,6 +382,19 @@ body {
 /* Ensure TipTap default resets don't zero margins */
 .ProseMirror {
   line-height: 1.625;
+  height: 100%;
+  min-height: 100%;
+}
+.tiptap-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow children to grow */
+  height: 100%;
+}
+.tiptap-content > .ProseMirror {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
 }
 .ProseMirror p {
   margin-top: 0.5rem;

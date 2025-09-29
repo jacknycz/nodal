@@ -8,28 +8,13 @@ import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
-import Strike from '@tiptap/extension-strike'
+// Strike is included by StarterKit; avoid adding twice to prevent duplicates
 import CodeBlock from '@tiptap/extension-code-block'
 import Blockquote from '@tiptap/extension-blockquote'
 import BulletList from '@tiptap/extension-bullet-list'
 import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
-import { 
-  Bold, 
-  Italic, 
-  List, 
-  ListOrdered, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  Underline as UnderlineIcon,
-  Strikethrough,
-  Code,
-  Quote,
-  Link as LinkIcon,
-  Image as ImageIcon,
-  GripVertical
-} from 'lucide-react'
+import { Bold, Italic, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Underline as UnderlineIcon, Strikethrough, Code, Quote, Link as LinkIcon, Image as ImageIcon } from 'lucide-react'
 import IconButton from './ui/IconButton'
 import Loader from './ui/Loader'
 
@@ -51,65 +36,73 @@ export default function TipTapEditor({
   editorHandleRef
 }: TipTapEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const [editorHeight, setEditorHeight] = useState(200)
-  const [isResizing, setIsResizing] = useState(false)
-  const resizeRef = useRef<HTMLDivElement>(null)
+  // Removed resizer
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        // Disable extensions that we're adding separately
-        codeBlock: false,
-        blockquote: false,
-        bulletList: false,
-        orderedList: false,
-        listItem: false,
-      }),
-      Placeholder.configure({
-        placeholder,
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-blue-600 hover:text-blue-800 underline',
-        },
-      }),
-      Image.configure({
-        HTMLAttributes: {
-          class: 'max-w-full h-auto rounded',
-        },
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      Underline,
-      Strike,
-      CodeBlock.configure({
-        HTMLAttributes: {
-          class: 'bg-gray-100 dark:bg-gray-800 rounded p-2 font-mono text-sm',
-        },
-      }),
-      Blockquote.configure({
-        HTMLAttributes: {
-          class: 'border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic',
-        },
-      }),
-      BulletList.configure({
-        HTMLAttributes: {
-          class: 'list-disc pl-5 my-2',
-        },
-      }),
-      OrderedList.configure({
-        HTMLAttributes: {
-          class: 'list-decimal pl-5 my-2',
-        },
-      }),
-      ListItem,
-    ],
+    extensions: (() => {
+      const raw = [
+        StarterKit.configure({
+          // Disable extensions that we're adding separately
+          codeBlock: false,
+          blockquote: false,
+          bulletList: false,
+          orderedList: false,
+          listItem: false,
+          strike: true, // use StarterKit's strike, don't add Strike extension separately
+        }),
+        Placeholder.configure({
+          placeholder,
+        }),
+        Link.configure({
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-blue-600 hover:text-blue-800 underline',
+          },
+        }),
+        Image.configure({
+          HTMLAttributes: {
+            class: 'max-w-full h-auto rounded',
+          },
+        }),
+        TextAlign.configure({
+          types: ['heading', 'paragraph'],
+        }),
+        Underline,
+        CodeBlock.configure({
+          HTMLAttributes: {
+            class: 'bg-gray-100 dark:bg-gray-800 rounded p-2 font-mono text-sm',
+          },
+        }),
+        Blockquote.configure({
+          HTMLAttributes: {
+            class: 'border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic',
+          },
+        }),
+        BulletList.configure({
+          HTMLAttributes: {
+            class: 'list-disc pl-5 my-2',
+          },
+        }),
+        OrderedList.configure({
+          HTMLAttributes: {
+            class: 'list-decimal pl-5 my-2',
+          },
+        }),
+        ListItem,
+      ] as any[]
+      const seen = new Set<string>()
+      return raw.filter((ext: any) => {
+        const name = ext?.name || ''
+        if (!name) return true
+        if (seen.has(name)) return false
+        seen.add(name)
+        return true
+      })
+    })(),
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
@@ -156,58 +149,7 @@ export default function TipTapEditor({
     }
   }, [editor, editorHandleRef])
 
-  // Handle resize functionality
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing || !resizeRef.current) return
-      
-      const container = resizeRef.current
-      const containerRect = container.getBoundingClientRect()
-      const newHeight = e.clientY - containerRect.top
-      
-      console.log('Mouse move:', {
-        clientY: e.clientY,
-        containerTop: containerRect.top,
-        newHeight,
-        currentHeight: editorHeight
-      })
-      
-      // Set min and max constraints
-      const minHeight = 120
-      const maxHeight = Math.min(50 * window.innerHeight / 100, 400) // 50vh or 400px, whichever is smaller
-      
-      if (newHeight >= minHeight && newHeight <= maxHeight) {
-        console.log('Setting new height:', newHeight)
-        setEditorHeight(newHeight)
-      }
-    }
-
-    const handleMouseUp = () => {
-      console.log('Mouse up - stopping resize')
-      setIsResizing(false)
-    }
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = 'ns-resize'
-      document.body.style.userSelect = 'none'
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-  }, [isResizing, editorHeight])
-
-  const handleResizeStart = (e: React.MouseEvent) => {
-    console.log('Resize start triggered!')
-    e.preventDefault()
-    e.stopPropagation()
-    setIsResizing(true)
-  }
+  // Resizer removed
 
   if (!editor || !isMounted) {
     return (
@@ -237,7 +179,7 @@ export default function TipTapEditor({
   }
 
   return (
-    <div className={`border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden flex flex-col ${className}`}>
+    <div className={`border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden flex flex-col flex-1 min-h-0 nodrag nopan ${className}`}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 p-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600">
         <IconButton
@@ -365,25 +307,12 @@ export default function TipTapEditor({
       </div>
       
       {/* Editor content with resize handle */}
-      <div 
-        ref={resizeRef}
-        className="relative bg-white dark:bg-gray-800 pb-4 text-gray-900 dark:text-white"
-        style={{ height: `${editorHeight}px` }}
-      >
-        <div className="p-3 h-full overflow-y-auto">
-          <EditorContent 
-            editor={editor} 
-            className="tiptap-content h-full min-h-full focus:outline-none leading-relaxed" 
+      <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex-1 min-h-0 flex flex-col">
+        <div className="p-3 flex-1 min-h-0 flex">
+          <EditorContent
+            editor={editor}
+            className="tiptap-content flex-1 min-h-0 h-full focus:outline-none leading-relaxed"
           />
-        </div>
-        
-        {/* Resize handle */}
-        <div
-          className="absolute -bottom-0 left-0 right-0 h-4 cursor-ns-resize bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center z-10 border-t border-gray-200 dark:border-gray-600"
-          onMouseDown={handleResizeStart}
-          title="Drag to resize"
-        >
-          <GripVertical size={14} className="text-gray-500 dark:text-gray-400" />
         </div>
       </div>
     </div>

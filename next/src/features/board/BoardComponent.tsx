@@ -1959,8 +1959,9 @@ function BoardContent({
               initialContent={d.content || ''}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={d.titleSize || 'sm'}
-              onSave={(title, content, colorgoryIds, titleSize) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize } } : nn) : nds))
+              initialPageMode={!!d.pageMode}
+              onSave={(title, content, colorgoryIds, titleSize, pageMode) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize, pageMode } } : nn) : nds))
               }}
             />
           )

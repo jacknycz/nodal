@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -13,6 +13,7 @@ import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses } from './nodeStyles'
+import TipTapEditor from '../../components/TipTapEditor'
  
 
 interface NodalNodeProps {
@@ -25,6 +26,7 @@ interface NodalNodeProps {
     aiGenerated?: boolean
     colorgoryIds?: string[]
     titleSize?: 'sm' | 'md' | 'lg'
+    pageMode?: boolean
   }
   id: string
   onNodeDelete?: (nodeId: string) => void
@@ -53,6 +55,8 @@ export default function NodalNode({
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
 
   const displayTitle = data.label || data.title || 'Untitled'
+  const pageMode = !!data.pageMode
+  const [expanded, setExpanded] = useState(false)
 
   // Debug logs for lock state
   // console.log(`[NodalNode ${id}] isLocked: ${isLocked}, isLockedByMe: ${isLockedByMe}, showEditModal: ${showEditModal}, nodeLocks count: ${nodeLocks?.length || 0}`)
@@ -74,8 +78,8 @@ export default function NodalNode({
     setShowEditModal(false)
   }
 
-  const handleSaveEdit = async (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg') => {
-    if (onNodeUpdate) onNodeUpdate(id, { title, content, ...(colorgoryIds ? { colorgoryIds } : {}), ...(titleSize ? { titleSize } : {}) })
+  const handleSaveEdit = async (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode0?: boolean) => {
+    if (onNodeUpdate) onNodeUpdate(id, { title, content, ...(colorgoryIds ? { colorgoryIds } : {}), ...(titleSize ? { titleSize } : {}), ...(typeof pageMode0 === 'boolean' ? { pageMode: pageMode0 } : {}) })
     setShowEditModal(false)
   }
 
@@ -134,10 +138,15 @@ export default function NodalNode({
 
   
 
+  const baseWidthCls = useMemo(() => {
+    if (pageMode) return expanded ? 'w-[640px]' : 'min-w-[360px] max-w-[360px]'
+    return 'min-w-[240px] max-w-[240px]'
+  }, [pageMode, expanded])
+
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'min-w-[240px] max-w-[240px]' })}
-      style={{ position: 'relative' }}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `${baseWidthCls} ${expanded ? 'h-[80vh] overflow-hidden' : ''} flex flex-col` })}
+      style={{ position: 'relative', zIndex: expanded ? 1000 : undefined }}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -166,18 +175,56 @@ export default function NodalNode({
 
       
 
-      <div className="nodal-drag-handle cursor-move">
-        <div className="flex items-center gap-2 mb-1">
+      <div className={`${expanded ? 'cursor-default flex-1' : 'cursor-move'} flex flex-col min-h-0`}>
+        <div className={`nodal-drag-handle flex items-center gap-2 mb-1 w-full justify-between flex-none ${expanded ? 'cursor-default' : 'cursor-move'} ${pageMode ? 'px-2' : ''}`}>
           <h3 className={`${data.titleSize === 'lg' ? 'text-lg' : data.titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
             {displayTitle}
           </h3>
+          {pageMode && (
+            <BookOpenText size={20} weight="duotone" className="text-gray-400" />
+          )}
         </div>
-        {data.content && (
-          <div className="mb-3">
-            {renderRichContent(data.content)}
+        {pageMode ? (
+          <div className={`${expanded ? 'flex-1 min-h-0 nodrag nopan' : 'nodal-drag-handle cursor-move'} mb-3 px-2`}>
+            {expanded ? (
+              <div className="flex-1 min-h-0 h-full flex flex-col">
+                <TipTapEditor
+                  content={data.content || ''}
+                  onChange={(val) => onNodeUpdate?.(id, { content: val })}
+                  placeholder="Write your page..."
+                  className="bg-white dark:bg-gray-800 flex-1 min-h-0 h-full"
+                />
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="tiptap-content text-xs text-gray-600 dark:text-gray-200 leading-relaxed max-h-56 overflow-hidden">
+                  {data.content ? renderRichContent(data.content) : null}
+                </div>
+                {data.content && <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white/90 dark:from-gray-900/90 to-transparent" />}
+              </div>
+            )}
           </div>
+        ) : (
+          data.content && (
+            <div className="mb-3">
+              {renderRichContent(data.content)}
+            </div>
+          )
         )}
       </div>
+
+      {pageMode && (
+        <div className="mt-2 flex justify-end">
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label={expanded ? 'Collapse' : 'Expand'}
+            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
+          >
+            {expanded ? <ArrowsIn size={14} weight="duotone" /> : <ArrowsOut size={14} weight="duotone" />}
+          </IconButton>
+        </div>
+      )}
       
 
       {/* Modals */}
@@ -207,6 +254,7 @@ export default function NodalNode({
           initialContent={data.content || ''}
           initialColorgoryIds={data.colorgoryIds || []}
           initialTitleSize={data.titleSize || 'sm'}
+          initialPageMode={pageMode}
         />
       )}
 
