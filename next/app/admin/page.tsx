@@ -6,6 +6,8 @@ import { isAdmin, getUserRoleFromMetadata } from '@/features/auth/roles'
 import Select from '@/components/ui/Select'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
+import Checkbox from '@/components/ui/Checkbox'
+import { CheckFat } from '@phosphor-icons/react/dist/ssr'
 
 interface LiteUser {
   id: string
@@ -21,8 +23,8 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<LiteUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<Array<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string }>>([])
-  const [selectedFeedback, setSelectedFeedback] = useState<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string } | null>(null)
+  const [feedback, setFeedback] = useState<Array<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string }>>([])
+  const [selectedFeedback, setSelectedFeedback] = useState<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -121,6 +123,7 @@ export default function AdminUsersPage() {
             <table className="min-w-full text-xs sm:text-sm">
               <thead className="bg-gray-800 text-left">
                 <tr>
+                  <th className="px-3 py-2"><CheckFat size={16} weight="duotone" /></th>
                   <th className="px-3 py-2">Quick</th>
                   <th className="px-3 py-2">Idea</th>
                   <th className="px-3 py-2">Broken</th>
@@ -136,6 +139,30 @@ export default function AdminUsersPage() {
                     className="border-t border-gray-800 align-top cursor-pointer hover:bg-gray-800/60"
                     onClick={() => setSelectedFeedback(f)}
                   >
+                    <td className="px-3 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={!!f.done}
+                        onChange={async (val) => {
+                          const next = !!val
+                          // Optimistic update
+                          setFeedback(prev => prev.map(x => x.id === f.id ? { ...x, done: next } : x))
+                          try {
+                            const res = await fetch('/api/admin/feedback', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: f.id, done: next })
+                            })
+                            if (!res.ok) throw new Error('Failed to update')
+                          } catch (e) {
+                            // Revert on failure
+                            setFeedback(prev => prev.map(x => x.id === f.id ? { ...x, done: !next } : x))
+                            alert('Unable to update done status')
+                          }
+                        }}
+                        label=""
+                        className="!p-0"
+                      />
+                    </td>
                     <td className="px-3 py-2 w-[28ch] max-w-[28ch]">
                       <div className="truncate" title={f.quick}>{f.quick}</div>
                       {f.details && (
