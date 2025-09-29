@@ -206,6 +206,32 @@ export default function AdminUsersPage() {
       >
         {selectedFeedback && (
           <div className="space-y-3 text-sm">
+            <div className="absolute top-6 right-6">
+              <Checkbox
+                checked={!!selectedFeedback.done}
+                onChange={async (val) => {
+                  const next = !!val
+                  // Optimistic update: modal state
+                  setSelectedFeedback(prev => prev ? { ...prev, done: next } : prev)
+                  // Optimistic update: table state
+                  setFeedback(prev => prev.map(x => x.id === selectedFeedback.id ? { ...x, done: next } : x))
+                  try {
+                    const res = await fetch('/api/admin/feedback', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ id: selectedFeedback.id, done: next })
+                    })
+                    if (!res.ok) throw new Error('Failed to update')
+                  } catch (e) {
+                    // Revert on failure
+                    setSelectedFeedback(prev => prev ? { ...prev, done: !next } : prev)
+                    setFeedback(prev => prev.map(x => x.id === selectedFeedback.id ? { ...x, done: !next } : x))
+                    alert('Unable to update done status')
+                  }
+                }}
+                // label="Done"
+              />
+            </div>
             <div>
               <div className="text-gray-400 text-xs uppercase tracking-wide">Quick</div>
               <div className="mt-1 text-gray-100">{selectedFeedback.quick || '—'}</div>
