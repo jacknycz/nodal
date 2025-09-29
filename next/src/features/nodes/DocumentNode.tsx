@@ -290,7 +290,7 @@ export default function DocumentNode({
 
         {/* Document description */}
         {hasContent && (
-          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
             {data.content!.length > 280 ? `${data.content!.slice(0, 280)}…` : data.content}
           </div>
         )}

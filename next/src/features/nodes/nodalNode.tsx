@@ -95,7 +95,7 @@ export default function NodalNode({
   const renderRichContent = (htmlContent: string) => {
     return (
       <div
-        className="text-xs text-gray-600 dark:text-gray-200 mb-3 prose prose-sm dark:prose-invert max-w-none"
+        className="tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     )

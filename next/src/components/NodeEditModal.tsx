@@ -89,6 +89,7 @@ export default function NodeEditModal({
       onClose={onClose}
       title="Edit Node"
       description="Update the node's title and content with rich text formatting."
+      className="w-full max-w-7xl!"
       actions={
         <>
           <Button

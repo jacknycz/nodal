@@ -116,7 +116,7 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full min-h-full',
+        class: 'tiptap-content prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full min-h-full',
       },
       handleKeyDown: (view, event) => {
         // Call the parent onKeyDown if provided
@@ -373,7 +373,7 @@ export default function TipTapEditor({
         <div className="p-3 h-full overflow-y-auto">
           <EditorContent 
             editor={editor} 
-            className="h-full min-h-full prose prose-sm dark:prose-invert max-w-none focus:outline-none" 
+            className="tiptap-content h-full min-h-full focus:outline-none leading-relaxed" 
           />
         </div>
         

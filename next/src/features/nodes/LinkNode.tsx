@@ -156,7 +156,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             </a>
           )}
           {data.description && (
-            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
               {data.description.length > 200 ? `${data.description.slice(0, 200)}…` : data.description}
             </div>
           )}
