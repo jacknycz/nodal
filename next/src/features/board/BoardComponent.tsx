@@ -1647,6 +1647,7 @@ function BoardContent({
         }}
         onQuickAIGenerateNodes={async (nodeId?: string | null) => {
           try {
+            console.log('[QuickAI] start, nodeId:', nodeId)
             const store = useBoardStore.getState()
             const nodesList = store.nodes || []
             const edgesList = store.edges || []
@@ -1662,9 +1663,10 @@ function BoardContent({
             const attachParentId = selectedNode ? selectedNode.id : undefined
             const contextTitle = selectedNode?.data?.title || ''
             const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
+            console.log('[QuickAI] selectedId:', selectedId, 'title:', contextTitle, 'content.len:', contextContent?.length || 0, 'topic:', topic)
 
             const ai = getOpenAIService()
-            if (!ai) return
+            if (!ai) { console.warn('[QuickAI] ai service unavailable'); return }
             const promptParts = [
               topic && `Board topic: ${topic}`,
               contextTitle && `Selected node: ${contextTitle}`,
@@ -1681,9 +1683,11 @@ function BoardContent({
               parsed = JSON.parse(fenced ? fenced[1] : raw)
             } catch {}
             const items = Array.isArray(parsed?.nodes) ? parsed.nodes : []
-            if (items.length === 0) return
+            console.log('[QuickAI] parsed items count:', items.length)
+            if (items.length === 0) { console.warn('[QuickAI] no items parsed from AI'); return }
             const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
             const result = await placeAINodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 })
+            console.log('[QuickAI] placement result:', result?.placements?.length || 0, 'placements')
             if (result.success && result.placements.length > 0) {
               const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
               setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
@@ -1692,6 +1696,59 @@ function BoardContent({
                 setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
               }
               showAddToast('generated', newNodes.length)
+            } else {
+              console.warn('[QuickAI] placement produced no placements — using simple fallback under parent')
+              const itemsCount = items.length
+              const created: Node[] = []
+              const edgesToAdd: Edge[] = []
+              if (attachParentId) {
+                const parent = (useBoardStore.getState().nodes || []).find(n => n.id === attachParentId)
+                const center = parent?.position || reactFlowInstance.getViewport()
+                const baseX = parent?.position?.x ?? 0
+                const baseY = (parent?.position?.y ?? 0) + 300
+                const spacingX = 260
+                const columns = Math.min(itemsCount, 4)
+                const rows = Math.ceil(itemsCount / columns)
+                const startX = baseX - ((columns - 1) * spacingX) / 2
+                let idx = 0
+                for (let r = 0; r < rows; r++) {
+                  for (let c = 0; c < columns; c++) {
+                    if (idx >= itemsCount) break
+                    const pos = { x: startX + c * spacingX, y: baseY + r * 220 }
+                    const id = `node-${Date.now()}-${idx}`
+                    const it = items[idx]
+                    created.push({ id, type: 'default', position: pos, data: { title: String(it.title || it.label || ''), content: String(it.content || '') } } as any)
+                    edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: attachParentId, target: id, type: toVisualEdgeType(edgeTypePref) as any } as any)
+                    idx++
+                  }
+                }
+              } else {
+                // No parent, place around viewport center in grid
+                const vp = reactFlowInstance.getViewport()
+                const center = getViewportCenter()
+                const spacingX = 260
+                const spacingY = 200
+                const columns = Math.min(itemsCount, 4)
+                const rows = Math.ceil(itemsCount / columns)
+                const startX = center.x - ((columns - 1) * spacingX) / 2
+                const startY = center.y - ((rows - 1) * spacingY) / 2
+                let idx = 0
+                for (let r = 0; r < rows; r++) {
+                  for (let c = 0; c < columns; c++) {
+                    if (idx >= itemsCount) break
+                    const pos = { x: startX + c * spacingX, y: startY + r * spacingY }
+                    const id = `node-${Date.now()}-${idx}`
+                    const it = items[idx]
+                    created.push({ id, type: 'default', position: pos, data: { title: String(it.title || it.label || ''), content: String(it.content || '') } } as any)
+                    idx++
+                  }
+                }
+              }
+              if (created.length > 0) {
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+                if (edgesToAdd.length > 0) setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
+                showAddToast('generated', created.length)
+              }
             }
           } catch {}
         }}
