@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react'
 import { useSupabaseUser } from '@/features/auth/authUtils'
 import { isAdmin, getUserRoleFromMetadata } from '@/features/auth/roles'
 import Select from '@/components/ui/Select'
+import Modal from '@/components/ui/Modal'
+import Button from '@/components/ui/Button'
 
 interface LiteUser {
   id: string
@@ -20,6 +22,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<Array<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string }>>([])
+  const [selectedFeedback, setSelectedFeedback] = useState<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -128,7 +131,11 @@ export default function AdminUsersPage() {
               </thead>
               <tbody>
                 {feedback.map((f) => (
-                  <tr key={f.id} className="border-t border-gray-800 align-top">
+                  <tr
+                    key={f.id}
+                    className="border-t border-gray-800 align-top cursor-pointer hover:bg-gray-800/60"
+                    onClick={() => setSelectedFeedback(f)}
+                  >
                     <td className="px-3 py-2 w-[28ch] max-w-[28ch]">
                       <div className="truncate" title={f.quick}>{f.quick}</div>
                       {f.details && (
@@ -157,6 +164,60 @@ export default function AdminUsersPage() {
           )}
         </div>
       </div>
+
+      {/* Feedback details modal */}
+      <Modal
+        open={!!selectedFeedback}
+        onClose={() => setSelectedFeedback(null)}
+        title="Feedback Details"
+        description="Full submission information"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setSelectedFeedback(null)}>Close</Button>
+          </>
+        }
+      >
+        {selectedFeedback && (
+          <div className="space-y-3 text-sm">
+            <div>
+              <div className="text-gray-400 text-xs uppercase tracking-wide">Quick</div>
+              <div className="mt-1 text-gray-100">{selectedFeedback.quick || '—'}</div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-xs uppercase tracking-wide">Details</div>
+              <div className="mt-1 whitespace-pre-wrap text-gray-200">{selectedFeedback.details || '—'}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-gray-400 text-xs uppercase tracking-wide">Idea</div>
+                <div className="mt-1">{selectedFeedback.idea ? 'Yes' : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-400 text-xs uppercase tracking-wide">Broken</div>
+                <div className="mt-1">{selectedFeedback.broken ? 'Yes' : '—'}</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-gray-400 text-xs uppercase tracking-wide">User Email</div>
+                <div className="mt-1 truncate" title={selectedFeedback.user_email || ''}>{selectedFeedback.user_email || '—'}</div>
+                <div className="text-gray-400 text-xs uppercase tracking-wide mt-3">User ID</div>
+                <div className="mt-1 break-all text-gray-300">{selectedFeedback.user_id || '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-400 text-xs uppercase tracking-wide">Board Name</div>
+                <div className="mt-1 truncate" title={selectedFeedback.board_name || ''}>{selectedFeedback.board_name || '—'}</div>
+                <div className="text-gray-400 text-xs uppercase tracking-wide mt-3">Board ID</div>
+                <div className="mt-1 break-all text-gray-300">{selectedFeedback.board_id || '—'}</div>
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-xs uppercase tracking-wide">Created</div>
+              <div className="mt-1">{selectedFeedback.created_at ? new Date(selectedFeedback.created_at).toLocaleString() : '—'}</div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
