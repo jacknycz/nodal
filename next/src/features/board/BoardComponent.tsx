@@ -1256,6 +1256,51 @@ function BoardContent({
     return () => document.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
+  // Ensure right-click on selection overlay opens our pane context menu (not pass-through)
+  useEffect(() => {
+    const isSelectionOverlay = (ev: Event) => {
+      const path: any[] = (ev as any).composedPath ? (ev as any).composedPath() : []
+      const testEl = (el: any) => {
+        try {
+          if (!el || !el.classList) return false
+          const cls = Array.from(el.classList)
+          return cls.some((c: string) => (
+            c === 'react-flow__selection' ||
+            c === 'react-flow__selection-rect' ||
+            c === 'xyflow__selection' ||
+            c === 'xyflow__selection-rect'
+          ))
+        } catch { return false }
+      }
+      if (path.length) return path.some(testEl)
+      const t = ev.target as any
+      if (typeof t?.closest === 'function') {
+        if (t.closest('.react-flow__selection') || t.closest('.react-flow__selection-rect') || t.closest('.xyflow__selection') || t.closest('.xyflow__selection-rect')) return true
+      }
+      return false
+    }
+
+    const onContextMenu = (e: MouseEvent) => {
+      if (!isSelectionOverlay(e)) return
+      e.preventDefault()
+      e.stopPropagation()
+      setPendingSourceNodeId(null)
+      setContextMenu({ isOpen: true, position: { x: e.clientX, y: e.clientY } })
+    }
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 2) return
+      if (!isSelectionOverlay(e)) return
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    document.addEventListener('contextmenu', onContextMenu, true)
+    document.addEventListener('mousedown', onMouseDown, true)
+    return () => {
+      document.removeEventListener('contextmenu', onContextMenu, true)
+      document.removeEventListener('mousedown', onMouseDown, true)
+    }
+  }, [])
+
   const handleNodeUpdate = useCallback(async (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
     // Update local nodes immediately
     setNodes((nds) => nds.map((node) => 

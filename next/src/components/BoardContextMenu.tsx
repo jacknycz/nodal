@@ -46,6 +46,7 @@ export default function BoardContextMenu({
   const menuRef = React.useRef<HTMLDivElement | null>(null)
   const edges = useBoardStore((s: any) => s.edges || [])
   const nodes = useBoardStore((s: any) => s.nodes || [])
+  const selectedIds = useBoardStore((s: any) => s.selectedNodeIds || [])
   const hasChildren = React.useMemo(() => {
     if (!nodeId) return false
     return (edges || []).some((e: any) => e?.source === nodeId)
@@ -59,6 +60,9 @@ export default function BoardContextMenu({
   }, [nodes, nodeId])
   const [colorgoryHover, setColorgoryHover] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
+  const multiSelected = React.useMemo(() => {
+    return Array.isArray(selectedIds) && selectedIds.length > 1 && !!nodeId && selectedIds.includes(nodeId)
+  }, [selectedIds, nodeId])
 
   // Reset delete modal whenever menu opens/closes or target node changes
   React.useEffect(() => {
@@ -123,16 +127,18 @@ export default function BoardContextMenu({
       >
         {nodeId ? (
           <>
-            <button onClick={() => handleAction(() => onEditNode && nodeId && onEditNode(nodeId))}
-              className="cursor-pointer w-full px-4 py-2 rounded-t-2xl 
-              text-left text-sm text-gray-700 dark:text-gray-300 
-              hover:bg-gray-100 dark:hover:bg-gray-700 
-              flex items-center gap-3">
-              <Pencil size={18} className="w-4 h-4" />
-              Edit Node
-            </button>
+            {!multiSelected && (
+              <button onClick={() => handleAction(() => onEditNode && nodeId && onEditNode(nodeId))}
+                className="cursor-pointer w-full px-4 py-2 rounded-t-2xl 
+                text-left text-sm text-gray-700 dark:text-gray-300 
+                hover:bg-gray-100 dark:hover:bg-gray-700 
+                flex items-center gap-3">
+                <Pencil size={18} className="w-4 h-4" />
+                Edit Node
+              </button>
+            )}
 
-            <div className="relative"
+            <div className={`relative ${multiSelected ? 'rounded-t-2xl' : ''}`}
               onMouseEnter={() => setColorgoryHover(true)}
               onMouseLeave={() => setColorgoryHover(false)}
             >
@@ -151,9 +157,22 @@ export default function BoardContextMenu({
                           key={c.id}
                           checked={checked}
                           onChange={(next) => {
-                            if (!onUpdateNode || !nodeId) return
-                            const nextIds = checked ? nodeColorgoryIds.filter(id => id !== c.id) : [...nodeColorgoryIds, c.id]
-                            onUpdateNode(nodeId, { colorgoryIds: nextIds })
+                            if (!onUpdateNode) return
+                            // Determine targets: if multi-selected and right-clicked node is among them, apply to all selected
+                            const targets: string[] = (selectedIds && selectedIds.length > 1 && nodeId && selectedIds.includes(nodeId))
+                              ? [...selectedIds]
+                              : (nodeId ? [nodeId] : [])
+                            if (targets.length === 0) return
+                            // Apply add/remove of this colorgory id to each target based on its current state
+                            for (const tid of targets) {
+                              const n = (nodes as any[]).find(nn => nn.id === tid)
+                              const cur: string[] = Array.isArray(n?.data?.colorgoryIds) ? [...(n!.data!.colorgoryIds as string[])] : []
+                              const has = cur.includes(c.id)
+                              let nextIds: string[] = cur
+                              if (next && !has) nextIds = [...cur, c.id]
+                              if (!next && has) nextIds = cur.filter(x => x !== c.id)
+                              onUpdateNode(tid, { colorgoryIds: nextIds })
+                            }
                           }}
                           label={c.name}
                           labelTextClassName="text-xs"
@@ -171,9 +190,9 @@ export default function BoardContextMenu({
               )}
             </div>
 
-            <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
 
-            {onAddConnectedNodes && (
+            {!multiSelected && onAddConnectedNodes && (
               <button onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <TreeStructure size={18} className="w-4 h-4" />
@@ -181,7 +200,7 @@ export default function BoardContextMenu({
               </button>
             )}
 
-            {onQuickAIGenerateNodes && (
+            {!multiSelected && onQuickAIGenerateNodes && (
               <button onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <PlusCircle size={18} className="w-4 h-4" />
@@ -189,7 +208,7 @@ export default function BoardContextMenu({
               </button>
             )}
 
-            {onPasteConnectedNode && (
+            {!multiSelected && onPasteConnectedNode && (
               <button onClick={() => handleAction(() => onPasteConnectedNode(nodeId, position))}
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <ClipboardText size={18} className="w-4 h-4" />
@@ -197,9 +216,9 @@ export default function BoardContextMenu({
               </button>
             )}
 
-            <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
 
-            {onOrganizeSubtree && hasChildren && (
+            {!multiSelected && onOrganizeSubtree && hasChildren && (
               <button onClick={() => handleAction(() => onOrganizeSubtree(nodeId))}
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <TreeView size={18} className="w-4 h-4" />
@@ -207,7 +226,7 @@ export default function BoardContextMenu({
               </button>
             )}
 
-            {onAddTaskNode && (
+            {!multiSelected && onAddTaskNode && (
               <button onClick={() => handleAction(onAddTaskNode)}
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <CheckSquare size={18} className="w-4 h-4" />
@@ -218,7 +237,7 @@ export default function BoardContextMenu({
             <button onClick={() => { console.log('[BoardContextMenu] Open delete modal for node', nodeId); setShowDelete(true) }}
               className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3">
               <Trash size={18} className="w-4 h-4" />
-              Delete Node
+              {multiSelected ? 'Delete Nodes' : 'Delete Node'}
             </button>
           </>
         ) : (
@@ -249,25 +268,24 @@ export default function BoardContextMenu({
       </div>
 
       <Modal
-        open={Boolean(showDelete && nodeId)}
+        open={Boolean(showDelete && (nodeId || (multiSelected && selectedIds.length > 1)))}
         onClose={() => setShowDelete(false)}
-        title="Delete Node"
-        description="Are you sure you want to delete this node? This action cannot be undone."
+        title={multiSelected ? `Delete ${selectedIds.length} nodes` : 'Delete Node'}
+        description={multiSelected ? 'Are you sure you want to delete the selected nodes? This action cannot be undone.' : 'Are you sure you want to delete this node? This action cannot be undone.'}
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowDelete(false)}>Cancel</Button>
             <Button variant="danger" onClick={() => {
-              console.log('[BoardContextMenu] Confirm delete for node', nodeId)
-              const id = nodeId
+              console.log('[BoardContextMenu] Confirm delete', multiSelected ? selectedIds : nodeId)
               setShowDelete(false)
               onClose()
-              if (id) {
+              const ids = multiSelected ? selectedIds : (nodeId ? [nodeId] : [])
+              ids.forEach((id) => {
+                if (!id) return
                 if (onDeleteNode) setTimeout(() => onDeleteNode(id), 0)
-                // Always dispatch a global event as a fallback
                 try { window.dispatchEvent(new CustomEvent('nodal:delete-node', { detail: { id } })) } catch {}
-                // And call global direct if present
                 try { const fn = (window as any).__deleteNodeFromBoard; if (typeof fn === 'function') setTimeout(() => fn(id), 0) } catch {}
-              }
+              })
             }}>Delete</Button>
           </>
         }

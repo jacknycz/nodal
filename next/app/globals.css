@@ -109,6 +109,16 @@ body {
   filter: drop-shadow(0 0 4px currentColor);
 }
 
+/* Disable pointer events on selection overlay so right-click reaches pane/nodes */
+.react-flow__selection,
+.react-flow__selection-rect,
+.react-flow__nodesselection-rect,
+.xyflow__selection,
+.xyflow__selection-rect {
+  pointer-events: none !important;
+}
+
+
 /* CSS Custom Properties for edge colors */
 :root {
   --edge-default-color: #73e3f7;
