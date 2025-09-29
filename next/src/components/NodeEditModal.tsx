@@ -47,9 +47,13 @@ export default function NodeEditModal({
         const same = sameLength && prev.every((v, i) => v === next[i])
         return same ? prev : next
       })
-      // Focus the title input after a brief delay to ensure modal is rendered
+      // Focus the content editor first after a brief delay to ensure modal is rendered
       setTimeout(() => {
-        titleInputRef.current?.focus()
+        if (editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
+          try { editorHandleRef.current.focus() } catch {}
+        } else {
+          titleInputRef.current?.focus()
+        }
       }, 100)
     }
   }, [open, initialTitle, initialContent, initialColorgoryIds])
