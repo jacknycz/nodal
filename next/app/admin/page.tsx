@@ -7,6 +7,7 @@ import Select from '@/components/ui/Select'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import Checkbox from '@/components/ui/Checkbox'
+import TipTapEditor from '@/components/TipTapEditor'
 import { CheckFat } from '@phosphor-icons/react/dist/ssr'
 
 interface LiteUser {
@@ -23,8 +24,9 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<LiteUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<Array<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string }>>([])
-  const [selectedFeedback, setSelectedFeedback] = useState<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string } | null>(null)
+  const [feedback, setFeedback] = useState<Array<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; notes?: string | null; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string }>>([])
+  const [selectedFeedback, setSelectedFeedback] = useState<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; notes?: string | null; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string } | null>(null)
+  const [notesDraft, setNotesDraft] = useState<string>('')
 
   useEffect(() => {
     const load = async () => {
@@ -127,6 +129,7 @@ export default function AdminUsersPage() {
                   <th className="px-3 py-2">Quick</th>
                   <th className="px-3 py-2">Idea</th>
                   <th className="px-3 py-2">Broken</th>
+                  <th className="px-3 py-2">Notes</th>
                   <th className="px-3 py-2">User</th>
                   <th className="px-3 py-2">Board</th>
                   <th className="px-3 py-2">Created</th>
@@ -137,7 +140,7 @@ export default function AdminUsersPage() {
                   <tr
                     key={f.id}
                     className="border-t border-gray-800 align-top cursor-pointer hover:bg-gray-800/60"
-                    onClick={() => setSelectedFeedback(f)}
+                    onClick={() => { setSelectedFeedback(f); setNotesDraft(f.notes || '') }}
                   >
                     <td className="px-3 py-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
@@ -171,6 +174,9 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">{f.idea ? 'Yes' : '—'}</td>
                     <td className="px-3 py-2 whitespace-nowrap">{f.broken ? 'Yes' : '—'}</td>
+                    <td className="px-3 py-2 w-[28ch] max-w-[28ch]">
+                      <div className="truncate text-gray-300" title={(f.notes || '').replace(/<[^>]+>/g, '')}>{(f.notes || '').replace(/<[^>]+>/g, '')}</div>
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col">
                         <span className="truncate max-w-[24ch]" title={f.user_email || ''}>{f.user_email || '—'}</span>
@@ -201,6 +207,27 @@ export default function AdminUsersPage() {
         actions={
           <>
             <Button variant="secondary" onClick={() => setSelectedFeedback(null)}>Close</Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                if (!selectedFeedback) return
+                const id = selectedFeedback.id
+                try {
+                  const res = await fetch('/api/admin/feedback', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, notes: notesDraft })
+                  })
+                  if (!res.ok) throw new Error('failed')
+                  setSelectedFeedback(prev => prev ? { ...prev, notes: notesDraft } : prev)
+                  setFeedback(prev => prev.map(x => x.id === id ? { ...x, notes: notesDraft } : x))
+                } catch {
+                  alert('Unable to save notes')
+                }
+              }}
+            >
+              Save Notes
+            </Button>
           </>
         }
       >
@@ -267,6 +294,16 @@ export default function AdminUsersPage() {
             <div>
               <div className="text-gray-400 text-xs uppercase tracking-wide">Created</div>
               <div className="mt-1">{selectedFeedback.created_at ? new Date(selectedFeedback.created_at).toLocaleString() : '—'}</div>
+            </div>
+
+            {/* Notes editor */}
+            <div>
+              <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Notes</div>
+              <TipTapEditor
+                content={notesDraft}
+                onChange={setNotesDraft}
+                placeholder="Add internal notes…"
+              />
             </div>
           </div>
         )}

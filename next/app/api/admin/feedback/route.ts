@@ -76,12 +76,18 @@ export async function PATCH(req: Request) {
     const admin = createClient(supabaseUrl, serviceKey)
 
     const body = await req.json()
-    const { id, done } = body || {}
-    if (!id || typeof done !== 'boolean') {
-      return NextResponse.json({ error: 'id and done(boolean) are required' }, { status: 400 })
+    const { id, done, notes } = body || {}
+    if (!id) {
+      return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    }
+    const update: any = {}
+    if (typeof done === 'boolean') update.done = done
+    if (typeof notes === 'string') update.notes = notes
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'nothing to update' }, { status: 400 })
     }
 
-    const { error } = await admin.from('feedback').update({ done }).eq('id', id)
+    const { error } = await admin.from('feedback').update(update).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json({ ok: true })
   } catch (e: any) {
