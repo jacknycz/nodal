@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useSupabaseUser } from '@/features/auth/authUtils'
 import { isAdmin, getUserRoleFromMetadata } from '@/features/auth/roles'
 import Select from '@/components/ui/Select'
@@ -27,6 +27,39 @@ export default function AdminUsersPage() {
   const [feedback, setFeedback] = useState<Array<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; notes?: string | null; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string }>>([])
   const [selectedFeedback, setSelectedFeedback] = useState<{ id: string; quick: string; details?: string | null; idea?: boolean; broken?: boolean; done?: boolean; notes?: string | null; user_id?: string | null; user_email?: string | null; board_id?: string | null; board_name?: string | null; created_at?: string } | null>(null)
   const [notesDraft, setNotesDraft] = useState<string>('')
+  const [sortKey, setSortKey] = useState<'done' | 'idea' | 'broken' | null>(null)
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  const sortedFeedback = useMemo(() => {
+    const rows = Array.isArray(feedback) ? [...feedback] : []
+    if (!sortKey) return rows
+    rows.sort((a, b) => {
+      const av = !!(a as any)[sortKey]
+      const bv = !!(b as any)[sortKey]
+      const aPrim = av ? 1 : 0
+      const bPrim = bv ? 1 : 0
+      let cmp = aPrim - bPrim
+      if (cmp === 0) {
+        // Tie-breaker: created_at descending by default (newest first)
+        const at = a.created_at ? new Date(a.created_at).getTime() : 0
+        const bt = b.created_at ? new Date(b.created_at).getTime() : 0
+        cmp = bt - at
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return rows
+  }, [feedback, sortKey, sortDir])
+
+  const toggleSort = (key: 'done' | 'idea' | 'broken') => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+        return prev
+      }
+      setSortDir('asc')
+      return key
+    })
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -125,10 +158,25 @@ export default function AdminUsersPage() {
             <table className="min-w-full text-xs sm:text-sm">
               <thead className="bg-gray-800 text-left">
                 <tr>
-                  <th className="px-3 py-2"><CheckFat size={16} weight="duotone" /></th>
+                  <th className="px-3 py-2 cursor-pointer select-none" onClick={() => toggleSort('done')} title="Sort by Done">
+                    <div className="flex items-center gap-1">
+                      <CheckFat size={16} weight="duotone" />
+                      {sortKey === 'done' && (<span className="text-[10px] text-gray-400">{sortDir === 'asc' ? '↑' : '↓'}</span>)}
+                    </div>
+                  </th>
                   <th className="px-3 py-2">Quick</th>
-                  <th className="px-3 py-2">Idea</th>
-                  <th className="px-3 py-2">Broken</th>
+                  <th className="px-3 py-2 cursor-pointer select-none" onClick={() => toggleSort('idea')} title="Sort by Idea">
+                    <div className="flex items-center gap-1">
+                      <span>Idea</span>
+                      {sortKey === 'idea' && (<span className="text-[10px] text-gray-400">{sortDir === 'asc' ? '↑' : '↓'}</span>)}
+                    </div>
+                  </th>
+                  <th className="px-3 py-2 cursor-pointer select-none" onClick={() => toggleSort('broken')} title="Sort by Broken">
+                    <div className="flex items-center gap-1">
+                      <span>Broken</span>
+                      {sortKey === 'broken' && (<span className="text-[10px] text-gray-400">{sortDir === 'asc' ? '↑' : '↓'}</span>)}
+                    </div>
+                  </th>
                   <th className="px-3 py-2">Notes</th>
                   <th className="px-3 py-2">User</th>
                   <th className="px-3 py-2">Board</th>
@@ -136,7 +184,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {feedback.map((f) => (
+                {sortedFeedback.map((f) => (
                   <tr
                     key={f.id}
                     className="border-t border-gray-800 align-top cursor-pointer hover:bg-gray-800/60"
