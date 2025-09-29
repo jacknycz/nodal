@@ -1197,10 +1197,43 @@ function BoardContent({
   
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId))
-    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId))
+    console.log('[BoardComponent] handleNodeDelete called for', nodeId)
+    setNodes((nds) => (Array.isArray(nds) ? nds.filter((node) => node.id !== nodeId) : nds))
+    setEdges((eds) => (Array.isArray(eds) ? eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId) : eds))
+    try {
+      const store = useBoardStore.getState()
+      const selected = store.selectedNodeIds || []
+      if (selected.includes(nodeId)) {
+        store.setSelectedNodes(selected.filter((id: string) => id !== nodeId))
+      }
+    } catch {}
+    setTimeout(() => {
+      const store = useBoardStore.getState()
+      console.log('[BoardComponent] post-delete nodes', (store.nodes || []).length, 'edges', (store.edges || []).length)
+    }, 0)
     if (onDeleteNode) onDeleteNode(nodeId)
   }, [onDeleteNode, setNodes, setEdges])
+
+  // Fallback: respond to global delete events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{ id: string }>
+      const id = ce?.detail?.id
+      if (typeof id === 'string' && id) {
+        handleNodeDelete(id)
+      }
+    }
+    window.addEventListener('nodal:delete-node', handler as EventListener)
+    return () => window.removeEventListener('nodal:delete-node', handler as EventListener)
+  }, [handleNodeDelete])
+
+  // Expose a global delete function so external UI (context menu) can always delete reliably
+  useEffect(() => {
+    (window as any).__deleteNodeFromBoard = (id: string) => {
+      if (typeof id === 'string' && id) handleNodeDelete(id)
+    }
+    return () => { try { delete (window as any).__deleteNodeFromBoard } catch {} }
+  }, [handleNodeDelete])
 
   const handleNodeUpdate = useCallback(async (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
     // Update local nodes immediately
@@ -1519,16 +1552,20 @@ function BoardContent({
         onClose={() => setContextMenu({ isOpen: false, position: null })}
         nodeId={pendingSourceNodeId}
         onEditNode={(nodeId: string) => {
+          console.log('[BoardComponent] Open edit modal for', nodeId)
           setEditNodeId(nodeId)
         }}
         onUpdateNode={(nodeId: string, updates: Record<string, any>) => {
           handleNodeUpdate(nodeId, updates)
         }}
         onDeleteNode={(nodeId: string) => {
+          console.log('[BoardComponent] onDeleteNode prop called for', nodeId)
           handleNodeDelete(nodeId)
           setContextMenu({ isOpen: false, position: null })
+          setPendingSourceNodeId(null)
         }}
         onAddConnectedNodes={(nodeId: string, screenPos: { x: number; y: number }) => {
+          console.log('[BoardComponent] Context: Add Node(s) for', nodeId, 'at', screenPos)
           try {
             const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
             setPendingNodePosition(flowPosition)
@@ -1755,7 +1792,7 @@ function BoardContent({
           } catch {}
         }}
       />
-      {/* Node edit modal for default and link nodes */}
+      {/* Node edit modal for default, link, and image nodes */}
       {editNodeId && (() => {
         const n = nodes.find(nn => nn.id === editNodeId)
         if (!n) return null
@@ -1787,6 +1824,23 @@ function BoardContent({
               initialTitleSize={'sm'}
               onSave={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
+              }}
+            />
+          )
+        }
+        if (n.type === 'image') {
+          const initialTitle = d.title || d.fileName || 'Image'
+          const initialContent = d.content || ''
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={() => setEditNodeId(null)}
+              initialTitle={initialTitle}
+              initialContent={initialContent}
+              initialColorgoryIds={d.colorgoryIds || []}
+              initialTitleSize={'sm'}
+              onSave={(title, content, colorgoryIds) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
               }}
             />
           )

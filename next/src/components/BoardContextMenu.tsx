@@ -60,10 +60,20 @@ export default function BoardContextMenu({
   const [colorgoryHover, setColorgoryHover] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
 
+  // Reset delete modal whenever menu opens/closes or target node changes
+  React.useEffect(() => {
+    if (!isOpen) setShowDelete(false)
+  }, [isOpen])
+  React.useEffect(() => {
+    setShowDelete(false)
+  }, [nodeId])
+
   React.useEffect(() => {
     if (!isOpen) return
 
     const handleMouseDown = (e: MouseEvent) => {
+      // If delete modal is open, don't auto-close the menu on outside clicks
+      if (showDelete) return
       if (!menuRef.current) return
       if (!menuRef.current.contains(e.target as Node)) {
         onClose()
@@ -71,6 +81,7 @@ export default function BoardContextMenu({
     }
 
     const handleContextMenu = (e: MouseEvent) => {
+      if (showDelete) return
       if (!menuRef.current) return
       if (!menuRef.current.contains(e.target as Node)) {
         onClose()
@@ -78,6 +89,7 @@ export default function BoardContextMenu({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showDelete) return
       if (e.key === 'Escape') {
         onClose()
       }
@@ -92,7 +104,7 @@ export default function BoardContextMenu({
       document.removeEventListener('contextmenu', handleContextMenu, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, showDelete])
 
   if (!isOpen || !position) return null
 
@@ -203,7 +215,7 @@ export default function BoardContextMenu({
               </button>
             )}
 
-            <button onClick={() => { setShowDelete(true) }}
+            <button onClick={() => { console.log('[BoardContextMenu] Open delete modal for node', nodeId); setShowDelete(true) }}
               className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3">
               <Trash size={18} className="w-4 h-4" />
               Delete Node
@@ -244,7 +256,19 @@ export default function BoardContextMenu({
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowDelete(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => { setShowDelete(false); if (nodeId && onDeleteNode) onDeleteNode(nodeId) }}>Delete</Button>
+            <Button variant="danger" onClick={() => {
+              console.log('[BoardContextMenu] Confirm delete for node', nodeId)
+              const id = nodeId
+              setShowDelete(false)
+              onClose()
+              if (id) {
+                if (onDeleteNode) setTimeout(() => onDeleteNode(id), 0)
+                // Always dispatch a global event as a fallback
+                try { window.dispatchEvent(new CustomEvent('nodal:delete-node', { detail: { id } })) } catch {}
+                // And call global direct if present
+                try { const fn = (window as any).__deleteNodeFromBoard; if (typeof fn === 'function') setTimeout(() => fn(id), 0) } catch {}
+              }
+            }}>Delete</Button>
           </>
         }
       />
