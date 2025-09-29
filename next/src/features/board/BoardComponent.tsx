@@ -1235,6 +1235,27 @@ function BoardContent({
     return () => { try { delete (window as any).__deleteNodeFromBoard } catch {} }
   }, [handleNodeDelete])
 
+  // Intercept Delete key to confirm before deleting
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete') return
+      // Ignore when editing inputs/editors
+      const active = document.activeElement as HTMLElement | null
+      if (active) {
+        const tag = active.tagName
+        if (active.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA') return
+      }
+      const selectedIds: string[] = useBoardStore.getState().selectedNodeIds || []
+      if (selectedIds.length > 0) {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowKeyboardDeleteModal(true)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [])
+
   const handleNodeUpdate = useCallback(async (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
     // Update local nodes immediately
     setNodes((nds) => nds.map((node) => 
@@ -1344,6 +1365,7 @@ function BoardContent({
   const [awaitingNodePlacement, setAwaitingNodePlacement] = useState(false)
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
+  const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
 
   const handleOpenAINodeGenerator = useCallback(() => {
     // Prefer explicit pendingSourceNodeId from context menu; fallback to current selection
@@ -1454,7 +1476,7 @@ function BoardContent({
         className={`${theme === 'dark' ? 'dark' : ''}`}
         style={{ background: 'transparent' }} // Make ReactFlow background transparent
         multiSelectionKeyCode="Meta"
-        deleteKeyCode="Delete"
+        // Disable built-in Delete behavior; we show a confirm modal instead
       >
         {renderRemoteCursors()}
         {/* Remove the Background component - BokehBackground will handle the background */}
@@ -1791,6 +1813,35 @@ function BoardContent({
                 setEdges((eds) => (Array.isArray(eds) ? [...eds, { id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }] : [{ id: `edge-${Date.now()}`, source: sourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }]))
           } catch {}
         }}
+      />
+      {/* Confirm delete modal for keyboard Delete */}
+      <Modal
+        open={showKeyboardDeleteModal}
+        onClose={() => setShowKeyboardDeleteModal(false)}
+        title={(() => {
+          const ids: string[] = useBoardStore.getState().selectedNodeIds || []
+          return ids.length > 1 ? `Delete ${ids.length} nodes` : 'Delete Node'
+        })()}
+        description="Are you sure you want to delete the selected node(s)? This action cannot be undone."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowKeyboardDeleteModal(false)}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                const ids: string[] = useBoardStore.getState().selectedNodeIds || []
+                setShowKeyboardDeleteModal(false)
+                if (ids.length === 0) return
+                // Delete each selected node
+                setNodes((nds) => (Array.isArray(nds) ? nds.filter(n => !ids.includes(n.id)) : nds))
+                setEdges((eds) => (Array.isArray(eds) ? eds.filter(e => !ids.includes(e.source) && !ids.includes(e.target)) : eds))
+                try { useBoardStore.getState().clearSelectedNodes() } catch {}
+              }}
+            >
+              Delete
+            </Button>
+          </>
+        }
       />
       {/* Node edit modal for default, link, and image nodes */}
       {editNodeId && (() => {
