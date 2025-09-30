@@ -199,11 +199,20 @@ export default function AddNodesModal({
           const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id, target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id, type: (c.edge as any).type || 'floating' }))
           setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
         }
-        // Pan to the centroid of created nodes
+        // Pan to the centroid of created nodes and pulse highlight
         try {
           const cx = newNodes.reduce((s, n) => s + n.position.x, 0) / newNodes.length
           const cy = newNodes.reduce((s, n) => s + n.position.y, 0) / newNodes.length
           rf.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+          const firstId = newNodes[0]?.id
+          if (firstId) {
+            setTimeout(() => {
+              const nodeOuter = document.querySelector(`.react-flow__node[data-id="${firstId}"]`) as HTMLElement | null
+              const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+              const el = nodeInner || nodeOuter
+              if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+            }, 50)
+          }
         } catch {}
         onClose()
       }
@@ -238,6 +247,15 @@ export default function AddNodesModal({
         const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
         setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
       }
+      try {
+        rf.setCenter(baseX, baseY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+        setTimeout(() => {
+          const nodeOuter = document.querySelector(`.react-flow__node[data-id="${newId}"]`) as HTMLElement | null
+          const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+          const el = nodeInner || nodeOuter
+          if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+        }, 50)
+      } catch {}
       onClose()
       return
     }
@@ -258,6 +276,15 @@ export default function AddNodesModal({
           const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
           setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
         }
+        try {
+          rf.setCenter(baseX, baseY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+          setTimeout(() => {
+            const nodeOuter = document.querySelector(`.react-flow__node[data-id="${newId}"]`) as HTMLElement | null
+            const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+            const el = nodeInner || nodeOuter
+            if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+          }, 50)
+        } catch {}
         onClose()
         return
       } catch {}
@@ -275,6 +302,15 @@ export default function AddNodesModal({
       const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
       setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
     }
+    try {
+      rf.setCenter(baseX, baseY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+      setTimeout(() => {
+        const nodeOuter = document.querySelector(`.react-flow__node[data-id="${newId}"]`) as HTMLElement | null
+        const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+        const el = nodeInner || nodeOuter
+        if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+      }, 50)
+    } catch {}
     onClose()
   }
 
@@ -333,7 +369,15 @@ export default function AddNodesModal({
                   const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
                   setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
                 }
-                try { rf.setCenter(baseX, baseY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 }) } catch {}
+                try {
+                  rf.setCenter(baseX, baseY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+                  setTimeout(() => {
+                    const nodeOuter = document.querySelector(`.react-flow__node[data-id="${newId}"]`) as HTMLElement | null
+                    const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+                    const el = nodeInner || nodeOuter
+                    if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+                  }, 50)
+                } catch {}
                 onClose()
                 return
               } catch { }

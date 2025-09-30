@@ -2249,10 +2249,11 @@ function BoardContent({
               } catch {}
             } else if (titles.length === 1) {
               const target = pendingNodePosition || center
-              const newNode: Node = { id: `node-${Date.now()}`, type: 'default', position: target, data: { title: titles[0], content: desc } }
+              const newId = `node-${Date.now()}`
+              const newNode: Node = { id: newId, type: 'default', position: target, data: { title: titles[0], content: desc } }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
               showAddToast('added', 1)
-              centerOnPositions([{ x: target.x, y: target.y }])
+              centerOnNodeIds([newId])
             } else {
               if (pendingNodePosition) {
                 const count = titles.length
@@ -2344,7 +2345,7 @@ function BoardContent({
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
             showAddToast('added', 1)
-            centerOnPositions([{ x: center.x, y: center.y }])
+            centerOnNodeIds([newNode.id])
           }}
           onLinkSubmit={(url) => {
             const center = pendingNodePosition || getViewportCenter()
@@ -2357,7 +2358,7 @@ function BoardContent({
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
             showAddToast('added', 1)
-            centerOnPositions([{ x: center.x, y: center.y }])
+            centerOnNodeIds([newNode.id])
           }}
           onUploadSubmit={(file) => {
             const center = pendingNodePosition || getViewportCenter()

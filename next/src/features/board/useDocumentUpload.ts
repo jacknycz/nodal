@@ -56,6 +56,15 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       }
       addNodeToStore(optimisticNode)
       console.log('[Upload] node added to store (optimistic)', { nodeId, type: optimisticNode.type })
+      // Pulse highlight the newly added node
+      try {
+        setTimeout(() => {
+          const nodeOuter = document.querySelector(`.react-flow__node[data-id="${nodeId}"]`) as HTMLElement | null
+          const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+          const el = nodeInner || nodeOuter
+          if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+        }, 50)
+      } catch {}
 
       // Persist file
       const documentId = await boardStorage.saveDocument(file.name, file, '', localBoardIdRef.current || 'temp', nodeId)
