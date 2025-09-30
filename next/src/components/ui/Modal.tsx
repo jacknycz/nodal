@@ -15,6 +15,13 @@ interface ModalProps {
   onStepChange?: (step: number) => void
   // Control whether the body should scroll when content overflows
   scrollBody?: boolean
+  // Optional custom classes for the backdrop color (supports light/dark)
+  // Example: 'bg-white/60 dark:bg-black/60'
+  backdropClassName?: string
+  // If false, allow pointer interactions to pass through backdrop (board stays interactive)
+  backdropInteractive?: boolean
+  // If false, clicking the backdrop will not close the modal
+  closeOnBackdropClick?: boolean
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -29,6 +36,9 @@ const Modal: React.FC<ModalProps> = ({
   totalSteps,
   onStepChange,
   scrollBody = true,
+  backdropClassName,
+  backdropInteractive = true,
+  closeOnBackdropClick = true,
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
@@ -67,13 +77,14 @@ const Modal: React.FC<ModalProps> = ({
   if (typeof window === 'undefined') return null;
 
   return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[900] flex items-center justify-center">
+    <div className={`fixed inset-0 z-[900] flex items-center justify-center md:justify-start ${backdropInteractive ? '' : 'pointer-events-none'}`}>
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black backdrop-blur-sm transition-all duration-200 ease-out ${
+        className={`absolute inset-0 ${backdropClassName || 'bg-black'} transition-all duration-200 ease-out ${
           isVisible ? 'bg-opacity-40' : 'bg-opacity-0'
-        }`}
+        } ${backdropInteractive ? 'pointer-events-auto' : 'pointer-events-none'}`}
         onClick={(e) => {
+          if (!backdropInteractive || !closeOnBackdropClick) return
           e.stopPropagation()
           e.preventDefault()
           // Guard against immediate close when opened via click/tap
@@ -84,7 +95,8 @@ const Modal: React.FC<ModalProps> = ({
       />
       {/* Modal content */}
       <div
-        className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] overflow-hidden ${
+        className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl pointer-events-auto 
+          max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] overflow-hidden ${
           isVisible 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-95 -translate-y-1'
