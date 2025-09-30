@@ -1710,7 +1710,7 @@ function BoardContent({
             id: newId,
             type: 'task',
             position: flowPosition,
-            data: { title: 'New Task', completed: false, focusOnMount: true },
+            data: { title: '', completed: false, focusOnMount: true },
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)
