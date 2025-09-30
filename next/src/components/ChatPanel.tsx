@@ -183,7 +183,8 @@ export default function ChatPanel2() {
           }`}
         title="Open Chat"
       >
-        <Chat className="w-5 h-5" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/nobot.svg" alt="Open Chat" className="w-5 h-5" />
       </button>
 
       {/* Panel */}

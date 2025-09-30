@@ -101,6 +101,14 @@ export default function BoardPage() {
     window.location.href = '/';
   };
 
+  // Listen for editor-mode to hide Topbar
+  const [editorMode, setEditorMode] = useState(false)
+  useEffect(() => {
+    const handler = (e: any) => setEditorMode(!!e?.detail?.open)
+    window.addEventListener('nodal:editor-mode', handler as EventListener)
+    return () => window.removeEventListener('nodal:editor-mode', handler as EventListener)
+  }, [])
+
   return (
     <ThemeProvider>
       <AIProvider>
@@ -117,13 +125,16 @@ export default function BoardPage() {
           </div>
         ) : (
           <div className="h-screen">
-            <Topbar
+            {/* Hide topbar in editor mode */}
+            <div className={editorMode ? 'hidden' : ''}>
+              <Topbar
               currentBoardName={board?.name}
               saveStatus={saveStatus}
               hasUnsavedChanges={hasUnsavedChanges}
               isBoardView={true}
               onOpenBoardRoom={handleOpenBoardRoom}
-            />
+              />
+            </div>
             <BoardComponent 
               initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
               onBoardStateChange={handleBoardStateChange}

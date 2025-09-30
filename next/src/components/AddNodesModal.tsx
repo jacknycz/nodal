@@ -48,7 +48,7 @@ export default function AddNodesModal({
   onUploadSubmit,
   hideVideoTab,
 }: AddNodesModalProps) {
-  const [tab, setTab] = React.useState<'basic' | 'ai' | 'images' | 'videos' | 'docs' | 'link'>('basic')
+  const [tab, setTab] = React.useState<'basic' | 'ai' | 'images' | 'videos' | 'docs' | 'link' | 'url' | 'upload'>('basic')
 
   // Manual state
   const [titleInput, setTitleInput] = React.useState('')
@@ -66,6 +66,7 @@ export default function AddNodesModal({
   const topic = useBoardStore((s) => s.topic || '')
   const [videoUrl, setVideoUrl] = React.useState('')
   const [imageUrl, setImageUrl] = React.useState('')
+  const [unifiedUrl, setUnifiedUrl] = React.useState('')
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [selectedFiles, setSelectedFiles] = React.useState<File[]>([])
   const [isDragOver, setIsDragOver] = React.useState(false)
@@ -76,6 +77,16 @@ export default function AddNodesModal({
   const { isPro, isAdmin } = useUserRole()
   const canUploadVideo = isPro || isAdmin
   const [isVideoDragOver, setIsVideoDragOver] = React.useState(false)
+
+  // Responsive: use compact tabs on small screens
+  const [isSmall, setIsSmall] = React.useState<boolean>(false)
+  React.useEffect(() => {
+    const mq = typeof window !== 'undefined' ? window.matchMedia('(max-width: 767px)') : null
+    const update = () => setIsSmall(!!mq?.matches)
+    update()
+    try { mq?.addEventListener('change', update) } catch { mq?.addListener(update as any) }
+    return () => { try { mq?.removeEventListener('change', update) } catch { mq?.removeListener(update as any) } }
+  }, [])
 
   React.useEffect(() => {
     if (open) {
@@ -96,6 +107,7 @@ export default function AddNodesModal({
         'Generate starter nodes for this board:',
       ].filter(Boolean).join('\n\n') : '')
       setGenerated([])
+      setUnifiedUrl('')
       requestAnimationFrame(() => titleRef.current?.focus())
     }
   }, [open, initialAIContext])
@@ -193,6 +205,72 @@ export default function AddNodesModal({
     }
   }
 
+  const isVideoProviderUrl = (url: string) => {
+    try {
+      const u = new URL(url)
+      const h = u.hostname.toLowerCase()
+      return h.includes('youtube.com') || h.includes('youtu.be') || h.includes('vimeo.com') || h.includes('dailymotion.com') || h.includes('dai.ly') || h.includes('loom.com')
+    } catch { return false }
+  }
+
+  const isImageUrl = (url: string) => /\.(png|jpe?g|gif|webp|svg)(\?|#|$)/i.test(url)
+
+  const handleCreateFromUrl = async () => {
+    const url = unifiedUrl.trim()
+    if (!url) return
+    // Prefer board parent if provided
+    const parent = parentNodeId ? (nodes as any[]).find(n => n.id === parentNodeId) : null
+    const baseX = parent?.position?.x ?? 400
+    const baseY = (parent?.position?.y ?? 300) + 360
+    if (isVideoProviderUrl(url)) {
+      // Create Video node – VideoNode will fetch oEmbed
+      const newId = `video-${Date.now()}`
+      const newNode: Node = { id: newId, type: 'video' as any, position: { x: baseX, y: baseY }, data: { title: 'Video', videoUrl: url, status: 'idle' } as any }
+      setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+      if (parentNodeId) {
+        const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
+        setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+      }
+      onClose()
+      return
+    }
+    if (isImageUrl(url)) {
+      // Create Image node with link preview meta when possible
+      try {
+        let meta: any = {}
+        try {
+          const res = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+          if (res.ok) meta = await res.json()
+        } catch {}
+        const title = (meta?.title as string) || 'Image'
+        const description = (meta?.description as string) || ''
+        const newId = `image-${Date.now()}`
+        const newNode: Node = { id: newId, type: 'image' as any, position: { x: baseX, y: baseY }, data: { title, content: description, previewUrl: url, type: 'image', status: 'ready' } as any }
+        setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+        if (parentNodeId) {
+          const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
+          setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+        }
+        onClose()
+        return
+      } catch {}
+    }
+    // Default: Link node
+    if (onLinkSubmit) {
+      onLinkSubmit(url)
+      onClose()
+      return
+    }
+    const newId = `link-${Date.now()}`
+    const newNode: Node = { id: newId, type: 'link' as any, position: { x: baseX, y: baseY }, data: { url, title: url, description: '' } as any }
+    setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+    if (parentNodeId) {
+      const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
+      setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+    }
+    onClose()
+  }
+
   return (
     <Modal
       open={open}
@@ -200,6 +278,10 @@ export default function AddNodesModal({
       // title="Add Node(s)"
       // description={tab === 'manual' ? 'Manually add one or more nodes.' : 'Describe and generate nodes with AI.'}
       className="max-w-xl"
+      alignLeftLg
+      backdropClassName="bg-black lg:bg-primary-500/5"
+      backdropInteractive={false}
+      closeOnBackdropClick={false}
       actions={tab === 'basic' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
@@ -212,14 +294,14 @@ export default function AddNodesModal({
             <Button onClick={handleCreateSelected} disabled={generated.filter(g => g.selected).length === 0}>Create</Button>
           </>
         ) : undefined
-      ) : (tab === 'images' || tab === 'videos' || tab === 'docs') ? (
+      ) : (tab === 'images' || tab === 'videos' || tab === 'docs' || tab === 'upload') ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={async () => {
             if (tab === 'videos' && videoUrl.trim() && onVideoSubmit) {
               onVideoSubmit(videoUrl.trim()); return
             }
-            if (tab === 'images' && imageUrl.trim()) {
+            if ((tab === 'images') && imageUrl.trim()) {
               try {
                 const url = imageUrl.trim()
                 let meta: any = {}
@@ -250,7 +332,7 @@ export default function AddNodesModal({
             }
             if (tab === 'videos') {
               if (onUploadSubmit && selectedFile) onUploadSubmit(selectedFile)
-            } else if (onUploadSubmit && selectedFiles.length > 0) {
+            } else if ((tab === 'docs' || tab === 'upload') && onUploadSubmit && selectedFiles.length > 0) {
               selectedFiles.forEach(f => onUploadSubmit(f))
             }
           }} disabled={!((tab === 'videos' ? (selectedFile || videoUrl.trim()) : (selectedFiles.length > 0 || (tab === 'images' && imageUrl.trim()))))}>Create</Button>
@@ -260,6 +342,11 @@ export default function AddNodesModal({
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button onClick={() => { if (onLinkSubmit && linkUrl.trim()) onLinkSubmit(linkUrl.trim()) }} disabled={!linkUrl.trim()}>Create</Button>
         </>
+      ) : tab === 'url' ? (
+        <>
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleCreateFromUrl} disabled={!unifiedUrl.trim()}>Create</Button>
+        </>
       ) : undefined}
     >
       {parentNodeTitle && (
@@ -268,7 +355,7 @@ export default function AddNodesModal({
           <Tag variant="primary">{parentNodeTitle}</Tag>
         </div>
       )}
-      <div className={`grid grid-cols-6 gap-3 mb-3`}>
+      <div className={`grid ${isSmall ? 'grid-cols-4' : 'grid-cols-6'} gap-3 mb-3`}>
         <button
           className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'basic' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
           onClick={() => setTab('basic')}
@@ -285,40 +372,55 @@ export default function AddNodesModal({
           <Robot size={32} weight="duotone" />
           AI
         </button>
-
-        <button
-          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'images' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('images')}
-        >
-          <ImageSquare size={32} weight="duotone" />
-          Images
-        </button>
-
-        <button
-          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'videos' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('videos')}
-        >
-          <Video size={32} weight="duotone" />
-          Videos
-        </button>
-
-        <button
-          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'docs' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('docs')}
-        >
-          <Files size={32} weight="duotone" />
-          Docs
-        </button>
-
-        <button
-          className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'link' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
-          onClick={() => setTab('link')}
-        >
-          <LinkSimple size={32} weight="duotone" />
-          Links
-        </button>
-
-
+        {isSmall ? (
+          <>
+            <button
+              className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'url' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+              onClick={() => setTab('url')}
+            >
+              <LinkSimple size={32} weight="duotone" />
+              URL
+            </button>
+            <button
+              className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'upload' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+              onClick={() => setTab('upload')}
+            >
+              <Upload size={32} weight="duotone" />
+              Upload
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'images' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+              onClick={() => setTab('images')}
+            >
+              <ImageSquare size={32} weight="duotone" />
+              Images
+            </button>
+            <button
+              className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'videos' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+              onClick={() => setTab('videos')}
+            >
+              <Video size={32} weight="duotone" />
+              Videos
+            </button>
+            <button
+              className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'docs' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+              onClick={() => setTab('docs')}
+            >
+              <Files size={32} weight="duotone" />
+              Docs
+            </button>
+            <button
+              className={`w-full px-1 py-3 cursor-pointer rounded-md text-sm flex flex-col items-center justify-center gap-2 ${tab === 'link' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100'}`}
+              onClick={() => setTab('link')}
+            >
+              <LinkSimple size={32} weight="duotone" />
+              Links
+            </button>
+          </>
+        )}
       </div>
 
       {tab === 'basic' && (
@@ -423,7 +525,7 @@ export default function AddNodesModal({
           )}
         </div>
       )}
-      {tab === 'videos' && (
+      {!isSmall && tab === 'videos' && (
         <div className="space-y-4 py-2">
           <TextInput
             label="Video URL"
@@ -479,7 +581,7 @@ export default function AddNodesModal({
           </div>
         </div>
       )}
-      {tab === 'link' && (
+      {!isSmall && tab === 'link' && (
         <div className="space-y-4 py-2">
           <TextInput
             label="Link URL"
@@ -491,7 +593,7 @@ export default function AddNodesModal({
           <div className="text-xs text-gray-500 dark:text-gray-400">We'll fetch the title, image, and description if available.</div>
         </div>
       )}
-      {(tab === 'images' || tab === 'docs') && (
+      {(!isSmall && (tab === 'images' || tab === 'docs')) && (
         <div className="space-y-4 py-2">
           {tab === 'images' && (
             <TextInput
@@ -544,6 +646,79 @@ export default function AddNodesModal({
             )}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">We’ll create a {tab === 'images' ? 'Image' : 'Document'} node based on the file.</div>
+        </div>
+      )}
+      {/* Mobile-only: URL tab */}
+      {isSmall && tab === 'url' && (
+        <div className="space-y-4 py-2">
+          <TextInput
+            label="URL"
+            value={unifiedUrl}
+            onChange={(e) => setUnifiedUrl((e.target as HTMLInputElement).value)}
+            placeholder="Paste a link to a page, image, or video"
+            fullWidth
+          />
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            We'll create a Link, Image, or Video node automatically based on the URL.
+          </div>
+        </div>
+      )}
+      {/* Mobile-only: Upload tab */}
+      {isSmall && tab === 'upload' && (
+        <div className="space-y-4 py-2">
+          <div
+            className={`border-2 border-dashed rounded-md p-6 text-center ${isDragOver ? 'border-primary-500 bg-primary-50/40 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700'}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+            onDragLeave={() => setIsDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragOver(false);
+              const list = e.dataTransfer.files
+              if (!list || list.length === 0) return
+              const files = Array.from(list)
+              const filtered = files.filter(f => {
+                const isVid = f.type.startsWith('video/') || /\.mp4$/i.test(f.name)
+                if (isVid && !canUploadVideo) return false
+                return true
+              })
+              if (filtered.length === 0) return
+              setSelectedFiles(prev => [...prev, ...filtered])
+            }}
+          >
+            <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop files here</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Images, documents, and MP4 videos</div>
+            <div className="mt-3">
+              <label className="inline-block px-3 py-1.5 rounded-md border bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer">
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  onChange={(e) => {
+                    const list = (e.target as HTMLInputElement).files
+                    if (!list) { setSelectedFiles([]); return }
+                    const files = Array.from(list)
+                    const filtered = files.filter(f => {
+                      const isVid = f.type.startsWith('video/') || /\.mp4$/i.test(f.name)
+                      if (isVid && !canUploadVideo) return false
+                      return true
+                    })
+                    if (filtered.length === 0) { (e.target as HTMLInputElement).value = ''; return }
+                    setSelectedFiles(prev => [...prev, ...filtered])
+                      ; (e.target as HTMLInputElement).value = ''
+                  }}
+                  accept={'image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/json,video/mp4'}
+                />
+                <span className="text-sm">Choose files</span>
+              </label>
+            </div>
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''}</div>
+            )}
+            {!canUploadVideo && (
+              <div className="mt-2"><Tag variant="beta">Pro Feature</Tag></div>
+            )}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">We'll create nodes for each file (Image, Video, or Document).</div>
         </div>
       )}
     </Modal>

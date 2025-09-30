@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView } from '@phosphor-icons/react'
+import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown } from '@phosphor-icons/react'
 // Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
@@ -33,6 +33,7 @@ interface ImageNodeData {
   content?: string
   variant800Url?: string
   variant1920Url?: string
+  hasVariants?: boolean
 }
 
 interface ImageNodeProps {
@@ -61,6 +62,7 @@ export default function ImageNode({
   const [isLoaded, setIsLoaded] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
+  const [detailsOpen, setDetailsOpen] = useState(false)
   
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -79,10 +81,11 @@ export default function ImageNode({
     if (refreshAttemptsRef.current >= 2) return
     try {
       const isSvg = (data.fileType === 'image/svg+xml') || /\.svg$/i.test(data.fileName || '')
+      const shouldTryVariants = !isSvg && !!(data as any).hasVariants
       const [url, v800, v1920] = await Promise.all([
         supabaseStorage.getSignedUrl(data.documentId),
-        isSvg ? Promise.resolve(null) : supabaseStorage.getSignedUrlForVariant(data.documentId, '800'),
-        isSvg ? Promise.resolve(null) : supabaseStorage.getSignedUrlForVariant(data.documentId, '1920')
+        shouldTryVariants ? supabaseStorage.getSignedUrlForVariant(data.documentId, '800') : Promise.resolve(null),
+        shouldTryVariants ? supabaseStorage.getSignedUrlForVariant(data.documentId, '1920') : Promise.resolve(null)
       ])
       refreshAttemptsRef.current += 1
       setSignedPreviewUrl(url)
@@ -389,34 +392,54 @@ export default function ImageNode({
           </div>
         </div>
 
-        {/* Filename, focus, and status - hidden when expanded */}
+        {/* Filename and accordion toggle - hidden when expanded */}
         {!expanded && (
           <>
-            <div className="mt-2 flex items-center gap-2 cursor-move">
-              <div className="flex-1 min-w-0">
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 min-w-0 cursor-move">
                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {data.fileName || data.title || 'Image'}
                 </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
-                </div>
               </div>
+              <button
+                type="button"
+                aria-label={detailsOpen ? 'Hide details' : 'Show details'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDetailsOpen((v) => !v)
+                }}
+                className="ml-2 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              >
+                <CaretCircleDown
+                  size={24}
+                  weight="duotone"
+                  className={`transition-transform duration-300 ${detailsOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
             </div>
 
-            {data.content && (
-              <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                {data.content.length > 200 ? `${data.content.slice(0, 200)}…` : data.content}
+            {/* Accordion content */}
+            <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
+              <div className="mt-2">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
+                </div>
+                {data.content && (
+                  <div
+                    className="mt-2 tiptap-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: data.content }}
+                  />
+                )}
+                {data.status && (
+                  <div className={`mt-2 flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
+                    {getStatusIcon()}
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
-
-            {data.status && (
-              <div className={`mt-2 flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
-                {getStatusIcon()}
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
-                </span>
-              </div>
-            )}
+            </div>
           </>
         )}
       </div>

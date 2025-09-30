@@ -95,10 +95,12 @@ export default function NodeEditModal({
       title="Edit Node"
       description="Update the node's title and content with rich text formatting."
       className="w-full lg:max-w-[40%]! max-w-7xl! h-[85vh]!"
-      backdropClassName="hidden! bg-black/20"
+      backdropClassName="bg-black lg:bg-primary-500/5"
       backdropInteractive={false}
       closeOnBackdropClick={false}
       scrollBody={false}
+      showCloseButton
+      alignLeftLg
       actions={
         <>
           <Button

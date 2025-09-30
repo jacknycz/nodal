@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { XCircle } from '@phosphor-icons/react'
 import ReactDOM from 'react-dom'
 
 interface ModalProps {
@@ -22,6 +23,10 @@ interface ModalProps {
   backdropInteractive?: boolean
   // If false, clicking the backdrop will not close the modal
   closeOnBackdropClick?: boolean
+  // Optional close button in the top-right of the modal content
+  showCloseButton?: boolean
+  // If true, horizontally align modal to the left on lg+ screens; otherwise center
+  alignLeftLg?: boolean
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -39,6 +44,8 @@ const Modal: React.FC<ModalProps> = ({
   backdropClassName,
   backdropInteractive = true,
   closeOnBackdropClick = true,
+  showCloseButton = false,
+  alignLeftLg = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
@@ -77,7 +84,7 @@ const Modal: React.FC<ModalProps> = ({
   if (typeof window === 'undefined') return null;
 
   return ReactDOM.createPortal(
-    <div className={`fixed inset-0 z-[900] flex items-center justify-center md:justify-start ${backdropInteractive ? '' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[900] flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''} ${backdropInteractive ? '' : 'pointer-events-none'}`}>
       {/* Backdrop */}
       <div
         className={`absolute inset-0 ${backdropClassName || 'bg-black'} transition-all duration-200 ease-out ${
@@ -105,6 +112,16 @@ const Modal: React.FC<ModalProps> = ({
         aria-modal="true"
         onClick={e => e.stopPropagation()}
       >
+        {showCloseButton && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute cursor-pointer top-3 right-3 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 rounded-md p-1 focus:outline-none"
+            aria-label="Close"
+          >
+            <XCircle size={28} weight="duotone" />
+          </button>
+        )}
         {/* Step indicator */}
         {totalSteps && totalSteps > 1 && (
           <div className="flex items-center justify-center mb-4">

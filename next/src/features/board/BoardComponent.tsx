@@ -1191,7 +1191,7 @@ function BoardContent({
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
   }, [getViewportCenter, handleDocumentUpload, setNodes, showAddToast])
-
+  
   // Keyboard shortcuts via hook
   useBoardShortcuts(() => { saveBoard() })
   
@@ -1410,6 +1410,7 @@ function BoardContent({
   const [awaitingNodePlacement, setAwaitingNodePlacement] = useState(false)
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
+  const editorMode = !!editNodeId
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
 
   const handleOpenAINodeGenerator = useCallback(() => {
@@ -1436,6 +1437,18 @@ function BoardContent({
       window.removeEventListener('nodal:chat-updated', handler as EventListener)
     }
   }, [saveStatus, currentBoardName])
+
+  // Broadcast editor mode and toggle a root class for global styling (e.g., hide headers)
+  useEffect(() => {
+    try {
+      const open = !!editNodeId
+      document.documentElement.classList.toggle('nodal-editor-mode', open)
+      window.dispatchEvent(new CustomEvent('nodal:editor-mode', { detail: { open } }))
+    } catch {}
+    return () => {
+      try { document.documentElement.classList.remove('nodal-editor-mode') } catch {}
+    }
+  }, [editNodeId])
 
   return (
     <div 
@@ -1464,6 +1477,7 @@ function BoardContent({
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
           onNodeContextMenu={(event: React.MouseEvent, node: any) => {
+            if (editorMode) { event.preventDefault(); return }
             event.preventDefault()
             event.stopPropagation()
             setPendingSourceNodeId(node?.id || null)
@@ -1502,6 +1516,7 @@ function BoardContent({
           } catch {}
         }}
         onPaneContextMenu={(event) => {
+          if (editorMode) { event.preventDefault(); return }
           event.preventDefault();
           // Right-click on empty pane (not a node)
           setPendingSourceNodeId(null)
@@ -1542,7 +1557,7 @@ function BoardContent({
           onToggle={(key) => setLeftDockActive(prev => (prev === key ? null : key))}
         />
       )}
-      {isBoardView && (
+      {isBoardView && !editorMode && (
         <FloatingActionButton
           onAddNode={() => {
             console.log('[BoardComponent] onAddNode called')
@@ -1559,7 +1574,7 @@ function BoardContent({
               setTimeout(() => { console.log('[BoardComponent] opening AddNodesModal now'); setShowUnifiedAddModal(true) }, 0)
             } catch {
               console.warn('[BoardComponent] onAddNode fallback immediate open')
-              setShowUnifiedAddModal(true)
+            setShowUnifiedAddModal(true)
             }
           }}
           onAIGenerate={() => setShowUnifiedAddModal(true)}
@@ -1570,7 +1585,9 @@ function BoardContent({
         />
       )}
       {isBoardView && (
-        <ChatPanel />
+        <div className={editorMode ? 'hidden lg:block' : ''}>
+          <ChatPanel />
+        </div>
       )}
       {isBoardView && (
         <TaskList dock open={leftDockActive === 'tasks'} onClose={() => setLeftDockActive(null)} leftOffsetPx={56} topOffsetPx={72} />
@@ -1608,7 +1625,9 @@ function BoardContent({
         </div>
       )}
       {isBoardView && (
-        <OmniSearch />
+        <div className={editorMode ? 'hidden lg:block' : ''}>
+          <OmniSearch />
+        </div>
       )}
       {/* Removed old Tips button; now opened via LeftDock */}
       
@@ -2067,7 +2086,7 @@ function BoardContent({
             </Modal>
           )}
           {/* NodeSetupModal deprecated for add-new-node; using NodeEditModal instead */}
-          {isBoardView && (
+          {isBoardView && !editorMode && (
             <>
               <FloatingActionButton
                 onAddNode={() => {

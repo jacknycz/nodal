@@ -182,6 +182,9 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
           }
 
           // Do not persist signed variant URLs; nodes will resolve them on render
+          if (v800Url || v1920Url) {
+            setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, hasVariants: true } } : n))
+          }
         }
 
         const generateCaption = async () => {
