@@ -94,7 +94,7 @@ export default function NodeEditModal({
       onClose={onClose}
       title="Edit Node"
       description="Update the node's title and content with rich text formatting."
-      className="w-full md:max-w-[40%]! max-w-7xl! h-[85vh]!"
+      className="w-full lg:max-w-[40%]! max-w-7xl! h-[85vh]!"
       backdropClassName="hidden! bg-black/20"
       backdropInteractive={false}
       closeOnBackdropClick={false}
