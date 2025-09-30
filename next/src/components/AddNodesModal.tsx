@@ -72,7 +72,8 @@ export default function AddNodesModal({
   const [isDragOver, setIsDragOver] = React.useState(false)
   const [linkUrl, setLinkUrl] = React.useState('')
   const { placeGeneratedNodes } = useAIPlacement()
-  const { setNodes: setFlowNodes, setEdges: setFlowEdges } = useReactFlow()
+  const rf = useReactFlow()
+  const { setNodes: setFlowNodes, setEdges: setFlowEdges } = rf
   const [quickGenerating, setQuickGenerating] = React.useState(false)
   const { isPro, isAdmin } = useUserRole()
   const canUploadVideo = isPro || isAdmin
@@ -198,6 +199,12 @@ export default function AddNodesModal({
           const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id, target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id, type: (c.edge as any).type || 'floating' }))
           setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
         }
+        // Pan to the centroid of created nodes
+        try {
+          const cx = newNodes.reduce((s, n) => s + n.position.x, 0) / newNodes.length
+          const cy = newNodes.reduce((s, n) => s + n.position.y, 0) / newNodes.length
+          rf.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+        } catch {}
         onClose()
       }
     } finally {
@@ -326,6 +333,7 @@ export default function AddNodesModal({
                   const newEdge: Edge = { id: `edge-${Date.now()}`, source: parentNodeId, target: newId, type: 'floating' as any }
                   setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
                 }
+                try { rf.setCenter(baseX, baseY, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 }) } catch {}
                 onClose()
                 return
               } catch { }
@@ -345,7 +353,7 @@ export default function AddNodesModal({
       ) : tab === 'url' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleCreateFromUrl} disabled={!unifiedUrl.trim()}>Create</Button>
+          <Button onClick={async () => { await handleCreateFromUrl() }} disabled={!unifiedUrl.trim()}>Create</Button>
         </>
       ) : undefined}
     >

@@ -281,6 +281,31 @@ function BoardContent({
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
+  const centerOnPositions = (positions: { x: number; y: number }[]) => {
+    if (!positions || positions.length === 0) return
+    try {
+      const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length
+      const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length
+      reactFlowInstance.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom())), duration: 600 })
+    } catch {}
+  }
+  const centerOnNodeIds = (ids: string[]) => {
+    if (!ids || ids.length === 0) return
+    setTimeout(() => {
+      try {
+        const setIds = new Set(ids)
+        const nodes = reactFlowInstance.getNodes().filter(n => setIds.has(n.id))
+        if (nodes.length === 0) return
+        const positions = nodes.map(n => ({ x: n.position.x + ((n as any).width || 240) / 2, y: n.position.y + ((n as any).height || 140) / 2 }))
+        centerOnPositions(positions)
+        const targetId = nodes[0].id
+        const nodeOuter = document.querySelector(`.react-flow__node[data-id="${targetId}"]`) as HTMLElement | null
+        const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+        const el = nodeInner || nodeOuter
+        if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+      } catch {}
+    }, 50)
+  }
   const setConnectingSource = useBoardStore((s: any) => s.setConnectingSource)
   
   // Broadcast local cursor position
@@ -2180,6 +2205,7 @@ function BoardContent({
                     setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                   }
                   showAddToast('added', newNodes.length)
+                  centerOnNodeIds(newNodes.map(n => n.id))
                 } else {
                   // Fallback deterministic placement directly under parent with edges
                   const parent = (useBoardStore.getState().nodes || []).find(n => n.id === pendingSourceNodeId)
@@ -2206,6 +2232,7 @@ function BoardContent({
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
                   setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
                   showAddToast('added', created.length)
+                  centerOnNodeIds(created.map(n => n.id))
                 }
               } catch {}
             } else if (titles.length === 1) {
@@ -2213,6 +2240,7 @@ function BoardContent({
               const newNode: Node = { id: `node-${Date.now()}`, type: 'default', position: target, data: { title: titles[0], content: desc } }
               setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
               showAddToast('added', 1)
+              centerOnPositions([{ x: target.x, y: target.y }])
             } else {
               if (pendingNodePosition) {
                 const count = titles.length
@@ -2235,6 +2263,7 @@ function BoardContent({
                 }
                 setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
                 showAddToast('added', created.length)
+                centerOnNodeIds(created.map(n => n.id))
               } else {
                 const nodesToPlace = titles.map(t => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const }))
                 let placed = false
@@ -2245,6 +2274,7 @@ function BoardContent({
                     setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
                     placed = true
                     showAddToast('added', newNodes.length)
+                    centerOnNodeIds(newNodes.map(n => n.id))
                   }
                 } catch {}
                 if (!placed) {
@@ -2268,6 +2298,7 @@ function BoardContent({
                   }
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
                   showAddToast('added', fallbackNodes.length)
+                  centerOnNodeIds(fallbackNodes.map(n => n.id))
                 }
               }
             }
@@ -2285,6 +2316,7 @@ function BoardContent({
                   setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                 }
                 showAddToast('generated', newNodes.length)
+                centerOnNodeIds(newNodes.map(n => n.id))
               }
             } catch {}
             setShowUnifiedAddModal(false)
@@ -2300,6 +2332,7 @@ function BoardContent({
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
             showAddToast('added', 1)
+            centerOnPositions([{ x: center.x, y: center.y }])
           }}
           onLinkSubmit={(url) => {
             const center = pendingNodePosition || getViewportCenter()
@@ -2312,12 +2345,14 @@ function BoardContent({
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             setShowUnifiedAddModal(false)
             showAddToast('added', 1)
+            centerOnPositions([{ x: center.x, y: center.y }])
           }}
           onUploadSubmit={(file) => {
             const center = pendingNodePosition || getViewportCenter()
             handleDocumentUpload(file as File, center)
             setShowUnifiedAddModal(false)
             showAddToast('added', 1)
+            centerOnPositions([{ x: center.x, y: center.y }])
           }}
         />
       )}
