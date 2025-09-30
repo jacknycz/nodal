@@ -13,7 +13,7 @@ import Tag from '../../components/ui/Tag'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses } from './nodeStyles'
-import TipTapEditor from '../../components/TipTapEditor'
+ 
  
 
 interface NodalNodeProps {
@@ -187,13 +187,10 @@ export default function NodalNode({
         {pageMode ? (
           <div className={`${expanded ? 'flex-1 min-h-0 nodrag nopan' : 'nodal-drag-handle cursor-move'} mb-3 px-2`}>
             {expanded ? (
-              <div className="flex-1 min-h-0 h-full flex flex-col">
-                <TipTapEditor
-                  content={data.content || ''}
-                  onChange={(val) => onNodeUpdate?.(id, { content: val })}
-                  placeholder="Write your page..."
-                  className="bg-white dark:bg-gray-800 flex-1 min-h-0 h-full"
-                />
+              <div className="flex-1 min-h-0 h-full flex flex-col overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {data.content ? renderRichContent(data.content) : null}
+                </div>
               </div>
             ) : (
               <div className="relative">
