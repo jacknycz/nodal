@@ -14,6 +14,7 @@ interface NodeEditModalProps {
   open: boolean
   onClose: () => void
   onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
+  onLiveChange?: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
   initialTitle: string
   initialContent: string
   initialColorgoryIds?: string[]
@@ -25,6 +26,7 @@ export default function NodeEditModal({
   open, 
   onClose, 
   onSave, 
+  onLiveChange,
   initialTitle, 
   initialContent,
   initialColorgoryIds = [],
@@ -38,6 +40,7 @@ export default function NodeEditModal({
   const [pageMode, setPageMode] = useState<boolean>(!!initialPageMode)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const editorHandleRef = useRef<{ focus: () => void } | null>(null)
+  const didAutoFocusRef = useRef<boolean>(false)
   const colorgories = useBoardStore.getState().colorgories || []
 
   useEffect(() => {
@@ -52,16 +55,27 @@ export default function NodeEditModal({
         const same = sameLength && prev.every((v, i) => v === next[i])
         return same ? prev : next
       })
-      // Focus the content editor first after a brief delay to ensure modal is rendered
-      setTimeout(() => {
+    }
+  }, [open, initialTitle, initialContent, initialColorgoryIds, initialTitleSize, initialPageMode])
+
+  // Auto-focus only once when opening. Do not steal focus from title if user clicked it.
+  useEffect(() => {
+    if (!open) { didAutoFocusRef.current = false; return }
+    if (didAutoFocusRef.current) return
+    const t = setTimeout(() => {
+      didAutoFocusRef.current = true
+      const active = document.activeElement as HTMLElement | null
+      if (active && titleInputRef.current && active === titleInputRef.current) return
+      try {
         if (editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
-          try { editorHandleRef.current.focus() } catch {}
+          editorHandleRef.current.focus()
         } else {
           titleInputRef.current?.focus()
         }
-      }, 100)
-    }
-  }, [open, initialTitle, initialContent, initialColorgoryIds])
+      } catch {}
+    }, 100)
+    return () => clearTimeout(t)
+  }, [open])
 
   const handleSave = () => {
     onSave(title, content, selectedColorgoryIds, titleSize, pageMode)
@@ -126,7 +140,7 @@ export default function NodeEditModal({
               id="edit-title"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { const v = e.target.value; setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
               onKeyDown={handleTitleKeyDown}
               placeholder="Enter node title..."
               fullWidth
@@ -137,7 +151,7 @@ export default function NodeEditModal({
             <ToggleGroup
               label="Size"
               value={titleSize}
-              onChange={(v) => setTitleSize((v as any) as 'sm' | 'md' | 'lg')}
+              onChange={(v) => { const vs = (v as any) as 'sm' | 'md' | 'lg'; setTitleSize(vs); onLiveChange?.(title, content, selectedColorgoryIds, vs, pageMode) }}
               options={[
                 { value: 'sm', label: 'S' },
                 { value: 'md', label: 'M' },
@@ -150,7 +164,7 @@ export default function NodeEditModal({
         <div className="flex-none">
           <Checkbox
             checked={pageMode}
-            onChange={(v) => setPageMode(!!v)}
+            onChange={(v) => { const pv = !!v; setPageMode(pv); onLiveChange?.(title, content, selectedColorgoryIds, titleSize, pv) }}
             label="Page Mode"
           />
         </div>
@@ -168,7 +182,7 @@ export default function NodeEditModal({
           </label>
           <TipTapEditor
             content={content}
-            onChange={setContent}
+            onChange={(v) => { setContent(v); onLiveChange?.(title, v, selectedColorgoryIds, titleSize, pageMode) }}
             placeholder="Start writing your node content..."
             onKeyDown={handleContentKeyDown}
             editorHandleRef={editorHandleRef}

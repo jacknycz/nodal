@@ -2006,6 +2006,10 @@ function BoardContent({
               initialPageMode={!!d.pageMode}
               onSave={(title, content, colorgoryIds, titleSize, pageMode) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize, pageMode } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(title, content, colorgoryIds, titleSize, pageMode) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize, pageMode } } : nn) : nds))
               }}
             />
           )
@@ -2021,6 +2025,10 @@ function BoardContent({
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
               onSave={(title, content, colorgoryIds) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
               }}
             />
@@ -2038,6 +2046,10 @@ function BoardContent({
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
               onSave={(title, content, colorgoryIds) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
               }}
             />
