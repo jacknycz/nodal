@@ -1473,10 +1473,17 @@ function BoardContent({
       triggerAutosaveRef.current(nodes, edges)
     }
     window.addEventListener('nodal:chat-updated', handler as EventListener)
+    // Immediate save trigger (e.g., from ColorgoryManager changes)
+    const saveNow = (e: Event) => {
+      if (!localBoardIdRef.current) return
+      manualSave(nodes, edges).catch(() => {})
+    }
+    window.addEventListener('nodal:save-now', saveNow as EventListener)
     return () => {
       window.removeEventListener('nodal:chat-updated', handler as EventListener)
+      window.removeEventListener('nodal:save-now', saveNow as EventListener)
     }
-  }, [saveStatus, currentBoardName])
+  }, [saveStatus, currentBoardName, nodes, edges, manualSave])
 
   // Broadcast editor mode and toggle a root class for global styling (e.g., hide headers)
   useEffect(() => {

@@ -61,6 +61,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
     if (from < 0 || to < 0) return
     ids.splice(to, 0, ids.splice(from, 1)[0])
     reorderColorgories(ids)
+    try { window.dispatchEvent(new CustomEvent('nodal:save-now')) } catch {}
     setDragId(null)
   }
 
@@ -197,7 +198,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
               <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
               <TextInput
                 value={c.name}
-                onChange={(e) => renameColorgory(c.id, (e.target as HTMLInputElement).value)}
+                onChange={(e) => { renameColorgory(c.id, (e.target as HTMLInputElement).value); try { window.dispatchEvent(new CustomEvent('nodal:save-now')) } catch {} }}
                 size="sm"
                 className="h-[28px]"
                 fullWidth
@@ -205,7 +206,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
               <IconButton
                 variant="secondary"
                 aria-label={c.visible === false ? 'Show colorgory' : 'Hide colorgory'}
-                onClick={(e) => { e.stopPropagation(); setColorgoryVisible(c.id, c.visible === false ? true : false) }}
+                onClick={(e) => { e.stopPropagation(); setColorgoryVisible(c.id, c.visible === false ? true : false); try { window.dispatchEvent(new CustomEvent('nodal:save-now')) } catch {} }}
               >
                 {c.visible === false ? <EyeClosed size={16} weight="duotone" /> : <Eye size={16} weight="duotone" />}
               </IconButton>
