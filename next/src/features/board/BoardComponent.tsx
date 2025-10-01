@@ -2081,6 +2081,28 @@ function BoardContent({
             />
           )
         }
+        if (n.type === 'video') {
+          const initialTitle = d.title || 'Video'
+          const initialContent = d.content || ''
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={() => setEditNodeId(null)}
+              initialTitle={initialTitle}
+              initialContent={initialContent}
+              initialColorgoryIds={d.colorgoryIds || []}
+              initialTitleSize={'sm'}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onSave={(title, content, colorgoryIds) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(title, content, colorgoryIds) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+              }}
+            />
+          )
+        }
         return null
       })()}
       
