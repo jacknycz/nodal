@@ -981,8 +981,8 @@ function BoardContent({
     try {
       const input = document.createElement('input')
       input.type = 'file'
-      // Include common doc types and broad image/* for iOS
-      input.accept = '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.webp,.svg,.heic,image/*'
+      // Accept images, documents, and supported video uploads (mp4)
+      input.accept = '.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json,.png,.jpg,.jpeg,.gif,.webp,.svg,.heic,image/*,.mp4,video/mp4'
       // Ensure element stays alive during native picker
       input.style.position = 'fixed'
       input.style.left = '-9999px'
