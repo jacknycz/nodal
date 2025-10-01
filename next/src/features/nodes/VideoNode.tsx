@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle, TreeView } from '@phosphor-icons/react/ssr'
-import { ArrowsOut, ArrowsIn, Pencil } from '@phosphor-icons/react'
+import { ArrowsOut, ArrowsIn, Pencil, PlayCircle } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -251,18 +251,20 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                 {loading ? 'Loading…' : 'No thumbnail'}
               </div>
             )}
-            <div className="absolute top-1 left-1">
-              <IconButton variant="default" size="sm" aria-label="Expand video" onClick={(e) => {
-                e.stopPropagation()
-                const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
-                if (isMobile) {
-                  const href = effectiveVideoUrl || data.videoUrl
-                  if (href) { setShowMobilePlayer(true); return }
-                }
-                setExpanded(true)
-              }}>
-                <ArrowsOut size={14} />
-              </IconButton>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto">
+                <IconButton variant="secondaryGhost" size="lg" aria-label="Expand video" onClick={(e) => {
+                  e.stopPropagation()
+                  const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
+                  if (isMobile) {
+                    const href = effectiveVideoUrl || data.videoUrl
+                    if (href) { setShowMobilePlayer(true); return }
+                  }
+                  setExpanded(true)
+                }}>
+                  <PlayCircle size={44} weight="duotone" />
+                </IconButton>
+              </div>
             </div>
           </div>
         ) : (
