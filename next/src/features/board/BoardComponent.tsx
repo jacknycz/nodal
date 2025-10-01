@@ -1439,6 +1439,18 @@ function BoardContent({
   const editorMode = !!editNodeId
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
 
+  // Cleanup: remove edges that reference nodes that no longer exist (prevents "runaway" edges)
+  useEffect(() => {
+    try {
+      const validNodeIds = new Set((nodes || []).map((n: any) => n.id))
+      setEdges((eds) => {
+        const list = Array.isArray(eds) ? eds : []
+        const cleaned = list.filter((e: any) => validNodeIds.has(e?.source) && validNodeIds.has(e?.target))
+        return cleaned.length !== list.length ? cleaned : eds
+      })
+    } catch {}
+  }, [nodes, setEdges])
+
   const handleOpenAINodeGenerator = useCallback(() => {
     // Prefer explicit pendingSourceNodeId from context menu; fallback to current selection
     const selectedIds = useBoardStore.getState().selectedNodeIds || []
