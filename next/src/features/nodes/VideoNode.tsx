@@ -342,9 +342,10 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             </a>
           )}
           {data.content && (
-            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-              {data.content.length > 200 ? `${data.content.slice(0, 200)}…` : data.content}
-            </div>
+            <div
+              className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed tiptap-content"
+              dangerouslySetInnerHTML={{ __html: data.content }}
+            />
           )}
         </div>
       </div>
