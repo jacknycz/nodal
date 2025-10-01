@@ -322,24 +322,26 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           </div>
         )}
         <div className="mt-2">
-          <div className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
-            {Boolean((data as any).faviconUrl) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />
-            )}
-            <span className="">{data.title || 'Video'}</span>
+          <div className="text-sm font-medium text-gray-900 dark:text-white">
+            {data.title || 'Video'}
           </div>
           {effectiveVideoUrl && (
-            <a
-              href={effectiveVideoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary-600 dark:text-primary-400 hover:underline truncate inline-block w-full"
-              onClick={(e) => e.stopPropagation()}
-              title={effectiveVideoUrl}
-            >
-              {effectiveVideoUrl}
-            </a>
+            <div className="mt-1 inline-flex truncate items-center gap-1 min-w-0 w-full">
+              {Boolean((data as any).faviconUrl) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />
+              )}
+              <a
+                href={effectiveVideoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary-600 dark:text-primary-400 hover:underline truncate w-full"
+                onClick={(e) => e.stopPropagation()}
+                title={effectiveVideoUrl}
+              >
+                {effectiveVideoUrl}
+              </a>
+            </div>
           )}
           {data.content && (
             <div
