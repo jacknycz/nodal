@@ -1441,6 +1441,8 @@ function BoardContent({
 
   // Cleanup: remove edges that reference nodes that no longer exist (prevents "runaway" edges)
   useEffect(() => {
+    if (!Array.isArray(nodes) || nodes.length === 0) return
+    if (!Array.isArray(edges) || edges.length === 0) return
     try {
       const validNodeIds = new Set((nodes || []).map((n: any) => n.id))
       setEdges((eds) => {
@@ -1449,7 +1451,7 @@ function BoardContent({
         return cleaned.length !== list.length ? cleaned : eds
       })
     } catch {}
-  }, [nodes, setEdges])
+  }, [nodes, edges, setEdges])
 
   const handleOpenAINodeGenerator = useCallback(() => {
     // Prefer explicit pendingSourceNodeId from context menu; fallback to current selection
