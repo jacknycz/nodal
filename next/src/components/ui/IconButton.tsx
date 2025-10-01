@@ -1,7 +1,7 @@
 import React from 'react'
 import clsx from 'clsx'
 
-export type IconButtonVariant = 'default' | 'primary' | 'danger' | 'primaryGhost' | 'secondary' | 'secondaryGhost' | 'dangerGhost'
+export type IconButtonVariant = 'default' | 'primary' | 'danger' | 'primaryGhost' | 'secondary' | 'secondaryGhost' | 'dangerGhost' | 'primaryOutline' | 'secondaryOutline'
 
 interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: IconButtonVariant
@@ -13,8 +13,10 @@ const variantClasses: Record<IconButtonVariant, string> = {
   default: 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200',
   primary: 'bg-primary-500 hover:bg-primary-600 text-white',
   primaryGhost: 'bg-transparent hover:bg-primary-100 text-primary-600',
+  primaryOutline: 'bg-transparent border-2 border-primary-500 text-primary-600',
   secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200',
   secondaryGhost: 'bg-transparent hover:bg-gray-100 text-gray-700 dark:hover:bg-gray-600 dark:text-gray-200',
+  secondaryOutline: 'bg-transparent border-2 border-gray-500 text-gray-700 dark:border-gray-400 dark:text-gray-200',
   danger: 'bg-red-500 hover:bg-red-600 text-white',
   dangerGhost: 'bg-transparent hover:bg-red-100 text-red-500',
 }

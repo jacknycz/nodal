@@ -2027,6 +2027,7 @@ function BoardContent({
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={d.titleSize || 'sm'}
               initialPageMode={!!d.pageMode}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
               onSave={(title, content, colorgoryIds, titleSize, pageMode) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize, pageMode } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
@@ -2047,6 +2048,7 @@ function BoardContent({
               initialContent={d.description || ''}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
               onSave={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
@@ -2068,6 +2070,7 @@ function BoardContent({
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
               onSave={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])

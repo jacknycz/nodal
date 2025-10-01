@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
+import IconButton from './ui/IconButton'
+import { CrosshairSimple } from '@phosphor-icons/react'
+import Tooltip from './ui/Tooltip'
 import Checkbox from './ui/Checkbox'
 import TipTapEditor from './TipTapEditor'
 import TextInput from './ui/TextInput'
@@ -15,6 +18,7 @@ interface NodeEditModalProps {
   onClose: () => void
   onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
   onLiveChange?: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
+  onLocate?: () => void
   initialTitle: string
   initialContent: string
   initialColorgoryIds?: string[]
@@ -27,6 +31,7 @@ export default function NodeEditModal({
   onClose, 
   onSave, 
   onLiveChange,
+  onLocate,
   initialTitle, 
   initialContent,
   initialColorgoryIds = [],
@@ -116,20 +121,29 @@ export default function NodeEditModal({
       showCloseButton
       alignLeftLg
       actions={
-        <>
-          <Button
-            variant="secondary"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-          >
-            Save Changes
-          </Button>
-        </>
+        <div className="w-full flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Tooltip content="Find My Node" side="top">
+              <IconButton aria-label="Find My Node" variant="secondaryGhost" size="md" onClick={() => onLocate?.()} className="hidden lg:inline-flex">
+                <CrosshairSimple className="w-6 h-6" />
+              </IconButton>
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>
       }
     >
       <div className="gap-4 py-2 flex-1 min-h-0 h-full flex flex-col overflow-hidden basis-0">
