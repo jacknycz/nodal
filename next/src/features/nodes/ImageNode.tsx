@@ -344,7 +344,7 @@ export default function ImageNode({
                 (signedVariant1920 || data.variant1920Url) ? `${signedVariant1920 || data.variant1920Url} 1920w` : null,
               ].filter(Boolean).join(', ')}
               sizes={expanded ? '100vw' : '260px'}
-              alt={data.fileName || data.title || 'Image'}
+              alt={data.title || data.fileName || 'Image'}
               className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
               style={{
                 transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
@@ -399,7 +399,7 @@ export default function ImageNode({
             <div className="mt-2 flex items-center gap-2">
               <div className="flex-1 min-w-0 cursor-move">
                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {data.fileName || data.title || 'Image'}
+                  {data.title || data.fileName || 'Image'}
                 </div>
               </div>
               <button
