@@ -1014,14 +1014,14 @@ function BoardContent({
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
+  const editingNodeIdRef = useRef<string | null>(null)
 
   // Handle XYFlow's selection changes
   const handleSelectionChange = useCallback(({ nodes }: { nodes: BoardNode[] }) => {
     const selectedIds = nodes.map(node => node.id)
-    // console.log('Selection changed:', selectedIds)
-    setSelectedNodes(selectedIds)
-    // Also update our store for chat integration
-    useBoardStore.getState().setSelectedNodes(selectedIds)
+    const enforced = editingNodeIdRef.current ? Array.from(new Set([...selectedIds, editingNodeIdRef.current])) : selectedIds
+    setSelectedNodes(enforced)
+    useBoardStore.getState().setSelectedNodes(enforced)
   }, [])
 
   // Global drag event listener to handle files dragged from outside
@@ -1472,6 +1472,16 @@ function BoardContent({
     } catch {}
     return () => {
       try { document.documentElement.classList.remove('nodal-editor-mode') } catch {}
+    }
+  }, [editNodeId])
+
+  // Ensure the node being edited remains in the board's selected set for chat context
+  useEffect(() => {
+    if (editNodeId) {
+      editingNodeIdRef.current = editNodeId
+      try { useBoardStore.getState().addSelectedNode(editNodeId) } catch {}
+    } else {
+      editingNodeIdRef.current = null
     }
   }, [editNodeId])
 

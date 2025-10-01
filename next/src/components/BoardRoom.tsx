@@ -458,12 +458,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                       const b = allBoards.find((bb) => bb.id === t.boardId) as any
                       if (b) onOpenBoard(b, undefined)
                     }}
-                    className="text-left flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded px-3 py-2 bg-white/70 dark:bg-gray-900/60 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="group text-left flex items-center justify-between gap-3 rounded-lg px-3 py-2 bg-white/80 dark:bg-gray-900/70 border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-900 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex w-4 h-4 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900" aria-hidden />
-                      <div className="flex flex-col">
-                        <span className="text-sm text-gray-800 dark:text-gray-100 truncate max-w-[220px]">{t.title}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span aria-hidden className="inline-flex w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 group-hover:border-primary-400" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm text-gray-900 dark:text-gray-100 truncate max-w-[220px]">{t.title}</span>
                         <span className="text-[11px] text-gray-500 dark:text-gray-400">{t.boardName}</span>
                       </div>
                     </div>
