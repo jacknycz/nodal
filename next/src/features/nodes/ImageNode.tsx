@@ -2,22 +2,18 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown } from '@phosphor-icons/react'
+import { Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown, Resize } from '@phosphor-icons/react'
 // Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
 import NodeEditModal from '../../components/NodeEditModal'
-import TextInput from '../../components/ui/TextInput'
-import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
-import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
  
 import { supabaseStorage } from '../storage/supabaseStorage'
-import TextArea from '../../components/ui/TextArea'
-import Tooltip from '../../components/ui/Tooltip'
+ 
 
 interface ImageNodeData {
   label: string
@@ -35,6 +31,8 @@ interface ImageNodeData {
   variant800Url?: string
   variant1920Url?: string
   hasVariants?: boolean
+  width?: number
+  detailsOpen?: boolean
 }
 
 interface ImageNodeProps {
@@ -63,7 +61,7 @@ export default function ImageNode({
   const [isLoaded, setIsLoaded] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(Boolean((data as any).detailsOpen))
   
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -71,6 +69,8 @@ export default function ImageNode({
   const panStartRef = React.useRef<{ x: number; y: number } | null>(null)
   const pointerCacheRef = React.useRef<Map<number, { x: number; y: number }>>(new Map())
   const pinchStartRef = React.useRef<{ distance: number; center: { x: number; y: number }; scale: number; translate: { x: number; y: number } } | null>(null)
+  // Resizable width state
+  const [signedReady, setSignedReady] = useState(false)
   const refreshAttemptsRef = React.useRef<number>(0)
 
   const [signedPreviewUrl, setSignedPreviewUrl] = useState<string | null>(null)
@@ -92,6 +92,7 @@ export default function ImageNode({
       setSignedPreviewUrl(url)
       setSignedVariant800(v800)
       setSignedVariant1920(v1920)
+      setSignedReady(true)
     } catch {}
   }
 
@@ -169,7 +170,29 @@ export default function ImageNode({
     } catch { }
   }
 
-  const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
+  const variantMax = (signedVariant1920 || data.variant1920Url) ? 1920 : ((signedVariant800 || data.variant800Url) ? 800 : 1920)
+  const maxWidth = Math.min(1280, variantMax)
+  const minWidth = 320
+  const initialWidth = Math.max(minWidth, Math.min(((data as any)?.width as number) || 320, maxWidth))
+  const [nodeWidth, setNodeWidth] = useState<number>(initialWidth)
+  const resizeStartRef = React.useRef<{ startX: number; startW: number } | null>(null)
+  const onResizeDown = (e: React.MouseEvent) => {
+    e.stopPropagation(); e.preventDefault()
+    resizeStartRef.current = { startX: e.clientX, startW: nodeWidth }
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeStartRef.current) return
+      const dx = ev.clientX - resizeStartRef.current.startX
+      const next = Math.max(minWidth, Math.min(resizeStartRef.current.startW + dx, maxWidth))
+      setNodeWidth(next)
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      onNodeUpdate?.(id, { width: Math.round(nodeWidth) })
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
 
@@ -202,7 +225,8 @@ export default function ImageNode({
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move ${containerWidthClass}` })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
+      style={{ width: `${Math.round(nodeWidth)}px` }}
       onClick={(e) => {
       }}
     >
@@ -343,13 +367,10 @@ export default function ImageNode({
                 (signedVariant800 || data.variant800Url) ? `${signedVariant800 || data.variant800Url} 800w` : null,
                 (signedVariant1920 || data.variant1920Url) ? `${signedVariant1920 || data.variant1920Url} 1920w` : null,
               ].filter(Boolean).join(', ')}
-              sizes={expanded ? '100vw' : '260px'}
+              sizes={`${Math.round(nodeWidth)}px`}
               alt={data.title || data.fileName || 'Image'}
               className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
-              style={{
-                transform: expanded ? `translate(${translate.x}px, ${translate.y}px) scale(${scale})` : undefined,
-                transformOrigin: '0 0',
-              }}
+              style={{}}
               onLoad={() => setIsLoaded(true)}
               onError={handleImageError}
               draggable={false}
@@ -360,54 +381,22 @@ export default function ImageNode({
             </div>
           )}
 
-          {/* Minimize/Expand control overlay */}
-          <div className="absolute top-1 left-1">
-            {expanded ? (
-              <IconButton
-                variant="default"
-                size="sm"
-                aria-label="Minimize image"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setExpanded(false)
-                  setScale(1)
-                  setTranslate({ x: 0, y: 0 })
-                }}
-              >
-                <ArrowsIn size={14} />
-              </IconButton>
-            ) : (
-              <IconButton
-                variant="default"
-                size="sm"
-                aria-label="Expand image"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setExpanded(true)
-                }}
-                
-              >
-                <ArrowsOut size={14} />
-              </IconButton>
-            )}
-          </div>
         </div>
 
         {/* Filename and accordion toggle - hidden when expanded */}
         {!expanded && (
           <>
             <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 min-w-0 cursor-move">
-                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {data.title || data.fileName || 'Image'}
-                </div>
-              </div>
+              <div className="flex-1 min-w-0 cursor-move" />
               <button
                 type="button"
                 aria-label={detailsOpen ? 'Hide details' : 'Show details'}
                 onClick={(e) => {
                   e.stopPropagation()
-                  setDetailsOpen((v) => !v)
+                  const next = !detailsOpen
+                  setDetailsOpen(next)
+                  // Persist outside of render path
+                  setTimeout(() => onNodeUpdate?.(id, { detailsOpen: next }), 0)
                 }}
                 className="ml-2 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
               >
@@ -422,6 +411,9 @@ export default function ImageNode({
             {/* Accordion content */}
             <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
               <div className="mt-2">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {data.title || data.fileName || 'Image'}
+                </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
                 </div>
@@ -520,6 +512,19 @@ export default function ImageNode({
         </div>
       </Modal>
 
+      {/* Node-level resize handle (bottom-right) */}
+      <div
+        className="nodrag nopan
+        hidden md:flex absolute -bottom-2 -right-2 w-6 h-6 items-center justify-center rounded-full
+            bg-white dark:bg-primary-900 text-primary-600 dark:text-white 
+            cursor-se-resize shadow-lg hover:shadow-xl transition-opacity duration-200 ease-out opacity-0 group-hover:opacity-100
+            pointer-events-none group-hover:pointer-events-auto"
+        onMouseDown={onResizeDown}
+        title="Resize"
+      >
+        <Resize size={32} weight="duotone" className="w-4 h-4" />
+      </div>
+      
       <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
     </div>
   )

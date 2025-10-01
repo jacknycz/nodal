@@ -1674,7 +1674,7 @@ function BoardContent({
       )}
       {isBoardView && (
         <div className={editorMode ? 'hidden lg:block' : ''}>
-          <OmniSearch />
+        <OmniSearch />
         </div>
       )}
       {/* Removed old Tips button; now opened via LeftDock */}
