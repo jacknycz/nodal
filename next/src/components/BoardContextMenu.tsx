@@ -147,7 +147,7 @@ export default function BoardContextMenu({
                 <CaretRight size={16} weight="duotone" className="transition-transform duration-200 text-gray-400" /> 
               </div>
               {colorgoryHover && (
-                <div className="absolute left-full top-0 ml-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]">
+                <div className="absolute left-full top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]">
                   <div className="grid grid-cols-2 gap-1">
                     {(colorgoriesAll || []).map((c: any) => {
                       const checked = nodeColorgoryIds.includes(c.id)
