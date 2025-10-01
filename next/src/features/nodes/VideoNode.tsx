@@ -327,7 +327,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               // eslint-disable-next-line @next/next/no-img-element
               <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />
             )}
-            <span className="truncate">{data.title || 'Video'}</span>
+            <span className="">{data.title || 'Video'}</span>
           </div>
           {effectiveVideoUrl && (
             <a
