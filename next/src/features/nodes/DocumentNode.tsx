@@ -5,6 +5,7 @@ import { Handle, Position } from '@xyflow/react'
 import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil, TreeView } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
+import NodeEditModal from '../../components/NodeEditModal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
@@ -303,42 +304,19 @@ export default function DocumentNode({
       
 
       {/* Modals */}
-      {/* Edit Modal */}
-      <Modal
-        open={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="Edit Document"
-        description="Update the document title and description."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button onClick={() => {
-              const titleInput = (document.getElementById(`doc-edit-title-${id}`) as HTMLInputElement | null)
-              const descInput = (document.getElementById(`doc-edit-desc-${id}`) as HTMLTextAreaElement | null)
-              const nextTitle = titleInput?.value?.trim() || data.fileName || data.title || 'Document'
-              const nextContent = descInput?.value?.trim() || ''
-              onNodeUpdate?.(id, { title: nextTitle, content: nextContent })
-              setShowEditModal(false)
-            }}>Save</Button>
-          </>
-        }
-      >
-        <div className="space-y-3 py-2">
-          <TextInput
-            id={`doc-edit-title-${id}`}
-            type="text"
-            defaultValue={data.title || data.fileName || ''}
-            label="Title"
-            fullWidth
-          />
-          <TextArea
-            id={`doc-edit-desc-${id}`}
-            defaultValue={data.content || ''}
-            label="Description"
-            fullWidth
-          />
-        </div>
-      </Modal>
+      {showEditModal && (
+        <NodeEditModal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={(title, content) => { onNodeUpdate?.(id, { title, content }); setShowEditModal(false) }}
+          onLiveChange={(title, content) => { onNodeUpdate?.(id, { title, content }) }}
+          initialTitle={data.title || data.fileName || 'Document'}
+          initialContent={data.content || ''}
+          initialColorgoryIds={data.colorgoryIds || []}
+          initialTitleSize={'sm'}
+          initialPageMode={false}
+        />
+      )}
 
       <Modal 
         open={showDeleteModal} 

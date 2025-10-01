@@ -5,6 +5,7 @@ import { Handle, Position } from '@xyflow/react'
 import { DownloadSimple, ArrowsOut, ArrowsIn, Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown } from '@phosphor-icons/react'
 // Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
+import NodeEditModal from '../../components/NodeEditModal'
 import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -451,44 +452,19 @@ export default function ImageNode({
       
 
       {/* Edit Modal */}
-      <Modal
-        open={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="Edit Image"
-        description="Update the image title and description."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button onClick={() => {
-              const titleInput = (document.getElementById(`image-edit-title-${id}`) as HTMLInputElement | null)
-              const descInput = (document.getElementById(`image-edit-desc-${id}`) as HTMLTextAreaElement | null)
-              const nextTitle = titleInput?.value?.trim() || data.fileName || data.title || 'Image'
-              const nextContent = descInput?.value?.trim() || ''
-              onNodeUpdate?.(id, { title: nextTitle, content: nextContent })
-              setShowEditModal(false)
-            }}>Save</Button>
-          </>
-        }
-      >
-        <div className="space-y-3 py-2">
-          <TextInput
-            id={`image-edit-title-${id}`}
-            type="text"
-            defaultValue={data.title || data.fileName || ''}
-            label="Title"
-            fullWidth
-          />
-          <div>
-            <TextArea
-              id={`image-edit-desc-${id}`}
-              defaultValue={data.content || ''}
-              placeholder="Add a short description..."
-              label="Description"
-              fullWidth
-            />
-          </div>
-        </div>
-      </Modal>
+      {showEditModal && (
+        <NodeEditModal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={(title, content) => { onNodeUpdate?.(id, { title, content }); setShowEditModal(false) }}
+          onLiveChange={(title, content) => { onNodeUpdate?.(id, { title, content }) }}
+          initialTitle={data.title || data.fileName || 'Image'}
+          initialContent={data.content || ''}
+          initialColorgoryIds={(data as any).colorgoryIds || []}
+          initialTitleSize={'sm'}
+          initialPageMode={false}
+        />
+      )}
 
       {/* Delete Modal */}
       <Modal

@@ -10,9 +10,8 @@ import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
  
 import Modal from '../../components/ui/Modal'
-import TextInput from '../../components/ui/TextInput'
-import TextArea from '../../components/ui/TextArea'
 import Button from '../../components/ui/Button'
+import NodeEditModal from '../../components/NodeEditModal'
 import Tooltip from '../../components/ui/Tooltip'
 
 interface LinkNodeData {
@@ -165,47 +164,19 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
 
       
 
-      {/* Edit Modal */}
-      <Modal
-        open={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="Edit Link"
-        description="Update the link title and description. To change the URL, create a new node."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-            <Button onClick={() => {
-              const titleInput = (document.getElementById(`link-edit-title-${id}`) as HTMLInputElement | null)
-              const descInput = (document.getElementById(`link-edit-desc-${id}`) as HTMLTextAreaElement | null)
-              const nextTitle = titleInput?.value?.trim() || data.title || (data.linkUrl ? new URL(data.linkUrl).hostname : 'Link')
-              const nextDesc = descInput?.value?.trim() || ''
-              onNodeUpdate?.(id, { title: nextTitle, description: nextDesc })
-              setShowEditModal(false)
-            }}>Save</Button>
-          </>
-        }
-      >
-        <div className="space-y-3 py-2">
-          <TextInput
-            id={`link-edit-title-${id}`}
-            label="Title"
-            defaultValue={data.title || (data.linkUrl ? new URL(data.linkUrl).hostname : '')}
-            fullWidth
-          />
-          <TextArea
-            id={`link-edit-desc-${id}`}
-            label="Description"
-            defaultValue={data.description || ''}
-            rows={3}
-            fullWidth
-          />
-          {data.linkUrl && (
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              URL: {data.linkUrl}
-            </div>
-          )}
-        </div>
-      </Modal>
+      {showEditModal && (
+        <NodeEditModal
+          open={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSave={(title, content) => { onNodeUpdate?.(id, { title, description: content }); setShowEditModal(false) }}
+          onLiveChange={(title, content) => { onNodeUpdate?.(id, { title, description: content }) }}
+          initialTitle={data.title || safeHostname || ''}
+          initialContent={data.description || ''}
+          initialColorgoryIds={(data as any).colorgoryIds || []}
+          initialTitleSize={'sm'}
+          initialPageMode={false}
+        />
+      )}
 
       <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
     </div>
