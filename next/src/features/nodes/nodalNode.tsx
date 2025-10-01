@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { ArrowsOut, ArrowsIn, BookOpenText } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText, Resize } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -27,6 +27,7 @@ interface NodalNodeProps {
     colorgoryIds?: string[]
     titleSize?: 'sm' | 'md' | 'lg'
     pageMode?: boolean
+    width?: number
   }
   id: string
   onNodeDelete?: (nodeId: string) => void
@@ -57,6 +58,30 @@ export default function NodalNode({
   const displayTitle = data.label || data.title || 'Untitled'
   const pageMode = !!data.pageMode
   const [expanded, setExpanded] = useState(false)
+  // Resizable width for default nodes
+  const minWidth = 240
+  const maxWidth = 600
+  const initialWidth = Math.max(minWidth, Math.min(typeof data.width === 'number' ? data.width : 240, maxWidth))
+  const [nodeWidth, setNodeWidth] = useState<number>(initialWidth)
+  const resizeStartRef = useRef<{ startX: number; startW: number } | null>(null)
+  const onResizeDown = (e: React.MouseEvent) => {
+    if (pageMode) return
+    e.stopPropagation(); e.preventDefault()
+    resizeStartRef.current = { startX: e.clientX, startW: nodeWidth }
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeStartRef.current) return
+      const dx = ev.clientX - resizeStartRef.current.startX
+      const next = Math.max(minWidth, Math.min(resizeStartRef.current.startW + dx, maxWidth))
+      setNodeWidth(next)
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      onNodeUpdate?.(id, { width: Math.round(nodeWidth) })
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
 
   // Debug logs for lock state
   // console.log(`[NodalNode ${id}] isLocked: ${isLocked}, isLockedByMe: ${isLockedByMe}, showEditModal: ${showEditModal}, nodeLocks count: ${nodeLocks?.length || 0}`)
@@ -140,13 +165,13 @@ export default function NodalNode({
 
   const baseWidthCls = useMemo(() => {
     if (pageMode) return expanded ? 'w-[640px]' : 'min-w-[360px] max-w-[360px]'
-    return 'min-w-[240px] max-w-[240px]'
+    return 'group flex flex-col'
   }, [pageMode, expanded])
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `${baseWidthCls} ${expanded ? 'h-[80vh] overflow-hidden' : ''} flex flex-col` })}
-      style={{ position: 'relative', zIndex: expanded ? 1000 : undefined }}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `${baseWidthCls} ${expanded ? 'h-[80vh] overflow-hidden' : ''}` })}
+      style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }) }}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -290,6 +315,17 @@ export default function NodalNode({
           ))}
         </div>
       </Modal>
+
+      {/* Resize handle for default nodes */}
+      {!pageMode && (
+        <div
+          className="nodrag nopan hidden md:flex absolute -bottom-2 -right-2 w-6 h-6 items-center justify-center rounded-full bg-white dark:bg-primary-900 text-primary-600 dark:text-white cursor-se-resize shadow-lg hover:shadow-xl transition-opacity duration-200 ease-out opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+          onMouseDown={onResizeDown}
+          title="Resize"
+        >
+          <Resize size={32} weight="duotone" className="w-4 h-4" />
+        </div>
+      )}
 
       <Handle
         type="source"

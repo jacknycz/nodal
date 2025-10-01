@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown, Resize } from '@phosphor-icons/react'
+import { Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown, CaretCircleUp, Info, Resize } from '@phosphor-icons/react'
 // Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
 import NodeEditModal from '../../components/NodeEditModal'
@@ -11,9 +11,9 @@ import { useBoardStore } from '../board/boardSlice'
 import Checkbox from '../../components/ui/Checkbox'
 import { colorgoryHexById } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
- 
+
 import { supabaseStorage } from '../storage/supabaseStorage'
- 
+
 
 interface ImageNodeData {
   label: string
@@ -61,8 +61,8 @@ export default function ImageNode({
   const [isLoaded, setIsLoaded] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
-  const [detailsOpen, setDetailsOpen] = useState<boolean>(Boolean((data as any).detailsOpen))
-  
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(typeof (data as any).detailsOpen === 'boolean' ? (data as any).detailsOpen : true)
+
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
@@ -93,7 +93,7 @@ export default function ImageNode({
       setSignedVariant800(v800)
       setSignedVariant1920(v1920)
       setSignedReady(true)
-    } catch {}
+    } catch { }
   }
 
   const handleImageError = async () => {
@@ -200,28 +200,28 @@ export default function ImageNode({
   const colorgories = useBoardStore.getState().colorgories || []
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
     ? colorgories
-        .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
-        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+      .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
+      .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
     : []
 
   const gradientStops = swatchColors.length <= 1
     ? (swatchColors[0] || '')
     : (() => {
-        const n = swatchColors.length
-        const segment = 100 / n
-        const blendWidth = segment * 0.3
-        const half = blendWidth / 2
-        const stops: string[] = []
-        stops.push(`${swatchColors[0]} 0%`)
-        for (let i = 0; i < n - 1; i++) {
-          const boundary = segment * (i + 1)
-          const p0 = Math.max(0, boundary - half)
-          const p1 = Math.min(100, boundary + half)
-          stops.push(`${swatchColors[i]} ${p0}%`, `${swatchColors[i + 1]} ${p1}%`)
-        }
-        stops.push(`${swatchColors[n - 1]} 100%`)
-        return stops.join(', ')
-      })()
+      const n = swatchColors.length
+      const segment = 100 / n
+      const blendWidth = segment * 0.3
+      const half = blendWidth / 2
+      const stops: string[] = []
+      stops.push(`${swatchColors[0]} 0%`)
+      for (let i = 0; i < n - 1; i++) {
+        const boundary = segment * (i + 1)
+        const p0 = Math.max(0, boundary - half)
+        const p1 = Math.min(100, boundary + half)
+        stops.push(`${swatchColors[i]} ${p0}%`, `${swatchColors[i + 1]} ${p1}%`)
+      }
+      stops.push(`${swatchColors[n - 1]} 100%`)
+      return stops.join(', ')
+    })()
 
   return (
     <div
@@ -238,13 +238,13 @@ export default function ImageNode({
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
-            ...( { WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any )
+            ...({ WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any)
           }}
         />
       )}
       <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
 
-      
+
 
       <div className="relative cursor-default">
         {/* Image content */}
@@ -383,65 +383,61 @@ export default function ImageNode({
 
         </div>
 
-        {/* Filename and accordion toggle - hidden when expanded */}
-        {!expanded && (
-          <>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 min-w-0 cursor-move" />
-              <button
-                type="button"
-                aria-label={detailsOpen ? 'Hide details' : 'Show details'}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const next = !detailsOpen
-                  setDetailsOpen(next)
-                  // Persist outside of render path
-                  setTimeout(() => onNodeUpdate?.(id, { detailsOpen: next }), 0)
-                }}
-                className="ml-2 cursor-pointer text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-              >
-                <CaretCircleDown
-                  size={24}
-                  weight="duotone"
-                  className={`transition-transform duration-300 ${detailsOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
-            </div>
 
-            {/* Accordion content */}
-            <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
-              <div className="mt-2">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {data.title || data.fileName || 'Image'}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
-                </div>
-                {data.content && (
-                  <div
-                    className="mt-2 tiptap-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: data.content }}
-                  />
-                )}
-                {data.status && (
-                  <div className={`mt-2 flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
-                    {getStatusIcon()}
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
-                      {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
-                    </span>
-                  </div>
-                )}
+        <>
+          <button
+            type="button"
+            aria-label={detailsOpen ? 'Hide details' : 'Show details'}
+            onClick={(e) => {
+              e.stopPropagation()
+              const next = !detailsOpen
+              setDetailsOpen(next)
+              // Persist outside of render path
+              setTimeout(() => onNodeUpdate?.(id, { detailsOpen: next }), 0)
+            }}
+            className="cursor-pointer absolute bottom-1 left-1/2 -translate-x-1/2 nodrag nopan
+            text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            >
+            {detailsOpen ? (
+              <CaretCircleUp size={24} weight="duotone" />
+            ) : (
+              <Info size={24} weight="duotone" />
+            )}
+          </button>
+
+          {/* Accordion content */}
+          <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
+            <div className="my-2">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                {data.title || data.fileName || 'Image'}
               </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {formatFileSize(data.fileSize)} {data.fileType ? `• ${data.fileType}` : ''}
+              </div>
+              {data.content && (
+                <div
+                  className="mt-2 tiptap-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: data.content }}
+                />
+              )}
+              {data.status && (
+                <div className={`mt-2 pointer-events-none flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
+                  {getStatusIcon()}
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+                  </span>
+                </div>
+              )}
             </div>
-          </>
-        )}
+          </div>
+        </>
       </div>
 
       {/* Colorgories swatch replaces tag list */}
 
       {/* Colorgories button moved to drawer */}
 
-      
+
 
       {/* Edit Modal */}
       {showEditModal && (
@@ -524,7 +520,7 @@ export default function ImageNode({
       >
         <Resize size={32} weight="duotone" className="w-4 h-4" />
       </div>
-      
+
       <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
     </div>
   )
