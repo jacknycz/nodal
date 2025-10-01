@@ -1015,6 +1015,7 @@ function BoardContent({
   const [isDragOver, setIsDragOver] = useState(false)
   const [selectedNodes, setSelectedNodes] = useState<string[]>([])
   const editingNodeIdRef = useRef<string | null>(null)
+  const lastEditedNodeIdRef = useRef<string | null>(null)
 
   // Handle XYFlow's selection changes
   const handleSelectionChange = useCallback(({ nodes }: { nodes: BoardNode[] }) => {
@@ -1479,9 +1480,21 @@ function BoardContent({
   useEffect(() => {
     if (editNodeId) {
       editingNodeIdRef.current = editNodeId
+      lastEditedNodeIdRef.current = editNodeId
       try { useBoardStore.getState().addSelectedNode(editNodeId) } catch {}
     } else {
+      // On close, unpin previously edited node from selection if present
+      const prev = lastEditedNodeIdRef.current
+      if (prev) {
+        try {
+          const current = Array.from(useBoardStore.getState().selectedNodeIds || [])
+          const filtered = current.filter(id => id !== prev)
+          useBoardStore.getState().setSelectedNodes(filtered)
+          setSelectedNodes(filtered)
+        } catch {}
+      }
       editingNodeIdRef.current = null
+      lastEditedNodeIdRef.current = null
     }
   }, [editNodeId])
 
