@@ -487,6 +487,18 @@ function BoardContent({
   useEffect(() => {
     setEdges((eds) => (Array.isArray(eds) ? eds.map(e => ({ ...e, type: toVisualEdgeType(edgeTypePref) as any })) : eds))
   }, [edgeTypePref, setEdges, toVisualEdgeType])
+
+  // Persist edge type preference changes even if there are no edges/nodes changes
+  useEffect(() => {
+    if (!isInitializedRef.current) return
+    if (!localBoardIdRef.current) return
+    // Mark and autosave current state including meta.edgeType
+    setHasUnsavedChanges(true)
+    if (onBoardStateChangeRef.current) {
+      onBoardStateChangeRef.current(currentBoardName, 'saving', true)
+    }
+    triggerAutosaveRef.current(nodes, edges)
+  }, [edgeTypePref])
   
   // Simple effect to trigger autosave when nodes/edges change
   useEffect(() => {
