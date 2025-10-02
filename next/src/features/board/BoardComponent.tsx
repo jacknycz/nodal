@@ -24,6 +24,7 @@ import { templateStorage } from '../storage/templateStorage'
 import DocumentNode from '../nodes/DocumentNode'
 import ImageNode from '../nodes/ImageNode'
 import NodalNode from '../nodes/nodalNode'
+import HeadlineNode from '../nodes/HeadlineNode'
 import TaskNode from '../nodes/TaskNode'
 import VideoNode from '../nodes/VideoNode'
 import LinkNode from '../nodes/LinkNode'
@@ -122,6 +123,7 @@ export const nodeTypes = {
   task: (props: any) => <TaskNode {...props} {...stableHandlers} />,
   video: (props: any) => <VideoNode {...props} {...stableHandlers} />,
   link: (props: any) => <LinkNode {...props} {...stableHandlers} />,
+  headline: (props: any) => <HeadlineNode {...props} {...stableHandlers} />,
 };
 
 export const edgeTypes = {
@@ -1774,6 +1776,25 @@ function BoardContent({
           setPendingSourceNodeId(null)
           setPendingNodePosition(null)
         }}
+        onAddHeadlineNode={() => {
+          if (!contextMenu.position) return
+          const flowPosition = reactFlowInstance.screenToFlowPosition({
+            x: contextMenu.position.x,
+            y: contextMenu.position.y,
+          })
+          const newId = `headline-${Date.now()}`
+          const newNode: Node = {
+            id: newId,
+            type: 'headline',
+            position: flowPosition,
+            data: { title: 'New headline', titleSize: 'sm' },
+          }
+          setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          showAddToast('added', 1)
+          setContextMenu({ isOpen: false, position: null })
+          setPendingSourceNodeId(null)
+          setPendingNodePosition(null)
+        }}
         onGenerateAINode={() => {
           handleOpenAINodeGenerator()
           setContextMenu({ isOpen: false, position: null })
@@ -2121,6 +2142,31 @@ function BoardContent({
               onLiveChange={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
               }}
+            />
+          )
+        }
+        if (n.type === 'headline') {
+          const initialTitle = d.title || 'New headline'
+          const initialTitleSize = (d.titleSize as any) || 'sm'
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={() => setEditNodeId(null)}
+              initialTitle={initialTitle}
+              initialContent={''}
+              initialColorgoryIds={[]}
+              initialTitleSize={initialTitleSize}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onSave={(title, _content, _cids, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, titleSize } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(title, _content, _cids, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, titleSize } } : nn) : nds))
+              }}
+              // Hide content/page mode for headline nodes
+              showContent={false as any}
+              showPageMode={false as any}
             />
           )
         }

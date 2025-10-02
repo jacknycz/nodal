@@ -17,6 +17,7 @@ interface BoardContextMenuProps {
   nodeId?: string | null
   onAddConnectedNodes?: (nodeId: string, position: { x: number; y: number }) => void
   onAddTaskNode?: () => void
+  onAddHeadlineNode?: () => void
   onQuickAIGenerateNodes?: (nodeId?: string | null) => void
   onPasteNode?: (position: { x: number; y: number }) => void
   onPasteConnectedNode?: (nodeId: string, position: { x: number; y: number }) => void
@@ -35,6 +36,7 @@ export default function BoardContextMenu({
   nodeId,
   onAddConnectedNodes,
   onAddTaskNode,
+  onAddHeadlineNode,
   onQuickAIGenerateNodes,
   onPasteNode,
   onPasteConnectedNode,
@@ -234,6 +236,14 @@ export default function BoardContextMenu({
               </button>
             )}
 
+            {!multiSelected && onAddHeadlineNode && (
+              <button onClick={() => handleAction(onAddHeadlineNode)}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <TagIcon size={18} className="w-4 h-4" />
+                Add Headline
+              </button>
+            )}
+
             <button onClick={() => { console.log('[BoardContextMenu] Open delete modal for node', nodeId); setShowDelete(true) }}
               className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3">
               <Trash size={18} className="w-4 h-4" />
@@ -261,6 +271,14 @@ export default function BoardContextMenu({
                 className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <CheckSquare size={18} className="w-4 h-4" />
                 Add Task
+              </button>
+            )}
+
+            {onAddHeadlineNode && (
+              <button onClick={() => handleAction(onAddHeadlineNode)}
+                className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <TagIcon size={18} className="w-4 h-4" />
+                Add Headline
               </button>
             )}
           </>

@@ -24,6 +24,8 @@ interface NodeEditModalProps {
   initialColorgoryIds?: string[]
   initialTitleSize?: 'sm' | 'md' | 'lg'
   initialPageMode?: boolean
+  showContent?: boolean
+  showPageMode?: boolean
 }
 
 export default function NodeEditModal({ 
@@ -37,6 +39,8 @@ export default function NodeEditModal({
   initialColorgoryIds = [],
   initialTitleSize = 'sm',
   initialPageMode = false,
+  showContent = true,
+  showPageMode = true,
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
@@ -72,7 +76,7 @@ export default function NodeEditModal({
       const active = document.activeElement as HTMLElement | null
       if (active && titleInputRef.current && active === titleInputRef.current) return
       try {
-        if (editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
+        if (showContent && editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
           editorHandleRef.current.focus()
         } else {
           titleInputRef.current?.focus()
@@ -80,7 +84,7 @@ export default function NodeEditModal({
       } catch {}
     }, 100)
     return () => clearTimeout(t)
-  }, [open])
+  }, [open, showContent])
 
   const handleSave = () => {
     onSave(title, content, selectedColorgoryIds, titleSize, pageMode)
@@ -175,13 +179,15 @@ export default function NodeEditModal({
             />
           </div>
         </div>
-        <div className="flex-none">
-          <Checkbox
-            checked={pageMode}
-            onChange={(v) => { const pv = !!v; setPageMode(pv); onLiveChange?.(title, content, selectedColorgoryIds, titleSize, pv) }}
-            label="Page Mode"
-          />
-        </div>
+        {showPageMode && (
+          <div className="flex-none">
+            <Checkbox
+              checked={pageMode}
+              onChange={(v) => { const pv = !!v; setPageMode(pv); onLiveChange?.(title, content, selectedColorgoryIds, titleSize, pv) }}
+              label="Page Mode"
+            />
+          </div>
+        )}
         {/* <MultiSelect
           label="Colorgories"
           values={selectedColorgoryIds}
@@ -190,19 +196,21 @@ export default function NodeEditModal({
           size="sm"
           fullWidth
         /> */}
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden basis-0">
-          <label htmlFor="edit-content" aria-description="Content" className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Content
-          </label>
-          <TipTapEditor
-            content={content}
-            onChange={(v) => { setContent(v); onLiveChange?.(title, v, selectedColorgoryIds, titleSize, pageMode) }}
-            placeholder="Start writing your node content..."
-            onKeyDown={handleContentKeyDown}
-            editorHandleRef={editorHandleRef}
-            className="flex-1 min-h-[320px]"
-          />
-        </div>
+        {showContent && (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden basis-0">
+            <label htmlFor="edit-content" aria-description="Content" className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Content
+            </label>
+            <TipTapEditor
+              content={content}
+              onChange={(v) => { setContent(v); onLiveChange?.(title, v, selectedColorgoryIds, titleSize, pageMode) }}
+              placeholder="Start writing your node content..."
+              onKeyDown={handleContentKeyDown}
+              editorHandleRef={editorHandleRef}
+              className="flex-1 min-h-[320px]"
+            />
+          </div>
+        )}
       </div>
     </Modal>
   )
