@@ -2,7 +2,7 @@
 
 import React from 'react'
 
-type HeadlineSize = 'sm' | 'md' | 'lg'
+type HeadlineSize = 'sm' | 'md' | 'lg' | 'xl'
 
 export interface HeadlineNodeData {
   title?: string
@@ -19,7 +19,7 @@ export default function HeadlineNode({ data }: HeadlineNodeProps) {
   const size: HeadlineSize = (data?.titleSize as HeadlineSize) || 'sm'
   const title = data?.title || 'New headline'
 
-  const sizeClass = size === 'lg' ? 'text-[72px]' : size === 'md' ? 'text-[64px]' : 'text-[48px]'
+  const sizeClass = size === 'lg' ? 'text-[72px]' : size === 'md' ? 'text-[64px]' : size === 'xl' ? 'text-[96px]' : 'text-[48px]'
 
   return (
     <div className="pointer-events-auto bg-transparent">
