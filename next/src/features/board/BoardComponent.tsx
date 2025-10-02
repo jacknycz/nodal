@@ -149,11 +149,10 @@ function BoardContent({
   const router = useRouter() // Add this line
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
-  const [myCursor, setMyCursor] = useState<{ x: number; y: number } | null>(null)
+  // Cursor tracking removed (temporarily disabled)
 
   // Centralized realtime subscriptions: cursors, locks, and board updates
   const {
-    remoteCursors,
     nodeLocks,
     isNodeLocked,
     getNodeLockOwner,
@@ -362,42 +361,7 @@ function BoardContent({
   }
   const setConnectingSource = useBoardStore((s: any) => s.setConnectingSource)
   
-  // Broadcast local cursor position
-  useEffect(() => {
-    if (!boardId || !user?.id) return
-    let lastSent = 0
-    const handleMouseMove = (e: MouseEvent) => {
-      // Get board-relative coordinates
-      const wrapper = reactFlowWrapper.current
-      if (!wrapper) return
-      const rect = wrapper.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-      setMyCursor({ x, y })
-      const now = Date.now()
-      if (now - lastSent > 50) { // throttle
-        lastSent = now
-        supabase.from('board_cursors').upsert({
-          board_id: boardId,
-          user_id: user.id,
-          x,
-          y,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'board_id,user_id' }).then(({ error, data }) => {
-          if (error) {
-          } else {
-          }
-        })
-      }
-    }
-    const wrapper = reactFlowWrapper.current
-    if (wrapper) {
-      wrapper.addEventListener('mousemove', handleMouseMove)
-    }
-    return () => {
-      if (wrapper) wrapper.removeEventListener('mousemove', handleMouseMove)
-    }
-  }, [boardId, user?.id])
+  // Cursor broadcast disabled
 
   // Wrappers for lock operations bound to current board/user
   const acquireNodeLock = useCallback(async (nodeId: string) => {
@@ -412,33 +376,7 @@ function BoardContent({
 
   // isNodeLocked, getNodeLockOwner, isNodeLockedByMe provided by useBoardRealtime
 
-  // Helper to get avatar for a user_id
-  const getCursorAvatar = (userId: string) => {
-    if (user && user.id === userId) {
-      const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
-      if (avatar) {
-        return <img src={avatar} alt="avatar" className="w-6 h-6 rounded-full object-cover border-2 border-white" />
-      }
-    }
-    return (
-      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white border-2 border-white">
-        {userId.slice(0, 2).toUpperCase()}
-      </div>
-    )
-  }
-
-  // Render remote cursors (excluding self)
-  const renderRemoteCursors = () => {
-    return remoteCursors.filter(c => user && c.user_id !== user.id).map(c => (
-      <div
-        key={`${c.user_id}-${c.x}-${c.y}`}
-        className="pointer-events-none absolute z-50"
-        style={{ left: c.x, top: c.y, transform: 'translate(-50%, -50%)', border: '2px solid red', background: 'rgba(255,255,255,0.7)' }}
-      >
-        {getCursorAvatar(c.user_id)}
-      </div>
-    ))
-  }
+  // Remote cursor rendering disabled
   
   // Helper function to check if a file type supports text extraction
   const isTextExtractable = (fileType: string, fileName: string): boolean => {
@@ -1699,7 +1637,7 @@ function BoardContent({
         multiSelectionKeyCode="Meta"
         // Disable built-in Delete behavior; we show a confirm modal instead
       >
-        {renderRemoteCursors()}
+        {/* Remote cursors disabled */}
         {/* Remove the Background component - BokehBackground will handle the background */}
         <div className="hidden sm:block">
           <Controls />
