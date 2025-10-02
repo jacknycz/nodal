@@ -1975,7 +1975,14 @@ function BoardContent({
         }}
         onOrganizeSubtree={async (nodeId: string) => {
           try {
+            // Capture history before layout mutation
+            pushHistory()
             await reorganizeSubtree(nodeId)
+            // Persist immediately after reorg completes
+            try {
+              const st = useBoardStore.getState()
+              await manualSave(st.nodes || [], st.edges || [])
+            } catch {}
           } catch {}
         }}
         onPasteNode={async (screenPos: { x: number; y: number }) => {
