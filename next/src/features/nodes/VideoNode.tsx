@@ -216,6 +216,20 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
 
+  // Ensure expanded video sits above other nodes
+  useEffect(() => {
+    try {
+      const el = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+      if (!el) return
+      if (expanded) {
+        el.style.zIndex = '800'
+      } else {
+        el.style.zIndex = ''
+      }
+      return () => { if (el) el.style.zIndex = '' }
+    } catch {}
+  }, [expanded, id])
+
   return (
     <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef}>
       {/* Colorgory ring overlay (hidden when expanded) */}
