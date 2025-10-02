@@ -173,6 +173,7 @@ function BoardContent({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   
+  
   // Sync XYFlow nodes with Zustand board store for DocumentsMenu
   useEffect(() => {
     useBoardStore.getState().setNodes(nodes)
@@ -283,6 +284,57 @@ function BoardContent({
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
+
+  // --- History (undo/redo) ---
+  type Snapshot = { nodes: Node[]; edges: Edge[]; viewport: any }
+  const pastRef = useRef<Snapshot[]>([])
+  const futureRef = useRef<Snapshot[]>([])
+  const isRestoringRef = useRef(false)
+  const HISTORY_LIMIT = 5
+
+  const broadcastHistoryState = useCallback(() => {
+    try { window.dispatchEvent(new CustomEvent('nodal:history-state', { detail: { canUndo: pastRef.current.length > 0, canRedo: futureRef.current.length > 0 } })) } catch {}
+  }, [])
+
+  const captureSnapshot = useCallback((): Snapshot => {
+    return { nodes: Array.isArray(nodes) ? [...nodes] : [], edges: Array.isArray(edges) ? [...edges] : [], viewport: reactFlowInstance.getViewport() }
+  }, [nodes, edges, reactFlowInstance])
+
+  const pushHistory = useCallback(() => {
+    if (isRestoringRef.current) return
+    const snap = captureSnapshot()
+    pastRef.current = [...pastRef.current, snap].slice(-HISTORY_LIMIT)
+    futureRef.current = []
+    broadcastHistoryState()
+  }, [captureSnapshot, broadcastHistoryState])
+
+  const undo = useCallback(() => {
+    if (pastRef.current.length === 0) return
+    isRestoringRef.current = true
+    const current = captureSnapshot()
+    const prev = pastRef.current[pastRef.current.length - 1]
+    pastRef.current = pastRef.current.slice(0, -1)
+    futureRef.current = [...futureRef.current, current].slice(-HISTORY_LIMIT)
+    setNodes(prev.nodes)
+    setEdges(prev.edges)
+    try { reactFlowInstance.setViewport(prev.viewport, { duration: 0 }) } catch {}
+    isRestoringRef.current = false
+    broadcastHistoryState()
+  }, [captureSnapshot, setNodes, setEdges, reactFlowInstance, broadcastHistoryState])
+
+  const redo = useCallback(() => {
+    if (futureRef.current.length === 0) return
+    isRestoringRef.current = true
+    const current = captureSnapshot()
+    const next = futureRef.current[futureRef.current.length - 1]
+    futureRef.current = futureRef.current.slice(0, -1)
+    pastRef.current = [...pastRef.current, current].slice(-HISTORY_LIMIT)
+    setNodes(next.nodes)
+    setEdges(next.edges)
+    try { reactFlowInstance.setViewport(next.viewport, { duration: 0 }) } catch {}
+    isRestoringRef.current = false
+    broadcastHistoryState()
+  }, [captureSnapshot, setNodes, setEdges, reactFlowInstance, broadcastHistoryState])
   const centerOnPositions = (positions: { x: number; y: number }[]) => {
     if (!positions || positions.length === 0) return
     try {
@@ -862,6 +914,7 @@ function BoardContent({
   // Handle connections
   const onConnect = useCallback(
     (params: Connection) => {
+      pushHistory()
       const newEdge: Edge = {
         id: `edge-${Date.now()}`,
         source: params.source!,
@@ -873,7 +926,7 @@ function BoardContent({
         return [...eds, newEdge]
       })
     },
-    [setEdges, edgeTypePref, toVisualEdgeType]
+    [setEdges, edgeTypePref, toVisualEdgeType, pushHistory]
   )
 
   // Node-wide drop connection support
@@ -903,6 +956,7 @@ function BoardContent({
     const targetId = nodeEl?.getAttribute?.('data-id') || null
 
     if (targetId && targetId !== sourceId) {
+      pushHistory()
       const newEdge: Edge = {
         id: `edge-${Date.now()}`,
         source: sourceId,
@@ -912,10 +966,11 @@ function BoardContent({
       setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
     }
     done()
-  }, [setEdges, clearConnecting])
+  }, [setEdges, clearConnecting, pushHistory])
   
   // Handle adding nodes
   const handleAddNode = useCallback((nodeData: { title: string; content?: string }, position: { x: number; y: number }) => {
+    pushHistory()
     // console.log('➕ Adding new node:', { nodeData, position })
     const newNode: Node = {
       id: `node-${Date.now()}`,
@@ -935,7 +990,7 @@ function BoardContent({
       })
     }
     addNode(newNode)
-  }, [setNodes])
+  }, [setNodes, pushHistory])
 
   // Add handler for node setup modal
   const handleNodeSetupComplete = useCallback((nodeData: { title: string; content?: string }) => {
@@ -1226,6 +1281,7 @@ function BoardContent({
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
     console.log('[BoardComponent] handleNodeDelete called for', nodeId)
+    pushHistory()
     setNodes((nds) => (Array.isArray(nds) ? nds.filter((node) => node.id !== nodeId) : nds))
     setEdges((eds) => (Array.isArray(eds) ? eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId) : eds))
     try {
@@ -1240,7 +1296,7 @@ function BoardContent({
       console.log('[BoardComponent] post-delete nodes', (store.nodes || []).length, 'edges', (store.edges || []).length)
     }, 0)
     if (onDeleteNode) onDeleteNode(nodeId)
-  }, [onDeleteNode, setNodes, setEdges])
+  }, [onDeleteNode, setNodes, setEdges, pushHistory])
 
   // Fallback: respond to global delete events
   useEffect(() => {
@@ -1330,6 +1386,7 @@ function BoardContent({
   }, [])
 
   const handleNodeUpdate = useCallback(async (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
+    pushHistory()
     // Update local nodes immediately
     setNodes((nds) => nds.map((node) => 
       node.id === nodeId ? { ...node, data: { ...node.data, ...updates } } : node
@@ -1357,11 +1414,12 @@ function BoardContent({
         // console.error('[BoardComponent] Error broadcasting node update:', error)
       }
     }
-  }, [setNodes, boardId, user?.id, supabase])
+  }, [setNodes, boardId, user?.id, supabase, pushHistory])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
+    pushHistory()
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
-  }, [setEdges])
+  }, [setEdges, pushHistory])
 
   // Shift+Click connect: connect from the single selected node to clicked node
   const handleShiftClickConnect = useCallback((targetId: string) => {
@@ -1475,6 +1533,11 @@ function BoardContent({
       triggerAutosaveRef.current(nodes, edges)
     }
     window.addEventListener('nodal:chat-updated', handler as EventListener)
+    // History events
+    const onUndo = () => undo()
+    const onRedo = () => redo()
+    window.addEventListener('nodal:undo', onUndo as EventListener)
+    window.addEventListener('nodal:redo', onRedo as EventListener)
     // Immediate save trigger (e.g., from ColorgoryManager changes)
     const saveNow = (e: Event) => {
       if (!localBoardIdRef.current) return
@@ -1483,9 +1546,11 @@ function BoardContent({
     window.addEventListener('nodal:save-now', saveNow as EventListener)
     return () => {
       window.removeEventListener('nodal:chat-updated', handler as EventListener)
+      window.removeEventListener('nodal:undo', onUndo as EventListener)
+      window.removeEventListener('nodal:redo', onRedo as EventListener)
       window.removeEventListener('nodal:save-now', saveNow as EventListener)
     }
-  }, [saveStatus, currentBoardName, nodes, edges, manualSave])
+  }, [saveStatus, currentBoardName, nodes, edges, manualSave, undo, redo])
 
   // Broadcast editor mode and toggle a root class for global styling (e.g., hide headers)
   useEffect(() => {
@@ -1751,6 +1816,7 @@ function BoardContent({
             x: contextMenu.position.x,
             y: contextMenu.position.y,
           })
+          pushHistory()
           const newId = `task-${Date.now()}`
           const newNode: Node = {
             id: newId,
@@ -1782,6 +1848,7 @@ function BoardContent({
             x: contextMenu.position.x,
             y: contextMenu.position.y,
           })
+          pushHistory()
           const newId = `headline-${Date.now()}`
           const newNode: Node = {
             id: newId,

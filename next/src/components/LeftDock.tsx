@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ListChecks, Tag as TagIcon, Info, X } from '@phosphor-icons/react'
+import { ListChecks, Tag as TagIcon, Info, X, ArrowCounterClockwise, ArrowClockwise } from '@phosphor-icons/react'
 import TaskList from './TaskList'
 import ColorgoryManager from './ColorgoryManager'
 
@@ -16,8 +16,11 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
   const baseBtn = "w-10 h-10 cursor-pointer rounded-lg flex items-center justify-center transition-colors duration-150"
   const neutral = "bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 dark:text-gray-200"
   const activeCls = "bg-primary-600 text-white hover:bg-primary-600"
+  const disabledCls = "opacity-50 cursor-not-allowed"
   const [openKey, setOpenKey] = useState<DockKey>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [canUndo, setCanUndo] = useState(false)
+  const [canRedo, setCanRedo] = useState(false)
 
   // Close any open submenu on outside click/tap
   useEffect(() => {
@@ -38,6 +41,15 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
     }
   }, [openKey])
 
+  useEffect(() => {
+    const onHist = (e: any) => {
+      setCanUndo(!!e?.detail?.canUndo)
+      setCanRedo(!!e?.detail?.canRedo)
+    }
+    window.addEventListener('nodal:history-state', onHist as EventListener)
+    return () => window.removeEventListener('nodal:history-state', onHist as EventListener)
+  }, [])
+
   return (
     <div
       className="fixed z-50 left-0 top-12 md:top-16 flex flex-col gap-2 p-2 rounded-r-xl 
@@ -47,6 +59,27 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
       aria-label="Left dock"
       ref={containerRef}
     >
+      {/* Undo / Redo */}
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          title="Undo"
+          onClick={() => { if (canUndo) try { window.dispatchEvent(new CustomEvent('nodal:undo')) } catch {} }}
+          className={`${baseBtn} ${neutral} ${!canUndo ? disabledCls : ''}`}
+          disabled={!canUndo}
+        >
+          <ArrowCounterClockwise className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          title="Redo"
+          onClick={() => { if (canRedo) try { window.dispatchEvent(new CustomEvent('nodal:redo')) } catch {} }}
+          className={`${baseBtn} ${neutral} ${!canRedo ? disabledCls : ''}`}
+          disabled={!canRedo}
+        >
+          <ArrowClockwise className="w-5 h-5" />
+        </button>
+      </div>
       <div className="relative">
         <button
         type="button"
