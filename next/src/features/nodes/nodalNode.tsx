@@ -202,7 +202,7 @@ export default function NodalNode({
 
       <div className={`${expanded ? 'cursor-default flex-1' : 'cursor-move'} flex flex-col min-h-0`}>
         <div className={`nodal-drag-handle flex items-center gap-2 mb-1 w-full justify-between flex-none ${expanded ? 'cursor-default' : 'cursor-move'} ${pageMode ? 'px-2' : ''}`}>
-          <h3 className={`${data.titleSize === 'lg' ? 'text-lg' : data.titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
+          <h3 className={`${data.titleSize === 'lg' ? 'text-xl' : data.titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
             {displayTitle}
           </h3>
           {pageMode && (
