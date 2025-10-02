@@ -99,8 +99,9 @@ export default function FloatingStraightEdge({
     targetPosition: tp,
   })
 
-  const centerX = (sx + tx) / 2
-  const centerY = (sy + ty) / 2
+  // Use labelX/labelY to position the delete button exactly on the path midpoint
+  const centerX = labelX
+  const centerY = labelY
 
   const getEdgeStyle = () => {
     const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)

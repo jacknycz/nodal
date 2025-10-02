@@ -105,8 +105,9 @@ export default function FloatingEdge({
   })
 
   // Calculate center point for delete button
-  const centerX = (sx + tx) / 2
-  const centerY = (sy + ty) / 2
+  // Use labelX/labelY from the path util for accurate midpoint on curved paths
+  const centerX = labelX
+  const centerY = labelY
 
   
 

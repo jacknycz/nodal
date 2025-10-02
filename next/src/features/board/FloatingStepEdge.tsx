@@ -100,8 +100,9 @@ export default function FloatingStepEdge({
     borderRadius: 0,
   })
 
-  const centerX = (sx + tx) / 2
-  const centerY = (sy + ty) / 2
+  // Use labelX/labelY from smooth-step path util to align with the actual path midpoint
+  const centerX = labelX
+  const centerY = labelY
 
   const getEdgeStyle = () => {
     const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)

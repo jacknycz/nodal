@@ -100,8 +100,9 @@ export default function FloatingSmoothEdge({
     borderRadius: 32,
   })
 
-  const centerX = (sx + tx) / 2
-  const centerY = (sy + ty) / 2
+  // Use labelX/labelY returned by the path util for accurate midpoint on curved paths
+  const centerX = labelX
+  const centerY = labelY
 
   const getEdgeStyle = () => {
     const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)
