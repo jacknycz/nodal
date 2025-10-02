@@ -201,14 +201,16 @@ export default function NodeEditModal({
             <label htmlFor="edit-content" aria-description="Content" className="hidden text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Content
             </label>
-            <TipTapEditor
-              content={content}
-              onChange={(v) => { setContent(v); onLiveChange?.(title, v, selectedColorgoryIds, titleSize, pageMode) }}
-              placeholder="Start writing your node content..."
-              onKeyDown={handleContentKeyDown}
-              editorHandleRef={editorHandleRef}
-              className="flex-1 min-h-[320px]"
-            />
+            <div className="flex-1 min-h-0 overflow-y-auto scrollbar-themed">
+              <TipTapEditor
+                content={content}
+                onChange={(v) => { setContent(v); onLiveChange?.(title, v, selectedColorgoryIds, titleSize, pageMode) }}
+                placeholder="Start writing your node content..."
+                onKeyDown={handleContentKeyDown}
+                editorHandleRef={editorHandleRef}
+                className="h-full"
+              />
+            </div>
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import React from 'react'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import TextArea from './ui/TextArea'
+import TipTapEditor from './TipTapEditor'
 import Button from './ui/Button'
 import Checkbox from './ui/Checkbox'
 import Toggle from './ui/Toggle'
@@ -506,16 +507,17 @@ export default function AddNodesModal({
           </div>
 
           {titles.length === 0 && !generateDescription && (
-            <div>
-              <TextArea
-                label="Description (optional)"
-                value={description}
-                onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
-                placeholder="Add details, notes, or context for this node..."
-                rows={3}
-                fullWidth
-                description="Hidden when adding multiple nodes."
-              />
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description (optional)</label>
+              <div className="h-[150px] overflow-y-auto flex flex-col min-h-0 scrollbar-themed">
+                <TipTapEditor
+                  content={description}
+                  onChange={(v) => setDescription(v)}
+                  placeholder="Add details, notes, or context for this node..."
+                  className="h-[150px]"
+                />
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Hidden when adding multiple nodes.</div>
             </div>
           )}
 
