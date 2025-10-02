@@ -82,7 +82,6 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <div
           className={clsx(
             'relative flex cursor-pointer rounded-full border border-transparent transition-all duration-200',
-            'shadow-sm shadow-gray-400/20 dark:shadow-2xl dark:shadow-primary-500/40',
             'bg-white dark:bg-gray-900/80',
             'focus-within:border-primary-500 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',
