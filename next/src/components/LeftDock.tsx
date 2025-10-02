@@ -80,6 +80,7 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
           <ArrowClockwise className="w-5 h-5" />
         </button>
       </div>
+      <hr className="border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-400/10 dark:shadow-gray-950/90 my-1" />
       <div className="relative">
         <button
         type="button"
