@@ -2156,6 +2156,7 @@ function BoardContent({
               initialContent={''}
               initialColorgoryIds={[]}
               initialTitleSize={initialTitleSize}
+              titleSizeOptions={['sm','md','lg','xl']}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
               onSave={(title, _content, _cids, titleSize) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, titleSize } } : nn) : nds))

@@ -13,19 +13,22 @@ import MultiSelect from './ui/MultiSelect'
 import ToggleGroup from './ui/ToggleGroup'
 import { useBoardStore } from '../features/board/boardSlice'
 
+type TitleSize = 'sm' | 'md' | 'lg' | 'xl'
+
 interface NodeEditModalProps {
   open: boolean
   onClose: () => void
-  onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
-  onLiveChange?: (title: string, content: string, colorgoryIds?: string[], titleSize?: 'sm' | 'md' | 'lg', pageMode?: boolean) => void
+  onSave: (title: string, content: string, colorgoryIds?: string[], titleSize?: TitleSize, pageMode?: boolean) => void
+  onLiveChange?: (title: string, content: string, colorgoryIds?: string[], titleSize?: TitleSize, pageMode?: boolean) => void
   onLocate?: () => void
   initialTitle: string
   initialContent: string
   initialColorgoryIds?: string[]
-  initialTitleSize?: 'sm' | 'md' | 'lg'
+  initialTitleSize?: TitleSize
   initialPageMode?: boolean
   showContent?: boolean
   showPageMode?: boolean
+  titleSizeOptions?: TitleSize[]
 }
 
 export default function NodeEditModal({ 
@@ -41,11 +44,12 @@ export default function NodeEditModal({
   initialPageMode = false,
   showContent = true,
   showPageMode = true,
+  titleSizeOptions = ['sm','md','lg'],
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
   const [selectedColorgoryIds, setSelectedColorgoryIds] = useState<string[]>(initialColorgoryIds)
-  const [titleSize, setTitleSize] = useState<'sm' | 'md' | 'lg'>(initialTitleSize)
+  const [titleSize, setTitleSize] = useState<TitleSize>(initialTitleSize)
   const [pageMode, setPageMode] = useState<boolean>(!!initialPageMode)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const editorHandleRef = useRef<{ focus: () => void } | null>(null)
@@ -169,12 +173,8 @@ export default function NodeEditModal({
             <ToggleGroup
               label="Size"
               value={titleSize}
-              onChange={(v) => { const vs = (v as any) as 'sm' | 'md' | 'lg'; setTitleSize(vs); onLiveChange?.(title, content, selectedColorgoryIds, vs, pageMode) }}
-              options={[
-                { value: 'sm', label: 'S' },
-                { value: 'md', label: 'M' },
-                { value: 'lg', label: 'L' },
-              ]}
+              onChange={(v) => { const vs = (v as any) as TitleSize; setTitleSize(vs); onLiveChange?.(title, content, selectedColorgoryIds, vs, pageMode) }}
+              options={titleSizeOptions.map((sz) => ({ value: sz, label: sz.toUpperCase() }))}
               size="sm"
             />
           </div>
