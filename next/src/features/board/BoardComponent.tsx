@@ -922,8 +922,13 @@ function BoardContent({
         type: toVisualEdgeType(edgeTypePref) as any,
       }
       setEdges((eds) => {
-        if (!Array.isArray(eds)) return [newEdge]
-        return [...eds, newEdge]
+        const list = Array.isArray(eds) ? eds : []
+        const exists = list.some((e: any) => (
+          (e.source === newEdge.source && e.target === newEdge.target) ||
+          (e.source === newEdge.target && e.target === newEdge.source)
+        ))
+        if (exists) return eds
+        return [...list, newEdge]
       })
     },
     [setEdges, edgeTypePref, toVisualEdgeType, pushHistory]
@@ -963,7 +968,15 @@ function BoardContent({
         target: targetId,
         type: toVisualEdgeType(edgeTypePref) as any,
       }
-      setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+      setEdges((eds) => {
+        const list = Array.isArray(eds) ? eds : []
+        const exists = list.some((e: any) => (
+          (e.source === newEdge.source && e.target === newEdge.target) ||
+          (e.source === newEdge.target && e.target === newEdge.source)
+        ))
+        if (exists) return eds
+        return [...list, newEdge]
+      })
     }
     done()
   }, [setEdges, clearConnecting, pushHistory])
@@ -1836,7 +1849,15 @@ function BoardContent({
           }, 50)
           if (pendingSourceNodeId) {
             const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }
-            setEdges((eds) => (Array.isArray(eds) ? [...eds, newEdge] : [newEdge]))
+            setEdges((eds) => {
+              const list = Array.isArray(eds) ? eds : []
+              const exists = list.some((e: any) => (
+                (e.source === newEdge.source && e.target === newEdge.target) ||
+                (e.source === newEdge.target && e.target === newEdge.source)
+              ))
+              if (exists) return eds
+              return [...list, newEdge]
+            })
           }
           setContextMenu({ isOpen: false, position: null })
           setPendingSourceNodeId(null)

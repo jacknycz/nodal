@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, Position, useReactFlow } from '@xyflow/react'
 import { X } from '@phosphor-icons/react'
 import { useBoardStore } from './boardSlice'
 
@@ -42,6 +42,7 @@ export default function FloatingEdge({
 }: FloatingEdgeProps) {
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const rf = useReactFlow()
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   const hoveredEdgeId = useBoardStore((s: any) => s.hoveredEdgeId)
   const setHoveredEdgeId = useBoardStore((s: any) => s.setHoveredEdgeId)
@@ -51,18 +52,61 @@ export default function FloatingEdge({
   const hasContext = (selectedNodeIds || []).length > 0
   const isRelatedToContext = hasContext && (selectedNodeIds.includes(source as string) || selectedNodeIds.includes(target as string))
 
+  // Compute floating anchors: choose the closest pair of side midpoints between source and target nodes
+  const computeAnchors = (): { sx: number; sy: number; tx: number; ty: number; sp: Position; tp: Position } => {
+    try {
+      if (!source || !target) throw new Error('no ids')
+      const sel = document.querySelector(`.react-flow__node[data-id="${source}"]`) as HTMLElement | null
+      const tel = document.querySelector(`.react-flow__node[data-id="${target}"]`) as HTMLElement | null
+      if (!sel || !tel) throw new Error('no elements')
+      const sr = sel.getBoundingClientRect()
+      const tr = tel.getBoundingClientRect()
+      const sPts = [
+        { x: sr.left + sr.width / 2, y: sr.top, pos: Position.Top },
+        { x: sr.right, y: sr.top + sr.height / 2, pos: Position.Right },
+        { x: sr.left + sr.width / 2, y: sr.bottom, pos: Position.Bottom },
+        { x: sr.left, y: sr.top + sr.height / 2, pos: Position.Left },
+      ]
+      const tPts = [
+        { x: tr.left + tr.width / 2, y: tr.top, pos: Position.Top },
+        { x: tr.right, y: tr.top + tr.height / 2, pos: Position.Right },
+        { x: tr.left + tr.width / 2, y: tr.bottom, pos: Position.Bottom },
+        { x: tr.left, y: tr.top + tr.height / 2, pos: Position.Left },
+      ]
+      let best: any = null
+      for (const sp of sPts) {
+        const spFlow = rf.screenToFlowPosition({ x: sp.x, y: sp.y })
+        for (const tp of tPts) {
+          const tpFlow = rf.screenToFlowPosition({ x: tp.x, y: tp.y })
+          const dx = spFlow.x - tpFlow.x
+          const dy = spFlow.y - tpFlow.y
+          const d2 = dx * dx + dy * dy
+          if (!best || d2 < best.d2) {
+            best = { sx: spFlow.x, sy: spFlow.y, tx: tpFlow.x, ty: tpFlow.y, sp: sp.pos, tp: tp.pos, d2 }
+          }
+        }
+      }
+      if (best) return best
+      throw new Error('no best')
+    } catch {
+      return { sx: sourceX, sy: sourceY, tx: targetX, ty: targetY, sp: sourcePosition, tp: targetPosition }
+    }
+  }
+
+  const { sx, sy, tx, ty, sp, tp } = computeAnchors()
+
   const [edgePath, labelX, labelY] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
+    sourceX: sx,
+    sourceY: sy,
+    sourcePosition: sp,
+    targetX: tx,
+    targetY: ty,
+    targetPosition: tp,
   })
 
   // Calculate center point for delete button
-  const centerX = (sourceX + targetX) / 2
-  const centerY = (sourceY + targetY) / 2
+  const centerX = (sx + tx) / 2
+  const centerY = (sy + ty) / 2
 
   
 
