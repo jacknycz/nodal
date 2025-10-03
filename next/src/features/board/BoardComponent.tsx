@@ -2168,6 +2168,36 @@ function BoardContent({
             />
           )
         }
+        if (n.type === 'task') {
+          const initialContent = (d.content ?? d.title ?? '')
+          const toPlain = (html: string) => {
+            try { const tmp = document.createElement('div'); tmp.innerHTML = html; return (tmp.textContent || tmp.innerText || '').trim() } catch { return html }
+          }
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={() => setEditNodeId(null)}
+              initialTitle={''}
+              initialContent={initialContent}
+              initialColorgoryIds={d.colorgoryIds || []}
+              initialTitleSize={'sm'}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onSave={(_title, content) => {
+                const plain = toPlain(content || '')
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), content, title: plain } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(_title, content) => {
+                const plain = toPlain(content || '')
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), content, title: plain } } : nn) : nds))
+              }}
+              showContent={true}
+              showPageMode={false}
+              showTitle={false}
+              showTitleSize={false}
+            />
+          )
+        }
         if (n.type === 'video') {
           const initialTitle = d.title || 'Video'
           const initialContent = d.content || ''
@@ -2191,7 +2221,7 @@ function BoardContent({
           )
         }
         if (n.type === 'headline') {
-          const initialTitle = d.title || 'New headline'
+          const initialTitle = (d.title ?? 'New headline')
           const initialTitleSize = (d.titleSize as any) || 'sm'
           return (
             <NodeEditModal

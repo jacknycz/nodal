@@ -136,6 +136,17 @@ export default function ChatPanel2() {
     return text
   }
 
+  const getPlainText = (htmlOrText: string): string => {
+    if (!htmlOrText) return ''
+    try {
+      const tmp = document.createElement('div')
+      tmp.innerHTML = htmlOrText
+      return (tmp.textContent || tmp.innerText || '').trim()
+    } catch {
+      return htmlOrText
+    }
+  }
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || isStreaming) return
     const userText = inputValue.trim()
@@ -275,13 +286,23 @@ export default function ChatPanel2() {
         {selectedNodes.length > 0 && (
           <div className="bg-blue-50 dark:bg-primary-900/20 px-4 py-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 min-w-0">
                 <Target className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                <p className="text-xs text-primary-700 dark:text-primary-300">
-                  {selectedNodes.length === 1
-                    ? `Selected: "${selectedNodes[0].data?.title || 'Untitled Node'}"`
-                    : `Selected: ${selectedNodes.length} nodes`}
-                </p>
+                {selectedNodes.length === 1 ? (
+                  <p className="text-xs text-primary-700 dark:text-primary-300 truncate">
+                    {(() => {
+                      const n: any = selectedNodes[0]
+                      const t = n?.data?.title || 'Untitled Node'
+                      const raw = n?.data?.content || n?.data?.extractedText || n?.data?.extracted_text || ''
+                      const plain = getPlainText(String(raw))
+                      return plain ? `Selected: "${t}" — ${plain}` : `Selected: "${t}"`
+                    })()}
+                  </p>
+                ) : (
+                  <p className="text-xs text-primary-700 dark:text-primary-300">
+                    {`Selected: ${selectedNodes.length} nodes`}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => { clearSelectedNodes() }}

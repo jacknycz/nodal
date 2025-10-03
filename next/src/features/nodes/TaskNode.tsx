@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
-import TextInput from '../../components/ui/TextInput'
 import IconButton from '../../components/ui/IconButton'
 import { Trash, TreeView } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
@@ -58,21 +57,7 @@ export default function TaskNode({
     setCompleted(!!data.completed)
   }, [data.title, data.completed])
 
-  const commitTitle = (value: string) => {
-    if (value !== data.title) {
-      onNodeUpdate?.(id, { title: value })
-    }
-  }
-
-  const handleTitleBlur = () => {
-    commitTitle(title.trim())
-  }
-
-  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur()
-    }
-  }
+  // Inline editing removed; Task now edited via Edit Node modal
 
   const handleToggleCompleted = (next: boolean) => {
     setCompleted(next)
@@ -83,18 +68,7 @@ export default function TaskNode({
   const isReceiveMode = !!connectingSourceId && connectingSourceId !== id
   
 
-  useEffect(() => {
-    if ((data as any)?.focusOnMount) {
-      // Defer to ensure mounted
-      setTimeout(() => {
-        try {
-          const el = document.getElementById(`task-${id}`) as HTMLInputElement | null
-          el?.focus()
-          el?.select()
-        } catch {}
-      }, 0)
-    }
-  }, [])
+  // Focus on mount behavior removed with inline editor
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
@@ -153,7 +127,7 @@ export default function TaskNode({
       
 
       <div className="nodal-drag-handle cursor-move">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <Checkbox
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}
@@ -162,18 +136,7 @@ export default function TaskNode({
             className="flex-none"
             shape="circle"
           />
-          <TextInput
-            id={`task-${id}`}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleTitleBlur}
-            onKeyDown={handleTitleKeyDown}
-            placeholder="New task"
-            size="sm"
-            fullWidth
-            className={`${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
-            autoFocus={Boolean((data as any)?.focusOnMount)}
-          />
+          <div className={`text-sm leading-relaxed tiptap-content ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`} dangerouslySetInnerHTML={{ __html: (data as any)?.content || (data.title || '') }} />
           {/* inline actions removed; moved to slide-out */}
           
         </div>

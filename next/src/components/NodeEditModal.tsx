@@ -29,6 +29,8 @@ interface NodeEditModalProps {
   showContent?: boolean
   showPageMode?: boolean
   titleSizeOptions?: TitleSize[]
+  showTitle?: boolean
+  showTitleSize?: boolean
 }
 
 export default function NodeEditModal({ 
@@ -45,6 +47,8 @@ export default function NodeEditModal({
   showContent = true,
   showPageMode = true,
   titleSizeOptions = ['sm','md','lg'],
+  showTitle = true,
+  showTitleSize = true,
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
@@ -155,30 +159,36 @@ export default function NodeEditModal({
       }
     >
       <div className="gap-4 py-2 flex-1 min-h-0 h-full flex flex-col overflow-hidden basis-0">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-none">
-          <div className="flex-1">
-            <TextInput
-              ref={titleInputRef}
-              id="edit-title"
-              type="text"
-              value={title}
-              onChange={(e) => { const v = e.target.value; setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
-              onKeyDown={handleTitleKeyDown}
-              placeholder="Enter node title..."
-              fullWidth
-              label="Title"
-            />
+        {(showTitle || showTitleSize) && (
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-none">
+            {showTitle && (
+              <div className="flex-1">
+                <TextInput
+                  ref={titleInputRef}
+                  id="edit-title"
+                  type="text"
+                  value={title}
+                  onChange={(e) => { const v = e.target.value; setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
+                  onKeyDown={handleTitleKeyDown}
+                  placeholder="Enter node title..."
+                  fullWidth
+                  label="Title"
+                />
+              </div>
+            )}
+            {showTitleSize && titleSizeOptions.length > 0 && (
+              <div className="sm:w-auto">
+                <ToggleGroup
+                  label="Size"
+                  value={titleSize}
+                  onChange={(v) => { const vs = (v as any) as TitleSize; setTitleSize(vs); onLiveChange?.(title, content, selectedColorgoryIds, vs, pageMode) }}
+                  options={titleSizeOptions.map((sz) => ({ value: sz, label: sz.toUpperCase() }))}
+                  size="sm"
+                />
+              </div>
+            )}
           </div>
-          <div className="sm:w-auto">
-            <ToggleGroup
-              label="Size"
-              value={titleSize}
-              onChange={(v) => { const vs = (v as any) as TitleSize; setTitleSize(vs); onLiveChange?.(title, content, selectedColorgoryIds, vs, pageMode) }}
-              options={titleSizeOptions.map((sz) => ({ value: sz, label: sz.toUpperCase() }))}
-              size="sm"
-            />
-          </div>
-        </div>
+        )}
         {showPageMode && (
           <div className="flex-none">
             <Checkbox
