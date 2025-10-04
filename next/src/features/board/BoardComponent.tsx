@@ -1510,6 +1510,13 @@ function BoardContent({
                 return next
               })
             }
+            if (msg?.type === 'content-update' && msg?.data) {
+              const { nodeId, patch, userId: from } = msg.data as any
+              console.log('[content-ws] content-update', { nodeId, from, keys: patch && Object.keys(patch || {}) })
+              if ((user?.id || '') === from) return // ignore own
+              if (!nodeId || !patch || typeof patch !== 'object') return
+              setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n) : nds))
+            }
           } catch {}
         })
         ws.addEventListener('close', () => {
@@ -1550,6 +1557,16 @@ function BoardContent({
       }
     } catch {}
   }, [])
+
+  const lastLiveSentRef = useRef<number>(0)
+  const sendLivePatch = useCallback((nodeId: string, patch: any) => {
+    try {
+      const now = Date.now()
+      if (now - lastLiveSentRef.current < 80) return
+      lastLiveSentRef.current = now
+      sendWs({ type: 'content', boardId, data: { nodeId, patch, userId: user?.id || null, ts: now } })
+    } catch {}
+  }, [boardId, user?.id, sendWs])
   
   // Release lock when modal closes or component unmounts
   useEffect(() => {
@@ -2272,6 +2289,7 @@ function BoardContent({
               }}
               onLiveChange={(title, content, colorgoryIds, titleSize, pageMode) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize, pageMode } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds, titleSize, pageMode })
               }}
             />
           )
@@ -2293,6 +2311,7 @@ function BoardContent({
               }}
               onLiveChange={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, description: content, colorgoryIds })
               }}
             />
           )
@@ -2315,6 +2334,7 @@ function BoardContent({
               }}
               onLiveChange={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds })
               }}
             />
           )
@@ -2341,6 +2361,7 @@ function BoardContent({
               onLiveChange={(_title, content) => {
                 const plain = toPlain(content || '')
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), content, title: plain } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title: plain, content })
               }}
               showContent={true}
               showPageMode={false}
@@ -2367,6 +2388,7 @@ function BoardContent({
               }}
               onLiveChange={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds })
               }}
             />
           )
@@ -2390,6 +2412,7 @@ function BoardContent({
               }}
               onLiveChange={(title, _content, _cids, titleSize) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, titleSize } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, titleSize })
               }}
               // Hide content/page mode for headline nodes
               showContent={false as any}

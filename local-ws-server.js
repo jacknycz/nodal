@@ -50,6 +50,17 @@ wss.on('connection', (ws, req) => {
         }
       }
     }
+    if (type === 'content' && data && data.nodeId) {
+      console.log('[ws] content', { boardId, nodeId: data.nodeId, from: data.userId, keys: data.patch && Object.keys(data.patch || {}) })
+      const room = rooms.get(boardId)
+      if (!room) return
+      const payload = JSON.stringify({ type: 'content-update', data })
+      for (const client of room) {
+        if (client.readyState === ws.OPEN) {
+          try { client.send(payload) } catch {}
+        }
+      }
+    }
     if (type === 'lock' && data && data.nodeId && data.userId) {
       console.log('[ws] lock', { boardId, nodeId: data.nodeId, userId: data.userId })
       const room = rooms.get(boardId)
