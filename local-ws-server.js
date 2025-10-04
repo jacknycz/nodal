@@ -72,6 +72,28 @@ wss.on('connection', (ws, req) => {
         }
       }
     }
+    if (type === 'edge-add' && data && data.edge && data.edge.id) {
+      console.log('[ws] edge-add', { boardId, id: data.edge.id, from: data.userId })
+      const room = rooms.get(boardId)
+      if (!room) return
+      const payload = JSON.stringify({ type: 'edge-add-update', data })
+      for (const client of room) {
+        if (client.readyState === ws.OPEN) {
+          try { client.send(payload) } catch {}
+        }
+      }
+    }
+    if (type === 'edge-remove' && data && data.edgeId) {
+      console.log('[ws] edge-remove', { boardId, id: data.edgeId, from: data.userId })
+      const room = rooms.get(boardId)
+      if (!room) return
+      const payload = JSON.stringify({ type: 'edge-remove-update', data })
+      for (const client of room) {
+        if (client.readyState === ws.OPEN) {
+          try { client.send(payload) } catch {}
+        }
+      }
+    }
     if (type === 'content' && data && data.nodeId) {
       console.log('[ws] content', { boardId, nodeId: data.nodeId, from: data.userId, keys: data.patch && Object.keys(data.patch || {}) })
       const room = rooms.get(boardId)

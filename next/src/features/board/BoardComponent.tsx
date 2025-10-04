@@ -885,8 +885,9 @@ function BoardContent({
         if (exists) return eds
         return [...list, newEdge]
       })
+      try { sendWs({ type: 'edge-add', boardId, data: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
     },
-    [setEdges, edgeTypePref, toVisualEdgeType, pushHistory]
+    [setEdges, edgeTypePref, toVisualEdgeType, pushHistory, boardId, user?.id]
   )
 
   // Node-wide drop connection support
@@ -932,6 +933,7 @@ function BoardContent({
         if (exists) return eds
         return [...list, newEdge]
       })
+      try { sendWs({ type: 'edge-add', boardId, data: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
     }
     done()
   }, [setEdges, clearConnecting, pushHistory])
@@ -1387,6 +1389,7 @@ function BoardContent({
   const handleEdgeDelete = useCallback((edgeId: string) => {
     pushHistory()
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
+    try { sendWs({ type: 'edge-remove', boardId, data: { edgeId, userId: user?.id || null, ts: Date.now() } }) } catch {}
   }, [setEdges, pushHistory])
 
   // Shift+Click connect: connect from the single selected node to clicked node
@@ -1537,6 +1540,22 @@ function BoardContent({
               if ((user?.id || '') === from) return
               if (!nodeId || typeof width !== 'number') return
               setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...(n.data as any), width } } : n) : nds))
+            }
+            if (msg?.type === 'edge-add-update' && msg?.data) {
+              const { edge, userId: from } = msg.data as any
+              if ((user?.id || '') === from) return
+              if (!edge || !edge.id) return
+              setEdges((eds) => {
+                const list = Array.isArray(eds) ? eds : []
+                const exists = list.some((e: any) => e.id === edge.id || ((e.source === edge.source && e.target === edge.target) || (e.source === edge.target && e.target === edge.source)))
+                return exists ? eds : [...list, edge]
+              })
+            }
+            if (msg?.type === 'edge-remove-update' && msg?.data) {
+              const { edgeId, userId: from } = msg.data as any
+              if ((user?.id || '') === from) return
+              if (!edgeId) return
+              setEdges((eds) => (Array.isArray(eds) ? eds.filter(e => e.id !== edgeId) : eds))
             }
           } catch {}
         })
