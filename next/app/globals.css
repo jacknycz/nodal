@@ -370,13 +370,14 @@ body {
 }
 .tiptap-content ul,
 .tiptap-content ol {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
   padding-left: 1.25rem; /* 20px */
 }
 .tiptap-content li {
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.25;
 }
 
 /* Ensure TipTap default resets don't zero margins */

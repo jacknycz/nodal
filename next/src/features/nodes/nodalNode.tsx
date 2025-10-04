@@ -253,7 +253,7 @@ export default function NodalNode(props: any) {
           </div>
         ) : (
           data.content && (
-            <div className="mb-3">
+            <div className="mt-2">
               {renderRichContent(data.content)}
             </div>
           )

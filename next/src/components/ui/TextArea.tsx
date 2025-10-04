@@ -11,6 +11,7 @@ interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
   rightIcon?: React.ReactNode
   size?: TextAreaSize
   fullWidth?: boolean
+  bgClassName?: string
 }
 
 const sizeClasses: Record<TextAreaSize, string> = {
@@ -29,6 +30,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     size = 'md',
     fullWidth = false,
     className = '',
+    bgClassName = '',
     rows = 3,
     value,
     onChange,
@@ -52,6 +54,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
           className={clsx(
             'relative rounded-4xl px-3 border border-transparent transition-all duration-200',
             'bg-gray-100 dark:bg-gray-950/80',
+            bgClassName,
             'focus-within:bg-white dark:focus-within:bg-gray-900',
             'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',

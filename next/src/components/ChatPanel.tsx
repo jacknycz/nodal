@@ -333,6 +333,7 @@ export default function ChatPanel2() {
               rows={1}
               fullWidth
               className="resize-none scrollbar-none text-base! md:text-sm!"
+              // bgClassName="bg-[#F6F1EE]!"
             />
             <Button 
             onClick={() => handleSend()} 
