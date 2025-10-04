@@ -43,6 +43,7 @@ interface ImageNodeProps {
   selected?: boolean
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onLiveResize?: (nodeId: string, width: number) => void
 }
 
 export default function ImageNode({
@@ -52,7 +53,8 @@ export default function ImageNode({
   onNodeUpdate,
   selected,
   onQuickAddNodes,
-  onOrganizeSubtree
+  onOrganizeSubtree,
+  onLiveResize,
 }: ImageNodeProps) {
   const SHOW_ADD_CONNECTED = false
   const [showEditModal, setShowEditModal] = useState(false)
@@ -175,6 +177,14 @@ export default function ImageNode({
   const minWidth = 320
   const initialWidth = Math.max(minWidth, Math.min(((data as any)?.width as number) || 320, maxWidth))
   const [nodeWidth, setNodeWidth] = useState<number>(initialWidth)
+  // Sync external width updates (live resize)
+  useEffect(() => {
+    const incoming = typeof (data as any)?.width === 'number' ? ((data as any).width as number) : undefined
+    if (typeof incoming === 'number') {
+      const clamped = Math.max(minWidth, Math.min(incoming, maxWidth))
+      if (clamped !== nodeWidth) setNodeWidth(clamped)
+    }
+  }, [(data as any)?.width, maxWidth])
   const resizeStartRef = React.useRef<{ startX: number; startW: number } | null>(null)
   const onResizeDown = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault()
@@ -184,6 +194,7 @@ export default function ImageNode({
       const dx = ev.clientX - resizeStartRef.current.startX
       const next = Math.max(minWidth, Math.min(resizeStartRef.current.startW + dx, maxWidth))
       setNodeWidth(next)
+      try { onLiveResize?.(id, next) } catch {}
     }
     const onUp = () => {
       document.removeEventListener('mousemove', onMove)

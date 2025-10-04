@@ -1442,6 +1442,14 @@ function BoardContent({
         setShowUnifiedAddModal(true)
       },
       onOrganizeSubtree: (nodeId: string) => reorganizeSubtree(nodeId),
+      onLiveResize: (nodeId: string, width: number) => {
+        const now = Date.now()
+        const last = lastLiveSentRef.current || 0
+        if (now - last > 80) {
+          lastLiveSentRef.current = now
+          sendWs({ type: 'resize', boardId, data: { nodeId, width: Math.round(width), userId: user?.id || null, ts: now } })
+        }
+      },
     }
     
     // Force update stableHandlers immediately
@@ -1517,6 +1525,19 @@ function BoardContent({
               if (!nodeId || !patch || typeof patch !== 'object') return
               setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n) : nds))
             }
+            if (msg?.type === 'position-update' && msg?.data) {
+              const { nodeId, x, y, userId: from } = msg.data as any
+              if ((user?.id || '') === from) return
+              if (!nodeId || typeof x !== 'number' || typeof y !== 'number') return
+              setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, position: { x, y } } : n) : nds))
+            }
+            if (msg?.type === 'resize-update' && msg?.data) {
+              const { nodeId, width, userId: from } = msg.data as any
+              console.log('[resize-ws] resize-update', { nodeId, width, from })
+              if ((user?.id || '') === from) return
+              if (!nodeId || typeof width !== 'number') return
+              setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...(n.data as any), width } } : n) : nds))
+            }
           } catch {}
         })
         ws.addEventListener('close', () => {
@@ -1567,6 +1588,30 @@ function BoardContent({
       sendWs({ type: 'content', boardId, data: { nodeId, patch, userId: user?.id || null, ts: now } })
     } catch {}
   }, [boardId, user?.id, sendWs])
+
+  // Live position broadcasting (throttled per node)
+  const lastPosSentRef = useRef<Record<string, number>>({})
+  const draggingRef = useRef<Set<string>>(new Set())
+  const handleNodesChange = useCallback((changes: any[]) => {
+    onNodesChange(changes)
+    const now = Date.now()
+    for (const ch of changes) {
+      if (ch?.type === 'position' && ch?.position && ch?.id) {
+        const id = ch.id as string
+        if (ch.dragging) {
+          draggingRef.current.add(id)
+          const last = lastPosSentRef.current[id] || 0
+          if (now - last > 80) {
+            lastPosSentRef.current[id] = now
+            sendWs({ type: 'position', boardId, data: { nodeId: id, x: ch.position.x, y: ch.position.y, userId: user?.id || null, ts: now } })
+          }
+        } else {
+          draggingRef.current.delete(id)
+          sendWs({ type: 'position', boardId, data: { nodeId: id, x: ch.position.x, y: ch.position.y, userId: user?.id || null, ts: now } })
+        }
+      }
+    }
+  }, [onNodesChange, boardId, user?.id, sendWs])
   
   // Release lock when modal closes or component unmounts
   useEffect(() => {
@@ -1716,7 +1761,7 @@ function BoardContent({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
           onNodeContextMenu={(event: React.MouseEvent, node: any) => {

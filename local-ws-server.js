@@ -50,6 +50,28 @@ wss.on('connection', (ws, req) => {
         }
       }
     }
+    if (type === 'position' && data && data.nodeId && typeof data.x === 'number' && typeof data.y === 'number') {
+      console.log('[ws] position', { boardId, nodeId: data.nodeId, x: data.x, y: data.y, from: data.userId })
+      const room = rooms.get(boardId)
+      if (!room) return
+      const payload = JSON.stringify({ type: 'position-update', data })
+      for (const client of room) {
+        if (client.readyState === ws.OPEN) {
+          try { client.send(payload) } catch {}
+        }
+      }
+    }
+    if (type === 'resize' && data && data.nodeId && typeof data.width === 'number') {
+      console.log('[ws] resize', { boardId, nodeId: data.nodeId, width: data.width, from: data.userId })
+      const room = rooms.get(boardId)
+      if (!room) return
+      const payload = JSON.stringify({ type: 'resize-update', data })
+      for (const client of room) {
+        if (client.readyState === ws.OPEN) {
+          try { client.send(payload) } catch {}
+        }
+      }
+    }
     if (type === 'content' && data && data.nodeId) {
       console.log('[ws] content', { boardId, nodeId: data.nodeId, from: data.userId, keys: data.patch && Object.keys(data.patch || {}) })
       const room = rooms.get(boardId)
