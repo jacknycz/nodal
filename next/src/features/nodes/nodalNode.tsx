@@ -10,7 +10,7 @@ import Button from '../../components/ui/Button'
 import NodeEditModal from '../../components/NodeEditModal'
 import { useSupabaseUser } from '../auth/authUtils'
 import Tag from '../../components/ui/Tag'
-import { colorgoryHexById } from '../board/colorgoryColors'
+import { getColorgoryHex } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses } from './nodeStyles'
  
@@ -157,7 +157,7 @@ export default function NodalNode(props: any) {
   const swatchColors: string[] = Array.isArray(data.colorgoryIds)
     ? colorgories
         .filter((c: any) => data.colorgoryIds!.includes(c.id))
-        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+        .map((c: any) => getColorgoryHex(c.id))
     : []
 
   // Build colorgory ring gradient
@@ -322,7 +322,7 @@ export default function NodalNode(props: any) {
         }
       >
         <div className="mt-2 grid grid-cols-2 gap-2">
-          {(useBoardStore.getState().colorgories || []).map((c: any) => (
+          {(useBoardStore.getState().colorgories || []).filter((c: any) => c?.visible !== false).map((c: any) => (
             <Checkbox
               key={c.id}
               checked={pendingColorgoryIds.includes(c.id)}

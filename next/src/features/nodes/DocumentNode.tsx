@@ -12,7 +12,7 @@ import { useBoardStore } from '../board/boardSlice'
 // supabaseStorage is already imported above
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
-import { colorgoryHexById } from '../board/colorgoryColors'
+import { getColorgoryHex } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -213,7 +213,7 @@ export default function DocumentNode({
   const swatchColors: string[] = Array.isArray(data.colorgoryIds)
     ? colorgories
         .filter((c: any) => data.colorgoryIds!.includes(c.id))
-        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+        .map((c: any) => getColorgoryHex(c.id))
     : []
 
   // Build gradient stops for ring
@@ -362,7 +362,7 @@ export default function DocumentNode({
         }
       >
         <div className="mt-2 grid grid-cols-2 gap-2">
-          {(useBoardStore.getState().colorgories || []).map((c: any) => (
+          {(useBoardStore.getState().colorgories || []).filter((c: any) => c?.visible !== false).map((c: any) => (
             <Checkbox
               key={c.id}
               checked={pendingColorgoryIds.includes(c.id)}

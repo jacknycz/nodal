@@ -6,7 +6,7 @@ import { Trash, TreeView } from '@phosphor-icons/react/ssr'
 import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
-import { colorgoryHexById } from '../board/colorgoryColors'
+import { getColorgoryHex } from '../board/colorgoryColors'
 import { getNodeContainerClasses } from './nodeStyles'
  
 import Modal from '../../components/ui/Modal'
@@ -43,7 +43,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
     ? colorgories
         .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
-        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+        .map((c: any) => getColorgoryHex(c.id))
     : []
   const gradientStops = swatchColors.length <= 1
     ? (swatchColors[0] || '')

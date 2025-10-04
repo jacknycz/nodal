@@ -10,7 +10,7 @@ import TextArea from '../../components/ui/TextArea'
 import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
-import { colorgoryHexById } from '../board/colorgoryColors'
+import { getColorgoryHex } from '../board/colorgoryColors'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { getNodeContainerClasses } from './nodeStyles'
  
@@ -55,7 +55,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
     ? colorgories
         .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
-        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+        .map((c: any) => getColorgoryHex(c.id))
     : []
   const gradientStops = swatchColors.length <= 1
     ? (swatchColors[0] || '')

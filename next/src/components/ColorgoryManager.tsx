@@ -4,7 +4,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import { X, Tag as TagIcon, DotsSix, Eye, EyeClosed } from '@phosphor-icons/react'
 import TextInput from './ui/TextInput'
-import { colorgoryHexById } from '../features/board/colorgoryColors'
+import { getColorgoryHex } from '../features/board/colorgoryColors'
 import IconButton from './ui/IconButton'
 
 interface ColorgoryManagerProps {
@@ -31,6 +31,13 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
   const setColorgories = useBoardStore((s: any) => s.setColorgories)
   const reorderColorgories = useBoardStore((s: any) => s.reorderColorgories)
   const setColorgoryVisible = useBoardStore((s: any) => s.setColorgoryVisible)
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scheduleSaveNow = () => {
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current)
+    saveDebounceRef.current = setTimeout(() => {
+      try { window.dispatchEvent(new CustomEvent('nodal:save-now')) } catch {}
+    }, 500)
+  }
 
   const ordered = useMemo(() => {
     const list = [...(colorgories || [])]
@@ -195,10 +202,11 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
               >
                 <DotsSix size={24} weight="duotone" className="text-gray-400" />
               </span>
-              <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: colorgoryHexById[c.id] || '#9ca3af' }} />
+              <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: getColorgoryHex(c.id) }} />
               <TextInput
                 value={c.name}
-                onChange={(e) => { renameColorgory(c.id, (e.target as HTMLInputElement).value); try { window.dispatchEvent(new CustomEvent('nodal:save-now')) } catch {} }}
+                onChange={(e) => { renameColorgory(c.id, (e.target as HTMLInputElement).value); scheduleSaveNow() }}
+                onBlur={() => { scheduleSaveNow() }}
                 size="sm"
                 className="h-[28px]"
                 fullWidth

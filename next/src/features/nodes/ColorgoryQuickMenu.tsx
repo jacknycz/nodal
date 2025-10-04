@@ -6,7 +6,7 @@ import IconButton from '../../components/ui/IconButton'
 import Tooltip from '../../components/ui/Tooltip'
 import Checkbox from '../../components/ui/Checkbox'
 import { Tag as TagIcon } from '@phosphor-icons/react'
-import { colorgoryHexById } from '../board/colorgoryColors'
+import { getColorgoryHex } from '../board/colorgoryColors'
 import { useBoardStore } from '../board/boardSlice'
 import Button from '@/components/ui/Button'
 
@@ -165,7 +165,7 @@ export default function ColorgoryQuickMenu({ nodeId, selectedIds, onChange, disa
         >
           <div className="p-2 pb-0 grid grid-cols-2 gap-1">
             {colorgories.map((c: any) => {
-              const hex = colorgoryHexById[c.id] || '#9ca3af'
+              const hex = getColorgoryHex(c.id)
               return (
                 <Checkbox
                   key={c.id}

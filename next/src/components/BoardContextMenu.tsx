@@ -6,7 +6,7 @@ import { useBoardStore } from '../features/board/boardSlice'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import Checkbox from './ui/Checkbox'
-import { colorgoryHexById } from '../features/board/colorgoryColors'
+import { getColorgoryHex } from '../features/board/colorgoryColors'
 
 interface BoardContextMenuProps {
   isOpen: boolean
@@ -57,6 +57,7 @@ export default function BoardContextMenu({
     return (edges || []).some((e: any) => e?.source === nodeId)
   }, [edges, nodeId])
   const colorgoriesAll = useBoardStore((s: any) => s.colorgories || [])
+  const colorgoriesVisible = React.useMemo(() => (colorgoriesAll || []).filter((c: any) => c?.visible !== false), [colorgoriesAll])
   const nodeColorgoryIds: string[] = React.useMemo(() => {
     if (!nodeId) return []
     const n = (nodes as any[]).find(n => n.id === nodeId)
@@ -155,9 +156,9 @@ export default function BoardContextMenu({
               {colorgoryHover && (
                 <div className="absolute left-full top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]">
                   <div className="grid grid-cols-2 gap-1">
-                    {(colorgoriesAll || []).map((c: any) => {
+                    {(colorgoriesVisible || []).map((c: any) => {
                       const checked = nodeColorgoryIds.includes(c.id)
-                      const hex = colorgoryHexById[c.id] || '#9ca3af'
+                      const hex = getColorgoryHex(c.id)
                       return (
                         <Checkbox
                           key={c.id}
@@ -188,7 +189,7 @@ export default function BoardContextMenu({
                         />
                       )
                     })}
-                    {(colorgoriesAll || []).length === 0 && (
+                    {(colorgoriesVisible || []).length === 0 && (
                       <div className="col-span-2 text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5">No colorgories</div>
                     )}
                   </div>

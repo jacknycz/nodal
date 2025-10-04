@@ -176,7 +176,7 @@ export default function TaskNode({
         }
       >
         <div className="mt-2 grid grid-cols-2 gap-2">
-          {(useBoardStore.getState().colorgories || []).map((c: any) => (
+          {(useBoardStore.getState().colorgories || []).filter((c: any) => c?.visible !== false).map((c: any) => (
             <Checkbox
               key={c.id}
               checked={pendingColorgoryIds.includes(c.id)}
