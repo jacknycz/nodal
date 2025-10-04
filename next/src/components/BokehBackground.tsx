@@ -19,9 +19,9 @@ const themeStyles: Record<'light' | 'dark', ParticleStyles> = {
     count: 30,
     sizeRange: [3, 240], // Larger dots
     speedRange: [-0.3, 0.3], // Slightly slower movement
-    opacityRange: [0.01, 0.03], // More subtle opacity
+    opacityRange: [0.0, 0.00], // More subtle opacity
     colors: ['0, 207, 245', '255, 222, 0', '255, 0, 168'], // Primary, Secondary, Tertiary-500
-    background: '#ffffff', // Light gray background with some transparency
+    background: '#F6F1EE', // Light gray background with some transparency (light blue I like F5F6FA)
     glowIntensity: 0.3, // Subtle glow for light theme
     glowOpacity: 0.2 // Glow opacity multiplier
   },

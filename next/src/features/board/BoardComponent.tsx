@@ -1187,6 +1187,12 @@ function BoardContent({
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       try {
+        // Skip when focus is in an editor/input or contentEditable
+        const active = (document.activeElement as HTMLElement | null)
+        if (active) {
+          const tag = active.tagName?.toLowerCase()
+          if (tag === 'input' || tag === 'textarea' || (active as any).isContentEditable) return
+        }
         const cd = e.clipboardData
         if (!cd) return
         const center = pendingNodePosition || getViewportCenter()

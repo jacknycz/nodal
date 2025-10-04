@@ -64,12 +64,18 @@ export default function NodalNode(props: any) {
   const maxWidth = 600
   const initialWidth = Math.max(minWidth, Math.min(typeof data.width === 'number' ? data.width : 240, maxWidth))
   const [nodeWidth, setNodeWidth] = useState<number>(initialWidth)
+  const currentWidthRef = useRef<number>(initialWidth)
+  const isResizingRef = useRef<boolean>(false)
   // Sync external width updates (e.g., live resize from another user)
   React.useEffect(() => {
+    if (isResizingRef.current) return
     const incoming = typeof data.width === 'number' ? data.width : undefined
     if (typeof incoming === 'number') {
       const clamped = Math.max(minWidth, Math.min(incoming, maxWidth))
-      if (clamped !== nodeWidth) setNodeWidth(clamped)
+      if (clamped !== nodeWidth) {
+        setNodeWidth(clamped)
+        currentWidthRef.current = clamped
+      }
     }
   }, [data.width])
   const resizeStartRef = useRef<{ startX: number; startW: number } | null>(null)
@@ -77,17 +83,20 @@ export default function NodalNode(props: any) {
     if (pageMode) return
     e.stopPropagation(); e.preventDefault()
     resizeStartRef.current = { startX: e.clientX, startW: nodeWidth }
+    isResizingRef.current = true
     const onMove = (ev: MouseEvent) => {
       if (!resizeStartRef.current) return
       const dx = ev.clientX - resizeStartRef.current.startX
       const next = Math.max(minWidth, Math.min(resizeStartRef.current.startW + dx, maxWidth))
       setNodeWidth(next)
+      currentWidthRef.current = next
       try { (props as any).onLiveResize?.(id, next) } catch {}
     }
     const onUp = () => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
-      onNodeUpdate?.(id, { width: Math.round(nodeWidth) })
+      isResizingRef.current = false
+      onNodeUpdate?.(id, { width: Math.round(currentWidthRef.current) })
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)

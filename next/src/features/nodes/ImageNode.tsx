@@ -177,29 +177,38 @@ export default function ImageNode({
   const minWidth = 320
   const initialWidth = Math.max(minWidth, Math.min(((data as any)?.width as number) || 320, maxWidth))
   const [nodeWidth, setNodeWidth] = useState<number>(initialWidth)
+  const currentWidthRef = React.useRef<number>(initialWidth)
   // Sync external width updates (live resize)
+  const isResizingRef = React.useRef<boolean>(false)
   useEffect(() => {
+    if (isResizingRef.current) return
     const incoming = typeof (data as any)?.width === 'number' ? ((data as any).width as number) : undefined
     if (typeof incoming === 'number') {
       const clamped = Math.max(minWidth, Math.min(incoming, maxWidth))
-      if (clamped !== nodeWidth) setNodeWidth(clamped)
+      if (clamped !== nodeWidth) {
+        setNodeWidth(clamped)
+        currentWidthRef.current = clamped
+      }
     }
   }, [(data as any)?.width, maxWidth])
   const resizeStartRef = React.useRef<{ startX: number; startW: number } | null>(null)
   const onResizeDown = (e: React.MouseEvent) => {
     e.stopPropagation(); e.preventDefault()
     resizeStartRef.current = { startX: e.clientX, startW: nodeWidth }
+    isResizingRef.current = true
     const onMove = (ev: MouseEvent) => {
       if (!resizeStartRef.current) return
       const dx = ev.clientX - resizeStartRef.current.startX
       const next = Math.max(minWidth, Math.min(resizeStartRef.current.startW + dx, maxWidth))
       setNodeWidth(next)
+      currentWidthRef.current = next
       try { onLiveResize?.(id, next) } catch {}
     }
     const onUp = () => {
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup', onUp)
-      onNodeUpdate?.(id, { width: Math.round(nodeWidth) })
+      isResizingRef.current = false
+      onNodeUpdate?.(id, { width: Math.round(currentWidthRef.current) })
     }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
