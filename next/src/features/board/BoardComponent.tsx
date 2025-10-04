@@ -885,7 +885,7 @@ function BoardContent({
         if (exists) return eds
         return [...list, newEdge]
       })
-      try { sendWs({ type: 'edge-add', boardId, data: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
+      try { channelRef.current?.send({ type: 'broadcast', event: 'edge:add', payload: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
     },
     [setEdges, edgeTypePref, toVisualEdgeType, pushHistory, boardId, user?.id]
   )
@@ -933,7 +933,7 @@ function BoardContent({
         if (exists) return eds
         return [...list, newEdge]
       })
-      try { sendWs({ type: 'edge-add', boardId, data: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
+      try { channelRef.current?.send({ type: 'broadcast', event: 'edge:add', payload: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
     }
     done()
   }, [setEdges, clearConnecting, pushHistory])
@@ -1389,8 +1389,8 @@ function BoardContent({
   const handleEdgeDelete = useCallback((edgeId: string) => {
     pushHistory()
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
-    try { sendWs({ type: 'edge-remove', boardId, data: { edgeId, userId: user?.id || null, ts: Date.now() } }) } catch {}
-  }, [setEdges, pushHistory])
+    try { channelRef.current?.send({ type: 'broadcast', event: 'edge:remove', payload: { edgeId, userId: user?.id || null, ts: Date.now() } }) } catch {}
+  }, [setEdges, pushHistory, boardId, user?.id])
 
   // Shift+Click connect: connect from the single selected node to clicked node
   const handleShiftClickConnect = useCallback((targetId: string) => {
@@ -1487,115 +1487,77 @@ function BoardContent({
   const editorMode = !!editNodeId
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
   
-  // Ephemeral WS locks overlay for instant UX
+  // Supabase Realtime: broadcast + presence for live updates
   const [wsLocks, setWsLocks] = useState<Record<string, string>>({})
-  const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimerRef = useRef<any>(null)
-  const reconnectAttemptsRef = useRef<number>(0)
+  const channelRef = useRef<any>(null)
   useEffect(() => {
-    const url = process.env.NEXT_PUBLIC_PRESENCE_WS
-    if (!url || !boardId) return
-    let closed = false
-
-    const connect = () => {
-      if (closed) return
-      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return
-      try {
-        const ws = new WebSocket(`${url}?boardId=${boardId}`)
-        wsRef.current = ws
-        ws.addEventListener('open', () => {
-          console.log('[locks-ws] open', { boardId })
-          reconnectAttemptsRef.current = 0
+    if (!boardId || !user?.id) return
+    const channel = getSupabaseClient().channel(`board:${boardId}`, {
+      config: { broadcast: { self: false }, presence: { key: user.id } }
+    })
+    channel
+      .on('broadcast', { event: 'node:content' }, (p: any) => {
+        const { nodeId, patch, userId: from } = p.payload || {}
+        if ((user?.id || '') === from) return
+        if (!nodeId || !patch || typeof patch !== 'object') return
+        setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n) : nds))
+      })
+      .on('broadcast', { event: 'node:pos' }, (p: any) => {
+        const { nodeId, x, y, userId: from } = p.payload || {}
+        if ((user?.id || '') === from) return
+        if (!nodeId || typeof x !== 'number' || typeof y !== 'number') return
+        setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, position: { x, y } } : n) : nds))
+      })
+      .on('broadcast', { event: 'node:resize' }, (p: any) => {
+        const { nodeId, width, userId: from } = p.payload || {}
+        if ((user?.id || '') === from) return
+        if (!nodeId || typeof width !== 'number') return
+        setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...(n.data as any), width } } : n) : nds))
+      })
+      .on('broadcast', { event: 'edge:add' }, (p: any) => {
+        const { edge, userId: from } = p.payload || {}
+        if ((user?.id || '') === from) return
+        if (!edge || !edge.id) return
+        setEdges((eds) => {
+          const list = Array.isArray(eds) ? eds : []
+          const exists = list.some((e: any) => e.id === edge.id || ((e.source === edge.source && e.target === edge.target) || (e.source === edge.target && e.target === edge.source)))
+          return exists ? eds : [...list, edge]
         })
-        ws.addEventListener('message', (ev) => {
-          try {
-            const msg = JSON.parse(ev.data as string)
-            if (msg?.type === 'lock-update' && msg?.data) {
-              console.log('[locks-ws] lock-update msg', msg.data)
-              const { nodeId, userId, locked } = msg.data
-              setWsLocks(prev => {
-                const next = { ...prev }
-                if (locked) next[nodeId] = userId
-                else delete next[nodeId]
-                try { (window as any).__wsLocks = next } catch {}
-                return next
-              })
-            }
-            if (msg?.type === 'content-update' && msg?.data) {
-              const { nodeId, patch, userId: from } = msg.data as any
-              console.log('[content-ws] content-update', { nodeId, from, keys: patch && Object.keys(patch || {}) })
-              if ((user?.id || '') === from) return // ignore own
-              if (!nodeId || !patch || typeof patch !== 'object') return
-              setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n) : nds))
-            }
-            if (msg?.type === 'position-update' && msg?.data) {
-              const { nodeId, x, y, userId: from } = msg.data as any
-              if ((user?.id || '') === from) return
-              if (!nodeId || typeof x !== 'number' || typeof y !== 'number') return
-              setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, position: { x, y } } : n) : nds))
-            }
-            if (msg?.type === 'resize-update' && msg?.data) {
-              const { nodeId, width, userId: from } = msg.data as any
-              console.log('[resize-ws] resize-update', { nodeId, width, from })
-              if ((user?.id || '') === from) return
-              if (!nodeId || typeof width !== 'number') return
-              setNodes((nds) => (Array.isArray(nds) ? nds.map(n => n.id === nodeId ? { ...n, data: { ...(n.data as any), width } } : n) : nds))
-            }
-            if (msg?.type === 'edge-add-update' && msg?.data) {
-              const { edge, userId: from } = msg.data as any
-              if ((user?.id || '') === from) return
-              if (!edge || !edge.id) return
-              setEdges((eds) => {
-                const list = Array.isArray(eds) ? eds : []
-                const exists = list.some((e: any) => e.id === edge.id || ((e.source === edge.source && e.target === edge.target) || (e.source === edge.target && e.target === edge.source)))
-                return exists ? eds : [...list, edge]
-              })
-            }
-            if (msg?.type === 'edge-remove-update' && msg?.data) {
-              const { edgeId, userId: from } = msg.data as any
-              if ((user?.id || '') === from) return
-              if (!edgeId) return
-              setEdges((eds) => (Array.isArray(eds) ? eds.filter(e => e.id !== edgeId) : eds))
-            }
-          } catch {}
-        })
-        ws.addEventListener('close', () => {
-          console.log('[locks-ws] close (will reconnect)')
-          if (closed) return
-          const attempt = Math.min(6, reconnectAttemptsRef.current + 1) // cap
-          reconnectAttemptsRef.current = attempt
-          const delay = Math.pow(2, attempt) * 200 // 200ms, 400, 800, 1600, ...
-          clearTimeout(reconnectTimerRef.current)
-          reconnectTimerRef.current = setTimeout(connect, delay)
-        })
-        // Let 'close' handler manage reconnect; avoid forcing close on 'error'
-      } catch {
-        const attempt = Math.min(6, reconnectAttemptsRef.current + 1)
-        reconnectAttemptsRef.current = attempt
-        const delay = Math.pow(2, attempt) * 200
-        clearTimeout(reconnectTimerRef.current)
-        reconnectTimerRef.current = setTimeout(connect, delay)
+      })
+      .on('broadcast', { event: 'edge:remove' }, (p: any) => {
+        const { edgeId, userId: from } = p.payload || {}
+        if ((user?.id || '') === from) return
+        if (!edgeId) return
+        setEdges((eds) => (Array.isArray(eds) ? eds.filter(e => e.id !== edgeId) : eds))
+      })
+      .on('presence', { event: 'sync' }, () => {
+        try {
+          const state = channel.presenceState() as Record<string, any[]>
+          const map: Record<string, string> = {}
+          Object.keys(state || {}).forEach((uid) => {
+            const arr = state[uid] || []
+            const latest = arr[arr.length - 1] || {}
+            const editing = latest?.editingNodeId
+            if (editing) map[editing] = uid
+          })
+          setWsLocks(map)
+          ;(window as any).__wsLocks = map
+        } catch {}
+      })
+    channel.subscribe(async (status: any) => {
+      if (status === 'SUBSCRIBED') {
+        try { await channel.track({ userId: user.id, editingNodeId: null }) } catch {}
       }
-    }
-    connect()
-
+    })
+    channelRef.current = channel
     return () => {
-      closed = true
-      clearTimeout(reconnectTimerRef.current)
-      reconnectTimerRef.current = null
-      try { wsRef.current?.close() } catch {}
-      wsRef.current = null
+      try { getSupabaseClient().removeChannel(channel) } catch {}
+      channelRef.current = null
     }
-  }, [boardId])
+  }, [boardId, user?.id])
 
-  const sendWs = useCallback((payload: any) => {
-    try {
-      const ws = wsRef.current
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(payload))
-        console.log('[locks-ws] send', payload)
-      }
-    } catch {}
+  const sendBroadcast = useCallback((event: string, payload: any) => {
+    try { channelRef.current?.send({ type: 'broadcast', event, payload }) } catch {}
   }, [])
 
   const lastLiveSentRef = useRef<number>(0)
@@ -1604,9 +1566,9 @@ function BoardContent({
       const now = Date.now()
       if (now - lastLiveSentRef.current < 80) return
       lastLiveSentRef.current = now
-      sendWs({ type: 'content', boardId, data: { nodeId, patch, userId: user?.id || null, ts: now } })
+      sendBroadcast('node:content', { nodeId, patch, userId: user?.id || null, ts: now })
     } catch {}
-  }, [boardId, user?.id, sendWs])
+  }, [boardId, user?.id, sendBroadcast])
 
   // Live position broadcasting (throttled per node)
   const lastPosSentRef = useRef<Record<string, number>>({})
@@ -1622,15 +1584,15 @@ function BoardContent({
           const last = lastPosSentRef.current[id] || 0
           if (now - last > 80) {
             lastPosSentRef.current[id] = now
-            sendWs({ type: 'position', boardId, data: { nodeId: id, x: ch.position.x, y: ch.position.y, userId: user?.id || null, ts: now } })
+            channelRef.current?.send({ type: 'broadcast', event: 'node:pos', payload: { nodeId: id, x: ch.position.x, y: ch.position.y, userId: user?.id || null, ts: now } })
           }
         } else {
           draggingRef.current.delete(id)
-          sendWs({ type: 'position', boardId, data: { nodeId: id, x: ch.position.x, y: ch.position.y, userId: user?.id || null, ts: now } })
+          channelRef.current?.send({ type: 'broadcast', event: 'node:pos', payload: { nodeId: id, x: ch.position.x, y: ch.position.y, userId: user?.id || null, ts: now } })
         }
       }
     }
-  }, [onNodesChange, boardId, user?.id, sendWs])
+  }, [onNodesChange, boardId, user?.id])
   
   // Release lock when modal closes or component unmounts
   useEffect(() => {
@@ -1646,8 +1608,8 @@ function BoardContent({
     try {
       if (editNodeId && boardId && user?.id) {
         releaseNodeLockRaw(boardId, editNodeId, user.id)
-        sendWs({ type: 'unlock', boardId, data: { nodeId: editNodeId, userId: user.id } })
-        console.log('[locks] released & broadcast unlock', { nodeId: editNodeId, boardId })
+        try { channelRef.current?.track({ userId: user.id, editingNodeId: null }) } catch {}
+        console.log('[locks] released & tracked unlock', { nodeId: editNodeId, boardId })
       }
     } catch {}
     setEditNodeId(null)
@@ -1963,9 +1925,9 @@ function BoardContent({
                 alert('This node is currently being edited by someone else.')
                 return
               }
-              // Broadcast WS lock immediately for instant UX
-              sendWs({ type: 'lock', boardId, data: { nodeId, userId: user?.id } })
-              console.log('[locks] acquired & broadcast lock', { nodeId, boardId })
+              // Presence lock
+              try { channelRef.current?.track({ userId: user?.id || null, editingNodeId: nodeId }) } catch {}
+              console.log('[locks] acquired & tracked lock', { nodeId, boardId })
               setEditNodeId(nodeId)
             } catch {
               setEditNodeId(nodeId)
