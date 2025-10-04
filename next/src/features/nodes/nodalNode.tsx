@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { ArrowsOut, ArrowsIn, BookOpenText, Resize } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -38,16 +38,17 @@ interface NodalNodeProps {
   onOrganizeSubtree?: (nodeId: string) => void
 }
 
-export default function NodalNode({
-  data,
-  id,
-  onNodeDelete,
-  onNodeUpdate,
-  selected,
-  onNodeShiftClickConnect,
-  onQuickAddNodes,
-  onOrganizeSubtree
-}: NodalNodeProps) {
+export default function NodalNode(props: any) {
+  const {
+    data,
+    id,
+    onNodeDelete,
+    onNodeUpdate,
+    selected,
+    onNodeShiftClickConnect,
+    onQuickAddNodes,
+    onOrganizeSubtree
+  } = props
   const SHOW_ADD_CONNECTED = false
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -180,6 +181,12 @@ export default function NodalNode({
         }
       }}
     >
+      {typeof props.isNodeLockedNow === 'function' && props.isNodeLockedNow(id) && (
+        <div className="absolute top-1 right-1 z-50 flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/90 text-white text-[10px] font-medium shadow">
+          <Lock className="w-3 h-3" weight="duotone" />
+          <span>Editing...</span>
+        </div>
+      )}
       {swatchColors.length > 0 && (
         <div
           aria-hidden

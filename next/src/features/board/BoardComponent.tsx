@@ -33,6 +33,8 @@ import FloatingEdge from './FloatingEdge'
 import FloatingStraightEdge from './FloatingStraightEdge'
 import FloatingStepEdge from './FloatingStepEdge'
 import FloatingSmoothEdge from './FloatingSmoothEdge'
+// import RemoteCursor from '../collab/RemoteCursor'
+// import useYCursorPresence from '../collab/useYCursorPresence'
 import CustomConnectionLine from './CustomConnectionLine'
 import FloatingActionButton from '../../components/FloatingActionButton'
 import AINodeGenerator from '../../components/AINodeGenerator'
@@ -149,7 +151,7 @@ function BoardContent({
   const router = useRouter() // Add this line
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
-  // Cursor tracking removed (temporarily disabled)
+  // Collaborative cursor presence (yjs)
 
   // Centralized realtime subscriptions: cursors, locks, and board updates
   const {
@@ -284,6 +286,8 @@ function BoardContent({
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
 
+  // (cursor presence paused)
+
   // --- History (undo/redo) ---
   type Snapshot = { nodes: Node[]; edges: Edge[]; viewport: any }
   const pastRef = useRef<Snapshot[]>([])
@@ -361,7 +365,8 @@ function BoardContent({
   }
   const setConnectingSource = useBoardStore((s: any) => s.setConnectingSource)
   
-  // Cursor broadcast disabled
+  // Send local cursor at ~20Hz in board coordinates
+  // Capture directly from ReactFlow mouse move for consistent coords
 
   // Wrappers for lock operations bound to current board/user
   const acquireNodeLock = useCallback(async (nodeId: string) => {
@@ -1423,6 +1428,14 @@ function BoardContent({
       isNodeLockedByMe,
       nodeLocks,
       currentUser: user, // Add current user to handlers
+      isNodeLockedNow: (nodeId: string) => {
+        try {
+          const map = (window as any).__wsLocks || {}
+          const by = map[nodeId]
+          const me = user?.id || ''
+          return !!(by && by !== me)
+        } catch { return false }
+      },
       onNodeShiftClickConnect: handleShiftClickConnect,
       onQuickAddNodes: (nodeId: string) => {
         setPendingSourceNodeId(nodeId)
@@ -1447,6 +1460,7 @@ function BoardContent({
     isNodeLockedByMe,
     nodeLocks,
     user, // User dependency triggers re-creation when user changes
+    // wsLocks removed here; nodes read from window.__wsLocks dynamically
   ])
 
   
@@ -1461,6 +1475,119 @@ function BoardContent({
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
   const editorMode = !!editNodeId
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
+  
+  // Ephemeral WS locks overlay for instant UX
+  const [wsLocks, setWsLocks] = useState<Record<string, string>>({})
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimerRef = useRef<any>(null)
+  const reconnectAttemptsRef = useRef<number>(0)
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_PRESENCE_WS
+    if (!url || !boardId) return
+    let closed = false
+
+    const connect = () => {
+      if (closed) return
+      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return
+      try {
+        const ws = new WebSocket(`${url}?boardId=${boardId}`)
+        wsRef.current = ws
+        ws.addEventListener('open', () => {
+          console.log('[locks-ws] open', { boardId })
+          reconnectAttemptsRef.current = 0
+        })
+        ws.addEventListener('message', (ev) => {
+          try {
+            const msg = JSON.parse(ev.data as string)
+            if (msg?.type === 'lock-update' && msg?.data) {
+              console.log('[locks-ws] lock-update msg', msg.data)
+              const { nodeId, userId, locked } = msg.data
+              setWsLocks(prev => {
+                const next = { ...prev }
+                if (locked) next[nodeId] = userId
+                else delete next[nodeId]
+                try { (window as any).__wsLocks = next } catch {}
+                return next
+              })
+            }
+          } catch {}
+        })
+        ws.addEventListener('close', () => {
+          console.log('[locks-ws] close (will reconnect)')
+          if (closed) return
+          const attempt = Math.min(6, reconnectAttemptsRef.current + 1) // cap
+          reconnectAttemptsRef.current = attempt
+          const delay = Math.pow(2, attempt) * 200 // 200ms, 400, 800, 1600, ...
+          clearTimeout(reconnectTimerRef.current)
+          reconnectTimerRef.current = setTimeout(connect, delay)
+        })
+        // Let 'close' handler manage reconnect; avoid forcing close on 'error'
+      } catch {
+        const attempt = Math.min(6, reconnectAttemptsRef.current + 1)
+        reconnectAttemptsRef.current = attempt
+        const delay = Math.pow(2, attempt) * 200
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = setTimeout(connect, delay)
+      }
+    }
+    connect()
+
+    return () => {
+      closed = true
+      clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = null
+      try { wsRef.current?.close() } catch {}
+      wsRef.current = null
+    }
+  }, [boardId])
+
+  const sendWs = useCallback((payload: any) => {
+    try {
+      const ws = wsRef.current
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(payload))
+        console.log('[locks-ws] send', payload)
+      }
+    } catch {}
+  }, [])
+  
+  // Release lock when modal closes or component unmounts
+  useEffect(() => {
+    return () => {
+      const id = editNodeId
+      if (id && boardId && user?.id) {
+        releaseNodeLockRaw(boardId, id, user.id)
+      }
+    }
+  }, [editNodeId, boardId, user?.id, releaseNodeLockRaw])
+
+  const handleCloseEditModal = useCallback(() => {
+    try {
+      if (editNodeId && boardId && user?.id) {
+        releaseNodeLockRaw(boardId, editNodeId, user.id)
+        sendWs({ type: 'unlock', boardId, data: { nodeId: editNodeId, userId: user.id } })
+        console.log('[locks] released & broadcast unlock', { nodeId: editNodeId, boardId })
+      }
+    } catch {}
+    setEditNodeId(null)
+  }, [editNodeId, boardId, user?.id, releaseNodeLockRaw])
+
+  // Safety: release lock if tab closes while editing
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      try {
+        if (editNodeId && boardId && user?.id) {
+          navigator.sendBeacon?.('/api/board/locks', new Blob([JSON.stringify({ boardId, nodeId: editNodeId, userId: user.id })], { type: 'application/json' }))
+        }
+      } catch {}
+    }
+    if (editorMode) {
+      window.addEventListener('beforeunload', onBeforeUnload)
+    }
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [editorMode, editNodeId, boardId, user?.id])
 
   // Cleanup: remove edges that reference nodes that no longer exist (prevents "runaway" edges)
   useEffect(() => {
@@ -1637,7 +1764,6 @@ function BoardContent({
         multiSelectionKeyCode="Meta"
         // Disable built-in Delete behavior; we show a confirm modal instead
       >
-        {/* Remote cursors disabled */}
         {/* Remove the Background component - BokehBackground will handle the background */}
         <div className="hidden sm:block">
           <Controls />
@@ -1648,8 +1774,11 @@ function BoardContent({
           style={{ position: 'absolute', left: 30, bottom: 0, right: 'auto', top: 'auto', width: 160, height: 104 }}
         />
         
+        {/* (cursor presence paused) */}
+        
         {/** Removed FAB and ChatPanel from inside ReactFlow to avoid stacking context issues */}
       </ReactFlow>
+      
       {isBoardView && (
         <LeftDock
           active={leftDockActive}
@@ -1736,9 +1865,31 @@ function BoardContent({
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
         nodeId={pendingSourceNodeId}
+        isLockedByOther={(() => {
+          try {
+            if (!pendingSourceNodeId) return false
+            const wsLockedBy = wsLocks[pendingSourceNodeId]
+            return !!(wsLockedBy && wsLockedBy !== (user?.id || ''))
+          } catch { return false }
+        })()}
         onEditNode={(nodeId: string) => {
           console.log('[BoardComponent] Open edit modal for', nodeId)
-          setEditNodeId(nodeId)
+          ;(async () => {
+            try {
+              if (!boardId) { setEditNodeId(nodeId); return }
+              const ok = await acquireNodeLockRaw(boardId, nodeId, user?.id || null)
+              if (!ok) {
+                alert('This node is currently being edited by someone else.')
+                return
+              }
+              // Broadcast WS lock immediately for instant UX
+              sendWs({ type: 'lock', boardId, data: { nodeId, userId: user?.id } })
+              console.log('[locks] acquired & broadcast lock', { nodeId, boardId })
+              setEditNodeId(nodeId)
+            } catch {
+              setEditNodeId(nodeId)
+            }
+          })()
         }}
         onUpdateNode={(nodeId: string, updates: Record<string, any>) => {
           handleNodeUpdate(nodeId, updates)
@@ -2108,7 +2259,7 @@ function BoardContent({
           return (
             <NodeEditModal
               open={true}
-              onClose={() => setEditNodeId(null)}
+              onClose={handleCloseEditModal}
               initialTitle={d.title || ''}
               initialContent={d.content || ''}
               initialColorgoryIds={d.colorgoryIds || []}
@@ -2130,7 +2281,7 @@ function BoardContent({
           return (
             <NodeEditModal
               open={true}
-              onClose={() => setEditNodeId(null)}
+              onClose={handleCloseEditModal}
               initialTitle={d.title || safeHostname || ''}
               initialContent={d.description || ''}
               initialColorgoryIds={d.colorgoryIds || []}
@@ -2152,7 +2303,7 @@ function BoardContent({
           return (
             <NodeEditModal
               open={true}
-              onClose={() => setEditNodeId(null)}
+              onClose={handleCloseEditModal}
               initialTitle={initialTitle}
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
@@ -2176,7 +2327,7 @@ function BoardContent({
           return (
             <NodeEditModal
               open={true}
-              onClose={() => setEditNodeId(null)}
+              onClose={handleCloseEditModal}
               initialTitle={''}
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
@@ -2204,7 +2355,7 @@ function BoardContent({
           return (
             <NodeEditModal
               open={true}
-              onClose={() => setEditNodeId(null)}
+              onClose={handleCloseEditModal}
               initialTitle={initialTitle}
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
@@ -2226,7 +2377,7 @@ function BoardContent({
           return (
             <NodeEditModal
               open={true}
-              onClose={() => setEditNodeId(null)}
+              onClose={handleCloseEditModal}
               initialTitle={initialTitle}
               initialContent={''}
               initialColorgoryIds={[]}

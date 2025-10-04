@@ -79,7 +79,8 @@ export default function Topbar({
   const setTopic = useBoardStore(state => state.setTopic)
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [pendingTopic, setPendingTopic] = useState('')
-  const [presentUsers, setPresentUsers] = useState<{ user_id: string; last_seen: string }[]>([])
+  const [presentUsers, setPresentUsers] = useState<{ user_id: string; last_seen: string; email?: string | null }[]>([])
+  const colorgories = useBoardStore(state => state.colorgories || [])
   const supabase = getSupabaseClient()
   const [showSavedStatus, setShowSavedStatus] = useState(true)
   const [showBoardSettings, setShowBoardSettings] = useState(false)
@@ -135,6 +136,7 @@ export default function Topbar({
       await supabase.from('board_presence').upsert({
         board_id: currentBoardId,
         user_id: user.id,
+        user_email: user.email || null,
         last_seen: new Date().toISOString(),
       }, { onConflict: 'board_id,user_id' })
     }
@@ -183,6 +185,7 @@ export default function Topbar({
       const typed = (data || []).map((row: any) => ({
         user_id: String(row.user_id),
         last_seen: String(row.last_seen),
+        email: (row.email || row.user_email || null) as string | null,
       }))
       setPresentUsers(typed)
     }
@@ -190,8 +193,8 @@ export default function Topbar({
     return () => { supabase.removeChannel(channel) }
   }, [currentBoardId, supabase])
 
-  // Helper to get avatar for a user_id
-  const getPresenceAvatar = (userId: string) => {
+  // Helper to get avatar for a user_id (others only: small circle)
+  const getPresenceAvatar = (userId: string, email?: string | null) => {
     if (user && user.id === userId) {
       // Current user: show their avatar if available
       const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
@@ -199,10 +202,19 @@ export default function Topbar({
         return <Image src={avatar} alt="avatar" width={24} height={24} className="w-6 h-6 rounded-full object-cover border-2 border-white" unoptimized />
       }
     }
-    // Fallback: colored initials
+    // Fallback: colored initials from email (first two letters), else user_id
+    const initialsSource = (email && typeof email === 'string') ? String(email).split('@')[0] : userId
+    const initials = initialsSource.slice(0, 2).toUpperCase()
+    // Pick a color from colorgories deterministically by userId/email
+    const colors: string[] = (Array.isArray(colorgories) ? colorgories.map((c: any) => c?.color).filter(Boolean) : []).filter((v: any) => typeof v === 'string')
+    const fallbackColors = ['#22c55e','#06b6d4','#3b82f6','#a855f7','#f59e0b','#ef4444']
+    const palette = colors.length > 0 ? colors : fallbackColors
+    const hashStr = (initialsSource || userId)
+    const hash = Array.from(hashStr).reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)
+    const color = palette[Math.abs(hash) % palette.length]
     return (
-      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white border-2 border-white">
-        {userId.slice(0, 2).toUpperCase()}
+      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white" style={{ backgroundColor: color }}>
+        {initials}
       </div>
     )
   }
@@ -255,6 +267,35 @@ export default function Topbar({
                       <div className="sm:hidden min-w-0 w-full text-left">
                         <span className="font-semibold text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
                       </div>
+                      {/* Presence avatars (others only) */}
+                      {(() => {
+                        try {
+                          const now = Date.now()
+                          const online = (presentUsers || []).filter(p => {
+                            if (user?.id && p.user_id === user.id) return false
+                            const ts = Date.parse(p.last_seen)
+                            return Number.isFinite(ts) && (now - ts) < 30000 // 30s freshness window
+                          })
+                          if (online.length === 0) return null
+                          const maxShow = 3
+                          const toShow = online.slice(0, maxShow)
+                          const extra = online.length - toShow.length
+                          return (
+                            <div className="hidden sm:flex items-center ml-2 -space-x-2">
+                              {toShow.map((p) => (
+                                <div key={p.user_id} className="inline-block ring-2 ring-white dark:ring-black rounded-full overflow-hidden" title="Collaborator online">
+                                  {getPresenceAvatar(p.user_id, p.email)}
+                                </div>
+                              ))}
+                              {extra > 0 && (
+                                <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-[10px] text-gray-700 dark:text-gray-200 flex items-center justify-center ring-2 ring-white dark:ring-black">+{extra}</div>
+                              )}
+                            </div>
+                          )
+                        } catch {
+                          return null
+                        }
+                      })()}
                     </div>
 
                     {/* Save Status */}

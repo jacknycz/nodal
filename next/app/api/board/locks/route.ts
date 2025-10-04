@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '../../../../src/features/auth/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
 
-const supabase = getSupabaseClient()
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string
+  if (!url || !key) throw new Error('Supabase service role not configured')
+  return createClient(url, key)
+}
 
 export async function POST(req: NextRequest) {
   try {
     const { boardId, nodeId, userId } = await req.json()
-    
-    if (!boardId || !nodeId || !userId) {
-      return NextResponse.json({ error: 'Missing boardId, nodeId, or userId' }, { status: 400 })
-    }
+    if (!boardId || !nodeId || !userId) return NextResponse.json({ error: 'Missing boardId, nodeId, or userId' }, { status: 400 })
+    const supabase = getServiceClient()
+    console.log('[locks-api] POST acquire', { boardId, nodeId, userId })
 
-    // Check if node is already locked
+    // Check existing lock
     const { data: existingLock, error: checkError } = await supabase
       .from('node_locks')
       .select('*')
@@ -19,83 +23,56 @@ export async function POST(req: NextRequest) {
       .eq('node_id', nodeId)
       .single()
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (checkError && (checkError as any).code !== 'PGRST116') {
       return NextResponse.json({ error: checkError.message }, { status: 500 })
     }
 
-    // If lock exists and is owned by someone else, deny access
     if (existingLock && existingLock.user_id !== userId) {
-      return NextResponse.json({ 
-        error: 'Node is already locked by another user',
-        lockedBy: existingLock.user_id 
-      }, { status: 409 })
+      console.log('[locks-api] conflict existing lock owner', { owner: existingLock.user_id })
+      return NextResponse.json({ error: 'Node is already locked by another user', lockedBy: existingLock.user_id }, { status: 409 })
     }
 
-    // If we already own the lock, just update the expiration
+    const expiresAt = new Date(Date.now() + 60 * 1000).toISOString()
+
     if (existingLock && existingLock.user_id === userId) {
       const { data, error } = await supabase
         .from('node_locks')
-        .update({
-          locked_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minutes
-        })
+        .update({ locked_at: new Date().toISOString(), expires_at: expiresAt })
         .eq('board_id', boardId)
         .eq('node_id', nodeId)
         .eq('user_id', userId)
         .select()
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-      }
-
-      return NextResponse.json({ success: true, lock: data[0] })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: true, lock: data?.[0] })
     }
 
-    // Create new lock
     const { data, error } = await supabase
       .from('node_locks')
-      .insert({
-        board_id: boardId,
-        node_id: nodeId,
-        user_id: userId,
-        locked_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(), // 5 minutes
-      })
+      .insert({ board_id: boardId, node_id: nodeId, user_id: userId, locked_at: new Date().toISOString(), expires_at: expiresAt })
       .select()
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true, lock: data[0] })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, lock: data?.[0] })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
     const { boardId, nodeId, userId } = await req.json()
-    
-    if (!boardId || !nodeId || !userId) {
-      return NextResponse.json({ error: 'Missing boardId, nodeId, or userId' }, { status: 400 })
-    }
-
-    // Only allow the user who locked the node to release it
+    if (!boardId || !nodeId || !userId) return NextResponse.json({ error: 'Missing boardId, nodeId, or userId' }, { status: 400 })
+    const supabase = getServiceClient()
+    console.log('[locks-api] DELETE release', { boardId, nodeId, userId })
     const { error } = await supabase
       .from('node_locks')
       .delete()
       .eq('board_id', boardId)
       .eq('node_id', nodeId)
       .eq('user_id', userId)
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -103,24 +80,16 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const boardId = searchParams.get('boardId')
-    
-    if (!boardId) {
-      return NextResponse.json({ error: 'Missing boardId' }, { status: 400 })
-    }
-
-    // Get all locks for the board, excluding expired ones
+    if (!boardId) return NextResponse.json({ error: 'Missing boardId' }, { status: 400 })
+    const supabase = getServiceClient()
     const { data, error } = await supabase
       .from('node_locks')
       .select('*')
       .eq('board_id', boardId)
       .gt('expires_at', new Date().toISOString())
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
-
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ locks: data || [] })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Internal server error' }, { status: 500 })
   }
 }

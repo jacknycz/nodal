@@ -25,6 +25,8 @@ interface BoardContextMenuProps {
   onEditNode?: (nodeId: string) => void
   onUpdateNode?: (nodeId: string, updates: Record<string, any>) => void
   onDeleteNode?: (nodeId: string) => void
+  // Lock state (optional)
+  isLockedByOther?: boolean
 }
 
 export default function BoardContextMenu({
@@ -44,6 +46,7 @@ export default function BoardContextMenu({
   onEditNode,
   onUpdateNode,
   onDeleteNode,
+  isLockedByOther = false,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
   const edges = useBoardStore((s: any) => s.edges || [])
@@ -130,13 +133,14 @@ export default function BoardContextMenu({
         {nodeId ? (
           <>
             {!multiSelected && (
-              <button onClick={() => handleAction(() => onEditNode && nodeId && onEditNode(nodeId))}
-                className="cursor-pointer w-full px-4 py-2 rounded-t-2xl 
-                text-left text-sm text-gray-700 dark:text-gray-300 
-                hover:bg-gray-100 dark:hover:bg-gray-700 
-                flex items-center gap-3">
+              <button
+                onClick={() => !isLockedByOther && handleAction(() => onEditNode && nodeId && onEditNode(nodeId))}
+                disabled={isLockedByOther}
+                className={`w-full px-4 py-2 rounded-t-2xl text-left text-sm flex items-center gap-3 ${isLockedByOther ? 'text-gray-400 cursor-not-allowed' : 'cursor-pointer text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                aria-disabled={isLockedByOther}
+              >
                 <Pencil size={18} className="w-4 h-4" />
-                Edit Node
+                {isLockedByOther ? 'Locked (editing)' : 'Edit Node'}
               </button>
             )}
 

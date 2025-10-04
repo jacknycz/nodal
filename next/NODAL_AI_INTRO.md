@@ -238,7 +238,7 @@ next/src/
 ### Core Collaboration Features
 - **Board Sharing**: Email invitation system with shareable links and notification indicators
 - **Real-time Presence**: "Jack is in here" indicators in topbar with user avatars/initials
-- **Live Cursors**: Real-time cursor position tracking across all connected users
+- **Live Cursors**: Paused; see Cursor Tracking (Paused) for current status
 - **Node Locking**: Modal-driven optimistic locking prevents simultaneous edits
 - **Visual Indicators**: Red borders, pulsing dots, and "Editing..." status for locked nodes
 - **Shared Board UI**: "Shared" badges and "Invited by" labels in Board Room
@@ -455,11 +455,29 @@ next/src/
   - Subscription issue: Missing `[BoardComponent] Received remote update` logs
   - Likely causes: Supabase Realtime not enabled for `board_updates` table or RLS blocking subscriptions
 
+- **Live Cursors (Paused)**: Connection and rendering work, but coordinate mapping has precision issues under pan/zoom; see details below
+
 ### 🚀 **Next Priorities**
+
+### Cursor Tracking (Paused as of Oct 2025)
+
+- What works:
+  - Presence transport: plain WebSocket (local dev) and y-webrtc/y-websocket both connect; updates broadcast reliably.
+  - Rendering: remote cursors display in real time on multiple clients; animation and fade-out implemented.
+- What’s wrong:
+  - Coordinate mapping under pan/zoom shows proportional “zoom” effect and offset despite attempts to normalize.
+- Approaches attempted:
+  - Send board-space coords using `reactFlowInstance.screenToFlowPosition(event)`, render with manual `(x - vp.x) * vp.zoom + dx` mapping outside the viewport.
+  - Move cursors into `ViewportPortal` and render with identity mapping to avoid double transforms.
+  - Recompute mapping on `useOnViewportChange` and derive pane offsets from DOM to eliminate drift.
+  - Swapped transports: y-webrtc (public signaling), y-websocket (local server), and plain WS fallback — transport is not the issue.
+- Decision:
+  - Pause cursor visuals in `BoardComponent` (imports and render removed). Keep collab code paths for future re-enable.
+  - Revisit after content-sync work with a minimal repro against XYFlow to confirm the correct transform pipeline.
 1. **Fix Real-time Content Sync**: Debug subscription issue and complete live content updates
 2. **Real-time Node/Edge Creation**: Broadcast node/edge additions and deletions
 3. **Real-time Positioning**: Live node dragging with throttled position updates
-4. **Enhanced Cursors**: User names, avatars, and smooth animations
+4. **Cursors (Revisit after content sync)**: Re-enable once mapping approach is finalized
 5. **Typing Indicators**: Show when users are actively typing in nodes
 6. **Conflict Resolution**: Handle simultaneous edits more gracefully
 
