@@ -12,6 +12,7 @@ import Button from './ui/Button'
 import { Graph, TreeStructure, Users } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
+import ProfileTab from './ProfileTab'
 import dynamic from 'next/dynamic'
 import BoardCard from './BoardCard'
 import BoardsTab from './BoardsTab'
@@ -423,6 +424,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             icon={<Users size={44} className="h-6 w-6" weight="duotone" />}
           >
             <CommunityTab />
+          </Tab>
+
+          {/* TAB 4 */}
+          <Tab
+            label="profile"
+            icon={<svg width="24" height="24" className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.761 0 5-2.239 5-5S14.761 2 12 2 7 4.239 7 7s2.239 5 5 5Zm0 2c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5Z" fill="currentColor"/></svg>}
+          >
+            <ProfileTab />
           </Tab>
         </Tabs>
         

@@ -14,6 +14,7 @@ import { LayoutAlgorithm } from '../features/board/placementTypes'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import Tag from './ui/Tag'
+import { useBoardStore } from '../features/board/boardSlice'
 
 interface BoardReorganizeMenuProps {
   isOpen: boolean
@@ -51,6 +52,8 @@ export default function BoardReorganizeMenu({
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
   
   const { reorganizeBoardLayout } = useBoardReorganization()
+  const totalNodes = useBoardStore((s) => (s.nodes || []).length)
+  const scopeLabel = (totalNodes > 0 && nodeCount >= totalNodes) ? 'ALL' : String(nodeCount)
 
   const handleReorganize = async (algorithm: LayoutAlgorithm) => {
     setIsReorganizing(true)
@@ -95,13 +98,17 @@ export default function BoardReorganizeMenu({
       open={isOpen}
       onClose={() => { if (!isReorganizing) onClose() }}
       title="Reorganize Board"
-      description={`Apply grid layout to reorganize your ${nodeCount} nodes`}
+      description={`Apply grid layout to reorganize your ${scopeLabel} nodes`}
       actions={
         <Button onClick={onClose} disabled={isReorganizing}>
           {isReorganizing ? 'Reorganizing...' : 'Close'}
         </Button>
       }
     >
+      <div className="mb-4 p-3 rounded-md border border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300 flex items-center gap-2">
+        <Warning weight="duotone" className="w-4 h-4" />
+        <span className="text-sm font-medium">ALERT: This will reorganize {scopeLabel} nodes on the board.</span>
+      </div>
       {/* Result Message */}
       {result && (
         <div className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
