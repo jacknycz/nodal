@@ -121,7 +121,7 @@ body {
 
 /* CSS Custom Properties for edge colors */
 :root {
-  --edge-default-color: #73e3f7;
+  --edge-default-color: #ffffff;
   --edge-ai-color: #3b82f6;
   --edge-focus-color: #10b981;
   --edge-default-glow: #ffffff;
@@ -273,7 +273,7 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 9999px;
-  background: #f3f4f6; /* gray-100 */
+  background: #ffffff; /* gray-100 */
   border: 2px solid #e5e7eb; /* gray-200 */
   transition: all 0.2s ease;
 }

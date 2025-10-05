@@ -24,15 +24,15 @@ export const colorgoryHexByIdDark: Record<string, string> = COLORGORY_DEFS.reduc
 
 // Light theme mapping
 export const colorgoryHexByIdLight: Record<string, string> = {
-  cyan: '#A7E8F2',
-  yellow: '#F9E9A8',
-  magenta: '#F4B6D9',
-  green: '#B8E2C7',
-  red: '#F2B8B8',
-  blue: '#AEC8F5',
-  orange: '#F5C19E',
-  purple: '#C8B9E8',
-  slate: '#B8BFCB',
+  cyan: '#E0F7FB',
+  yellow: '#FDF7E1',
+  magenta: '#FCE6F2',
+  green: '#E7F5EB',
+  red: '#FBE7E7',
+  blue: '#E3ECFB',
+  orange: '#FBE9DD',
+  purple: '#ECE7F7',
+  slate: '#E7E9ED',
 }
 
 // Back-compat: keep the original name pointing to dark mapping

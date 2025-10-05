@@ -7,7 +7,8 @@ import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { useTheme } from '../../contexts/ThemeContext'
  
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
@@ -33,6 +34,7 @@ interface LinkNodeProps {
 }
 
 export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, onOrganizeSubtree }: LinkNodeProps) {
+  const { isDark } = useTheme()
   const [loading, setLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const isLocked = false
@@ -107,9 +109,9 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
   const containerWidthClass = 'w-[260px]'
 
   return (
-    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })}>
+    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {/* Colorgory ring overlay */}
-      {swatchColors.length > 0 && (
+      {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -121,7 +123,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         />
       )}
 
-      <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
+      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
 
       <div className="cursor-default">
         <div className="relative w-full">
@@ -178,7 +180,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         />
       )}
 
-      <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
+      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
     </div>
   )
 }

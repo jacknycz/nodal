@@ -12,7 +12,8 @@ import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import { supabaseStorage } from '../storage/supabaseStorage'
-import { getNodeContainerClasses } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
 
@@ -36,6 +37,7 @@ interface VideoNodeProps {
 }
 
 export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, onQuickAddNodes, onOrganizeSubtree }: VideoNodeProps) {
+  const { isDark } = useTheme()
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [inView, setInView] = useState(false)
@@ -231,9 +233,9 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   }, [expanded, id])
 
   return (
-    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef}>
+    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {/* Colorgory ring overlay (hidden when expanded) */}
-      {!expanded && swatchColors.length > 0 && (
+      {!expanded && isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -245,7 +247,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         />
       )}
 
-      <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
+      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
 
       <div className="cursor-default">
         {!expanded ? (
@@ -433,7 +435,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
+      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
     </div>
   )
 }

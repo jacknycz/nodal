@@ -200,7 +200,7 @@ export default function ChatPanel2() {
 
       {/* Panel */}
       <div
-        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-[700] md:z-[300] max-h-[calc(100dvh-80px)] bg-white/80 backdrop-blur-xs dark:bg-gray-900/80 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-[700] md:z-[300] max-h-[calc(100dvh-80px)] bg-white backdrop-blur-xs dark:bg-gray-900/80 shadow-xl shadow-orange-950/10 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
         style={
           (isMdUp

@@ -12,7 +12,8 @@ import { useSupabaseUser } from '../auth/authUtils'
 import Tag from '../../components/ui/Tag'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
-import { getNodeContainerClasses } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { useTheme } from '../../contexts/ThemeContext'
  
  
 
@@ -39,6 +40,7 @@ interface NodalNodeProps {
 }
 
 export default function NodalNode(props: any) {
+  const { isDark } = useTheme()
   const {
     data,
     id,
@@ -190,7 +192,7 @@ export default function NodalNode(props: any) {
   return (
     <div
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `${baseWidthCls} ${expanded ? 'h-[80vh] overflow-hidden' : ''}` })}
-      style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }) }}
+      style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }), ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -205,12 +207,12 @@ export default function NodalNode(props: any) {
           <span>Editing...</span>
         </div>
       )}
-      {swatchColors.length > 0 && (
+      {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
           style={{
-            padding: 4,
+            padding: 6,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
             // Draw only the ring via masking (outer minus inner)
             ...( { WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any )
@@ -220,7 +222,7 @@ export default function NodalNode(props: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className="rf-handle-hit-32"
+        className={NODE_HANDLE_CLASS}
       />
 
       
@@ -355,7 +357,7 @@ export default function NodalNode(props: any) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="rf-handle-hit-32"
+        className={NODE_HANDLE_CLASS}
       />
     </div>
   )

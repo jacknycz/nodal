@@ -9,8 +9,9 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
-import { colorgoryHexById } from '../board/colorgoryColors'
-import { getNodeContainerClasses } from './nodeStyles'
+import { getColorgoryHex } from '../board/colorgoryColors'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
 
@@ -72,10 +73,11 @@ export default function TaskNode({
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
+  const { isDark } = useTheme()
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
     ? colorgories
         .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
-        .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+        .map((c: any) => getColorgoryHex(c.id))
     : []
 
   const gradientStops = swatchColors.length <= 1
@@ -100,6 +102,7 @@ export default function TaskNode({
   return (
     <div
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'min-w-[220px] max-w-[420px]' })}
+      style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if (e.shiftKey) {
           e.preventDefault()
@@ -109,10 +112,10 @@ export default function TaskNode({
         
       }}
     >
-      <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
+      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
 
       {/* Colorgory ring overlay */}
-      {swatchColors.length > 0 && (
+      {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -195,7 +198,7 @@ export default function TaskNode({
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
+      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
     </div>
   )
 }

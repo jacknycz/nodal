@@ -9,8 +9,9 @@ import NodeEditModal from '../../components/NodeEditModal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Checkbox from '../../components/ui/Checkbox'
-import { colorgoryHexById } from '../board/colorgoryColors'
-import { getNodeContainerClasses } from './nodeStyles'
+import { getColorgoryHex } from '../board/colorgoryColors'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { useTheme } from '../../contexts/ThemeContext'
 
 import { supabaseStorage } from '../storage/supabaseStorage'
 
@@ -218,10 +219,11 @@ export default function ImageNode({
 
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
+  const { isDark } = useTheme()
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
     ? colorgories
       .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
-      .map((c: any) => colorgoryHexById[c.id] || '#9ca3af')
+      .map((c: any) => getColorgoryHex(c.id))
     : []
 
   const gradientStops = swatchColors.length <= 1
@@ -246,12 +248,12 @@ export default function ImageNode({
   return (
     <div
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
-      style={{ width: `${Math.round(nodeWidth)}px` }}
+      style={{ width: `${Math.round(nodeWidth)}px`, ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
       onClick={(e) => {
       }}
     >
       {/* Colorgory ring overlay (hidden when expanded) */}
-      {!expanded && swatchColors.length > 0 && (
+      {!expanded && isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -262,7 +264,7 @@ export default function ImageNode({
           }}
         />
       )}
-      <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
+      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
 
 
 
@@ -541,7 +543,7 @@ export default function ImageNode({
         <Resize size={32} weight="duotone" className="w-4 h-4" />
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
+      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
     </div>
   )
 }

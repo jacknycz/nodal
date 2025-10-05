@@ -225,7 +225,7 @@ export default function FloatingEdge({
           >
             <button
               onClick={handleDelete}
-              className="flex items-center justify-center w-6 h-6 bg-tertiary-900 hover:bg-tertiary-600 text-white cursor-pointer rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-300 border-2 border-white delete-button-enter"
+              className="flex items-center justify-center w-6 h-6 bg-primary-200 hover:bg-primary-300 dark:bg-tertiary-900 dark:hover:bg-tertiary-600 text-white cursor-pointer rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-300 border-2 border-white delete-button-enter"
               title="Delete connection"
               aria-label="Delete connection"
             >

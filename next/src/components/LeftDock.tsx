@@ -53,8 +53,8 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
   return (
     <div
       className="fixed z-50 left-0 top-12 md:top-16 flex flex-col gap-2 p-2 rounded-r-xl 
-      border border-l-0 border-gray-200 dark:border-gray-700 
-      bg-white/80 dark:bg-gray-900/80 shadow-lg backdrop-blur-sm"
+      border border-l-0 border-transparent dark:border-gray-700 
+      bg-white/80 dark:bg-gray-900/80 shadow-lg shadow-orange-950/10 dark:shadow-none backdrop-blur-sm"
       data-left-dock
       aria-label="Left dock"
       ref={containerRef}

@@ -13,7 +13,8 @@ import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
 import TextInput from '../../components/ui/TextInput'
@@ -54,6 +55,7 @@ export default function DocumentNode({
   onQuickAddNodes,
   onOrganizeSubtree
 }: DocumentNodeProps) {
+  const { isDark } = useTheme()
   const SHOW_ADD_CONNECTED = false
   const [showPreview, setShowPreview] = useState(false)
   const [showPDFModal, setShowPDFModal] = useState(false)
@@ -239,6 +241,7 @@ export default function DocumentNode({
   return (
     <div 
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
+      style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
           setDrawerOpen((prev) => !prev)
@@ -246,7 +249,7 @@ export default function DocumentNode({
       }}
     >
       {/* Colorgory ring overlay */}
-      {swatchColors.length > 0 && (
+      {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -257,7 +260,7 @@ export default function DocumentNode({
           }}
         />
       )}
-      <Handle type="target" position={Position.Top} className="rf-handle-hit-32" />
+      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
 
       
 
@@ -381,7 +384,7 @@ export default function DocumentNode({
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className="rf-handle-hit-32" />
+      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
     </div>
   )
 } 
