@@ -44,8 +44,7 @@ export default function FloatingEdge({
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const rf = useReactFlow()
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
-  const hoveredEdgeId = useBoardStore((s: any) => s.hoveredEdgeId)
-  const setHoveredEdgeId = useBoardStore((s: any) => s.setHoveredEdgeId)
+  // Hover fading removed
   const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
   const isInConnectionMode = !!connectingSourceId
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
@@ -114,14 +113,10 @@ export default function FloatingEdge({
   // Dynamic styling based on edge type and state
   const getEdgeStyle = () => {
     const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)
-    const edgeHoverActive = typeof hoveredEdgeId === 'string'
-    const isHoverTarget = edgeHoverActive && hoveredEdgeId === id
-    const effectiveHighlight = edgeHoverActive ? isHoverTarget : isHighlighted
-
-    const opacity = effectiveHighlight ? 1 : 0.2
+    const opacity = 1
 
     const baseStyle = {
-      strokeWidth: selected ? 2 : 2,
+      strokeWidth: selected ? 3 : 3,
       transition: 'all 0.2s ease, filter 0.3s ease',
       opacity,
       willChange: 'filter, opacity',
@@ -139,7 +134,7 @@ export default function FloatingEdge({
         return {
           ...baseStyle,
           stroke: 'var(--edge-default-color)',
-          strokeWidth: selected ? 3 : 2,
+          strokeWidth: selected ? 4 : 3,
           filter: selected && isHighlighted ? `drop-shadow(0 0 8px var(--edge-default-glow))` : 'drop-shadow(0 0 8px var(--edge-default-glow))',
         }
       default:
@@ -161,14 +156,12 @@ export default function FloatingEdge({
       clearTimeout(hoverTimeoutRef.current)
     }
     setIsHovered(true)
-    try { setHoveredEdgeId(id) } catch {}
   }
 
   const handleMouseLeave = () => {
     // Add a small delay before hiding to prevent flicker
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(false)
-      try { setHoveredEdgeId(null) } catch {}
     }, 100) // 100ms delay
   }
 
@@ -177,13 +170,11 @@ export default function FloatingEdge({
       clearTimeout(hoverTimeoutRef.current)
     }
     setIsHovered(true)
-    try { setHoveredEdgeId(id) } catch {}
   }
 
   const handleButtonMouseLeave = () => {
     hoverTimeoutRef.current = setTimeout(() => {
       setIsHovered(false)
-      try { setHoveredEdgeId(null) } catch {}
     }, 100)
   }
 

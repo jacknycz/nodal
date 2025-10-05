@@ -121,10 +121,10 @@ body {
 
 /* CSS Custom Properties for edge colors */
 :root {
-  --edge-default-color: #ffffff;
+  --edge-default-color: #C7B7AE;
   --edge-ai-color: #3b82f6;
   --edge-focus-color: #10b981;
-  --edge-default-glow: #ffffff;
+  --edge-default-glow: #C7B7AE;
   --edge-ai-glow: #3b82f6;
   --edge-focus-glow: #10b981;
   --connection-outline: #ffffff;

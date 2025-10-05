@@ -222,8 +222,8 @@ export default function Topbar({
   return (
     <>
       <header ref={headerRef} className="fixed top-0 left-0 right-0 z-[600] 
-      bg-gradient-to-b from-white via-white/80 to-white/0 
-      dark:from-black dark:via-black/80 dark:to-black/0
+      bg-white/10 backdrop-blur-sm
+      dark:bg-transparent dark:backdrop-blur-none dark:bg-gradient-to-b dark:from-black dark:via-black/80 dark:to-black/0
       ">
         <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}

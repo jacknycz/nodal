@@ -40,8 +40,7 @@ export default function FloatingStepEdge({
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const rf = useReactFlow()
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
-  const hoveredEdgeId = useBoardStore((s: any) => s.hoveredEdgeId)
-  const setHoveredEdgeId = useBoardStore((s: any) => s.setHoveredEdgeId)
+  // Hover fading removed
   const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
   const isInConnectionMode = !!connectingSourceId
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
@@ -106,10 +105,7 @@ export default function FloatingStepEdge({
 
   const getEdgeStyle = () => {
     const isHighlighted = isInConnectionMode ? isRelatedToSource : (hasContext ? isRelatedToContext : true)
-    const edgeHoverActive = typeof hoveredEdgeId === 'string'
-    const isHoverTarget = edgeHoverActive && hoveredEdgeId === id
-    const effectiveHighlight = edgeHoverActive ? isHoverTarget : isHighlighted
-    const opacity = effectiveHighlight ? 1 : 0.2
+    const opacity = 1
     const baseStyle = {
       strokeWidth: selected ? 2 : 2,
       transition: 'all 0.2s ease, filter 0.3s ease',
@@ -127,10 +123,10 @@ export default function FloatingStepEdge({
   }
 
   const handleDelete = (e: React.MouseEvent) => { e.stopPropagation(); onEdgeDelete?.(id) }
-  const handleMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true); try { setHoveredEdgeId(id) } catch {} }
-  const handleMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false); try { setHoveredEdgeId(null) } catch {} }, 100) }
-  const handleButtonMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true); try { setHoveredEdgeId(id) } catch {} }
-  const handleButtonMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false); try { setHoveredEdgeId(null) } catch {} }, 100) }
+  const handleMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true) }
+  const handleMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false) }, 100) }
+  const handleButtonMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true) }
+  const handleButtonMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false) }, 100) }
 
   return (
     <>
