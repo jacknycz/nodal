@@ -42,6 +42,7 @@ import AddNodesModal from '../../components/AddNodesModal'
 import { useAIContext } from '../ai/aiContext'
 import { getOpenAIService } from '../ai/aiService'
 import BokehBackground from '../../components/BokehBackground'
+import { SpinnerGap } from '@phosphor-icons/react/ssr'
 import ChatPanel from '../../components/ChatPanel'
 import TaskList from '../../components/TaskList'
 import ColorgoryManager from '../../components/ColorgoryManager'
@@ -216,6 +217,7 @@ function BoardContent({
   const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
+  const [quickAiGenerating, setQuickAiGenerating] = useState(false)
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
   const toVisualEdgeType = useCallback((pref: string) => {
     switch (pref) {
@@ -1456,7 +1458,7 @@ function BoardContent({
         const last = lastLiveSentRef.current || 0
         if (now - last > 80) {
           lastLiveSentRef.current = now
-          sendWs({ type: 'resize', boardId, data: { nodeId, width: Math.round(width), userId: user?.id || null, ts: now } })
+          try { channelRef.current?.send({ type: 'broadcast', event: 'node:resize', payload: { nodeId, width: Math.round(width), userId: user?.id || null, ts: now } }) } catch {}
         }
       },
     }
@@ -2039,6 +2041,7 @@ function BoardContent({
         }}
         onQuickAIGenerateNodes={async (nodeId?: string | null) => {
           try {
+            setQuickAiGenerating?.(true)
             console.log('[QuickAI] start, nodeId:', nodeId)
             const store = useBoardStore.getState()
             const nodesList = store.nodes || []
@@ -2069,14 +2072,39 @@ function BoardContent({
             const sys = 'You generate contextually relevant child ideas. Return strict JSON only.'
             const res = await ai.generate({ prompt, systemPrompt: sys, temperature: 0.8 })
             const raw = (res.content || '').trim()
-            const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
-            let parsed: any = null
+            let items: any[] = []
             try {
-              parsed = JSON.parse(fenced ? fenced[1] : raw)
+              const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
+              const text = fenced ? fenced[1] : raw
+              let parsed: any
+              try { parsed = JSON.parse(text) } catch {}
+              if (Array.isArray(parsed?.nodes)) {
+                items = parsed.nodes
+              } else if (Array.isArray(parsed)) {
+                items = parsed
+              } else {
+                const nodesArrayMatch = text.match(/"nodes"\s*:\s*(\[\s*[\s\S]*?\])/i)
+                if (nodesArrayMatch) {
+                  try { items = JSON.parse(nodesArrayMatch[1]) } catch {}
+                }
+                if (!items || items.length === 0) {
+                  const jsonMatch = text.match(/\{[\s\S]*\}/)
+                  if (jsonMatch) {
+                    try {
+                      const obj = JSON.parse(jsonMatch[0])
+                      if (Array.isArray(obj?.nodes)) items = obj.nodes
+                    } catch {}
+                  }
+                }
+              }
             } catch {}
-            const items = Array.isArray(parsed?.nodes) ? parsed.nodes : []
-            console.log('[QuickAI] parsed items count:', items.length)
-            if (items.length === 0) { console.warn('[QuickAI] no items parsed from AI'); return }
+            if (!items || items.length === 0) {
+              const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l)
+              const candidates = lines.map(l => l.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(l => l.length > 0).slice(0, 6)
+              if (candidates.length > 0) items = candidates.map(t => ({ title: t, content: '' }))
+            }
+            console.log('[QuickAI] parsed items count:', items?.length || 0)
+            if (!items || items.length === 0) { console.warn('[QuickAI] no items parsed from AI'); return }
             const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
             const result = await placeAINodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 })
             console.log('[QuickAI] placement result:', result?.placements?.length || 0, 'placements')
@@ -2143,6 +2171,7 @@ function BoardContent({
               }
             }
           } catch {}
+          finally { try { setQuickAiGenerating?.(false) } catch {} }
         }}
         onOrganizeSubtree={async (nodeId: string) => {
           try {
@@ -2773,6 +2802,12 @@ function BoardContent({
         onClose={() => setShowReorganizeMenu(false)}
         nodeCount={nodes.length}
       />
+      {quickAiGenerating && (
+        <div className="fixed left-1/2 -translate-x-1/2 top-6 z-[900] px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <SpinnerGap className="animate-spin" size={16} />
+          <span>Generating nodes…</span>
+        </div>
+      )}
       <Toast open={toastOpen} onClose={() => setToastOpen(false)} variant="success" position="top-center">
         {toastMessage}
       </Toast>

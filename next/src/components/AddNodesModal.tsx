@@ -76,6 +76,7 @@ export default function AddNodesModal({
   const rf = useReactFlow()
   const { setNodes: setFlowNodes, setEdges: setFlowEdges } = rf
   const [quickGenerating, setQuickGenerating] = React.useState(false)
+  const [quickError, setQuickError] = React.useState<string | null>(null)
   const { isPro, isAdmin } = useUserRole()
   const canUploadVideo = isPro || isAdmin
   const [isVideoDragOver, setIsVideoDragOver] = React.useState(false)
@@ -170,11 +171,13 @@ export default function AddNodesModal({
 
   const handleQuickGenerate = async () => {
     const attachParentId = parentNodeId || (useBoardStore.getState().selectedNodeIds?.[0] ?? undefined)
-    if (!attachParentId) return
+    if (!attachParentId) { console.warn('[QuickAI Modal] no parent id; abort'); return }
     setQuickGenerating(true)
+    setQuickError(null)
     try {
       const ai = getOpenAIService()
-      if (!ai) return
+      if (!ai) { console.warn('[QuickAI Modal] ai service unavailable'); return }
+      console.log('[QuickAI Modal] start, parentId:', attachParentId, 'topic:', topic, 'title:', parentNodeTitle, 'content.len:', (parentNodeContent || '').length)
       const trimmedContent = parentNodeContent ? String(parentNodeContent).slice(0, 4000) : ''
       const promptParts = [
         topic && `Board topic: ${topic}`,
@@ -186,13 +189,55 @@ export default function AddNodesModal({
       const sys = 'You generate contextually relevant child ideas. Return strict JSON only.'
       const res = await ai.generate({ prompt, systemPrompt: sys, temperature: 0.8 })
       const raw = (res.content || '').trim()
-      const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
-      let parsed: any = null
-      try { parsed = JSON.parse(fenced ? fenced[1] : raw) } catch { }
-      const items = Array.isArray(parsed?.nodes) ? parsed.nodes : []
-      if (items.length === 0) return
+      console.log('[QuickAI Modal] raw.len:', raw.length)
+      let items: any[] = []
+      try {
+        // Prefer fenced code block
+        const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
+        const text = fenced ? fenced[1] : raw
+        let parsed: any
+        try { parsed = JSON.parse(text) } catch {}
+        if (Array.isArray(parsed?.nodes)) {
+          items = parsed.nodes
+        } else if (Array.isArray(parsed)) {
+          items = parsed
+        } else {
+          // Try to extract an explicit nodes array
+          const nodesArrayMatch = text.match(/"nodes"\s*:\s*(\[\s*[\s\S]*?\])/i)
+          if (nodesArrayMatch) {
+            try { items = JSON.parse(nodesArrayMatch[1]) } catch {}
+          }
+          if (!items || items.length === 0) {
+            // Fallback: try to extract first balanced JSON object
+            const jsonMatch = text.match(/\{[\s\S]*\}/)
+            if (jsonMatch) {
+              try {
+                const obj = JSON.parse(jsonMatch[0])
+                if (Array.isArray(obj?.nodes)) items = obj.nodes
+              } catch {}
+            }
+          }
+        }
+      } catch {}
+      if (!items || items.length === 0) {
+        // Last-resort fallback: derive from bullet/line list
+        const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l)
+        const candidates = lines
+          .map(l => l.replace(/^[-*\d\.\)\s]+/, '').trim())
+          .filter(l => l.length > 0)
+          .slice(0, 6)
+        if (candidates.length > 0) {
+          items = candidates.map(t => ({ title: t, content: '' }))
+        }
+      }
+      if (!items || items.length === 0) {
+        console.warn('[QuickAI Modal] no items parsed from AI')
+        setQuickError('AI returned no items I could parse. Try again.')
+        return
+      }
       const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
       const result = await placeGeneratedNodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 } as any)
+      console.log('[QuickAI Modal] placement success:', !!result?.success, 'placements:', result?.placements?.length || 0)
       if (result && result.success && result.placements.length > 0) {
         const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: (p.node as any).type || 'default', position: p.position, data: { ...(p.node as any).data } }))
         setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
@@ -216,6 +261,57 @@ export default function AddNodesModal({
           }
         } catch {}
         onClose()
+      } else {
+        // Fallback: simple grid under parent
+        try {
+          const itemsCount = nodesToPlace.length
+          const created: Node[] = []
+          const edgesToAdd: Edge[] = []
+          const parent = (nodes as any[]).find((n) => n.id === attachParentId)
+          const baseX = parent?.position?.x ?? 0
+          const baseY = (parent?.position?.y ?? 0) + 300
+          const spacingX = 260
+          const spacingY = 200
+          const columns = Math.min(itemsCount, 4)
+          const rows = Math.ceil(itemsCount / columns)
+          const startX = baseX - ((columns - 1) * spacingX) / 2
+          let idx = 0
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < columns; c++) {
+              if (idx >= itemsCount) break
+              const pos = { x: startX + c * spacingX, y: baseY + r * spacingY }
+              const id = `node-${Date.now()}-${idx}`
+              const it = nodesToPlace[idx]
+              created.push({ id, type: 'default' as any, position: pos, data: { title: String(it.title || ''), content: String(it.content || '') } } as any)
+              edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: attachParentId!, target: id, type: 'floating' as any } as any)
+              idx++
+            }
+          }
+          if (created.length > 0) {
+            setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+            if (edgesToAdd.length > 0) setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
+            // Center on the created nodes
+            try {
+              const cx = created.reduce((s, n) => s + (n as any).position.x, 0) / created.length
+              const cy = created.reduce((s, n) => s + (n as any).position.y, 0) / created.length
+              rf.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
+              const firstId = created[0]?.id
+              if (firstId) {
+                setTimeout(() => {
+                  const nodeOuter = document.querySelector(`.react-flow__node[data-id="${firstId}"]`) as HTMLElement | null
+                  const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+                  const el = nodeInner || nodeOuter
+                  if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+                }, 50)
+              }
+            } catch {}
+            onClose()
+          } else {
+            setQuickError('Couldn’t place nodes. Please try again.')
+          }
+        } catch {
+          setQuickError('Couldn’t place nodes. Please try again.')
+        }
       }
     } finally {
       setQuickGenerating(false)
@@ -323,7 +419,7 @@ export default function AddNodesModal({
       // description={tab === 'manual' ? 'Manually add one or more nodes.' : 'Describe and generate nodes with AI.'}
       className="max-w-xl"
       alignLeftLg
-      backdropClassName="bg-black lg:bg-primary-500/5"
+      backdropClassName="bg-black lg:bg-orange-950/5 dark:lg:bg-primary-500/5"
       backdropInteractive={false}
       closeOnBackdropClick={false}
       actions={tab === 'basic' ? (
@@ -542,6 +638,9 @@ export default function AddNodesModal({
                   <div className="flex justify-center">
                     <Button onClick={handleQuickGenerate} loading={quickGenerating} disabled={quickGenerating || prompt.trim().length > 0}>Quick AI Generate</Button>
                   </div>
+                  {quickError && (
+                    <div className="mt-2 text-xs text-red-600 dark:text-red-400 text-center">{quickError}</div>
+                  )}
                   <div className="my-2 flex items-center gap-2 text-xs text-gray-500">
                     <span className="flex-1 border-t border-gray-200 dark:border-gray-700" />
                     <span>OR</span>
