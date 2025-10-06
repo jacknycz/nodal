@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseServiceClient } from '@/src/features/storage/supabaseService'
+import { getSupabaseServiceClient } from '../../../src/features/storage/supabaseService'
 
 function normalizeUsername(u: string): string {
   return (u || '').trim().toLowerCase()
