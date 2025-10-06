@@ -48,7 +48,8 @@ export default function ProfileTab() {
       try {
         const { data, error } = await supabase.from('profiles').select('username, avatar_url, display_name').eq('id', user.id).maybeSingle()
         if (error) throw error
-        setProfile(data || { username: null, avatar_url: null, display_name: null })
+        const prof = (data as { username: string | null; avatar_url: string | null; display_name: string | null } | null)
+        setProfile(prof || { username: null, avatar_url: null, display_name: null })
       } catch {
         setProfile({ username: null, avatar_url: null, display_name: null })
       } finally {
@@ -228,9 +229,40 @@ export default function ProfileTab() {
                   const { data: pub } = getSupabaseClient().storage.from('avatars').getPublicUrl(path)
                   const url = pub?.publicUrl || null
                   if (url) {
-                    const { error: updErr } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
-                    if (updErr) throw updErr
-                    setProfile((p) => ({ ...(p || { username: null, avatar_url: null, display_name: null }), avatar_url: url }))
+                    // Ensure a row exists; username may be required by schema, so derive a fallback if needed
+                    const deriveBaseUsername = () => {
+                      const baseRaw = (profile?.username || (user.email ? user.email.split('@')[0] : `user_${String(user.id).slice(0,6)}`) || 'user')
+                      const sanitized = baseRaw.toLowerCase().replace(/[^a-z0-9_.]/g, '_')
+                      return (sanitized.length ? sanitized.slice(0, 24) : 'user')
+                    }
+                    let attempt = 0
+                    let lastErr: any = null
+                    while (attempt < 3) {
+                      try {
+                        const candidate = attempt === 0 ? deriveBaseUsername() : `${deriveBaseUsername()}_${Math.floor(Math.random()*1000)}`.slice(0,24)
+                        const { data: upData, error: upErr } = await supabase
+                          .from('profiles')
+                          .upsert({ id: user.id, username: candidate, avatar_url: url }, { onConflict: 'id' })
+                          .select('username')
+                          .maybeSingle()
+                        if (upErr) throw upErr
+                        // Success
+                        const finalUsername = String((upData as any)?.username || candidate)
+                        setProfile((p) => ({ ...(p || { username: finalUsername, avatar_url: null, display_name: null }), avatar_url: url, username: finalUsername }))
+                        break
+                      } catch (err: any) {
+                        lastErr = err
+                        // Unique violation on username (23505): retry with different suffix
+                        if (String(err?.code) === '23505') {
+                          attempt += 1
+                          continue
+                        }
+                        throw err
+                      }
+                    }
+                    if (attempt >= 3 && lastErr) {
+                      throw lastErr
+                    }
                   }
                   setShowAvatarModal(false)
                 } catch (e: any) {

@@ -12,6 +12,8 @@ import ThemeToggle from './ThemeToggle'
 import Image from 'next/image'
 import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
+import { getSupabaseClient } from '../features/auth/supabaseClient'
+import { COLORGORY_DEFS } from '../features/board/colorgoryColors'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -44,6 +46,8 @@ export default function AvatarMenu({
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const [pendingInvites, setPendingInvites] = useState<any[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
+  const [profile, setProfile] = useState<{ username: string | null; avatar_url: string | null } | null>(null)
+  const supabase = getSupabaseClient()
 
   // Load recent boards when menu opens
   const loadRecentBoards = async () => {
@@ -74,6 +78,24 @@ export default function AvatarMenu({
     fetchInvites()
   }, [user?.email])
 
+  // Load user profile (avatar_url, username)
+  useEffect(() => {
+    let active = true
+    const run = async () => {
+      if (!user?.id) { setProfile(null); return }
+      try {
+        const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', user.id).maybeSingle()
+        if (!active) return
+        setProfile(data || { username: null, avatar_url: null })
+      } catch {
+        if (!active) return
+        setProfile({ username: null, avatar_url: null })
+      }
+    }
+    run()
+    return () => { active = false }
+  }, [user?.id, supabase])
+
   // Accept invitation handler
   const handleAcceptInvite = async (inviteId: string) => {
     try {
@@ -96,6 +118,7 @@ export default function AvatarMenu({
   const getUserDisplayName = () => {
     if (!user) return 'User'
     
+    if (profile?.username) return profile.username
     if (user.user_metadata?.full_name) return user.user_metadata.full_name
     if (user.user_metadata?.name) return user.user_metadata.name
     if (user.email) return user.email.split('@')[0]
@@ -107,14 +130,22 @@ export default function AvatarMenu({
   const admin = isAdmin(user)
   const displayRole = admin ? 'Admin' : roleLabel
 
-  // Get user avatar
+  // Get avatar url only from our profiles table (ignore Google picture entirely)
   const getUserAvatar = () => {
     if (!user) return null
-    
-    if (user.user_metadata?.avatar_url) return user.user_metadata.avatar_url
-    if (user.user_metadata?.picture) return user.user_metadata.picture
-    
-    return null
+    return profile?.avatar_url || null
+  }
+
+  const getInitials = () => {
+    const source = (profile?.username || user?.email || user?.id || 'U').toString()
+    return source.slice(0, 2).toUpperCase()
+  }
+
+  const getInitialsColor = () => {
+    const palette = COLORGORY_DEFS.map(d => d.hex)
+    const str = (profile?.username || user?.email || user?.id || 'U').toString()
+    const hash = Array.from(str).reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)
+    return palette[Math.abs(hash) % palette.length]
   }
 
   return (
@@ -136,8 +167,8 @@ export default function AvatarMenu({
               unoptimized
             />
           ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <User size={32} weight="duotone" />
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-gray-200 dark:border-gray-700" style={{ backgroundColor: getInitialsColor() }}>
+              {getInitials()}
             </div>
           )}
         </IconButton>
@@ -159,8 +190,8 @@ export default function AvatarMenu({
                   unoptimized
                 />
               ) : (
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-gray-200 dark:border-gray-700" style={{ backgroundColor: getInitialsColor() }}>
+                  {getInitials()}
                 </div>
               )}
               <div className="flex-1 min-w-0">
