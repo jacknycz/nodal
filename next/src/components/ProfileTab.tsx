@@ -314,7 +314,6 @@ export default function ProfileTab() {
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Crop (drag to pan, scroll to zoom)</div>
             <div
               className="relative border border-gray-200 dark:border-gray-700 rounded-md"
-              style={{ width: cropSize, height: cropSize, overflow: 'hidden', background: '#111' }}
               onMouseDown={(e) => {
                 if (!imageUrl) return
                 panRef.current = { active: true, sx: e.clientX, sy: e.clientY, startTx: tx, startTy: ty }
@@ -347,7 +346,7 @@ export default function ProfileTab() {
               onWheel={(e) => {
                 if (!imgSize) return
                 const delta = -Math.sign(e.deltaY) * 0.05
-                let nextScale = Math.max(minScale, Math.min(5, scale + delta))
+                const nextScale = Math.max(minScale, Math.min(5, scale + delta))
                 setScale(nextScale)
                 // After scale change, also clamp tx/ty
                 const drawW = imgSize.w * nextScale
