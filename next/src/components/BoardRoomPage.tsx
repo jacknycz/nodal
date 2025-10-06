@@ -41,7 +41,7 @@ export default function BoardRoomPage() {
   }
 
   const handleOpenBoardRoom = () => {
-    router.push('/')
+    router.push('/boards')
   }
 
   const handleBoardStateChange = (boardName: string, saveStatus: string, hasUnsavedChanges: boolean) => {

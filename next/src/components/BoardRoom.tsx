@@ -15,6 +15,8 @@ import { Tab, Tabs } from './ui/Tabs'
 import ProfileTab from './ProfileTab'
 import dynamic from 'next/dynamic'
 import BoardCard from './BoardCard'
+import ConnectionsSidebar from './ConnectionsSidebar'
+import TasksSidebar from './TasksSidebar'
 import BoardsTab from './BoardsTab'
 // Gradient background only (no external images)
 
@@ -44,8 +46,22 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [pinnedBoardIds, setPinnedBoardIds] = useState<string[]>([])
   const [showSharedOnly, setShowSharedOnly] = useState(false)
-  
+
   const [templates, setTemplates] = useState<TemplateRecord[]>([])
+  const [tabPath, setTabPath] = useState<string>(typeof window !== 'undefined' ? (window.location.pathname || '/boards') : '/boards')
+
+  // Derive active tab key from path
+  type TabKey = 'boards' | 'templates' | 'community' | 'profile'
+  const getActiveTab = (p: string): TabKey => {
+    const seg = (p.replace(/^\/+/, '').toLowerCase().split('/')[0]) || 'boards'
+    return (['boards', 'templates', 'community', 'profile'] as const).includes(seg as TabKey) ? seg as TabKey : 'boards'
+  }
+  const activeTab: TabKey = getActiveTab(tabPath)
+
+  // Sidebar helper for per-tab widget visibility
+  const SidebarSection: React.FC<{ showOn: TabKey[]; children: React.ReactNode }> = ({ showOn, children }) => {
+    return showOn.includes(activeTab) ? <>{children}</> : null
+  }
   const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
   const templatesRef = useRef<TemplateRecord[] | null>(null)
@@ -59,7 +75,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const loadBoards = async () => {
     try {
       // mark start of board load for perf debugging
-      try { performance.mark('loadBoards-start') } catch {}
+      try { performance.mark('loadBoards-start') } catch { }
       setLoading(true)
       const { boardStorage } = await import('../features/storage/storage')
       const loadedBoards = await boardStorage.getAllBoards()
@@ -73,8 +89,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         setSharedBoards([])
       }
       // Stats computed in a separate effect when state settles
-      try { performance.mark('loadBoards-end') } catch {}
-      try { performance.measure('loadBoards', 'loadBoards-start', 'loadBoards-end'); console.log('perf: loadBoards', performance.getEntriesByName('loadBoards')[0]?.duration) } catch {}
+      try { performance.mark('loadBoards-end') } catch { }
+      try { performance.measure('loadBoards', 'loadBoards-start', 'loadBoards-end'); console.log('perf: loadBoards', performance.getEntriesByName('loadBoards')[0]?.duration) } catch { }
     } catch {
       setError('Failed to load boards')
     } finally {
@@ -92,11 +108,32 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
 
+  // Track selected tab via path to conditionally show sections
+  useEffect(() => {
+    const onPop = () => setTabPath(window.location.pathname || '/boards')
+    const onTabChanged = (e: Event) => {
+      try {
+        const label = String((e as CustomEvent).detail?.label || '').toLowerCase()
+        if (label) setTabPath(`/${label}`)
+      } catch { }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', onPop)
+      window.addEventListener('nodal:tab-changed', onTabChanged as any)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', onPop)
+        window.removeEventListener('nodal:tab-changed', onTabChanged as any)
+      }
+    }
+  }, [])
+
   // Load templates (public)
   useEffect(() => {
     const loadTemplates = async () => {
       try {
-        try { performance.mark('loadTemplates-start') } catch {}
+        try { performance.mark('loadTemplates-start') } catch { }
         setTemplatesLoading(true)
         setTemplatesError(null)
         const list = await templateStorage.getAllTemplates()
@@ -110,12 +147,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               templatesRef.current = list
             }
           } catch {
-        setTemplates(list)
+            setTemplates(list)
             templatesRef.current = list
           }
         })
-        try { performance.mark('loadTemplates-end') } catch {}
-        try { performance.measure('loadTemplates', 'loadTemplates-start', 'loadTemplates-end'); console.log('perf: loadTemplates', performance.getEntriesByName('loadTemplates')[0]?.duration) } catch {}
+        try { performance.mark('loadTemplates-end') } catch { }
+        try { performance.measure('loadTemplates', 'loadTemplates-start', 'loadTemplates-end'); console.log('perf: loadTemplates', performance.getEntriesByName('loadTemplates')[0]?.duration) } catch { }
       } catch {
         setTemplatesError('Failed to load templates')
       } finally {
@@ -131,14 +168,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       let cancelled = false
       const waitForIdle = () => new Promise<void>(resolve => {
         if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          ;(window as any).requestIdleCallback(() => resolve(), { timeout: 1000 })
+          ; (window as any).requestIdleCallback(() => resolve(), { timeout: 1000 })
         } else {
           setTimeout(() => resolve(), 50)
         }
       })
 
       try {
-        try { performance.mark('computeTasks-start') } catch {}
+        try { performance.mark('computeTasks-start') } catch { }
         setTasksLoading(true)
         // Use precomputed task summary from board.data.meta if available
         const all: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
@@ -179,8 +216,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           })
         }
 
-        try { performance.mark('computeTasks-end') } catch {}
-        try { performance.measure('computeTasks', 'computeTasks-start', 'computeTasks-end'); console.log('perf: computeTasks', performance.getEntriesByName('computeTasks')[0]?.duration) } catch {}
+        try { performance.mark('computeTasks-end') } catch { }
+        try { performance.measure('computeTasks', 'computeTasks-start', 'computeTasks-end'); console.log('perf: computeTasks', performance.getEntriesByName('computeTasks')[0]?.duration) } catch { }
       } catch {
         if (!cancelled) setIncompleteTasks([])
       } finally {
@@ -202,7 +239,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }, [boards, sharedBoards, loading])
 
-  
+
 
   const togglePin = (boardId: string) => {
     setPinnedBoardIds(prev => {
@@ -288,7 +325,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     return (b.lastModified || 0) - (a.lastModified || 0)
   })
 
-  
+
 
   // Prefer first name; if missing, use last name; otherwise no name
   const greetingName = (() => {
@@ -380,8 +417,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
               <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM16 28C16.5523 28 17 28.4477 17 29V31C17 31.5523 16.5523 32 16 32H10C9.44772 32 9 31.5523 9 31V29C9 28.4477 9.44772 28 10 28H16ZM34 28C34.5523 28 35 28.4477 35 29V31C35 31.5523 34.5523 32 34 32H28C27.4477 32 27 31.5523 27 31V29C27 28.4477 27.4477 28 28 28H34ZM25 20C25.5523 20 26 20.4477 26 21V23C26 23.5523 25.5523 24 25 24H19C18.4477 24 18 23.5523 18 23V21C18 20.4477 18.4477 20 19 20H25ZM31 11C31.5523 11 32 11.4477 32 12C32 12.5523 31.5523 13 31 13C30.4477 13 30 12.5523 30 12C30 11.4477 30.4477 11 31 11ZM34 11C34.5523 11 35 11.4477 35 12C35 12.5523 34.5523 13 34 13C33.4477 13 33 12.5523 33 12C33 11.4477 33.4477 11 34 11Z" fill="currentColor" />
             </svg>}
-            // headerClassName="bg-white text-slate-900"
-            // activeHeaderClassName="bg-white text-slate-900"
+          // headerClassName="bg-white text-slate-900"
+          // activeHeaderClassName="bg-white text-slate-900"
           >
             <BoardsTab
               searchQuery={searchQuery}
@@ -403,10 +440,10 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           <Tab
             label="templates"
             icon={<svg width="44" height="44" className="h-6 w-6" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor"/>
-              <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM24.1025 18.0049C24.573 18.0528 24.9472 18.427 24.9951 18.8975C24.9985 18.9312 25 18.9654 25 19V29C25 29.0346 24.9985 29.0688 24.9951 29.1025C24.9472 29.573 24.573 29.9472 24.1025 29.9951C24.0688 29.9985 24.0346 30 24 30H14C13.4823 30 13.0562 29.6067 13.0049 29.1025C13.0015 29.0688 13 29.0346 13 29V19C13 18.4477 13.4477 18 14 18H24C24.0346 18 24.0688 18.0015 24.1025 18.0049ZM16 27H22V21H16V27ZM29 13C29.0346 13 29.0688 13.0015 29.1025 13.0049C29.573 13.0528 29.9472 13.427 29.9951 13.8975C29.9985 13.9312 30 13.9654 30 14V24C30 24.5523 29.5523 25 29 25H28C27.4477 25 27 24.5523 27 24V16H19C18.4477 16 18 15.5523 18 15V14C18 13.4477 18.4477 13 19 13H29Z" fill="currentColor"/>
-              </svg>              
-              }
+              <path opacity="0.2" d="M38.5 9.625V34.375C38.5 34.7397 38.3551 35.0894 38.0973 35.3473C37.8394 35.6051 37.4897 35.75 37.125 35.75H6.875C6.51033 35.75 6.16059 35.6051 5.90273 35.3473C5.64487 35.0894 5.5 34.7397 5.5 34.375V9.625C5.5 9.26033 5.64487 8.91059 5.90273 8.65273C6.16059 8.39487 6.51033 8.25 6.875 8.25H37.125C37.4897 8.25 37.8394 8.39487 38.0973 8.65273C38.3551 8.91059 38.5 9.26033 38.5 9.625Z" fill="currentColor" />
+              <path d="M37.125 6.875C37.8543 6.875 38.5536 7.16494 39.0693 7.68066C39.5851 8.19639 39.875 8.89566 39.875 9.625V34.375C39.875 35.1043 39.5851 35.8036 39.0693 36.3193C38.5536 36.8351 37.8543 37.125 37.125 37.125H6.875C6.14565 37.125 5.44639 36.8351 4.93066 36.3193C4.41494 35.8036 4.125 35.1043 4.125 34.375V9.625C4.125 8.89565 4.41494 8.19639 4.93066 7.68066C5.44639 7.16494 6.14565 6.875 6.875 6.875H37.125ZM6.875 34.375H37.125V9.625H6.875V34.375ZM24.1025 18.0049C24.573 18.0528 24.9472 18.427 24.9951 18.8975C24.9985 18.9312 25 18.9654 25 19V29C25 29.0346 24.9985 29.0688 24.9951 29.1025C24.9472 29.573 24.573 29.9472 24.1025 29.9951C24.0688 29.9985 24.0346 30 24 30H14C13.4823 30 13.0562 29.6067 13.0049 29.1025C13.0015 29.0688 13 29.0346 13 29V19C13 18.4477 13.4477 18 14 18H24C24.0346 18 24.0688 18.0015 24.1025 18.0049ZM16 27H22V21H16V27ZM29 13C29.0346 13 29.0688 13.0015 29.1025 13.0049C29.573 13.0528 29.9472 13.427 29.9951 13.8975C29.9985 13.9312 30 13.9654 30 14V24C30 24.5523 29.5523 25 29 25H28C27.4477 25 27 24.5523 27 24V16H19C18.4477 16 18 15.5523 18 15V14C18 13.4477 18.4477 13 19 13H29Z" fill="currentColor" />
+            </svg>
+            }
           >
             <TemplatesTab
               templates={templates}
@@ -434,7 +471,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             <ProfileTab />
           </Tab>
         </Tabs>
-        
+
         {/* SIDEBAR */}
         <div className="w-full md:w-96 mt-8 md:-mt-16 min-h-screen rounded-t-4xl 
         bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-12 self-start z-30">
@@ -451,45 +488,25 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             </Button>
           </div>
 
-          <div className="flex flex-col gap-4 mt-8">
-            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">task nodes</h2>
-            {tasksLoading ? (
-              <div className="text-sm text-gray-500 dark:text-gray-400">Loading tasks…</div>
-            ) : (
-            <div className="flex flex-col gap-2">
-                {incompleteTasks.length === 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">No incomplete tasks. Nice work!</div>
-                )}
-                {incompleteTasks.slice(0, 10).map((t) => (
-                  <button
-                    key={`${t.boardId}-${t.nodeId}`}
-                    onClick={() => {
-                      const b = allBoards.find((bb) => bb.id === t.boardId) as any
-                      if (b) onOpenBoard(b, undefined)
-                    }}
-                    className="group text-left flex items-center justify-between gap-3 rounded-lg px-3 py-2 bg-white/80 dark:bg-gray-900/70 border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-900 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span aria-hidden className="inline-flex w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 group-hover:border-primary-400" />
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-sm text-gray-900 dark:text-gray-100 truncate max-w-[220px]">{t.title}</span>
-                        <span className="text-[11px] text-gray-500 dark:text-gray-400">{t.boardName}</span>
-                      </div>
-                    </div>
-                    <span className="text-[11px] text-primary-600 dark:text-primary-400">Open</span>
-                  </button>
-                ))}
-                {incompleteTasks.length > 10 && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Showing 10 of {incompleteTasks.length} tasks</div>
-                )}
-              </div>
-            )}
-            </div>
+          <SidebarSection showOn={['boards', 'profile']}>
+            <TasksSidebar
+              incompleteTasks={incompleteTasks}
+              tasksLoading={tasksLoading}
+              allBoards={allBoards}
+              onOpenBoard={onOpenBoard}
+            />
+          </SidebarSection>
 
-          <div className="flex flex-col gap-4 mt-8">
-            <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
-            <span className="text-sm text-gray-500 dark:text-gray-400">Coming soon (for real, excited for this piece)</span>
-          </div>
+          <SidebarSection showOn={['boards']}>
+            <div className="flex flex-col gap-4 mt-8">
+              <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
+              <span className="text-sm text-gray-500 dark:text-gray-400">Coming soon (for real, excited for this piece)</span>
+            </div>
+          </SidebarSection>
+          
+          <SidebarSection showOn={['profile']}>
+            <ConnectionsSidebar />
+          </SidebarSection>
         </div>
       </div>
 

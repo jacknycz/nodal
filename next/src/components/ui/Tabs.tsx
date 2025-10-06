@@ -38,6 +38,21 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
   const [active, setActive] = useState(0);
   const tabs = Array.isArray(children) ? children : [children];
 
+  // Support selecting tab via pathname: /<label>
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const applyPath = () => {
+      const path = window.location.pathname.replace(/^\/+/, '').toLowerCase();
+      const seg = path.split('/')[0] || 'boards';
+      const idx = (tabs as any[]).findIndex((t) => String(t?.props?.label || '').toLowerCase() === seg);
+      if (idx >= 0) setActive(idx);
+    };
+    applyPath();
+    const onPop = () => applyPath();
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [tabs]);
+
   return (
     <div className="w-full">
       {/* Tab headers */}
@@ -45,7 +60,18 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
         {tabs.map((tab: any, idx) => (
           <button
             key={idx}
-            onClick={() => setActive(idx)}
+            onClick={() => {
+              setActive(idx);
+              try {
+                if (typeof window !== 'undefined') {
+                  const label = String(tab?.props?.label || '').toLowerCase();
+                  const target = label ? `/${label}` : '/boards';
+                  window.history.replaceState(null, '', target);
+                  // Notify listeners (e.g., BoardRoom) since replaceState doesn't emit popstate
+                  try { window.dispatchEvent(new CustomEvent('nodal:tab-changed', { detail: { label } })) } catch {}
+                }
+              } catch {}
+            }}
             className={`flex cursor-pointer items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-t-xl text-base sm:text-lg font-fredoka font-medium transition-colors ${
               active === idx
                 ? (tab.props.activeHeaderClassName || "text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")

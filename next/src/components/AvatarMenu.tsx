@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { User, GearSix, SquaresFour, SignOut } from '@phosphor-icons/react/dist/ssr'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
@@ -48,6 +48,8 @@ export default function AvatarMenu({
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
   const [profile, setProfile] = useState<{ username: string | null; avatar_url: string | null } | null>(null)
   const supabase = getSupabaseClient()
+  const [unreadCount, setUnreadCount] = useState<number>(0)
+  const notifTimerRef = useRef<any>(null)
 
   // Load recent boards when menu opens
   const loadRecentBoards = async () => {
@@ -86,7 +88,8 @@ export default function AvatarMenu({
       try {
         const { data } = await supabase.from('profiles').select('username, avatar_url').eq('id', user.id).maybeSingle()
         if (!active) return
-        setProfile(data || { username: null, avatar_url: null })
+        const prof = (data as { username: string | null; avatar_url: string | null } | null)
+        setProfile(prof || { username: null, avatar_url: null })
       } catch {
         if (!active) return
         setProfile({ username: null, avatar_url: null })
@@ -95,6 +98,49 @@ export default function AvatarMenu({
     run()
     return () => { active = false }
   }, [user?.id, supabase])
+
+  // Unread notifications count + realtime + local event
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.id) { setUnreadCount(0); return }
+    try {
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .is('read_at', null)
+      setUnreadCount(count || 0)
+    } catch {
+      setUnreadCount(0)
+    }
+  }, [supabase, user?.id])
+
+  useEffect(() => {
+    let active = true
+    fetchUnreadCount()
+    if (!user?.id) return () => { active = false }
+    const ch = supabase
+      .channel('notif-badge-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => fetchUnreadCount())
+      .subscribe()
+    const onLocal = (e: Event) => {
+      try {
+        const detail: any = (e as CustomEvent).detail
+        if (detail && typeof detail.delta === 'number') {
+          setUnreadCount((c) => Math.max(0, c + Number(detail.delta)))
+          if (notifTimerRef.current) clearTimeout(notifTimerRef.current)
+          notifTimerRef.current = setTimeout(() => {
+            fetchUnreadCount()
+          }, 350)
+          return
+        } else if (detail && detail.reset) {
+          // fall through to fetch immediately
+        }
+      } catch {}
+      fetchUnreadCount()
+    }
+    window.addEventListener('nodal:notifications-updated', onLocal as any)
+    return () => { active = false; if (notifTimerRef.current) clearTimeout(notifTimerRef.current); supabase.removeChannel(ch); window.removeEventListener('nodal:notifications-updated', onLocal as any) }
+  }, [user?.id, supabase, fetchUnreadCount])
 
   // Accept invitation handler
   const handleAcceptInvite = async (inviteId: string) => {
@@ -153,25 +199,32 @@ export default function AvatarMenu({
     <Menu
       className="z-[500]"
       trigger={
-        <IconButton
-          aria-label="User menu"
-          className="p-0!"
-        >
-          {getUserAvatar() ? (
-            <Image 
-              src={getUserAvatar()}
-              alt={getUserDisplayName()}
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-              unoptimized
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-gray-200 dark:border-gray-700" style={{ backgroundColor: getInitialsColor() }}>
-              {getInitials()}
-            </div>
+        <div className="relative">
+          <IconButton
+            aria-label="User menu"
+            className="p-0!"
+          >
+            {getUserAvatar() ? (
+              <Image 
+                src={getUserAvatar()}
+                alt={getUserDisplayName()}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
+                unoptimized
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-gray-200 dark:border-gray-700" style={{ backgroundColor: getInitialsColor() }}>
+                {getInitials()}
+              </div>
+            )}
+          </IconButton>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] leading-[18px] text-white text-center font-semibold shadow-sm">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
           )}
-        </IconButton>
+        </div>
       }
       showNotification={pendingInvites.length > 0}
       width="w-64"
@@ -203,27 +256,15 @@ export default function AvatarMenu({
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* Pending Invitations */}
-          {pendingInvites.length > 0 && (
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-              <div className="font-semibold text-xs text-gray-500 dark:text-gray-400 mb-1">Pending Invitations</div>
-              <ul className="space-y-1">
-                {pendingInvites.map((invite) => (
-                  <li key={invite.id} className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-200">
-                    <span>
-                      Board: {invite.board_id.slice(0, 8)}...<br/>
-                      Invited by: {invite.invited_by?.slice?.(0, 8) || 'unknown'}
-                    </span>
-                    <button className="ml-2 px-2 py-0.5 bg-blue-500 text-white rounded text-xs" onClick={() => handleAcceptInvite(invite.id)}>
-                      Accept
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            <div className="mt-2">
+              <button
+                onClick={() => { if (typeof window !== 'undefined') window.location.href = '/profile' }}
+                className="cursor-pointer text-xs text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                View Profile{unreadCount > 0 ? ` (${unreadCount > 99 ? '99+' : unreadCount})` : ''}
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Board Room Link - Only show when NOT on BoardRoom page */}
           {isBoardView && (

@@ -104,9 +104,6 @@ export default function Menu({
         }}
       >
         {trigger}
-        {showNotification && (
-          <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" />
-        )}
       </div>
 
       {/* Dropdown */}

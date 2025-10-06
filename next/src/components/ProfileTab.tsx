@@ -19,8 +19,20 @@ function useDebounced<T>(value: T, delay = 400) {
 
 export default function ProfileTab() {
   const user = useSupabaseUser()
+  const client = getSupabaseClient()
   const [loading, setLoading] = React.useState(true)
   const [profile, setProfile] = React.useState<{ username: string | null; avatar_url: string | null; display_name: string | null } | null>(null)
+  // Notifications
+  const [notifications, setNotifications] = React.useState<any[]>([])
+  const [unreadCount, setUnreadCount] = React.useState(0)
+  const [loadingNotifs, setLoadingNotifs] = React.useState(false)
+  // Connections
+  const [connections, setConnections] = React.useState<any[]>([])
+  const [loadingConns, setLoadingConns] = React.useState(false)
+  const [connSearch, setConnSearch] = React.useState('')
+  const debouncedConnSearch = useDebounced(connSearch, 300)
+  const [connResults, setConnResults] = React.useState<any[]>([])
+  const [connSearching, setConnSearching] = React.useState(false)
   const [showUsernameModal, setShowUsernameModal] = React.useState(false)
   const [usernameInput, setUsernameInput] = React.useState('')
   const debouncedUsername = useDebounced(usernameInput, 300)
@@ -58,6 +70,117 @@ export default function ProfileTab() {
     }
     run()
   }, [user?.id])
+
+  // Load notifications
+  const refreshNotifications = React.useCallback(async () => {
+    if (!user?.id) return
+    setLoadingNotifs(true)
+    try {
+      const res = await fetch(`/api/notifications?userId=${encodeURIComponent(user.id)}&limit=50`)
+      const json = await res.json()
+      const list = Array.isArray(json.notifications) ? json.notifications : []
+      setNotifications(list)
+      setUnreadCount(list.filter((n: any) => !n.read_at).length)
+    } catch {}
+    finally { setLoadingNotifs(false) }
+  }, [user?.id])
+
+  React.useEffect(() => { refreshNotifications() }, [refreshNotifications])
+
+  // Realtime notifications
+  React.useEffect(() => {
+    if (!user?.id) return
+    const ch = client
+      .channel('notif-' + user.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => refreshNotifications())
+      .subscribe()
+    return () => { client.removeChannel(ch) }
+  }, [user?.id, refreshNotifications, client])
+
+  const markAllRead = async () => {
+    if (!user?.id) return
+    try { await fetch('/api/notifications', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ userId: user.id, markAll: true }) }) } catch {}
+    refreshNotifications()
+    try { window.dispatchEvent(new CustomEvent('nodal:notifications-updated', { detail: { reset: true } })) } catch {}
+  }
+
+  const markOneRead = async (id: string) => {
+    if (!user?.id) return
+    // Optimistic UI
+    setNotifications((prev) => prev.map((n: any) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
+    setUnreadCount((c) => Math.max(0, c - 1))
+    try { window.dispatchEvent(new CustomEvent('nodal:notifications-updated', { detail: { delta: -1 } })) } catch {}
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, ids: [id] })
+      })
+    } catch {}
+    refreshNotifications()
+  }
+
+  // Load connections
+  const refreshConnections = React.useCallback(async () => {
+    if (!user?.id) return
+    setLoadingConns(true)
+    try {
+      const res = await fetch(`/api/connections?userId=${encodeURIComponent(user.id)}`)
+      const json = await res.json()
+      setConnections(Array.isArray(json.connections) ? json.connections : [])
+    } catch {}
+    finally { setLoadingConns(false) }
+  }, [user?.id])
+
+  React.useEffect(() => { refreshConnections() }, [refreshConnections])
+
+  // Realtime connections
+  React.useEffect(() => {
+    if (!user?.id) return
+    const ch1 = client
+      .channel('conn-req-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'connections', filter: `requester_id=eq.${user.id}` }, () => refreshConnections())
+      .subscribe()
+    const ch2 = client
+      .channel('conn-add-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'connections', filter: `addressee_id=eq.${user.id}` }, () => refreshConnections())
+      .subscribe()
+    return () => { client.removeChannel(ch1); client.removeChannel(ch2) }
+  }, [user?.id, refreshConnections, client])
+
+  // Connection search
+  React.useEffect(() => {
+    const run = async () => {
+      const q = debouncedConnSearch.trim()
+      if (!q || q.length < 2) { setConnResults([]); return }
+      setConnSearching(true)
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`)
+        const json = await res.json()
+        const results = Array.isArray(json.results) ? json.results : []
+        setConnResults(results.filter((r: any) => r.id !== user?.id))
+      } catch { setConnResults([]) }
+      finally { setConnSearching(false) }
+    }
+    run()
+  }, [debouncedConnSearch, user?.id])
+
+  const makeConnection = async (toUserId: string) => {
+    if (!user?.id || !toUserId) return
+    try {
+      await fetch('/api/connections', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ requesterId: user.id, addresseeId: toUserId }) })
+      setConnSearch('')
+      setConnResults([])
+      refreshConnections()
+    } catch {}
+  }
+
+  const updateConnection = async (id: string, action: 'accept'|'decline'|'block'|'unblock'|'cancel') => {
+    try {
+      await fetch(`/api/connections/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action }) })
+      refreshConnections()
+    } catch {}
+  }
 
   React.useEffect(() => {
     const check = async () => {
@@ -158,6 +281,147 @@ export default function ProfileTab() {
         </div>
       </div>
 
+      {/* Notifications */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</div>
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{unreadCount} unread</span>}
+            <Button variant="secondary" onClick={markAllRead} disabled={unreadCount === 0}>Mark all read</Button>
+          </div>
+        </div>
+        <div className="border rounded-md border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+          {loadingNotifs ? (
+            <div className="p-3 text-xs text-gray-500 dark:text-gray-400">Loading…</div>
+          ) : notifications.length === 0 ? (
+            <div className="p-3 text-xs text-gray-500 dark:text-gray-400">No notifications yet.</div>
+          ) : (
+            notifications.map((n: any) => {
+              let title = n.title as string
+              let bodyNode: React.ReactNode = n.body as string
+              const p = (n.payload || {}) as any
+              if (n.type === 'board_invite') {
+                const inviter = p?.inviterLabel || ''
+                const boardName = p?.boardName || ''
+                const link = p?.link || (p?.boardId ? `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${p.boardId}` : null)
+                title = inviter ? `New board shared with you by ${inviter}` : 'New board shared with you'
+                bodyNode = (
+                  <span>
+                    You have been invited to {link && boardName ? (
+                      <a href={link} className="text-primary-600 dark:text-primary-400 underline">"{boardName}"</a>
+                    ) : (
+                      boardName ? `"${boardName}"` : 'a board'
+                    )}
+                  </span>
+                )
+              }
+              return (
+                <div key={n.id} className="p-3 flex items-start gap-3">
+                  <div className={`w-2 h-2 mt-1 rounded-full ${n.read_at ? 'bg-transparent border border-gray-300 dark:border-gray-600' : 'bg-blue-500'}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-900 dark:text-white truncate">{title}</div>
+                        {bodyNode && <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{bodyNode}</div>}
+                      </div>
+                      <div className="flex-shrink-0">
+                        {!n.read_at && (
+                          <button
+                            onClick={() => markOneRead(n.id)}
+                            className="text-[10px] px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            Mark as read
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Connections */}
+      <div className="mt-8">
+        <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Connections</div>
+        <div className="mb-3">
+          <TextInput
+            label="Add connection"
+            placeholder="Search by username or email"
+            value={connSearch}
+            onChange={(e) => setConnSearch((e.target as HTMLInputElement).value)}
+            fullWidth
+          />
+          {connSearching && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Searching…</div>}
+          {!connSearching && connResults.length > 0 && (
+            <div className="mt-2 border rounded-md border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+              {connResults.map((r: any) => (
+                <div key={r.id} className="p-2 flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="text-sm text-gray-900 dark:text-white truncate">{r.username || r.email || r.id}</div>
+                    {r.email && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.email}</div>}
+                  </div>
+                  <Button size="sm" onClick={() => makeConnection(r.id)}>Make connection</Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Accepted */}
+          <div className="border rounded-md border-gray-200 dark:border-gray-700">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Connected</div>
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {loadingConns ? <div className="p-2 text-xs text-gray-500 dark:text-gray-400">Loading…</div> :
+                connections.filter((c: any) => c.status === 'accepted').map((c: any) => {
+                  const other = c.requester_id === user?.id ? c.addressee : c.requester
+                  const label = other?.username || other?.email || other?.id || (c.requester_id === user?.id ? c.addressee_id : c.requester_id)
+                  return (
+                    <div key={c.id} className="p-2 text-sm text-gray-900 dark:text-white truncate">{label}</div>
+                  )
+                })}
+            </div>
+          </div>
+          {/* Incoming */}
+          <div className="border rounded-md border-gray-200 dark:border-gray-700">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Incoming requests</div>
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {loadingConns ? <div className="p-2 text-xs text-gray-500 dark:text-gray-400">Loading…</div> :
+                connections.filter((c: any) => c.status === 'pending' && c.addressee_id === user?.id).map((c: any) => (
+                  <div key={c.id} className="p-2 flex items-center justify-between">
+                    <div className="text-sm text-gray-900 dark:text-white truncate">
+                      {c?.requester?.username || c?.requester?.email || c.requester_id}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => updateConnection(c.id, 'accept')}>Accept</Button>
+                      <Button size="sm" variant="secondary" onClick={() => updateConnection(c.id, 'decline')}>Decline</Button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+          {/* Outgoing */}
+          <div className="border rounded-md border-gray-200 dark:border-gray-700">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Sent requests</div>
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {loadingConns ? <div className="p-2 text-xs text-gray-500 dark:text-gray-400">Loading…</div> :
+                connections.filter((c: any) => c.status === 'pending' && c.requester_id === user?.id).map((c: any) => (
+                  <div key={c.id} className="p-2 flex items-center justify-between">
+                    <div className="text-sm text-gray-900 dark:text-white truncate">{c?.addressee?.username || c?.addressee?.email || c.addressee_id}</div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => updateConnection(c.id, 'cancel')}>Cancel</Button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <Modal
         open={showUsernameModal}
         onClose={() => setShowUsernameModal(false)}
@@ -165,7 +429,17 @@ export default function ProfileTab() {
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowUsernameModal(false)}>Cancel</Button>
-            <Button onClick={onSaveUsername} loading={saving} disabled={saving || available === false || !/^[a-z0-9_\.]{3,24}$/.test(usernameInput.trim())}>Save</Button>
+            <Button
+              onClick={onSaveUsername}
+              loading={saving}
+              disabled={
+                saving ||
+                available === false ||
+                !/^[a-z0-9_\.]{3,24}$/.test(usernameInput.trim().toLowerCase())
+              }
+            >
+              Save
+            </Button>
           </>
         }
       >

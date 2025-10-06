@@ -8,6 +8,7 @@ import Button from './ui/Button'
 import TextInput from './ui/TextInput'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
 import { PushPin, CheckCircle, Copy, Plus } from '@phosphor-icons/react/dist/ssr'
+import { useSupabaseUser } from '../features/auth/authUtils'
 
 interface TemplateCardProps {
   id: string
@@ -57,9 +58,61 @@ function TemplateCard({
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareEmails, setShareEmails] = useState<string[]>([])
   const [shareInput, setShareInput] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [results, setResults] = useState<Array<{ id: string; username?: string | null; email?: string | null; avatar_url?: string | null }>>([])
+  const [shareError, setShareError] = useState<string | null>(null)
   const shareLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${id}`
+  const user = useSupabaseUser()
 
   useEffect(() => { setNewName(name) }, [name])
+  // Debounced search for users by username/email
+  useEffect(() => {
+    let t: any
+    const run = async () => {
+      const q = shareInput.trim()
+      if (q.length < 2) { setResults([]); return }
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`)
+        const json = await res.json()
+        const list = Array.isArray(json.results) ? json.results : []
+        setResults(list)
+      } catch { setResults([]) }
+      finally { setSearching(false) }
+    }
+    t = setTimeout(run, 250)
+    return () => clearTimeout(t)
+  }, [shareInput])
+
+  const isValidEmail = (e: string) => /[^@\s]+@[^@\s]+\.[^@\s]+/.test(e)
+
+  const addEmail = (email: string) => {
+    const e = email.trim()
+    if (!e || !isValidEmail(e)) { setShareError('Enter a valid email'); return }
+    if (!shareEmails.includes(e)) {
+      setShareEmails(prev => [...prev, e])
+    }
+    setShareInput('')
+    setShareError(null)
+  }
+
+  const handleSendInvites = async () => {
+    setShareError(null)
+    try {
+      const invites = shareEmails.filter(isValidEmail)
+      for (const email of invites) {
+        await fetch('/api/board/invitations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boardId: id, email, invitedBy: user?.id })
+        })
+      }
+      setShowShareModal(false)
+      setShareEmails([])
+    } catch {
+      setShareError('Failed to send invites')
+    }
+  }
 
   // Thumbnails removed
 
@@ -290,11 +343,7 @@ function TemplateCard({
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
-                      const email = shareInput.trim()
-                      if (email && !shareEmails.includes(email)) {
-                        setShareEmails(prev => [...prev, email])
-                        setShareInput('')
-                      }
+                      addEmail(shareInput)
                     }
                   }}
                   fullWidth
@@ -303,17 +352,31 @@ function TemplateCard({
                   aria-label="Add email"
                   size="lg"
                   variant="secondary"
-                  onClick={() => {
-                    const email = shareInput.trim()
-                    if (email && !shareEmails.includes(email)) {
-                      setShareEmails(prev => [...prev, email])
-                      setShareInput('')
-                    }
-                  }}
+                  onClick={() => addEmail(shareInput)}
                 >
                   <Plus size={24} weight="duotone" className="w-4 h-4" />
                 </IconButton>
               </div>
+              {shareError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{shareError}</div>}
+
+              {/* Instant results */}
+              {(searching || results.length > 0) && (
+                <div className="mt-2 border rounded-md border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-56 overflow-auto">
+                  {searching && <div className="p-2 text-xs text-gray-500 dark:text-gray-400">Searching…</div>}
+                  {!searching && results.length === 0 && (
+                    <div className="p-2 text-xs text-gray-500 dark:text-gray-400">No matches</div>
+                  )}
+                  {!searching && results.map((r) => (
+                    <div key={r.id} className="p-2 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="text-sm text-gray-900 dark:text-white truncate">{r.username || r.email || r.id}</div>
+                        {r.email && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.email}</div>}
+                      </div>
+                      <Button size="sm" onClick={() => r.email && addEmail(r.email)} disabled={!r.email}>Share</Button>
+                    </div>
+                  ))}
+                </div>
+              )}
               {shareEmails.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {shareEmails.map(email => (
@@ -327,7 +390,7 @@ function TemplateCard({
 
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="secondary" onClick={() => setShowShareModal(false)}>Close</Button>
-              <Button onClick={() => { setShowShareModal(false); setShareEmails([]) }} disabled={shareEmails.length === 0}>Send Invites</Button>
+              <Button onClick={handleSendInvites} disabled={shareEmails.length === 0}>Send Invites</Button>
             </div>
           </div>
         </DynamicModal>
