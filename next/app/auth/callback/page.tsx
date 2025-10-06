@@ -1,10 +1,10 @@
 'use client'
 
 import React from 'react'
-import { getSupabaseClient } from '@/src/features/auth/supabaseClient'
+import { getSupabaseClient } from '../../../src/features/auth/supabaseClient'
 import { useRouter } from 'next/navigation'
-import TextInput from '@/src/components/ui/TextInput'
-import Button from '@/src/components/ui/Button'
+import TextInput from '../../../src/components/ui/TextInput'
+import Button from '../../../src/components/ui/Button'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
