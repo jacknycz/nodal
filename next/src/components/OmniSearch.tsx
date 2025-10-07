@@ -55,7 +55,7 @@ export default function OmniSearch() {
   const showResults = !!query && (isFocused || isHoveringResults)
 
   return (
-    <div className="fixed top-12 md:top-2 right-4 md:left-1/2 md:-translate-x-1/2 z-[600] w-64">
+    <div className="fixed top-12 md:top-2 right-4 md:left-1/2 md:-translate-x-1/2 z-[600] w-64 nodal-no-select">
       <FloatingSearch
         label="Search nodes"
         value={query}

@@ -127,7 +127,7 @@ export default function BoardContextMenu({
     <>
       <div
         className="fixed z-[700] bg-white overflow-visible dark:bg-gray-800 rounded-2xl shadow-lg 
-        min-w-[200px]"
+        min-w-[200px] nodal-no-select"
         style={{ left: position.x, top: position.y }}
         ref={menuRef}
       >

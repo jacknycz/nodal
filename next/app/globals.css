@@ -427,3 +427,11 @@ body {
 .ProseMirror > *:last-child {
   margin-bottom: 0 !important;
 }
+
+/* Prevent accidental text selection on board chrome (menus, dock, FAB, search) */
+.nodal-no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
