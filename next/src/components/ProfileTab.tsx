@@ -1,12 +1,14 @@
 'use client'
 
 import React from 'react'
+import NextImage from 'next/image'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import { supabase, getSupabaseClient } from '../features/auth/supabaseClient'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
 import Modal from './ui/Modal'
 import LinkUI from './ui/Link'
+import Tag from './ui/Tag'
 
 function useDebounced<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = React.useState(value)
@@ -26,6 +28,7 @@ export default function ProfileTab() {
   const [notifications, setNotifications] = React.useState<any[]>([])
   const [unreadCount, setUnreadCount] = React.useState(0)
   const [loadingNotifs, setLoadingNotifs] = React.useState(false)
+  const [showReadExpanded, setShowReadExpanded] = React.useState(false)
   // Connections
   const [connections, setConnections] = React.useState<any[]>([])
   const [loadingConns, setLoadingConns] = React.useState(false)
@@ -40,6 +43,7 @@ export default function ProfileTab() {
   const [available, setAvailable] = React.useState<boolean | null>(null)
   const [saving, setSaving] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [cooldownUntil, setCooldownUntil] = React.useState<string | null>(null)
   const [resetMsg, setResetMsg] = React.useState<string | null>(null)
   const [showAvatarModal, setShowAvatarModal] = React.useState(false)
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null)
@@ -54,16 +58,55 @@ export default function ProfileTab() {
   const panRef = React.useRef<{ active: boolean; sx: number; sy: number; startTx: number; startTy: number }>({ active: false, sx: 0, sy: 0, startTx: 0, startTy: 0 })
   const cropSize = 256
 
+  // Cooldown state computed from profile row (username_changed_at) if available
+  const [isUsernameOnCooldown, setIsUsernameOnCooldown] = React.useState(false)
+
   React.useEffect(() => {
     const run = async () => {
       if (!user?.id) { setLoading(false); return }
       try {
-        const { data, error } = await supabase.from('profiles').select('username, avatar_url, display_name').eq('id', user.id).maybeSingle()
-        if (error) throw error
-        const prof = (data as { username: string | null; avatar_url: string | null; display_name: string | null } | null)
+        let selError: any = null
+        let data: any = null
+        try {
+          const res = await supabase
+            .from('profiles')
+            .select('username, avatar_url, display_name, username_changed_at')
+            .eq('id', user.id)
+            .maybeSingle()
+          if (res.error) throw res.error
+          data = res.data
+        } catch (err: any) {
+          selError = err
+          const msg: string = err?.message || ''
+          const code: string | number | undefined = (err && (err.code ?? err.details))
+          // Retry without the optional column if schema not updated yet
+          if (msg.includes('username_changed_at') || String(code) === '42703' || err?.status === 400) {
+            const res2 = await supabase
+              .from('profiles')
+              .select('username, avatar_url, display_name')
+              .eq('id', user.id)
+              .maybeSingle()
+            if (res2.error) throw res2.error
+            data = res2.data
+          } else {
+            throw err
+          }
+        }
+        const prof = (data as { username: string | null; avatar_url: string | null; display_name: string | null, username_changed_at?: string | null } | null)
         setProfile(prof || { username: null, avatar_url: null, display_name: null })
+        // Compute cooldown if applicable
+        const changedAt = (prof as any)?.username_changed_at as string | null
+        if (changedAt) {
+          const last = new Date(changedAt)
+          const now = new Date()
+          const days = (now.getTime() - last.getTime()) / (1000*60*60*24)
+          setIsUsernameOnCooldown(days < 30)
+        } else {
+          setIsUsernameOnCooldown(false)
+        }
       } catch {
         setProfile({ username: null, avatar_url: null, display_name: null })
+        setIsUsernameOnCooldown(false)
       } finally {
         setLoading(false)
       }
@@ -209,6 +252,13 @@ export default function ProfileTab() {
     try {
       const res = await fetch('/api/profile/username', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ userId: user.id, username: u }) })
       if (res.status === 409) { setSaveError('Username is taken'); return }
+      if (res.status === 429) {
+        const json429 = await res.json()
+        const retryAt = json429?.retryAt
+        setCooldownUntil(retryAt || null)
+        setSaveError('You changed your username in the last 30 days')
+        return
+      }
       const json = await res.json()
       if (!res.ok || !json?.ok) { setSaveError(json?.error || 'Failed to save'); return }
       setProfile((p) => ({ ...(p || { username: null, avatar_url: null, display_name: null }), username: u }))
@@ -236,48 +286,64 @@ export default function ProfileTab() {
   if (loading) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">Loading profile…</div>
 
   return (
-    <div className="p-4">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center text-gray-500 dark:text-gray-300">
-          {/* Placeholder avatar */}
-          {(profile?.avatar_url) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-lg">{(user?.email || 'U').slice(0,1).toUpperCase()}</span>
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Email</div>
-          <div className="text-base text-gray-900 dark:text-gray-100">{user?.email || '—'}</div>
-          <div className="mt-1">
-            <LinkUI onClick={() => { setAvatarPreview(null); avatarBlobRef.current = null; setShowAvatarModal(true) }}>Edit avatar</LinkUI>
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
+      {/* Profile Card */}
+      <div className="rounded-3xl border border-gray-200/70 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur-sm shadow-xl p-6 md:p-8">
+        <div className="flex items-start gap-6">
+          {/* Avatar */}
+          <div className="relative flex flex-col items-center">
+            <div className="w-24 h-24 md:w-28 md:h-28 rounded-full ring-4 ring-white/60 dark:ring-gray-800 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 shadow-md">
+              {(profile?.avatar_url) ? (
+                <NextImage src={profile.avatar_url} alt="avatar" width={112} height={112} className="w-full h-full object-cover" priority sizes="112px" />
+              ) : (
+                <span className="text-2xl font-semibold">{(user?.email || 'U').slice(0,1).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="mt-2">
+              <LinkUI onClick={() => { setAvatarPreview(null); avatarBlobRef.current = null; setShowAvatarModal(true) }}>Edit avatar</LinkUI>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Password</div>
-            <div className="text-base text-gray-900 dark:text-gray-100">••••••••</div>
-          </div>
-          <Button onClick={onResetPassword}>Change Password</Button>
-        </div>
-        {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
-      </div>
+          {/* Main info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
+                {profile?.username || 'Add a username'}
+              </div>
+              {profile?.username ? (
+                <LinkUI
+                  onClick={() => { if (!isUsernameOnCooldown) { setUsernameInput(profile?.username || ''); setShowUsernameModal(true) } }}
+                >
+                  {isUsernameOnCooldown ? (
+                    <span title="You changed your username in the last 30 days" className="pointer-events-none opacity-50">Edit</span>
+                  ) : (
+                    'Edit'
+                  )}
+                </LinkUI>
+              ) : (
+                <Button size="sm" onClick={() => { setUsernameInput(''); setShowUsernameModal(true) }}>Add Username</Button>
+              )}
+              {/* Role tag */}
+              <Tag variant="secondary" className="ml-1">{String((user as any)?.app_metadata?.role || 'user').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</Tag>
+            </div>
 
-      <div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">Username</div>
-            <div className="text-base text-gray-900 dark:text-gray-100">{profile?.username || '—'}</div>
+            <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {/* Email */}
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
+                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</div>
+                <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100 break-words">{user?.email || '—'}</div>
+              </div>
+              {/* Password */}
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Password</div>
+                  <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">••••••••</div>
+                </div>
+                <Button onClick={onResetPassword}>Change</Button>
+              </div>
+            </div>
+            {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
           </div>
-          {profile?.username ? (
-            <LinkUI onClick={() => { setUsernameInput(profile?.username || ''); setShowUsernameModal(true) }}>Edit Username</LinkUI>
-          ) : (
-            <Button onClick={() => { setUsernameInput(''); setShowUsernameModal(true) }}>Add Username</Button>
-          )}
         </div>
       </div>
 
@@ -290,13 +356,21 @@ export default function ProfileTab() {
             <Button variant="secondary" onClick={markAllRead} disabled={unreadCount === 0}>Mark all read</Button>
           </div>
         </div>
-        <div className="border rounded-md border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700">
+        {
+          // Partition notifications: unread first; then up to 5 total with read fillers; rest read collapsible
+        }
+        <div className="border rounded-md border-gray-200 dark:border-gray-700">
           {loadingNotifs ? (
             <div className="p-3 text-xs text-gray-500 dark:text-gray-400">Loading…</div>
           ) : notifications.length === 0 ? (
             <div className="p-3 text-xs text-gray-500 dark:text-gray-400">No notifications yet.</div>
           ) : (
-            notifications.map((n: any) => {
+            (() => {
+              const unread = notifications.filter((n: any) => !n.read_at)
+              const read = notifications.filter((n: any) => !!n.read_at)
+              const primary = unread.concat(read.slice(0, Math.max(0, 5 - unread.length)))
+              const remainingRead = read.slice(Math.max(0, 5 - unread.length))
+              const Item = ({ n }: { n: any }) => {
               let title = n.title as string
               let bodyNode: React.ReactNode = n.body as string
               const p = (n.payload || {}) as any
@@ -315,31 +389,50 @@ export default function ProfileTab() {
                   </span>
                 )
               }
-              return (
-                <div key={n.id} className="p-3 flex items-start gap-3">
-                  <div className={`w-2 h-2 mt-1 rounded-full ${n.read_at ? 'bg-transparent border border-gray-300 dark:border-gray-600' : 'bg-blue-500'}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm text-gray-900 dark:text-white truncate">{title}</div>
-                        {bodyNode && <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{bodyNode}</div>}
+                return (
+                  <div key={n.id} className="p-3 flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                    <div className={`w-2 h-2 mt-1 rounded-full ${n.read_at ? 'bg-transparent border border-gray-300 dark:border-gray-600' : 'bg-blue-500'}`} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-900 dark:text-white truncate">{title}</div>
+                          {bodyNode && <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{bodyNode}</div>}
+                        </div>
+                        <div className="flex-shrink-0">
+                          {!n.read_at && (
+                            <button
+                              onClick={() => markOneRead(n.id)}
+                              className="text-[10px] px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              Mark as read
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-shrink-0">
-                        {!n.read_at && (
-                          <button
-                            onClick={() => markOneRead(n.id)}
-                            className="text-[10px] px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                          >
-                            Mark as read
-                          </button>
-                        )}
-                      </div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
                     </div>
-                    <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</div>
                   </div>
+                )
+              }
+              return (
+                <div>
+                  {primary.map((n: any) => <Item key={n.id} n={n} />)}
+                  {remainingRead.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setShowReadExpanded(v => !v)}
+                        className="w-full text-xs text-gray-600 dark:text-gray-300 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+                      >
+                        {showReadExpanded ? 'Hide' : 'Show'} {remainingRead.length} read notification{remainingRead.length === 1 ? '' : 's'}
+                      </button>
+                      <div className={`overflow-hidden transition-all duration-200 ${showReadExpanded ? 'max-h-[1000px]' : 'max-h-0'}`}>
+                        {showReadExpanded && remainingRead.map((n: any) => <Item key={n.id} n={n} />)}
+                      </div>
+                    </>
+                  )}
                 </div>
               )
-            })
+            })()
           )}
         </div>
       </div>
@@ -443,6 +536,11 @@ export default function ProfileTab() {
           </>
         }
       >
+        {profile?.username && (
+          <div className="mb-3 rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 px-3 py-2 text-xs leading-snug">
+            <strong className="font-semibold">Heads up:</strong> after your username is set, you can change it only once every 30 days.
+          </div>
+        )}
         <TextInput
           label="Username"
           value={usernameInput}
@@ -460,7 +558,16 @@ export default function ProfileTab() {
             <span className="text-red-600 dark:text-red-400">Taken or invalid</span>
           ) : null}
         </div>
-        {saveError && <div className="mt-2 text-xs text-red-600 dark:text-red-400">{saveError}</div>}
+        {saveError && (
+          <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+            {saveError}
+            {cooldownUntil && (
+              <>
+                {' '}(try again {new Date(cooldownUntil).toLocaleDateString()} {new Date(cooldownUntil).toLocaleTimeString()})
+              </>
+            )}
+          </div>
+        )}
       </Modal>
 
       <Modal

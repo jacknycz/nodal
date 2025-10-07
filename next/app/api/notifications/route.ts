@@ -8,6 +8,16 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 200)
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
     const supabase = getSupabaseServiceClient()
+    // Cleanup: delete read notifications older than 30 days
+    try {
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId)
+        .lt('read_at', cutoff)
+    } catch {}
+
     const { data } = await supabase
       .from('notifications')
       .select('*')

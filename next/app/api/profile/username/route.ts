@@ -33,8 +33,48 @@ export async function POST(req: NextRequest) {
     const { data: existing, error: selErr } = await supabase.from('profiles').select('id').ilike('username', u).maybeSingle()
     if (selErr) return NextResponse.json({ error: selErr.message }, { status: 500 })
     if (existing && existing.id !== userId) return NextResponse.json({ error: 'conflict' }, { status: 409 })
-    // Upsert profile row with new username
-    const { error: upErr } = await supabase.from('profiles').upsert({ id: userId, username: u }, { onConflict: 'id' })
+    // Fetch current profile to enforce 30-day cooldown if username already set
+    let hasChangedAtCol = true
+    let lastChangedAt: string | null = null
+    let currentUsername: string | null = null
+    try {
+      const { data: prof, error: profErr } = await supabase
+        .from('profiles')
+        .select('username, username_changed_at')
+        .eq('id', userId)
+        .maybeSingle()
+      if (profErr) throw profErr
+      currentUsername = (prof as any)?.username || null
+      lastChangedAt = (prof as any)?.username_changed_at || null
+    } catch (e: any) {
+      // Column may not exist yet — proceed without cooldown enforcement
+      const msg: string = e?.message || ''
+      if (msg.includes('username_changed_at') || msg.includes('column')) {
+        hasChangedAtCol = false
+      } else {
+        // Other errors: ignore cooldown but allow change
+        hasChangedAtCol = false
+      }
+    }
+
+    if (hasChangedAtCol && currentUsername && u !== currentUsername) {
+      if (lastChangedAt) {
+        const last = new Date(lastChangedAt)
+        const now = new Date()
+        const diffMs = now.getTime() - last.getTime()
+        const days = diffMs / (1000 * 60 * 60 * 24)
+        const minDays = 30
+        if (days < minDays) {
+          const retryAt = new Date(last.getTime() + minDays * 24 * 60 * 60 * 1000)
+          return NextResponse.json({ error: 'cooldown', retryAt: retryAt.toISOString() }, { status: 429 })
+        }
+      }
+    }
+
+    // Upsert profile row with new username (and changed_at if supported)
+    const payloadUpdate: any = { id: userId, username: u }
+    if (hasChangedAtCol) payloadUpdate.username_changed_at = new Date().toISOString()
+    const { error: upErr } = await supabase.from('profiles').upsert(payloadUpdate, { onConflict: 'id' })
     if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 })
     return NextResponse.json({ ok: true, username: u })
   } catch (e: any) {
