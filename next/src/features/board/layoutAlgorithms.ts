@@ -359,7 +359,7 @@ function calculateHierarchicalGridLayout(
     return deg === 0 && !hasParent && !isParent
   })
 
-  // Build tiered order: start from tier1 parents
+  // Build tiered order: start from tier1 parents (true roots/highest Y parents)
   const tierIds: string[][] = [] // excludes singletons
   const tierParentOrder: string[][] = [] // mirrors tierIds but keeps parent grouping
 
@@ -368,16 +368,17 @@ function calculateHierarchicalGridLayout(
     tierIds.push([]) // no nodes placed at tier 1 if focus isn't in nodesToPlace
     tierParentOrder.push([context.focusNode.id])
   } else {
-    const roots: string[] = []
+    // Roots are nodes that either have no parent among nodesToPlace or are highest by current Y among their parent chain
+    const candidates: string[] = []
     nodesToPlace.forEach((n, i) => {
       const nid = idOf(n, i)
       if (singletonIds.includes(nid)) return
       if (!n.parentId || !idMap.has(n.parentId)) {
-        roots.push(nid)
+        candidates.push(nid)
       }
     })
+    const roots = candidates
     tierIds.push(roots)
-    // Each root acts as its own parent reference for ordering
     tierParentOrder.push(roots)
   }
 
@@ -467,17 +468,23 @@ function calculateHierarchicalGridLayout(
     if (idsInTier.length === 0) continue
     const y = rowY(t)
 
-    // Group ids in this tier by family root
+    // Group ids in this tier by family root and sort by current x to preserve left-to-right order
     const idsByFamily = new Map<string, string[]>()
     idsInTier.forEach(id => {
       const root = findRoot(id)
       if (!idsByFamily.has(root)) idsByFamily.set(root, [])
       idsByFamily.get(root)!.push(id)
     })
-
+    // Preserve current x-ordering within the family group
+    const existingById = new Map<string, any>(context.existingNodes.map(n => [n.id, n]))
     orderedFamilies.forEach(root => {
       const group = idsByFamily.get(root) || []
       if (group.length === 0) return
+      group.sort((a, b) => {
+        const ax = existingById.get(a)?.position?.x ?? 0
+        const bx = existingById.get(b)?.position?.x ?? 0
+        return ax - bx
+      })
       const groupWidth = (group.length * cellWidth) + Math.max(0, group.length - 1) * padding
       const centerX = columnCenterByRoot.get(root) || center.x
       const startX = centerX - groupWidth / 2
@@ -501,13 +508,19 @@ function calculateHierarchicalGridLayout(
 
   // Place singleton nodes (no edges, no parent/children) to the right in their own grid
   if (singletonIds.length > 0) {
-    // Determine base starting X: to the right of the entire family block
+    // Determine base starting X: directly to the right of the last family column's right edge
     const groupedExists = orderedFamilies.length > 0
-    const widest = groupedExists ? totalWidth : 0
     const gap = padding * 2
-    const xStart = groupedExists
-      ? center.x + widest / 2 + gap + cellWidth / 2
-      : center.x + gap + cellWidth / 2
+    let xStart: number
+    if (groupedExists) {
+      const lastRoot = orderedFamilies[orderedFamilies.length - 1]
+      const lastCenterX = columnCenterByRoot.get(lastRoot) || center.x
+      const lastWidth = familyMaxWidth.get(lastRoot) || cellWidth
+      const rightEdge = lastCenterX + lastWidth / 2
+      xStart = rightEdge + gap + cellWidth / 2
+    } else {
+      xStart = center.x + gap + cellWidth / 2
+    }
     const yStart = groupedExists ? rowY(0) : center.y - cellHeight / 2
 
     // Group singleton nodes by type in desired order (normalize aliases)
@@ -556,7 +569,9 @@ function calculateHierarchicalGridLayout(
             reason: `Singleton ${t} column placement`,
             confidence
           })
-          yCursor += dims.height + 100
+          // Clamp unreasonable heights to prevent outliers pushing far away
+          const safeHeight = Math.max(80, Math.min(600, dims.height))
+          yCursor += safeHeight + 100
         }
       }
       columnCursor += columnsNeeded

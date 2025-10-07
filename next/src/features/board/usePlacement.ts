@@ -325,15 +325,20 @@ export function usePlacement() {
     })
     const context = { ...baseContext, existingNodes: measuredNodes as any, existingEdges: freshEdges }
     
-    // Build parent relationships from edges (source -> parent, target -> child)
+    // Build parent relationships from edges using current Y to infer direction (top -> bottom)
     const parentOf: Record<string, string> = {}
+    const nodeById = new Map<string, BoardNode>(freshNodes.map(n => [n.id, n]))
     freshEdges.forEach((edge: any) => {
-      const sourceId = edge?.source
-      const targetId = edge?.target
-      if (typeof sourceId === 'string' && typeof targetId === 'string') {
-        // Only set if not already assigned to keep first parent
-        if (!parentOf[targetId]) parentOf[targetId] = sourceId
-      }
+      const a = edge?.source as string
+      const b = edge?.target as string
+      if (typeof a !== 'string' || typeof b !== 'string') return
+      const na = nodeById.get(a)
+      const nb = nodeById.get(b)
+      if (!na || !nb) return
+      // Parent is visually above child (smaller y)
+      const parent = (na.position?.y ?? 0) <= (nb.position?.y ?? 0) ? a : b
+      const child = parent === a ? b : a
+      if (!parentOf[child]) parentOf[child] = parent
     })
 
     // Convert existing nodes to NodeToPlace if including them
@@ -407,11 +412,19 @@ export function usePlacement() {
     const freshNodes = useBoardStore.getState().nodes
     const freshEdges = useBoardStore.getState().edges
 
-    // Build parent mapping target -> source
+    // Build parent mapping using current Y (top -> bottom)
     const parentOf: Record<string, string> = {}
+    const nodeById2 = new Map<string, BoardNode>(freshNodes.map(n => [n.id, n]))
     freshEdges.forEach((edge: any) => {
-      const s = edge?.source; const t = edge?.target
-      if (typeof s === 'string' && typeof t === 'string' && !parentOf[t]) parentOf[t] = s
+      const a = edge?.source as string
+      const b = edge?.target as string
+      if (typeof a !== 'string' || typeof b !== 'string') return
+      const na = nodeById2.get(a)
+      const nb = nodeById2.get(b)
+      if (!na || !nb) return
+      const parent = (na.position?.y ?? 0) <= (nb.position?.y ?? 0) ? a : b
+      const child = parent === a ? b : a
+      if (!parentOf[child]) parentOf[child] = parent
     })
 
     // Collect descendants of parentNodeId
