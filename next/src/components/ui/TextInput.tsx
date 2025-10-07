@@ -15,9 +15,10 @@ interface TextInputProps
 }
 
 const sizeClasses: Record<TextInputSize, string> = {
-  sm: "h-[32px] text-sm",
-  md: "h-[40px] text-sm",
-  lg: "h-[48px] text-base",
+  // Align heights with IconButton/Button/Select
+  sm: "h-8 text-sm",
+  md: "h-10 text-sm",
+  lg: "h-12 text-base",
 };
 
 const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(

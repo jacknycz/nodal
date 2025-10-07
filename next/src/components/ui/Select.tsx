@@ -24,10 +24,11 @@ interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>
 }
 
 const sizeClasses: Record<SelectSize, string> = {
+  // Align heights with TextInput/Button
   xs: 'h-8 text-xs',
-  sm: 'h-10 text-sm',
-  md: 'h-12 text-sm',
-  lg: 'h-14 text-base',
+  sm: 'h-8 text-sm',
+  md: 'h-10 text-sm',
+  lg: 'h-12 text-base',
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(

@@ -349,16 +349,7 @@ export default function Topbar({
             {isBoardView && (
               <>
                 <div className="hidden sm:flex items-center gap-3">
-                  <AISettingsMenu
-                    isTestMode={isTestMode}
-                    onToggleTestMode={onToggleTestMode}
-                  />
-                  <DocumentsMenu
-                    onDeleteNode={onDeleteNode}
-                  />
-                  
-                  {/* NEW SHARE MENU */}
-                  <IconButton
+                   <IconButton
                     aria-label="Share board"
                     variant="secondaryGhost"
                     size="small"
@@ -366,6 +357,13 @@ export default function Topbar({
                   >
                     <ShareFat size={44} weight="duotone" className="w-4 h-4" />
                   </IconButton>
+                  <AISettingsMenu
+                    isTestMode={isTestMode}
+                    onToggleTestMode={onToggleTestMode}
+                  />
+                  <DocumentsMenu
+                    onDeleteNode={onDeleteNode}
+                  />
                 </div>
                 {/* Mobile More menu */}
                 <div className="sm:hidden">

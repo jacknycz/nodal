@@ -22,10 +22,11 @@ const variantClasses: Record<IconButtonVariant, string> = {
 }
 
 const sizeClasses = {
-  sm: 'w-6 h-6',
-  small: 'w-6 h-6',
-  md: 'w-8 h-8',
-  medium: 'w-8 h-8',
+  // Align control heights: sm=32px, md=40px, lg=48px
+  sm: 'w-8 h-8',
+  small: 'w-8 h-8',
+  md: 'w-10 h-10',
+  medium: 'w-10 h-10',
   lg: 'w-12 h-12',
   large: 'w-12 h-12',
 }

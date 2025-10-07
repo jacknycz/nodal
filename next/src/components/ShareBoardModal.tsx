@@ -88,28 +88,31 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
             <div className="space-y-6">
                 <div>
                     <div className="flex gap-2 items-end">
-                        <TextInput readOnly value={shareLink} fullWidth label="Share link" size="lg" />
-                        <IconButton aria-label="Copy share link" size="lg" variant="secondary" onClick={() => { try { navigator.clipboard.writeText(shareLink) } catch { } }}>
+                        <TextInput readOnly value={shareLink} fullWidth label="Share link" size="md" />
+                        <IconButton aria-label="Copy share link" size="md" variant="secondary" onClick={() => { try { navigator.clipboard.writeText(shareLink) } catch { } }}>
                             <Copy size={24} weight="duotone" className="w-4 h-4" />
                         </IconButton>
                     </div>
                 </div>
 
-                <div>
-                    <div className="flex-col space-y-2 md:flex-row gap-2 items-end">
-                        <TextInput
-                            type="email"
-                            size="lg"
-                            placeholder="Add email and press Enter"
-                            label="Invite by email"
-                            value={shareInput}
-                            onChange={e => setShareInput(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEmail(shareInput) } }}
-                            className="flex-1"
-                            fullWidth
-                        />
+                <hr className="my-4" />
 
-                        <div className="flex gap-2 items-end">
+                <div>
+                    <div className="flex flex-col sm:flex-row gap-2 items-end md:items-end space-y-2 md:space-y-0">
+                        <div className="flex grow w-full">
+                            <TextInput
+                                type="email"
+                                size="md"
+                                fullWidth
+                                placeholder="Add email and press Enter"
+                                label="Invite by email"
+                                value={shareInput}
+                                onChange={e => setShareInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addEmail(shareInput) } }}
+                            />
+                        </div>
+
+                        <div className="flex gap-2 items-end w-full sm:w-auto">
                             <Select
                                 label="Role"
                                 value={selectedRole}
@@ -121,7 +124,7 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
                                 ]}
                                 className="w-36 sm:w-40 flex-none"
                             />
-                            <IconButton aria-label="Add email" size="lg" variant="secondary" onClick={() => addEmail(shareInput)}>
+                            <IconButton aria-label="Add email" size="md" variant="secondary" onClick={() => addEmail(shareInput)}>
                                 <Plus size={24} className="w-4 h-4" />
                             </IconButton>
                         </div>

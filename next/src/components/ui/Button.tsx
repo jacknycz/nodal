@@ -23,12 +23,13 @@ const variantClasses: Record<ButtonVariant, string> = {
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
-  small: 'px-2 py-1.5 text-sm',
-  sm: 'px-2 py-1.5 text-sm',
-  medium: 'px-4 py-2 text-base',
-  md: 'px-4 py-2 text-base',
-  large: 'px-5 py-3 text-lg',
-  lg: 'px-5 py-3 text-lg',
+  // Aim for 32/40/48px total heights with baseline padding
+  small: 'h-8 px-3 text-sm',
+  sm: 'h-8 px-3 text-sm',
+  medium: 'h-10 px-4 text-base',
+  md: 'h-10 px-4 text-base',
+  large: 'h-12 px-5 text-lg',
+  lg: 'h-12 px-5 text-lg',
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
