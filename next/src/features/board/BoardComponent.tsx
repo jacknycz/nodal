@@ -340,15 +340,30 @@ function BoardContent({
     isRestoringRef.current = false
     broadcastHistoryState()
   }, [captureSnapshot, setNodes, setEdges, reactFlowInstance, broadcastHistoryState])
-  const centerOnPositions = (positions: { x: number; y: number }[]) => {
+  const centerOnPositions = (positions: { x: number; y: number }[], opts?: { align?: 'center' | 'rightCenter' }) => {
     if (!positions || positions.length === 0) return
     try {
       const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length
       const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length
+      if (opts?.align === 'rightCenter') {
+        const rect = (document.querySelector('.react-flow') as HTMLElement | null)?.getBoundingClientRect()
+        const screenW = rect?.width || window.innerWidth
+        const screenH = rect?.height || window.innerHeight
+        const zoom = Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom()))
+        // Place node center near the right edge with a small margin so it's fully visible
+        const rightMargin = 180 // px from right edge
+        const targetScreenX = Math.max(0, screenW - rightMargin)
+        const targetScreenY = Math.max(0, screenH * 0.5)
+        // For setViewport, mapping is: screen = flow * zoom + translation
+        const x = targetScreenX - cx * zoom
+        const y = targetScreenY - cy * zoom
+        reactFlowInstance.setViewport({ x, y, zoom }, { duration: 600 })
+        return
+      }
       reactFlowInstance.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom())), duration: 600 })
     } catch {}
   }
-  const centerOnNodeIds = (ids: string[]) => {
+  const centerOnNodeIds = (ids: string[], opts?: { align?: 'center' | 'rightCenter' }) => {
     if (!ids || ids.length === 0) return
     setTimeout(() => {
       try {
@@ -356,7 +371,7 @@ function BoardContent({
         const nodes = reactFlowInstance.getNodes().filter(n => setIds.has(n.id))
         if (nodes.length === 0) return
         const positions = nodes.map(n => ({ x: n.position.x + ((n as any).width || 240) / 2, y: n.position.y + ((n as any).height || 140) / 2 }))
-        centerOnPositions(positions)
+        centerOnPositions(positions, opts)
         const targetId = nodes[0].id
         const nodeOuter = document.querySelector(`.react-flow__node[data-id="${targetId}"]`) as HTMLElement | null
         const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
@@ -1991,14 +2006,13 @@ function BoardContent({
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)
-          // Focus the new task's text input once mounted
+          // Open the edit modal immediately for quick entry
           setTimeout(() => {
             try {
-              const el = document.getElementById(`task-${newId}`) as HTMLInputElement | null
-              el?.focus()
-              el?.select()
+              setEditNodeId(newId)
+              centerOnNodeIds([newId], { align: 'rightCenter' })
             } catch {}
-          }, 50)
+          }, 0)
           if (pendingSourceNodeId) {
             const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }
             setEdges((eds) => {

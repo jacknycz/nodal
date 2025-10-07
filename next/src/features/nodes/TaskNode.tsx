@@ -139,7 +139,10 @@ export default function TaskNode({
             className="flex-none"
             shape="circle"
           />
-          <div className={`text-sm leading-relaxed tiptap-content ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`} dangerouslySetInnerHTML={{ __html: (data as any)?.content || (data.title || '') }} />
+          <div 
+          className={`text-sm leading-relaxed tiptap-content mt-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`} 
+          dangerouslySetInnerHTML={{ __html: (data as any)?.content || (data.title || '') }} 
+          />
           {/* inline actions removed; moved to slide-out */}
           
         </div>
