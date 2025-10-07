@@ -18,6 +18,7 @@ import Button from './ui/Button'
 import Tag from './ui/Tag'
 import Modal from './ui/Modal'
 import ShareBoardModal from './ShareBoardModal'
+import BoardMembersRoleEditor from './BoardMembersRoleEditor'
 import TextInput from './ui/TextInput'
 import { isAdmin } from '../features/auth/roles'
 import LinkUI from './ui/Link'
@@ -91,6 +92,7 @@ export default function Topbar({
   const [pendingBoardTopic2, setPendingBoardTopic2] = useState('')
   const edgeType = useBoardStore(state => state.edgeType || 'floating')
   const setEdgeType = useBoardStore(state => state.setEdgeType)
+  const [boardMemberRole, setBoardMemberRole] = useState<'owner' | 'editor' | 'viewer' | null>(null)
 
   useEffect(() => {
     if (headerRef.current) {
@@ -98,6 +100,28 @@ export default function Topbar({
       setTopbarHeight(height);
     }
   }, [setTopbarHeight]);
+  // Fetch current user's role on this board for UI gating
+  useEffect(() => {
+    const loadRole = async () => {
+      if (!currentBoardId || !user?.id) { setBoardMemberRole(null); return }
+      try {
+        const { data, error } = await supabase
+          .from('board_members')
+          .select('role')
+          .eq('board_id', currentBoardId)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (!error && data?.role) {
+          setBoardMemberRole(data.role as any)
+        } else {
+          setBoardMemberRole(null)
+        }
+      } catch {
+        setBoardMemberRole(null)
+      }
+    }
+    loadRole()
+  }, [currentBoardId, user?.id, supabase])
 
   // Temporary share handler
   const handleShareBoard = async () => {
@@ -261,9 +285,11 @@ export default function Topbar({
                 <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
                   <div className="flex gap-1">
                     <div className="flex gap-0">
-                      <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); setShowBoardSettings(true) }}>
-                        <GearSix className="w-4 h-4" />
-                      </IconButton>
+                      {(boardMemberRole === 'owner' || boardMemberRole === 'editor') && (
+                        <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); setShowBoardSettings(true) }}>
+                          <GearSix className="w-4 h-4" />
+                        </IconButton>
+                      )}
                       <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
                         <span className="font-medium font-fredoka text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
                       </div>
@@ -490,6 +516,12 @@ export default function Topbar({
             fullWidth
             description="Choose how edges render on this board."
           />
+
+          {/* Board members and roles */}
+          <div className="pt-4">
+            <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Board Members</div>
+            <BoardMembersRoleEditor boardId={currentBoardId || ''} isOwnerView={boardMemberRole === 'owner'} />
+          </div>
         </div>
       </Modal>
       <Modal

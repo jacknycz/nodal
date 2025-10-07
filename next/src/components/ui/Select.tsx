@@ -52,6 +52,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     ref
   ) => {
     const id = props.id || `select-${Math.random().toString(36).slice(2, 9)}`
+    const isDisabled = !!props.disabled
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       if (multiple) {
@@ -82,7 +83,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
 
         <div
           className={clsx(
-            'relative flex cursor-pointer rounded-full border border-transparent transition-all duration-200',
+            'relative flex rounded-full border border-transparent transition-all duration-200',
+            isDisabled ? 'cursor-default' : 'cursor-pointer',
             'bg-gray-100 dark:bg-gray-900/80',
             'focus-within:border-primary-500 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',
@@ -104,7 +106,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             multiple={isMultiple}
             onChange={handleChange}
             className={clsx(
-              'peer w-full h-full bg-transparent outline-none appearance-none cursor-pointer',
+              'peer w-full h-full bg-transparent outline-none appearance-none',
+              isDisabled ? 'cursor-default' : 'cursor-pointer',
               isMultiple && 'appearance-none',
               'text-gray-700 dark:text-white',
               leftIcon && 'pl-9',

@@ -74,7 +74,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   }
 
   const renderStep1 = () => (
-    <div className="space-y-6 mt-8 mb-12">
+    <div className="space-y-6 mt-8 mb-12 items-start text-left">
       <div>
         <TextInput
           value={boardTopic}
@@ -154,7 +154,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   )
 
   const renderStep2 = () => (
-    <div className="space-y-4 mt-8 mb-12">
+    <div className="space-y-4 mt-8 mb-12 items-start text-left">
       <div>
         <TextInput
           label="Title"

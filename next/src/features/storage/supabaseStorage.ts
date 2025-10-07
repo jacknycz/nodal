@@ -77,6 +77,15 @@ class SupabaseStorage {
       if (error) throw error
 
       console.log(`Board "${name}" saved to Supabase with ID: ${result.id}`)
+
+      // Ensure creator is owner in board_members
+      try {
+        await supabase
+          .from('board_members')
+          .upsert({ board_id: result.id, user_id: user.id, role: 'owner' }, { onConflict: 'board_id,user_id' })
+      } catch (e) {
+        console.warn('Failed to upsert owner membership', e)
+      }
       return result.id as string
     } catch (error) {
       console.error('Failed to save board to Supabase:', error)
@@ -118,6 +127,15 @@ class SupabaseStorage {
 
       if (error) throw error
       console.log(`Board "${name}" upserted to Supabase with ID: ${id}`)
+
+      // Ensure creator is owner in board_members (idempotent)
+      try {
+        await supabase
+          .from('board_members')
+          .upsert({ board_id: id, user_id: user.id, role: 'owner' }, { onConflict: 'board_id,user_id' })
+      } catch (e) {
+        console.warn('Failed to upsert owner membership', e)
+      }
     } catch (error) {
       console.error('Failed to upsert board to Supabase:', error)
       throw error
