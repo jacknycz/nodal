@@ -16,6 +16,7 @@ import {
 } from './placementTypes'
 import type { BoardEdge } from './boardTypes'
 import { useBoardStore } from './boardSlice'
+import { mapEdgePrefToRfType } from './boardUtils'
 import {
   calculateGridLayout,
   calculateLayoutQuality
@@ -275,7 +276,7 @@ export class PlacementEngine {
     if (context.focusNode) {
       placements.forEach(placement => {
         const pref = useBoardStore.getState().edgeType || 'floating'
-        const edgeType = (pref === 'straight' ? 'floating-straight' : pref === 'step' ? 'floating-step' : pref === 'smoothstep' ? 'floating-smoothstep' : 'floating') as any
+        const edgeType = mapEdgePrefToRfType(pref) as any
         const edge: BoardEdge = {
           id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: context.focusNode!.id,
@@ -305,7 +306,7 @@ export class PlacementEngine {
           const relatedPlacement = placements.find(p => p.node.id === relatedId)
           if (relatedPlacement) {
             const pref2 = useBoardStore.getState().edgeType || 'floating'
-            const edgeType = (pref2 === 'straight' ? 'floating-straight' : pref2 === 'step' ? 'floating-step' : pref2 === 'smoothstep' ? 'floating-smoothstep' : 'floating') as any
+            const edgeType = mapEdgePrefToRfType(pref2) as any
             const edge: BoardEdge = {
               id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               source: placement.node.id,

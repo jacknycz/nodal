@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useLayoutEffect, useEffect } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getStraightPath, Position, useReactFlow } from '@xyflow/react'
 import { X } from '@phosphor-icons/react'
 import { useBoardStore } from './boardSlice'
@@ -87,7 +87,42 @@ export default function FloatingStraightEdge({
     }
   }
 
-  const { sx, sy, tx, ty, sp, tp } = computeAnchors()
+  const [anchors, setAnchors] = useState<{ sx: number; sy: number; tx: number; ty: number; sp: Position; tp: Position } | null>(null)
+
+  useLayoutEffect(() => {
+    let r1 = 0
+    let r2 = 0
+    r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        const a = computeAnchors()
+        setAnchors(a)
+      })
+    })
+    return () => { cancelAnimationFrame(r1); cancelAnimationFrame(r2) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, target, rf, sourceX, sourceY, targetX, targetY])
+
+  useEffect(() => {
+    if (!source || !target) return
+    const sel = document.querySelector(`.react-flow__node[data-id="${source}"]`) as HTMLElement | null
+    const tel = document.querySelector(`.react-flow__node[data-id="${target}"]`) as HTMLElement | null
+    if (!sel || !tel) return
+    const observer = new MutationObserver(() => {
+      const a = computeAnchors()
+      setAnchors(a)
+    })
+    observer.observe(sel, { attributes: true, attributeFilter: ['style'] })
+    observer.observe(tel, { attributes: true, attributeFilter: ['style'] })
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source, target])
+
+  const sx = anchors ? anchors.sx : sourceX
+  const sy = anchors ? anchors.sy : sourceY
+  const tx = anchors ? anchors.tx : targetX
+  const ty = anchors ? anchors.ty : targetY
+  const sp = anchors ? anchors.sp : sourcePosition
+  const tp = anchors ? anchors.tp : targetPosition
 
   const [edgePath, labelX, labelY] = getStraightPath({
     sourceX: sx,

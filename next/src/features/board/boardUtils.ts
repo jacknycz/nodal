@@ -43,7 +43,7 @@ export function createEdge(
   const connectionType = options.type || 'default'
   
   const pref = (useBoardStore.getState().edgeType || 'floating') as string
-  const rfType = pref === 'straight' ? 'floating-straight' : pref === 'step' ? 'floating-step' : pref === 'smoothstep' ? 'floating-smoothstep' : 'floating'
+  const rfType = mapEdgePrefToRfType(pref)
   return {
     source,
     target,
@@ -54,6 +54,20 @@ export function createEdge(
       type: connectionType, // Store our internal type in data
       ...options,
     },
+  }
+}
+
+// Map stored preference to React Flow edge type used by our custom edges
+export function mapEdgePrefToRfType(pref: string): 'floating' | 'floating-straight' | 'floating-step' | 'floating-smoothstep' {
+  switch (pref) {
+    case 'straight':
+      return 'floating-straight'
+    case 'step':
+      return 'floating-step'
+    case 'smoothstep':
+      return 'floating-smoothstep'
+    default:
+      return 'floating'
   }
 }
 

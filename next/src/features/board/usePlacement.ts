@@ -178,7 +178,8 @@ function applyClusterSpacing(
  * Provides easy-to-use functions for all placement scenarios
  */
 export function usePlacement() {
-  const { getViewport, screenToFlowPosition, setNodes } = useReactFlow()
+  const rfApi = useReactFlow()
+  const { getViewport, screenToFlowPosition, setNodes } = rfApi
   const { nodes: existingNodes, edges: existingEdges, selectedNodeIds } = useBoardStore()
 
   /**
@@ -379,6 +380,15 @@ export function usePlacement() {
       
       // Update the board with new positions
       setNodes(finalNodes)
+      // Force edges/handles to refresh after nodes settle in the DOM
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      try {
+        const updateNodeInternals = (rfApi as any)?.updateNodeInternals
+        if (typeof updateNodeInternals === 'function') {
+          const ids = finalNodes.map(n => n.id)
+          ids.forEach((id) => updateNodeInternals(id))
+        }
+      } catch {}
     } else {
     }
     
@@ -465,6 +475,15 @@ export function usePlacement() {
         return node
       })
       setNodes(updatedNodes)
+      // Force edges/handles to refresh for updated nodes
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      try {
+        const updateNodeInternals = (rfApi as any)?.updateNodeInternals
+        if (typeof updateNodeInternals === 'function') {
+          const ids = Array.from(descendants)
+          ids.forEach((id) => updateNodeInternals(id))
+        }
+      } catch {}
       try { console.log('[reorganizeSubtree] applied updates to', updatedNodes.length, 'nodes') } catch {}
       return result
     }

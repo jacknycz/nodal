@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServiceClient } from '../../../../src/features/storage/supabaseService'
-import { sendEmail } from '../../../../src/features/email/postmark'
+import { sendEmail, sendTemplatedEmail } from '../../../../src/features/email/postmark'
 
 // POST: Send invitation { boardId, email }
 // GET: Fetch invitations for current user (by email)
@@ -66,11 +66,17 @@ export async function POST(req: NextRequest) {
       })
     } catch {}
 
-    // Send email to invitee
-    await sendEmail({
+    // Send email to invitee using Postmark template if configured
+    const templateId = Number(process.env.POSTMARK_BOARD_INVITE_TEMPLATE_ID || 0) || 41734537
+    await sendTemplatedEmail({
       to: emailTrim,
-      subject: `Invitation to "${name}" on Nodal by ${inviterLabel}`,
-      text: `You've been invited to the board "${name}" on Nodal.\n\nOpen the board: ${link}\n\nInvited by: ${inviterLabel}`
+      templateId,
+      templateModel: {
+        board_name: name,
+        board_link: link,
+        inviter_label: inviterLabel,
+        invitee_email: emailTrim,
+      },
     })
 
     return NextResponse.json({ success: true, data })
