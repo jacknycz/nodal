@@ -6,8 +6,10 @@ import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
 import Tag from './ui/Tag'
+import Select from './ui/Select'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
-import { PushPin, CheckCircle, Copy, Plus, Pen, XSquare } from '@phosphor-icons/react/dist/ssr'
+import { PushPin, CheckCircle, Pen } from '@phosphor-icons/react/dist/ssr'
+import ShareBoardModal from './ShareBoardModal'
 import { useSupabaseUser } from '../features/auth/authUtils'
 
 interface BoardCardProps {
@@ -56,62 +58,10 @@ function BoardCard({
   const titleInputRef = useRef<HTMLInputElement | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
-  const [shareEmails, setShareEmails] = useState<string[]>([])
-  const [shareInput, setShareInput] = useState('')
-  const [searching, setSearching] = useState(false)
-  const [results, setResults] = useState<Array<{ id: string; username?: string | null; email?: string | null; avatar_url?: string | null }>>([])
-  const [shareError, setShareError] = useState<string | null>(null)
-  const shareLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${id}`
   const user = useSupabaseUser()
 
   useEffect(() => { setNewName(name) }, [name])
-  // Debounced search for users by username/email
-  useEffect(() => {
-    const run = async () => {
-      const q = shareInput.trim()
-      if (q.length < 2) { setResults([]); return }
-      setSearching(true)
-      try {
-        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`)
-        const json = await res.json()
-        const list = Array.isArray(json.results) ? json.results : []
-        setResults(list.filter((r: any) => r.id !== user?.id))
-      } catch { setResults([]) }
-      finally { setSearching(false) }
-    }
-    const timerId = setTimeout(run, 250)
-    return () => clearTimeout(timerId)
-  }, [shareInput])
-
-  const isValidEmail = (e: string) => /[^@\s]+@[^@\s]+\.[^@\s]+/.test(e)
-
-  const addEmail = (email: string) => {
-    const e = email.trim()
-    if (!e || !isValidEmail(e)) { setShareError('Enter a valid email'); return }
-    if (!shareEmails.includes(e)) {
-      setShareEmails(prev => [...prev, e])
-    }
-    setShareInput('')
-    setShareError(null)
-  }
-
-  const handleSendInvites = async () => {
-    setShareError(null)
-    try {
-      const invites = shareEmails.filter(isValidEmail)
-      for (const email of invites) {
-        await fetch('/api/board/invitations', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ boardId: id, email, invitedBy: user?.id, boardName: newName, boardUrl: shareLink })
-        })
-      }
-      setShowShareModal(false)
-      setShareEmails([])
-    } catch {
-      setShareError('Failed to send invites')
-    }
-  }
+  // All share logic moved into shared ShareBoardModal
 
   // Thumbnails removed
 
@@ -170,7 +120,7 @@ function BoardCard({
         <IconButton
           aria-label={isPinned ? 'Unpin board' : 'Pin board'}
           onClick={(e) => { e.stopPropagation(); onTogglePin() }}
-          variant={isPinned ? 'primaryGhost' : 'secondaryGhost'}
+          variant={isPinned ? 'primary' : 'secondaryGhost'}
           className={`absolute top-2 right-2 z-20 ${isPinned ? 'text-tertiary-500 bg-tertiary-50/50! dark:bg-transparent! hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
         >
           <PushPin size={16} weight="duotone" />
@@ -261,7 +211,6 @@ function BoardCard({
         </div>
       </div>
 
-      {/* Cover image and description for templates */}
       {(coverUrl || description) && (
         <div className="mt-3 space-y-2">
           {coverUrl && (
@@ -317,91 +266,9 @@ function BoardCard({
         </DynamicModal>
       )}
 
-      {/* Share Modal */}
+      {/* Share Modal (shared) */}
       {enableSharing && (
-        <DynamicModal
-          open={showShareModal}
-          onClose={() => setShowShareModal(false)}
-          title="Share Board"
-          description="Copy a link or invite people by email."
-        >
-          <div className="space-y-6">
-            <div>
-              <div className="flex gap-2">
-                <TextInput readOnly value={shareLink} fullWidth label="Share link" size="lg" />
-                <IconButton aria-label="Copy share link" size="lg" variant="secondary" onClick={() => { navigator.clipboard.writeText(shareLink) }}>
-                  <Copy size={24} weight="duotone" className="w-4 h-4" />
-                </IconButton>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex gap-2">
-                <TextInput
-                  type="email"
-                  size="lg"
-                  placeholder="Add email and press Enter"
-                  label="Invite by email"
-                  value={shareInput}
-                  onChange={e => setShareInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      addEmail(shareInput)
-                    }
-                  }}
-                  fullWidth
-                />
-                <IconButton
-                  aria-label="Add email"
-                  size="lg"
-                  variant="secondary"
-                  onClick={() => addEmail(shareInput)}
-                >
-                  <Plus size={24} weight="duotone" className="w-4 h-4" />
-                </IconButton>
-              </div>
-              {shareError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{shareError}</div>}
-
-              {(searching || results.length > 0) && (
-                <div className="mt-2 border rounded-md border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-56 overflow-auto">
-                  {searching && <div className="p-2 text-xs text-gray-500 dark:text-gray-400">Searching…</div>}
-                  {!searching && results.length === 0 && (
-                    <div className="p-2 text-xs text-gray-500 dark:text-gray-400">No matches</div>
-                  )}
-                  {!searching && results.map((r) => (
-                    <div key={r.id} className="p-2 flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="text-sm text-gray-900 dark:text-white truncate">{r.username || r.email || r.id}</div>
-                        {r.email && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.email}</div>}
-                      </div>
-                      <Button size="sm" onClick={() => r.email && addEmail(r.email)} disabled={!r.email}>Share</Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {shareEmails.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {shareEmails.map(email => (
-                    <Tag
-                      key={email}
-                      variant="secondary"
-                      rightIcon={<XSquare className="w-3 h-3" />}
-                      onRightIconClick={() => setShareEmails(prev => prev.filter(e => e !== email))}
-                    >
-                      {email}
-                    </Tag>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6">
-              <Button variant="secondary" onClick={() => setShowShareModal(false)}>Close</Button>
-              <Button onClick={handleSendInvites} disabled={shareEmails.length === 0}>Send Invites</Button>
-            </div>
-          </div>
-        </DynamicModal>
+        <ShareBoardModal open={showShareModal} onClose={() => setShowShareModal(false)} boardId={id} boardName={newName} />
       )}
     </div>
   )

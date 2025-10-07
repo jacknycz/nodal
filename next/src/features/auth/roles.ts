@@ -6,6 +6,23 @@ import { useMemo } from 'react'
 
 export type UserRole = 'Admin' | 'Pro' | 'User'
 
+export type BoardRole = 'owner' | 'editor' | 'viewer'
+
+export function canBoard(action: 'view' | 'edit' | 'share' | 'settings', role: BoardRole): boolean {
+  switch (action) {
+    case 'view':
+      return role === 'owner' || role === 'editor' || role === 'viewer'
+    case 'edit':
+      return role === 'owner' || role === 'editor'
+    case 'share':
+      return role === 'owner' || role === 'editor'
+    case 'settings':
+      return role === 'owner'
+    default:
+      return false
+  }
+}
+
 export function getUserRoleFromMetadata(user: User | null | undefined): UserRole {
   if (!user) return 'User'
   // Prefer app_metadata for roles; fall back to user_metadata

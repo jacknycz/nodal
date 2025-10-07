@@ -8,7 +8,7 @@ import { sendEmail, sendTemplatedEmail } from '../../../../src/features/email/po
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseServiceClient()
-    const { boardId, email, invitedBy, boardName, boardUrl } = await req.json()
+    const { boardId, email, invitedBy, boardName, boardUrl, role } = await req.json()
     if (!boardId || !email || !invitedBy) {
       return NextResponse.json({ error: 'Missing boardId, email, or invitedBy' }, { status: 400 })
     }
@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
     const link = typeof boardUrl === 'string' && boardUrl.length > 0 ? boardUrl : `${origin}/board/${boardId}`
     const name = typeof boardName === 'string' && boardName.length > 0 ? boardName : 'a board'
 
+    const inviteRole = (typeof role === 'string' && ['owner','editor','viewer'].includes(role)) ? role : 'editor'
     const { data, error } = await supabase.from('board_invitations').insert([
-      { board_id: boardId, email: emailTrim, invited_by: invitedBy }
+      { board_id: boardId, email: emailTrim, invited_by: invitedBy, role: inviteRole }
     ])
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
         board_link: link,
         inviter_label: inviterLabel,
         invitee_email: emailTrim,
+        role: inviteRole,
       },
     })
 

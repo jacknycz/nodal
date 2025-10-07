@@ -47,6 +47,8 @@ export default function TaskNode({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
+  const contentRef = useRef<HTMLDivElement | null>(null)
+  const [alignStart, setAlignStart] = useState(false)
 
   const isLocked = false
   const lockedByMe = false
@@ -57,6 +59,25 @@ export default function TaskNode({
     setTitle(data.title || '')
     setCompleted(!!data.completed)
   }, [data.title, data.completed])
+
+  // Measure content height to determine vertical alignment
+  useEffect(() => {
+    const measure = () => {
+      const h = contentRef.current?.offsetHeight || 0
+      setAlignStart(h > 40) // align top if content gets taller than a single-line-ish height
+    }
+    measure()
+    let ro: ResizeObserver | null = null
+    try {
+      ro = new ResizeObserver(measure)
+      if (contentRef.current) ro.observe(contentRef.current)
+    } catch {}
+    window.addEventListener('resize', measure)
+    return () => {
+      try { ro?.disconnect() } catch {}
+      window.removeEventListener('resize', measure)
+    }
+  }, [ (data as any)?.content, data.title ])
 
   // Inline editing removed; Task now edited via Edit Node modal
 
@@ -130,7 +151,7 @@ export default function TaskNode({
       
 
       <div className="nodal-drag-handle cursor-move">
-        <div className="flex items-start gap-2">
+        <div className={`flex ${alignStart ? 'items-start' : 'items-center'} gap-2`}>
           <Checkbox
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}
@@ -139,9 +160,10 @@ export default function TaskNode({
             className="flex-none"
             shape="circle"
           />
-          <div 
-          className={`text-sm leading-relaxed tiptap-content mt-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`} 
-          dangerouslySetInnerHTML={{ __html: (data as any)?.content || (data.title || '') }} 
+          <div
+            ref={contentRef}
+            className={`text-sm leading-relaxed tiptap-content flex-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
+            dangerouslySetInnerHTML={{ __html: (data as any)?.content || (data.title || '') }}
           />
           {/* inline actions removed; moved to slide-out */}
           

@@ -7,7 +7,7 @@ import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
 import { useBoardStore } from '../features/board/boardSlice';
-import { House, Info, Plus, Pen, GearSix } from '@phosphor-icons/react'
+import { House, Info, Plus, Pen, GearSix, ShareFat } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image';
 import { useSupabaseUser } from '../features/auth/authUtils'
@@ -17,9 +17,11 @@ import IconButton from './ui/IconButton'
 import Button from './ui/Button'
 import Tag from './ui/Tag'
 import Modal from './ui/Modal'
+import ShareBoardModal from './ShareBoardModal'
 import TextInput from './ui/TextInput'
 import { isAdmin } from '../features/auth/roles'
 import LinkUI from './ui/Link'
+import DynamicModal from 'next/dynamic'
 import Checkbox from './ui/Checkbox'
 import TextArea from './ui/TextArea'
 import { templateStorage } from '../features/storage/templateStorage'
@@ -70,6 +72,7 @@ export default function Topbar({
   const [fbSubmitting, setFbSubmitting] = useState(false)
   const [fbError, setFbError] = useState<string | null>(null)
   const [showFbThanks, setShowFbThanks] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
   const setTopbarHeight = useBoardStore(state => state.setTopbarHeight);
   const headerRef = useRef<HTMLHeadingElement | null>(null);
   const user = useSupabaseUser()
@@ -353,30 +356,16 @@ export default function Topbar({
                   <DocumentsMenu
                     onDeleteNode={onDeleteNode}
                   />
-                  {/* {isAdmin(user) && (
-                    <Button
-                      variant="secondaryGhost"
-                      className="text-sm px-2 py-1"
-                      onClick={async () => {
-                        const currentBoardId = useBoardStore.getState().currentBoardId
-                        const nodes = useBoardStore.getState().nodes || []
-                        const edges = useBoardStore.getState().edges || []
-                        const viewport = useBoardStore.getState().viewport || { x: 0, y: 0, zoom: 1 }
-                        const defaultName = currentBoardName || `Template ${new Date().toLocaleDateString()}`
-                        const name = window.prompt('Template name', defaultName)
-                        if (!name) return
-                        const description = window.prompt('Optional description', '') || undefined
-                        try {
-                          await templateStorage.saveTemplate(name, { nodes, edges, viewport }, description)
-                          alert('Template saved')
-                        } catch (err) {
-                          alert('Failed to save template')
-                        }
-                      }}
-                    >
-                      Save as new template
-                    </Button>
-                  )} */}
+                  
+                  {/* NEW SHARE MENU */}
+                  <IconButton
+                    aria-label="Share board"
+                    variant="secondaryGhost"
+                    size="small"
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <ShareFat size={44} weight="duotone" className="w-4 h-4" />
+                  </IconButton>
                 </div>
                 {/* Mobile More menu */}
                 <div className="sm:hidden">
@@ -419,6 +408,9 @@ export default function Topbar({
           </div>
         </div>
       </header>
+      {/* Share Modal (same UI as BoardCard share) */}
+      <ShareBoardModal open={showShareModal} onClose={() => setShowShareModal(false)} boardId={currentBoardId || ''} boardName={currentBoardName} />
+
       {/* Edit Topic Modal */}
       <Modal
         open={showTopicModal}

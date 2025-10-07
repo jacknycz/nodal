@@ -37,53 +37,21 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     ...props
   }, ref) => {
     const textareaId = props.id || `textarea-${Math.random().toString(36).substr(2, 9)}`
-    const [isFocused, setIsFocused] = useState(false)
-    
-    // Determine if label should be in "active" state (focused or has value/defaultValue)
-    const hasValue = (() => {
-      if (typeof value !== 'undefined' && value !== null) return value.toString().length > 0
-      if (typeof props.defaultValue !== 'undefined' && props.defaultValue !== null) return props.defaultValue.toString().length > 0
-      return false
-    })()
-    const isActive = isFocused || hasValue
+  const [isFocused, setIsFocused] = useState(false)
 
     return (
       <div className={clsx('flex flex-col gap-2', fullWidth && 'w-full')}>
         {/* Textarea container with label inside */}
-        <div
-          className={clsx(
-            'relative rounded-4xl px-3 border border-transparent transition-all duration-200',
-            'bg-gray-100 dark:bg-gray-950/80',
-            bgClassName,
+        <div className={clsx(
+            'relative rounded-2xl px-3 py-2 border border-transparent transition-all duration-200',
+            'bg-gray-100 dark:bg-gray-950/80', bgClassName,
             'focus-within:bg-white dark:focus-within:bg-gray-900',
             'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',
             'focus-within:ring-2 focus-within:ring-primary-500/20',
             error && 'border-red-500 dark:border-red-400 focus-within:border-red-500 dark:focus-within:border-red-400 focus-within:ring-red-500/20'
-          )}
-        >
-          {/* Label inside container */}
+          )}>
           {label && (
-            <label 
-              htmlFor={textareaId}
-              className={clsx(
-                'absolute px-4 rounded-full left-2 font-medium transition-all duration-200',
-                'text-gray-500 dark:text-gray-400 dark:bg-gray-950/80',
-                error && 'text-red-500 dark:text-red-400 peer-focus:text-red-500 dark:peer-focus:text-red-400',
-                isActive
-                  ? '-top-2 left-0! pl-0 bg-white text-xs'
-                  : clsx(
-                      'text-sm',
-                      size === 'sm' && 'top-2.5',
-                      size === 'md' && 'top-3',
-                      size === 'lg' && 'top-3.5'
-                    )
-              )}
-            >
-              {label}
-              {props.required && (
-                <span aria-hidden className="ml-1 text-red-500">*</span>
-              )}
-            </label>
+            <label htmlFor={textareaId} className={clsx('block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300')}>{label}{props.required && (<span aria-hidden className="ml-1 text-red-500">*</span>)}</label>
           )}
           
           {/* Textarea field */}
@@ -101,10 +69,10 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
               onChange={onChange}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder={label ? ' ' : props.placeholder}
+              placeholder={props.placeholder}
               className={clsx(
                 'peer w-full bg-transparent border-none outline-none resize-none pl-1',
-                'text-gray-900 dark:text-white text-base! md:text-sm! placeholder-transparent',
+                'text-gray-900 dark:text-white text-base! md:text-sm! placeholder-gray-400 dark:placeholder-gray-500',
                 leftIcon && 'pl-9',
                 rightIcon && 'pr-9',
                 sizeClasses[size],
