@@ -1,7 +1,7 @@
-import postmark from 'postmark'
+import { ServerClient } from 'postmark'
 
 export const postmarkClient = process.env.POSTMARK_SERVER_TOKEN
-  ? new postmark.ServerClient(process.env.POSTMARK_SERVER_TOKEN)
+  ? new ServerClient(process.env.POSTMARK_SERVER_TOKEN)
   : null
 
 type SendArgs = {
