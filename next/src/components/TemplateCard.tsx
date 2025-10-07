@@ -67,7 +67,6 @@ function TemplateCard({
   useEffect(() => { setNewName(name) }, [name])
   // Debounced search for users by username/email
   useEffect(() => {
-    let t: any
     const run = async () => {
       const q = shareInput.trim()
       if (q.length < 2) { setResults([]); return }
@@ -80,8 +79,8 @@ function TemplateCard({
       } catch { setResults([]) }
       finally { setSearching(false) }
     }
-    t = setTimeout(run, 250)
-    return () => clearTimeout(t)
+    const timerId = setTimeout(run, 250)
+    return () => clearTimeout(timerId)
   }, [shareInput])
 
   const isValidEmail = (e: string) => /[^@\s]+@[^@\s]+\.[^@\s]+/.test(e)
