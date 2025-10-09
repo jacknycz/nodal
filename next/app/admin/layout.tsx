@@ -1,18 +1,23 @@
-'use client'
+import React from 'react'
+import type { Metadata } from 'next'
+import AdminDarkClient from './AdminDarkClient'
+import Link from 'next/link'
 
-import React, { useEffect } from 'react'
+export const metadata: Metadata = {
+  title: 'Nodal Admin',
+  icons: {
+    icon: '/nobot.svg',
+    shortcut: '/nobot.svg',
+    apple: '/nobot.svg',
+  },
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const html = document.documentElement
-    const hadDark = html.classList.contains('dark')
-    if (!hadDark) html.classList.add('dark')
-    return () => {
-      if (!hadDark) html.classList.remove('dark')
-    }
-  }, [])
-
-  return <>{children}</>
+  return (
+    <AdminDarkClient>
+      {children}
+    </AdminDarkClient>
+  )
 }
 
 

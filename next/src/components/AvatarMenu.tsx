@@ -220,7 +220,7 @@ export default function AvatarMenu({
             )}
           </IconButton>
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] leading-[18px] text-white text-center font-semibold shadow-sm">
+            <span className="absolute -top-1 -right-1 w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] leading-[18px] text-white text-center font-semibold shadow-sm">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}

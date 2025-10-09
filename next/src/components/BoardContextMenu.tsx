@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil, Tag as TagIcon, Trash, CaretRight } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil, Tag as TagIcon, Trash, CaretRight, TextHOne } from '@phosphor-icons/react/dist/ssr'
 import { useBoardStore } from '../features/board/boardSlice'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
@@ -145,7 +145,52 @@ export default function BoardContextMenu({
               </button>
             )}
 
-            <div className={`relative ${multiSelected ? 'rounded-t-2xl' : ''}`}
+            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
+
+            {!multiSelected && onAddConnectedNodes && (
+              <button onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <TreeStructure size={18} className="w-4 h-4" />
+                Add Node(s)
+              </button>
+            )}
+
+            {!multiSelected && onQuickAIGenerateNodes && (
+              <button onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <PlusCircle size={18} className="w-4 h-4" />
+                Generate AI Node(s)
+              </button>
+            )}
+
+            {!multiSelected && onPasteConnectedNode && (
+              <button onClick={() => handleAction(() => onPasteConnectedNode(nodeId, position))}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <ClipboardText size={18} className="w-4 h-4" />
+                Paste Node
+              </button>
+            )}
+
+            {!multiSelected && onAddTaskNode && (
+              <button onClick={() => handleAction(onAddTaskNode)}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <CheckSquare size={18} className="w-4 h-4" />
+                Add Task
+              </button>
+            )}
+
+            {!multiSelected && onAddHeadlineNode && (
+              <button onClick={() => handleAction(onAddHeadlineNode)}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <TextHOne size={18} className="w-4 h-4" />
+                Add Headline
+              </button>
+            )}
+
+            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
+
+            {/* Bottom section: Colorgory, then Delete */}
+            <div className="relative"
               onMouseEnter={() => setColorgoryHover(true)}
               onMouseLeave={() => setColorgoryHover(false)}
             >
@@ -165,12 +210,10 @@ export default function BoardContextMenu({
                           checked={checked}
                           onChange={(next) => {
                             if (!onUpdateNode) return
-                            // Determine targets: if multi-selected and right-clicked node is among them, apply to all selected
                             const targets: string[] = (selectedIds && selectedIds.length > 1 && nodeId && selectedIds.includes(nodeId))
                               ? [...selectedIds]
                               : (nodeId ? [nodeId] : [])
                             if (targets.length === 0) return
-                            // Apply add/remove of this colorgory id to each target based on its current state
                             for (const tid of targets) {
                               const n = (nodes as any[]).find(nn => nn.id === tid)
                               const cur: string[] = Array.isArray(n?.data?.colorgoryIds) ? [...(n!.data!.colorgoryIds as string[])] : []
@@ -197,58 +240,6 @@ export default function BoardContextMenu({
               )}
             </div>
 
-            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
-
-            {!multiSelected && onAddConnectedNodes && (
-              <button onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <TreeStructure size={18} className="w-4 h-4" />
-                Add Node(s)
-              </button>
-            )}
-
-            {!multiSelected && onQuickAIGenerateNodes && (
-              <button onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <PlusCircle size={18} className="w-4 h-4" />
-                Quick AI Add Nodes
-              </button>
-            )}
-
-            {!multiSelected && onPasteConnectedNode && (
-              <button onClick={() => handleAction(() => onPasteConnectedNode(nodeId, position))}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <ClipboardText size={18} className="w-4 h-4" />
-                Paste Connected
-              </button>
-            )}
-
-            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
-
-            {!multiSelected && onOrganizeSubtree && hasChildren && (
-              <button onClick={() => handleAction(() => onOrganizeSubtree(nodeId))}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <TreeView size={18} className="w-4 h-4" />
-                Reorganize Nodes
-              </button>
-            )}
-
-            {!multiSelected && onAddTaskNode && (
-              <button onClick={() => handleAction(onAddTaskNode)}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <CheckSquare size={18} className="w-4 h-4" />
-                Add Task
-              </button>
-            )}
-
-            {!multiSelected && onAddHeadlineNode && (
-              <button onClick={() => handleAction(onAddHeadlineNode)}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <TagIcon size={18} className="w-4 h-4" />
-                Add Headline
-              </button>
-            )}
-
             <button onClick={() => { console.log('[BoardContextMenu] Open delete modal for node', nodeId); setShowDelete(true) }}
               className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3">
               <Trash size={18} className="w-4 h-4" />
@@ -273,7 +264,7 @@ export default function BoardContextMenu({
             )}
             {onAddTaskNode && (
               <button onClick={() => handleAction(onAddTaskNode)}
-                className="cursor-pointer w-full px-4 py-2 rounded-b-2xl text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <CheckSquare size={18} className="w-4 h-4" />
                 Add Task
               </button>

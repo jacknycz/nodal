@@ -57,17 +57,7 @@ export default function Tag({
       )}
       <span className="truncate">{children}</span>
       {rightIcon && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRightIconClick?.(e)
-          }}
-          aria-label="Remove"
-          className="ml-2 inline-flex items-center"
-        >
-          {rightIcon}
-        </button>
+        <span className="ml-1 inline-flex items-center">{rightIcon}</span>
       )}
     </span>
   )

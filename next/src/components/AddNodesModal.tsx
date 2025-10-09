@@ -593,7 +593,7 @@ export default function AddNodesModal({
             {titles.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {titles.map((t) => (
-                  <span key={t} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs">
+                  <span key={t} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-100 text-gray-800 dark:text-gray-100 dark:bg-gray-700 text-xs">
                     {t}
                     <button onClick={() => removeTitle(t)} className="ml-1 text-gray-500 hover:text-gray-800 dark:hover:text-white" aria-label={`Remove ${t}`}>×</button>
                   </span>
