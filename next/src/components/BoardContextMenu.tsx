@@ -65,6 +65,7 @@ export default function BoardContextMenu({
     return Array.isArray(ids) ? ids : []
   }, [nodes, nodeId])
   const [colorgoryHover, setColorgoryHover] = React.useState(false)
+  const [colorgoryFlipLeft, setColorgoryFlipLeft] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
   const multiSelected = React.useMemo(() => {
     return Array.isArray(selectedIds) && selectedIds.length > 1 && !!nodeId && selectedIds.includes(nodeId)
@@ -116,6 +117,42 @@ export default function BoardContextMenu({
     }
   }, [isOpen, onClose, showDelete])
 
+  // Clamp menu within viewport
+  const [menuPos, setMenuPos] = React.useState<{ x: number; y: number } | null>(null)
+  React.useEffect(() => {
+    if (!isOpen || !position) return
+    setMenuPos(position)
+    const raf = requestAnimationFrame(() => {
+      if (!menuRef.current) return
+      const rect = menuRef.current.getBoundingClientRect()
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const margin = 8
+      let nextX = position.x
+      let nextY = position.y
+      if (rect.right > vw - margin) nextX = Math.max(margin, vw - rect.width - margin)
+      if (rect.bottom > vh - margin) nextY = Math.max(margin, vh - rect.height - margin)
+      if (rect.left < margin) nextX = margin
+      if (rect.top < margin) nextY = margin
+      setMenuPos({ x: nextX, y: nextY })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isOpen, position])
+
+  // Flip colorgory submenu if it would overflow right edge
+  React.useEffect(() => {
+    if (!isOpen) return
+    if (!colorgoryHover) return setColorgoryFlipLeft(false)
+    if (!menuRef.current) return
+    try {
+      const rect = menuRef.current.getBoundingClientRect()
+      const spaceRight = window.innerWidth - rect.right
+      setColorgoryFlipLeft(spaceRight < 240)
+    } catch {
+      setColorgoryFlipLeft(false)
+    }
+  }, [colorgoryHover, isOpen])
+
   if (!isOpen || !position) return null
 
   const handleAction = (action: () => void) => {
@@ -128,7 +165,7 @@ export default function BoardContextMenu({
       <div
         className="fixed z-[700] bg-white overflow-visible dark:bg-gray-800 rounded-2xl shadow-lg 
         min-w-[200px] nodal-no-select"
-        style={{ left: position.x, top: position.y }}
+        style={{ left: (menuPos?.x ?? position.x), top: (menuPos?.y ?? position.y) }}
         ref={menuRef}
       >
         {nodeId ? (
@@ -199,7 +236,7 @@ export default function BoardContextMenu({
                 <CaretRight size={16} weight="duotone" className="transition-transform duration-200 text-gray-400" /> 
               </div>
               {colorgoryHover && (
-                <div className="absolute left-full top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]">
+                <div className={`absolute ${colorgoryFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]`}>
                   <div className="grid grid-cols-2 gap-1">
                     {(colorgoriesVisible || []).map((c: any) => {
                       const checked = nodeColorgoryIds.includes(c.id)
