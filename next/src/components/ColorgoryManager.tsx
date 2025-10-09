@@ -102,6 +102,7 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
       e.stopPropagation()
       try { e.preventDefault() } catch {}
       setDragId(null)
+      try { window.dispatchEvent(new CustomEvent('nodal:save-now')) } catch {}
       window.removeEventListener('pointermove', onMove, true)
       window.removeEventListener('pointerup', end, true)
       window.removeEventListener('pointercancel', end, true)

@@ -171,7 +171,7 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
                     )}
                 </div>
 
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="flex justify-end gap-2 mt-8">
                     <Button variant="secondary" onClick={onClose}>Close</Button>
                     <Button onClick={handleSendInvites} disabled={shareInvites.length === 0}>Send Invites</Button>
                 </div>

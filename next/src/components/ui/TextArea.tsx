@@ -51,14 +51,14 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
             error && 'border-red-500 dark:border-red-400 focus-within:border-red-500 dark:focus-within:border-red-400 focus-within:ring-red-500/20'
           )}>
           {label && (
-            <label htmlFor={textareaId} className={clsx('block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300')}>{label}{props.required && (<span aria-hidden className="ml-1 text-red-500">*</span>)}</label>
+            <label htmlFor={textareaId} className={clsx('block text-sm font-medium text-gray-700 dark:text-gray-300')}>{label}{props.required && (<span aria-hidden className="ml-1 text-red-500">*</span>)}</label>
           )}
           
           {/* Textarea field */}
           <div className={clsx('relative', fullWidth && 'w-full')}>
             {leftIcon && (
               <span className="pointer-events-none absolute inset-y-0 left-0 flex items-start pt-2 pl-3 text-gray-400">
-                {leftIcon}
+                {leftIcon} 
               </span>
             )}
             <textarea

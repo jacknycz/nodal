@@ -496,10 +496,9 @@ function BoardContent({
     prevEdgesRef.current = edges
   }, [nodes, edges, currentBoardName, saveStatus])
   
-  // Trigger autosave when colorgories (names/order) change
+  // Trigger save when colorgories (names/order/visibility) change
   useEffect(() => {
     if (!isInitializedRef.current) return
-    if (!localBoardIdRef.current) return
     if (saveStatus === 'saving') return
     const changed = JSON.stringify(colorgoriesState) !== JSON.stringify(prevColorgoriesRef.current)
     if (changed) {
@@ -507,10 +506,11 @@ function BoardContent({
       if (onBoardStateChangeRef.current) {
         onBoardStateChangeRef.current(currentBoardName, 'saving', true)
       }
-      triggerAutosaveRef.current(nodes, edges)
+      // Always use manualSave so we persist even when nodes/edges are empty
+      manualSave(nodes, edges).catch(() => {})
       prevColorgoriesRef.current = colorgoriesState
     }
-  }, [colorgoriesState, nodes, edges, saveStatus, currentBoardName])
+  }, [colorgoriesState, nodes, edges, saveStatus, currentBoardName, manualSave])
   
   // No local autosave timeout cleanup needed; handled in hook
 

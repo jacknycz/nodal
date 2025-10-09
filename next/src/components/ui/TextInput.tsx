@@ -46,7 +46,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
       <div className={clsx("flex flex-col gap-1.5", fullWidth && "w-full")}>
         {/* Input container */}
         {label && (
-            <label htmlFor={inputId} className={clsx("block mb-1 text-sm font-medium text-gray-700 dark:text-gray-300")}>
+            <label htmlFor={inputId} className={clsx("block text-sm font-medium text-gray-700 dark:text-gray-300")}>
               {label}{props.required && (<span aria-hidden className="ml-1 text-red-500">*</span>)}
             </label>
           )}
@@ -64,7 +64,7 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
           {/* Input */}
           <div className={clsx("relative h-full", fullWidth && "w-full")}>
             {leftIcon && (
-              <span className="absolute inset-y-0 left-2 flex items-center text-gray-400">
+              <span className="absolute inset-y-0 left-0 flex items-center text-gray-400">
                 {leftIcon}
               </span>
             )}

@@ -9,6 +9,7 @@ import TextInput from './ui/TextInput'
 import Modal from './ui/Modal'
 import LinkUI from './ui/Link'
 import Tag from './ui/Tag'
+import { User } from '@phosphor-icons/react/dist/ssr'
 
 function useDebounced<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = React.useState(value)
@@ -547,6 +548,7 @@ export default function ProfileTab() {
           onChange={(e) => setUsernameInput((e.target as HTMLInputElement).value)}
           placeholder="yourname"
           description="3–24 chars; letters, digits, underscore and dot"
+          leftIcon={<User size={16} className="w-4 h-4" />}
           fullWidth
         />
         <div className="mt-1 text-xs">
