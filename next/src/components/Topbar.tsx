@@ -90,6 +90,7 @@ export default function Topbar({
   const [showBoardSettings, setShowBoardSettings] = useState(false)
   const [pendingBoardName, setPendingBoardName] = useState('')
   const [pendingBoardTopic2, setPendingBoardTopic2] = useState('')
+  const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
   const edgeType = useBoardStore(state => state.edgeType || 'floating')
   const setEdgeType = useBoardStore(state => state.setEdgeType)
   const [boardMemberRole, setBoardMemberRole] = useState<'owner' | 'editor' | 'viewer' | null>(null)
@@ -286,7 +287,7 @@ export default function Topbar({
                   <div className="flex gap-1">
                     <div className="flex gap-0">
                       {(boardMemberRole === 'owner' || boardMemberRole === 'editor') && (
-                        <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); setShowBoardSettings(true) }}>
+                        <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); (async () => { try { if (currentBoardId) { const { data } = await supabase.from('boards').select('is_public').eq('id', currentBoardId).maybeSingle(); setPendingIsPublic(!!(data as any)?.is_public); } } catch {} finally { setShowBoardSettings(true) } })() }}>
                           <GearSix className="w-4 h-4" />
                         </IconButton>
                       )}
@@ -480,6 +481,16 @@ export default function Topbar({
                 if (typeof newTopic === 'string' && newTopic !== (topic || '')) {
                   setTopic(newTopic)
                 }
+                // Persist public flag
+                try {
+                  if (currentBoardId) {
+                    await fetch('/api/board/public', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ boardId: currentBoardId, isPublic: !!pendingIsPublic })
+                    })
+                  }
+                } catch {}
                 setShowBoardSettings(false)
                 try { onSaveBoard?.() } catch { }
               } catch { }
@@ -503,6 +514,15 @@ export default function Topbar({
             placeholder="Enter topic..."
             fullWidth
           />
+          <div className="flex items-center gap-3 pt-1" title={(boardMemberRole !== 'owner') ? 'Admin only' : undefined}>
+            <Checkbox
+              checked={pendingIsPublic}
+              onChange={setPendingIsPublic}
+              label="Public board"
+              disabled={boardMemberRole !== 'owner'}
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400">Public boards are viewable by anyone with the URL.</div>
+          </div>
           <Select
             label="Edge type"
             value={edgeType as any}

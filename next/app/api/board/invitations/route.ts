@@ -34,6 +34,15 @@ export async function POST(req: NextRequest) {
       invitedUserId = match?.id || null
     } catch {}
 
+    // If the invitee already has an account, immediately add them to board_members
+    if (invitedUserId) {
+      try {
+        await supabase
+          .from('board_members')
+          .insert({ board_id: boardId, user_id: invitedUserId, role: inviteRole }, { onConflict: 'board_id,user_id', ignoreDuplicates: true })
+      } catch {}
+    }
+
     // Resolve inviter label (username/email)
     let inviterLabel = 'someone'
     try {

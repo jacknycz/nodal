@@ -26,37 +26,26 @@ export default function BoardMembersRoleEditor({ boardId, isOwnerView = false }:
       if (!boardId) return
       setLoading(true)
       try {
-        // Fetch members (join auth.users for email)
-        const { data: members } = await supabase
-          .from('board_members')
-          .select('user_id, role')
-          .eq('board_id', boardId)
+        // Fetch members via server route to include email/username without client admin permissions
+        const resp = await fetch(`/api/board/members?boardId=${encodeURIComponent(boardId)}`)
+        const json = await resp.json()
+        const members = Array.isArray(json.members) ? json.members : []
 
-        const ids = (members || []).map((m: any) => m.user_id)
-        let emailMap: Record<string, string | null> = {}
-        let usernameMap: Record<string, string | null> = {}
-        if (ids.length > 0) {
-          const [{ data: users }, { data: profiles }] = await Promise.all([
-            supabase.auth.admin.listUsers(),
-            supabase.from('profiles').select('id, username').in('id', ids),
-          ])
-          const list = (users as any)?.users || []
-          list.forEach((u: any) => { if (ids.includes(u.id)) emailMap[u.id] = u.email || null })
-          ;(profiles as any[] | null || []).forEach((p: any) => { if (ids.includes(p.id)) usernameMap[p.id] = p.username || null })
-        }
-
-        const mapped = (members || []).map((m: any) => ({
-          user_id: m.user_id,
-          role: m.role,
-          email: emailMap[m.user_id] || null,
-          username: usernameMap[m.user_id] || null,
-        }))
-        setRows(mapped)
+        setRows(members as any)
       } finally {
         setLoading(false)
       }
     }
     load()
+    const handler = (e: any) => {
+      try {
+        if (!e?.detail?.boardId || e.detail.boardId === boardId) {
+          load()
+        }
+      } catch {}
+    }
+    window.addEventListener('nodal:board-members-updated' as any, handler)
+    return () => window.removeEventListener('nodal:board-members-updated' as any, handler)
   }, [boardId, supabase])
 
   const updateRole = async (userId: string, role: 'owner' | 'editor' | 'viewer') => {
@@ -90,18 +79,21 @@ export default function BoardMembersRoleEditor({ boardId, isOwnerView = false }:
             {r.username ? `${r.username}${r.email ? ` (${r.email})` : ''}` : (r.email || r.user_id)}
           </div>
           <div className="col-span-2">
-            <Select
-              value={r.role}
-              onChange={(v) => updateRole(r.user_id, v as any)}
-              options={[
-                { label: 'Owner', value: 'owner' },
-                { label: 'Editor', value: 'editor' },
-                { label: 'Viewer', value: 'viewer' },
-              ]}
-              size="xs"
-              className="w-28"
-              disabled={!isOwnerView || r.role === 'owner'}
-            />
+            {r.role === 'owner' ? (
+              <div className="text-xs text-gray-700 font-bold dark:text-gray-300">Owner</div>
+            ) : (
+              <Select
+                value={r.role}
+                onChange={(v) => updateRole(r.user_id, v as any)}
+                options={[
+                  { label: 'Editor', value: 'editor' },
+                  { label: 'Viewer', value: 'viewer' },
+                ]}
+                size="xs"
+                className="w-28"
+                disabled={!isOwnerView}
+              />
+            )}
           </div>
         </div>
       ))}

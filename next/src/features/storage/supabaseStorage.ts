@@ -10,6 +10,7 @@ interface SavedBoard {
   nodeCount: number
   edgeCount: number
   userId: string
+  isPublic?: boolean
 }
 
 interface DocumentFile {
@@ -208,6 +209,7 @@ class SupabaseStorage {
         nodeCount: data.node_count as number,
         edgeCount: data.edge_count as number,
         userId: data.user_id as string,
+        isPublic: !!(data as any).is_public,
       } : null
     } catch (error) {
       console.error('Failed to load board from Supabase:', error)

@@ -9,6 +9,7 @@ import Select from './ui/Select'
 import Tag from './ui/Tag'
 import { Copy, Plus, XSquare } from '@phosphor-icons/react/dist/ssr'
 import { useSupabaseUser } from '../features/auth/authUtils'
+import Toast from './ui/Toast'
 
 type ShareInvite = { email: string; role: 'owner' | 'editor' | 'viewer' }
 
@@ -27,6 +28,7 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
     const [results, setResults] = useState<Array<{ id: string; username?: string | null; email?: string | null; avatar_url?: string | null }>>([])
     const [shareInvites, setShareInvites] = useState<ShareInvite[]>([])
     const [shareError, setShareError] = useState<string | null>(null)
+  const [showSentToast, setShowSentToast] = useState(false)
 
     useEffect(() => {
         if (!open) return
@@ -70,20 +72,26 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
         setShareError(null)
         try {
             const invites = shareInvites.filter(i => isValidEmail(i.email))
-            for (const { email, role } of invites) {
-                await fetch('/api/board/invitations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ boardId, email, role, invitedBy: user?.id, boardName, boardUrl: shareLink })
-                })
-            }
-            onClose()
+      for (const { email, role } of invites) {
+        await fetch('/api/board/invitations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ boardId, email, role, invitedBy: user?.id, boardName, boardUrl: shareLink })
+        })
+      }
+      onClose()
+      try { window.dispatchEvent(new CustomEvent('nodal:board-members-updated', { detail: { boardId } })) } catch {}
+      setShareInvites([])
+      setResults([])
+      setShowSentToast(true)
+      setTimeout(() => setShowSentToast(false), 2000)
         } catch {
             setShareError('Failed to send invites')
         }
     }
 
     return (
+        <>
         <Modal open={open} onClose={onClose} title="Share Board" description="Copy a link or invite people by email.">
             <div className="space-y-6">
                 <div>
@@ -118,7 +126,6 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
                                 value={selectedRole}
                                 onChange={(v: any) => setSelectedRole(v as any)}
                                 options={[
-                                    { label: 'Owner', value: 'owner' },
                                     { label: 'Editor', value: 'editor' },
                                     { label: 'Viewer', value: 'viewer' },
                                 ]}
@@ -170,6 +177,10 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
                 </div>
             </div>
         </Modal>
+        <Toast open={showSentToast} onClose={() => setShowSentToast(false)} variant="success" autoHideMs={2000}>
+          Invites sent!
+        </Toast>
+        </>
     )
 }
 
