@@ -544,7 +544,7 @@ function BoardContent({
       const aiService = getOpenAIService()
       // Ensure a topic parent node exists
       const topicNodeId = `topic-${boardId}`
-      let topicNode = {
+      const topicNode = {
         id: topicNodeId,
         type: 'default' as const,
         position: { x: 500, y: 400 },
