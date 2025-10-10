@@ -52,7 +52,8 @@ export default function TipTapEditor({
           bulletList: false,
           orderedList: false,
           listItem: false,
-          strike: true, // use StarterKit's strike, don't add Strike extension separately
+          // keep default strike (boolean supported in TipTap v2 types)
+          strike: false,
         }),
         Placeholder.configure({
           placeholder,

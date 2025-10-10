@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServiceClient } from '../../../../src/features/storage/supabaseService'
 import { sendEmail } from '../../../../src/features/email/postmark'
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const supabase = getSupabaseServiceClient()
-    const { id } = await params
+    const { id } = await context.params
     const body = await req.json().catch(() => ({}))
     const action = String(body?.action || '')
 
@@ -34,8 +34,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // Send emails on accept
     if (action === 'accept') {
-      const reqId = up?.requester_id
-      const addId = up?.addressee_id
+      const reqId = String(up?.requester_id || '')
+      const addId = String(up?.addressee_id || '')
       if (reqId) await sendUserEmail(supabase, reqId, 'Connection accepted', 'You are now connected.')
       if (addId) await sendUserEmail(supabase, addId, 'Connection accepted', 'You are now connected.')
     }
@@ -46,10 +46,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const supabase = getSupabaseServiceClient()
-    const { id } = await params
+    const { id } = await context.params
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
     const { error } = await supabase.from('connections').delete().eq('id', id)
     if (error) throw error

@@ -68,15 +68,15 @@ class TemplateStorage {
     if (error) throw error
     if (!data) return null
     return {
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      coverUrl: data.cover_url || null,
+      id: String(data.id),
+      name: String(data.name || ''),
+      description: data.description as string | null,
+      coverUrl: (data.cover_url as string) || null,
       data: data.data as BoardData,
-      createdAt: data.created_at as number,
-      createdBy: data.created_by as string,
-      nodeCount: data.node_count as number,
-      edgeCount: data.edge_count as number,
+      createdAt: Number(data.created_at || 0),
+      createdBy: String(data.created_by || ''),
+      nodeCount: Number(data.node_count || 0),
+      edgeCount: Number(data.edge_count || 0),
       published: !!data.published,
     }
   }
@@ -116,15 +116,15 @@ class TemplateStorage {
 
     if (error) throw error
     return {
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      coverUrl: data.cover_url || null,
+      id: String(data.id),
+      name: String(data.name || ''),
+      description: data.description as string | null,
+      coverUrl: (data.cover_url as string) || null,
       data: data.data as BoardData,
-      createdAt: data.created_at as number,
-      createdBy: data.created_by as string,
-      nodeCount: data.node_count as number,
-      edgeCount: data.edge_count as number,
+      createdAt: Number(data.created_at || 0),
+      createdBy: String(data.created_by || ''),
+      nodeCount: Number(data.node_count || 0),
+      edgeCount: Number(data.edge_count || 0),
       published: !!data.published,
     }
   }

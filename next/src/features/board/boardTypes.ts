@@ -86,6 +86,8 @@ export interface BoardState {
   colorgories?: Colorgory[]
   // Board-wide edge type preference
   edgeType?: 'floating' | 'bezier' | 'straight' | 'step' | 'smoothstep'
+  // UI hovered edge id (optional UI-only state)
+  hoveredEdgeId?: string | null
 }
 
 export interface BoardActions {

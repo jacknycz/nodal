@@ -10,6 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   loading?: boolean
   fullWidth?: boolean
+  icon?: React.ReactNode
 }
 
 const variantClasses: Record<ButtonVariant, string> = {

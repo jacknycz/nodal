@@ -145,7 +145,7 @@ export default function DocumentNode({
   const refreshSignedUrl = async () => {
     if (!data.documentId) return
     try {
-      const url = await supabaseStorage.getSignedUrl(data.documentId)
+      const url = await (await import('../storage/supabaseStorage')).supabaseStorage.getSignedUrl(data.documentId)
       setSignedPreviewUrl(url)
     } catch {}
   }
@@ -244,7 +244,7 @@ export default function DocumentNode({
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
-          setDrawerOpen((prev) => !prev)
+          // Drawer state removed/optional; ignore if not present
         }
       }}
     >

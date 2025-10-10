@@ -123,7 +123,7 @@ function WelcomeContent() {
                   Share your boards with friends and family. Or enemies. Very flexible.
                 </motion.p>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  Collaborate with friends and family! (<Tag size="sm">Pro</Tag> feature. I'm one dude, I have rent.)
+                  Collaborate with friends and family! (<Tag>Pro</Tag> feature. I have rent.)
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>

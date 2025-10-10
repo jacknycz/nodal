@@ -386,7 +386,7 @@ export function usePlacement() {
       // Update the board with new positions
       setNodes(finalNodes)
       // Force edges/handles to refresh after nodes settle in the DOM
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
       try {
         const updateNodeInternals = (rfApi as any)?.updateNodeInternals
         if (typeof updateNodeInternals === 'function') {
@@ -489,7 +489,7 @@ export function usePlacement() {
       })
       setNodes(updatedNodes)
       // Force edges/handles to refresh for updated nodes
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
       try {
         const updateNodeInternals = (rfApi as any)?.updateNodeInternals
         if (typeof updateNodeInternals === 'function') {

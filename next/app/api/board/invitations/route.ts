@@ -37,9 +37,10 @@ export async function POST(req: NextRequest) {
     // If the invitee already has an account, immediately add them to board_members
     if (invitedUserId) {
       try {
+        // Upsert to avoid duplicate key errors (primary key is (board_id, user_id))
         await supabase
           .from('board_members')
-          .insert({ board_id: boardId, user_id: invitedUserId, role: inviteRole }, { onConflict: 'board_id,user_id', ignoreDuplicates: true })
+          .upsert({ board_id: boardId, user_id: invitedUserId, role: inviteRole }, { onConflict: 'board_id,user_id' })
       } catch {}
     }
 

@@ -127,10 +127,9 @@ export default function FloatingStraightEdge({
   const [edgePath, labelX, labelY] = getStraightPath({
     sourceX: sx,
     sourceY: sy,
-    sourcePosition: sp,
     targetX: tx,
     targetY: ty,
-    targetPosition: tp,
+    // XYFlow's getStraightPath typings don't accept positions in our version; rely on coordinates only
   })
 
   // Use labelX/labelY to position the delete button exactly on the path midpoint

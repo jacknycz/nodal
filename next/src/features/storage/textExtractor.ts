@@ -35,7 +35,7 @@ export async function extractTextFromWord(file: Blob): Promise<string> {
     const mammoth = await import('mammoth')
     
     const arrayBuffer = await file.arrayBuffer()
-    const result = await mammoth.default.extractRawText({ buffer: arrayBuffer })
+    const result = await mammoth.default.extractRawText({ arrayBuffer })
     
     if (result.messages.length > 0) {
       console.log('⚠️ Mammoth warnings:', result.messages)

@@ -62,7 +62,7 @@ export default function AISettingsMenu({
               aria-label="Position Strategy"
               value={positionStrategy}
               options={POSITION_STRATEGIES}
-              onChange={(v) => setPositionStrategy(v)}
+              onChange={(v) => setPositionStrategy(v as string)}
             />
           </div>
 

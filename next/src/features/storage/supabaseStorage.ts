@@ -334,8 +334,8 @@ class SupabaseStorage {
 
       if (dbError) throw dbError
 
-      console.log(`Document "${fileName}" saved to Supabase with ID: ${result.id}`)
-      return result.id
+      console.log(`Document "${fileName}" saved to Supabase with ID: ${String(result.id)}`)
+      return String(result.id)
     } catch (error) {
       console.error('Failed to save document to Supabase:', error)
       throw error
@@ -354,17 +354,17 @@ class SupabaseStorage {
       if (error) throw error
       
       // Convert snake_case to camelCase
-      return (data || []).map(doc => ({
-        id: doc.id,
-        fileName: doc.file_name,
-        fileType: doc.file_type,
-        fileSize: doc.file_size,
-        filePath: doc.file_path,
-        extractedText: doc.extracted_text,
-        boardId: doc.board_id,
-        nodeId: doc.node_id,
-        userId: doc.user_id,
-        uploadedAt: doc.uploaded_at,
+      return (data || []).map((doc: any) => ({
+        id: String(doc.id),
+        fileName: String(doc.file_name || ''),
+        fileType: String(doc.file_type || ''),
+        fileSize: Number(doc.file_size || 0),
+        filePath: String(doc.file_path || ''),
+        extractedText: String(doc.extracted_text || ''),
+        boardId: String(doc.board_id || ''),
+        nodeId: doc.node_id ? String(doc.node_id) : undefined,
+        userId: String(doc.user_id || ''),
+        uploadedAt: Number(doc.uploaded_at || 0),
       }))
     } catch (error) {
       console.error('Failed to get board documents from Supabase:', error)
@@ -390,7 +390,7 @@ class SupabaseStorage {
       // Download the file from Supabase Storage
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('documents')
-        .download(docData.file_path)
+        .download(String(docData.file_path))
 
       if (downloadError) {
         console.error('Failed to download document file:', downloadError)
@@ -399,16 +399,16 @@ class SupabaseStorage {
 
       // Convert to DocumentFile format
       const documentFile: DocumentFile = {
-        id: docData.id,
-        fileName: docData.file_name,
-        fileType: docData.file_type,
-        fileSize: docData.file_size,
-        content: fileData,
-        extractedText: docData.extracted_text,
-        uploadedAt: docData.uploaded_at,
-        boardId: docData.board_id,
-        nodeId: docData.node_id,
-        userId: docData.user_id,
+        id: String(docData.id),
+        fileName: String(docData.file_name || ''),
+        fileType: String(docData.file_type || ''),
+        fileSize: Number(docData.file_size || 0),
+        content: fileData as Blob,
+        extractedText: String(docData.extracted_text || ''),
+        uploadedAt: Number(docData.uploaded_at || 0),
+        boardId: String(docData.board_id || ''),
+        nodeId: docData.node_id ? String(docData.node_id) : undefined,
+        userId: String(docData.user_id || ''),
       }
 
       console.log(`Document "${docData.file_name}" loaded successfully`)
@@ -440,7 +440,7 @@ class SupabaseStorage {
       // Delete the file from Supabase Storage
       const { error: storageError } = await supabase.storage
         .from('documents')
-        .remove([docData.file_path])
+        .remove([String(docData.file_path)])
 
       if (storageError) {
         console.error('Failed to delete file from storage:', storageError)
@@ -478,11 +478,11 @@ class SupabaseStorage {
       }
 
       // Prefer public URL (works when bucket is public); fallback to signed
-      const pub = supabase.storage.from('documents').getPublicUrl(docData.file_path)
+      const pub = supabase.storage.from('documents').getPublicUrl(String(docData.file_path))
       if (pub?.data?.publicUrl) return pub.data.publicUrl
       const { data: signedUrl, error: urlError } = await supabase.storage
         .from('documents')
-        .createSignedUrl(docData.file_path, 86400)
+        .createSignedUrl(String(docData.file_path), 86400)
       if (urlError) { console.error('Failed to generate signed URL:', urlError); return null }
       return signedUrl.signedUrl
     } catch (error) {
@@ -512,11 +512,11 @@ class SupabaseStorage {
   // Create or refresh a signed URL for an arbitrary storage path
   async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 86400): Promise<string | null> {
     try {
-      const pub = supabase.storage.from('documents').getPublicUrl(filePath)
+      const pub = supabase.storage.from('documents').getPublicUrl(String(filePath))
       if (pub?.data?.publicUrl) return pub.data.publicUrl
       const { data: signedUrl, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePath, expiresInSeconds)
+        .createSignedUrl(String(filePath), expiresInSeconds)
       if (error) throw error
       return signedUrl.signedUrl
     } catch (error: any) {

@@ -35,7 +35,7 @@ export default function ShareMenu({
           icon: LinkSimple,
           onClick: onCopyLink
         },
-        { divider: true },
+        { divider: true, label: '' },
         {
           label: 'Feedback',
           icon: Chat,

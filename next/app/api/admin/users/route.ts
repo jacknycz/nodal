@@ -31,7 +31,9 @@ export async function GET(req: Request) {
       confirmedAt: u.confirmed_at as string | null,
     }))
 
-    return NextResponse.json({ users, page, perPage, total: data?.total ?? users.length })
+    // Some client versions don't return total; compute fallback
+    const total = typeof (data as any)?.total === 'number' ? (data as any).total : users.length
+    return NextResponse.json({ users, page, perPage, total })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 })
   }
