@@ -109,6 +109,24 @@ body {
   filter: drop-shadow(0 0 4px currentColor);
 }
 
+/* Controls styling: hide lock/interactive toggle, darken icons in light mode */
+.react-flow__controls-button[title*="Lock"],
+.react-flow__controls button[title*="Lock"],
+.react-flow__controls-button[title*="Interact"],
+.react-flow__controls button[title*="Interact"],
+.react-flow__controls-button[title*="interact"],
+.react-flow__controls button[title*="interact"] {
+  display: none !important;
+}
+.react-flow__controls button svg,
+.react-flow__controls-button svg {
+  color: #374151; /* gray-700 for light mode */
+}
+.dark .react-flow__controls button svg,
+.dark .react-flow__controls-button svg {
+  color: #e5e7eb; /* gray-200 in dark mode (already readable) */
+}
+
 /* Disable pointer events on selection overlay so right-click reaches pane/nodes */
 .react-flow__selection,
 .react-flow__selection-rect,

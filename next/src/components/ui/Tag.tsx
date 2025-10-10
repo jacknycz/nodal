@@ -25,7 +25,7 @@ export default function Tag({
   const variantClasses = {
     default: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
     primary: 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-800',
-    secondary: 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+    secondary: 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-white border-gray-200 dark:border-gray-700',
     success: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800',
     warning: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800',
     danger: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
@@ -57,7 +57,21 @@ export default function Tag({
       )}
       <span className="truncate">{children}</span>
       {rightIcon && (
-        <span className="ml-1 inline-flex items-center">{rightIcon}</span>
+        <span
+          className="ml-1 inline-flex items-center"
+          onClick={(e) => { e.stopPropagation(); onRightIconClick?.(e) }}
+          role={onRightIconClick ? 'button' : undefined}
+          tabIndex={onRightIconClick ? 0 : undefined}
+          onKeyDown={onRightIconClick ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              e.stopPropagation()
+              onRightIconClick?.(e as any)
+            }
+          } : undefined}
+        >
+          {rightIcon}
+        </span>
       )}
     </span>
   )

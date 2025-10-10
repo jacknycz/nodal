@@ -4,13 +4,16 @@ import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import dynamic from 'next/dynamic'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
-import TextInput from './ui/TextInput'
 import Tag from './ui/Tag'
 import Select from './ui/Select'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
-import { PushPin, CheckCircle, Pen } from '@phosphor-icons/react/dist/ssr'
+import { PushPin } from '@phosphor-icons/react/dist/ssr'
 import ShareBoardModal from './ShareBoardModal'
 import { useSupabaseUser } from '../features/auth/authUtils'
+import Menu from './ui/Menu'
+import { GearSix, Trash } from '@phosphor-icons/react/dist/ssr'
+import Image from 'next/image'
+import BoardSettingsModal from './BoardSettingsModal'
 
 interface BoardCardProps {
   id: string
@@ -53,11 +56,11 @@ function BoardCard({
 }: BoardCardProps) {
   const [newName, setNewName] = useState(name)
 
-  const [isEditingTitle, setIsEditingTitle] = useState(false)
-  const [originalName, setOriginalName] = useState(name)
-  const titleInputRef = useRef<HTMLInputElement | null>(null)
+  const [isEditingTitle] = useState(false)
+  const [originalName] = useState(name)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const user = useSupabaseUser()
 
   useEffect(() => { setNewName(name) }, [name])
@@ -67,27 +70,11 @@ function BoardCard({
 
   const commitTitleEdit = useCallback(() => {
     const trimmed = newName.trim()
-    if (!trimmed) { setNewName(originalName); setIsEditingTitle(false); return }
+    if (!trimmed) { setNewName(originalName); return }
     if (trimmed !== originalName) { onRename?.(trimmed) }
-    setIsEditingTitle(false)
   }, [newName, originalName, onRename])
 
-  useEffect(() => {
-    if (!isEditingTitle) return
-    const handleMouseDown = (e: MouseEvent) => {
-      const inputEl = titleInputRef.current
-      if (inputEl && !inputEl.contains(e.target as Node)) commitTitleEdit()
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [isEditingTitle, commitTitleEdit])
-
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus()
-      titleInputRef.current.select()
-    }
-  }, [isEditingTitle])
+  // Title editing removed from card view
 
   const formatDate = (timestamp?: number) => {
     if (!timestamp) return undefined
@@ -121,53 +108,16 @@ function BoardCard({
           aria-label={isPinned ? 'Unpin board' : 'Pin board'}
           onClick={(e) => { e.stopPropagation(); onTogglePin() }}
           variant={isPinned ? 'primary' : 'secondaryGhost'}
-          className={`absolute top-2 right-2 z-20 ${isPinned ? 'text-tertiary-500 bg-tertiary-50/50! dark:bg-transparent! hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
+          className={`absolute top-0 right-0 z-20 ${isPinned ? 'text-tertiary-500 bg-tertiary-50/50! dark:bg-transparent! hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
         >
           <PushPin size={16} weight="duotone" />
         </IconButton>
       )}
 
       <div className="mb-1">
-        <div className="group relative">
-          {onRename && isEditingTitle ? (
-            <div className="flex items-center gap-2">
-              <TextInput
-                ref={titleInputRef}
-                type="text"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { e.preventDefault(); commitTitleEdit() }
-                  if (e.key === 'Escape') { e.preventDefault(); setNewName(originalName); setIsEditingTitle(false) }
-                }}
-                onBlur={commitTitleEdit}
-                size="md"
-                maxLength={50}
-                className="flex-1"
-              />
-              <IconButton
-                variant="primary"
-                aria-label="Save title"
-                onClick={(e) => { e.stopPropagation(); commitTitleEdit() }}
-                className="ml-2"
-              >
-                <CheckCircle size={24} weight="duotone" className="w-4 h-4" />
-              </IconButton>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 group">
-              <h3
-                className="text-xl lg:text-2xl flex items-center gap-2 font-fredoka font-normal text-gray-900 dark:text-white truncate cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                onClick={(e) => { if (!onRename) return; e.stopPropagation(); setOriginalName(newName); setIsEditingTitle(true) }}
-              >
-                {newName}
-                {onRename && (
-                  <Pen size={16} weight="duotone" className="ml-2 w-4 h-4 opacity-0 group-hover:opacity-100 text-gray-700 dark:text-gray-500 transition-opacity pointer-events-none" />
-                )}
-              </h3>
-            </div>
-          )}
-        </div>
+        <h3 className="flex-1 pr-2 md:line-clamp-2 text-xl font-fredoka font-normal text-gray-900 dark:text-white">
+          {name}
+        </h3>
         {typeof topic === 'string' && topic.trim().length > 0 && (
           <div className="mt-1">
             <Tag variant="secondary" className="max-w-full truncate">{topic}</Tag>
@@ -237,16 +187,20 @@ function BoardCard({
                 Share
               </Button>
             )}
-            {onDelete && (
-              <Button
-                variant="dangerGhost"
-                size="small"
-                onClick={e => { e.stopPropagation(); setShowDeleteModal(true) }}
-                title="Delete board"
-              >
-                Delete
-              </Button>
-            )}
+            <Menu
+              trigger={
+                <IconButton aria-label="More actions" size="small" variant="primaryOutline">
+                  <Image src="/nodal.svg" alt="More" width={16} height={16} className="opacity-90" />
+                </IconButton>
+              }
+              align="right"
+              portal
+              placement="above"
+              items={[
+                { label: 'Board Settings', icon: GearSix, onClick: () => { setShowSettingsModal(true) } },
+                { label: 'Delete', icon: Trash, onClick: () => { setShowDeleteModal(true) } },
+              ]}
+            />
           </>
         )}
       </div>
@@ -270,6 +224,7 @@ function BoardCard({
       {enableSharing && (
         <ShareBoardModal open={showShareModal} onClose={() => setShowShareModal(false)} boardId={id} boardName={newName} />
       )}
+      <BoardSettingsModal open={showSettingsModal} onClose={() => setShowSettingsModal(false)} boardId={id} initialName={name} />
     </div>
   )
 }

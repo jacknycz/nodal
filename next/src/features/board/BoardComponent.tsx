@@ -340,7 +340,7 @@ function BoardContent({
     isRestoringRef.current = false
     broadcastHistoryState()
   }, [captureSnapshot, setNodes, setEdges, reactFlowInstance, broadcastHistoryState])
-  const centerOnPositions = (positions: { x: number; y: number }[], opts?: { align?: 'center' | 'rightCenter' }) => {
+  const centerOnPositions = (positions: { x: number; y: number }[], opts?: { align?: 'center' | 'rightCenter' | 'midLeft' }) => {
     if (!positions || positions.length === 0) return
     try {
       const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length
@@ -360,17 +360,35 @@ function BoardContent({
         reactFlowInstance.setViewport({ x, y, zoom }, { duration: 600 })
         return
       }
+      if (opts?.align === 'midLeft') {
+        const rect = (document.querySelector('.react-flow') as HTMLElement | null)?.getBoundingClientRect()
+        const screenW = rect?.width || window.innerWidth
+        const screenH = rect?.height || window.innerHeight
+        const zoom = Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom()))
+        // For midLeft, caller should pass left-edge x for x values and center y for y values
+        const targetScreenX = screenW * 0.5
+        const targetScreenY = screenH * 0.5
+        const x = targetScreenX - cx * zoom
+        const y = targetScreenY - cy * zoom
+        reactFlowInstance.setViewport({ x, y, zoom }, { duration: 600 })
+        return
+      }
       reactFlowInstance.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom())), duration: 600 })
     } catch {}
   }
-  const centerOnNodeIds = (ids: string[], opts?: { align?: 'center' | 'rightCenter' }) => {
+  const centerOnNodeIds = (ids: string[], opts?: { align?: 'center' | 'rightCenter' | 'midLeft' }) => {
     if (!ids || ids.length === 0) return
     setTimeout(() => {
       try {
         const setIds = new Set(ids)
         const nodes = reactFlowInstance.getNodes().filter(n => setIds.has(n.id))
         if (nodes.length === 0) return
-        const positions = nodes.map(n => ({ x: n.position.x + ((n as any).width || 240) / 2, y: n.position.y + ((n as any).height || 140) / 2 }))
+        let positions: { x: number; y: number }[]
+        if (opts?.align === 'midLeft') {
+          positions = nodes.map(n => ({ x: n.position.x, y: n.position.y + (((n as any).height || 140) / 2) }))
+        } else {
+          positions = nodes.map(n => ({ x: n.position.x + ((n as any).width || 240) / 2, y: n.position.y + ((n as any).height || 140) / 2 }))
+        }
         centerOnPositions(positions, opts)
         const targetId = nodes[0].id
         const nodeOuter = document.querySelector(`.react-flow__node[data-id="${targetId}"]`) as HTMLElement | null
@@ -544,26 +562,7 @@ function BoardContent({
         topic: brief.boardTopic || null,
         colorgories: useBoardStore.getState().colorgories || []
       })
-      // If requested, auto-generate a concise board description when none provided
-      if (brief.generateDescriptionsForStarter && !brief.description) {
-        try {
-          if (aiService) {
-            const sys = 'You write concise, clear project summaries.'
-            const res = await aiService.generate({
-              systemPrompt: sys,
-              prompt: `Write a single 1-2 sentence description for a mind-map titled "${brief.boardTopic}". Be specific and helpful. Plain text only.`,
-              maxTokens: 120
-            })
-            const autoDesc = (res.content || '').trim()
-            if (autoDesc) {
-              // Update topic node content with the generated summary
-              setNodes((prev) => (Array.isArray(prev) ? prev.map((n: any) => n.id === topicNodeId ? { ...n, data: { ...(n.data||{}), content: autoDesc } } : n) : prev))
-              // Also update the local topicNode used later for placement/saves
-              topicNode = { ...topicNode, data: { ...topicNode.data, content: autoDesc } }
-            }
-          }
-        } catch {}
-      }
+      // Do not auto-generate a description for the topic node per spec
 
       // If user provided manual starter nodes, prioritize those and skip AI
       if (Array.isArray(brief.starterNodes) && brief.starterNodes.length > 0) {
@@ -1166,16 +1165,16 @@ function BoardContent({
                 file.name.toLowerCase().endsWith('.mp4')
             })
 
-              if (validFiles.length > 0) {
-                validFiles.forEach(file => {
-                  // Convert screen coordinates (client) to flow coordinates via XYFlow utility
-                  const flowPosition = reactFlowInstance.screenToFlowPosition({
-                    x: e.clientX,
-                    y: e.clientY,
-                  })
-                  handleDocumentUpload(file, flowPosition)
+              if (validFiles.length > 1) {
+                setShowPasteLimitModal(true)
+              } else if (validFiles.length === 1) {
+                const file = validFiles[0]
+                const flowPosition = reactFlowInstance.screenToFlowPosition({
+                  x: e.clientX,
+                  y: e.clientY,
                 })
-                showAddToast('added', validFiles.length)
+                handleDocumentUpload(file, flowPosition)
+                showAddToast('added', 1)
               }
           }
         }
@@ -1216,15 +1215,20 @@ function BoardContent({
 
         // If files are present, prefer files
         if (cd.files && cd.files.length > 0) {
+          if (cd.files.length > 1) {
+            // Block multi-item paste
+            e.preventDefault()
+            setShowPasteLimitModal(true)
+            return
+          }
           const files = Array.from(cd.files)
           const hasProcessable = files.some(f => !!f.type)
           if (hasProcessable) {
             e.preventDefault()
-            files.forEach((file) => {
-              // Reuse existing upload pipeline
-              handleDocumentUpload(file as File, center)
-            })
-            showAddToast('added', files.length)
+            // Only allow one
+            const file = files[0]
+            handleDocumentUpload(file as File, center)
+            showAddToast('added', 1)
             return
           }
         }
@@ -1233,6 +1237,16 @@ function BoardContent({
         const text = cd.getData('text') || cd.getData('text/plain') || ''
         const trimmed = (text || '').trim()
         if (!trimmed) return
+        // Heuristic: if clipboard contains multiple lines that each look like URLs, block
+        const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+        if (lines.length > 1) {
+          const urlish = lines.filter(l => /^https?:\/\//i.test(l))
+          if (urlish.length > 1) {
+            e.preventDefault()
+            setShowPasteLimitModal(true)
+            return
+          }
+        }
         let url: URL | null = null
         try { url = new URL(trimmed) } catch {}
         if (!url) return
@@ -1509,6 +1523,7 @@ function BoardContent({
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
   const editorMode = !!editNodeId
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
+  const [showPasteLimitModal, setShowPasteLimitModal] = useState(false)
   
   // Supabase Realtime: broadcast + presence for live updates
   const [wsLocks, setWsLocks] = useState<Record<string, string>>({})
@@ -1832,7 +1847,7 @@ function BoardContent({
       >
         {/* Remove the Background component - BokehBackground will handle the background */}
         <div className="hidden sm:block">
-          <Controls />
+          <Controls showInteractive={false} showFitView={true} showZoom={true} />
         </div>
         {/* Place MiniMap bottom-left next to Controls */}
         <MiniMap
@@ -1952,8 +1967,10 @@ function BoardContent({
               try { channelRef.current?.track({ userId: user?.id || null, editingNodeId: nodeId }) } catch {}
               console.log('[locks] acquired & tracked lock', { nodeId, boardId })
               setEditNodeId(nodeId)
+              try { centerOnNodeIds([nodeId], { align: 'midLeft' }) } catch {}
             } catch {
               setEditNodeId(nodeId)
+              try { centerOnNodeIds([nodeId], { align: 'midLeft' }) } catch {}
             }
           })()
         }}
@@ -2010,7 +2027,7 @@ function BoardContent({
           setTimeout(() => {
             try {
               setEditNodeId(newId)
-              centerOnNodeIds([newId], { align: 'rightCenter' })
+              centerOnNodeIds([newId], { align: 'midLeft' })
             } catch {}
           }, 0)
           if (pendingSourceNodeId) {
@@ -2203,6 +2220,10 @@ function BoardContent({
           try {
             const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
             const cd = await navigator.clipboard.read()
+            if (cd && cd.length > 1) {
+              setShowPasteLimitModal(true)
+              return
+            }
             // Prefer files if present
             let handled = false
             for (const item of cd) {
@@ -2260,6 +2281,10 @@ function BoardContent({
           try {
             const flowPosition = reactFlowInstance.screenToFlowPosition(screenPos)
             const cd = await navigator.clipboard.read()
+            if (cd && cd.length > 1) {
+              setShowPasteLimitModal(true)
+              return
+            }
             let handled = false
             for (const item of cd) {
               const types = item.types
@@ -2343,6 +2368,19 @@ function BoardContent({
         }
       />
       {/* Node edit modal for default, link, and image nodes */}
+      <Modal
+        open={showPasteLimitModal}
+        onClose={() => setShowPasteLimitModal(false)}
+        title="Paste limit"
+        description="You can paste only one item at a time. This prevents accidental bulk pastes."
+        actions={
+          <>
+            <Button onClick={() => setShowPasteLimitModal(false)}>OK</Button>
+          </>
+        }
+      />
+      
+      {/* Node edit modal for default, link, and image nodes */}
       {editNodeId && (() => {
         const n = nodes.find(nn => nn.id === editNodeId)
         if (!n) return null
@@ -2357,7 +2395,7 @@ function BoardContent({
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={d.titleSize || 'sm'}
               initialPageMode={!!d.pageMode}
-              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(title, content, colorgoryIds, titleSize, pageMode) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize, pageMode } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
@@ -2379,7 +2417,7 @@ function BoardContent({
               initialContent={d.description || ''}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
-              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
@@ -2402,7 +2440,7 @@ function BoardContent({
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
-              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
@@ -2427,7 +2465,7 @@ function BoardContent({
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
-              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(_title, content) => {
                 const plain = toPlain(content || '')
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), content, title: plain } } : nn) : nds))
@@ -2456,7 +2494,7 @@ function BoardContent({
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
-              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(title, content, colorgoryIds) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
@@ -2480,7 +2518,7 @@ function BoardContent({
               initialColorgoryIds={[]}
               initialTitleSize={initialTitleSize}
               titleSizeOptions={['sm','md','lg','xl']}
-              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId]) }}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(title, _content, _cids, titleSize) => {
                 setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, titleSize } } : nn) : nds))
                 centerOnNodeIds([editNodeId!])

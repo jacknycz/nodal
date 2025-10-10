@@ -189,7 +189,7 @@ export default function ChatPanel2() {
       <button
         onClick={() => setIsOpen(true)}
         className={`fixed right-4 z-[200] p-3 bottom-4 md:bottom-auto md:top-16 cursor-pointer
-          border-2 border-primary-500 bg-transparent text-primary-700 dark:text-white rounded-full shadow-lg hover:bg-primary-500 hover:text-white dark:hover:bg-primary-700 transition-all duration-200 ease-out 
+          border-2 border-primary-500 bg-white/20 backdrop-blur-sm text-primary-700 dark:text-white rounded-full shadow-lg hover:bg-primary-500 hover:text-white dark:hover:bg-primary-700 transition-all duration-200 ease-out 
           ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
           }`}
         title="Open Chat"

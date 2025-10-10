@@ -29,6 +29,7 @@ import { templateStorage } from '../features/storage/templateStorage'
 import Toast from './ui/Toast'
 import { boardStorage } from '../features/storage/storage'
 import Select from './ui/Select'
+import BoardSettingsModal from './BoardSettingsModal'
 
 type SaveStatus = 'saved' | 'saving' | 'unsaved' | 'error'
 
@@ -235,7 +236,7 @@ export default function Topbar({
     const initials = initialsSource.slice(0, 2).toUpperCase()
     // Pick a color from colorgories deterministically by userId/email
     const colors: string[] = (Array.isArray(colorgories) ? colorgories.map((c: any) => c?.color).filter(Boolean) : []).filter((v: any) => typeof v === 'string')
-    const fallbackColors = ['#22c55e','#06b6d4','#3b82f6','#a855f7','#f59e0b','#ef4444']
+    const fallbackColors = ['#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444']
     const palette = colors.length > 0 ? colors : fallbackColors
     const hashStr = (initialsSource || userId)
     const hash = Array.from(hashStr).reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)
@@ -285,18 +286,19 @@ export default function Topbar({
               {isBoardView && currentBoardName && (
                 <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
                   <div className="flex gap-1">
-                    <div className="flex gap-0">
+                    <div className="flex items-center gap-0">
                       {(boardMemberRole === 'owner' || boardMemberRole === 'editor') && (
-                        <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); (async () => { try { if (currentBoardId) { const { data } = await supabase.from('boards').select('is_public').eq('id', currentBoardId).maybeSingle(); setPendingIsPublic(!!(data as any)?.is_public); } } catch {} finally { setShowBoardSettings(true) } })() }}>
+                        <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); (async () => { try { if (currentBoardId) { const { data } = await supabase.from('boards').select('is_public').eq('id', currentBoardId).maybeSingle(); setPendingIsPublic(!!(data as any)?.is_public); } } catch { } finally { setShowBoardSettings(true) } })() }}>
                           <GearSix className="w-4 h-4" />
                         </IconButton>
                       )}
-                      <div className="hidden sm:flex items-center text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium font-fredoka text-gray-900 dark:text-white truncate max-w-[40vw]" title={currentBoardName}>{currentBoardName}</span>
-                      </div>
-                      <div className="sm:hidden min-w-0 w-full text-left">
-                        <span className="font-semibold text-gray-900 dark:text-white truncate max-w-full text-xs" title={currentBoardName}>{currentBoardName}</span>
-                      </div>
+                      <span
+                        className="truncate text-gray-900 dark:text-white font-medium font-fredoka
+                        text-xs sm:text-sm max-w-[140px] sm:max-w-[200px]"
+                        title={currentBoardName}
+                      >
+                        {currentBoardName}
+                      </span>
                       {/* Presence avatars (others only) */}
                       {(() => {
                         try {
@@ -368,15 +370,17 @@ export default function Topbar({
 
           {/* Right - Controls */}
           <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3 justify-end">
-            <Tag variant="beta" className="ml-2">
-              BETA
-            </Tag>
-            <LinkUI onClick={() => setShowFeedback(true)}>Feedback</LinkUI>
+            <div className="flex md:flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2">
+              <Tag variant="beta" className="ml-2">
+                BETA
+              </Tag>
+              <LinkUI onClick={() => setShowFeedback(true)}>Feedback</LinkUI>
+            </div>
 
             {isBoardView && (
               <>
-                <div className="hidden sm:flex items-center gap-3">
-                   <IconButton
+                <div className="hidden sm:flex items-center gap-1 lg:gap-3">
+                  <IconButton
                     aria-label="Share board"
                     variant="secondaryGhost"
                     size="small"
@@ -416,7 +420,7 @@ export default function Topbar({
                 <Info className="w-5 h-5" />
               </IconButton>
             )}
-            
+
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}
@@ -463,87 +467,8 @@ export default function Topbar({
           />
         </div>
       </Modal>
-      {/* Board Settings Modal */}
-      <Modal
-        open={showBoardSettings}
-        onClose={() => setShowBoardSettings(false)}
-        title="Board Settings"
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setShowBoardSettings(false)}>Cancel</Button>
-            <Button onClick={async () => {
-              try {
-                const newName = (pendingBoardName || '').trim()
-                const newTopic = (pendingBoardTopic2 || '').trim()
-                if (currentBoardId && newName && newName !== (currentBoardName || '')) {
-                  try { await boardStorage.renameBoard(currentBoardId, newName) } catch { }
-                }
-                if (typeof newTopic === 'string' && newTopic !== (topic || '')) {
-                  setTopic(newTopic)
-                }
-                // Persist public flag
-                try {
-                  if (currentBoardId) {
-                    await fetch('/api/board/public', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ boardId: currentBoardId, isPublic: !!pendingIsPublic })
-                    })
-                  }
-                } catch {}
-                setShowBoardSettings(false)
-                try { onSaveBoard?.() } catch { }
-              } catch { }
-            }}>Save</Button>
-          </>
-        }
-      >
-        <div className="space-y-3 py-2">
-          <TextInput
-            label="Board title"
-            value={pendingBoardName}
-            onChange={(e) => setPendingBoardName((e.target as HTMLInputElement).value)}
-            placeholder="Enter board title..."
-            fullWidth
-            autoFocus
-          />
-          <TextInput
-            label="Board topic"
-            value={pendingBoardTopic2}
-            onChange={(e) => setPendingBoardTopic2((e.target as HTMLInputElement).value)}
-            placeholder="Enter topic..."
-            fullWidth
-          />
-          <div className="flex items-center gap-3 pt-1" title={(boardMemberRole !== 'owner') ? 'Admin only' : undefined}>
-            <Checkbox
-              checked={pendingIsPublic}
-              onChange={setPendingIsPublic}
-              label="Public board"
-              disabled={boardMemberRole !== 'owner'}
-            />
-            <div className="text-xs text-gray-500 dark:text-gray-400">Public boards are viewable by anyone with the URL.</div>
-          </div>
-          <Select
-            label="Edge type"
-            value={edgeType as any}
-            onChange={(val) => setEdgeType?.((val as string) as any)}
-            options={[
-              { value: 'floating', label: 'Floating (Nodal default)' },
-              { value: 'straight', label: 'Straight' },
-              { value: 'step', label: 'Step' },
-              { value: 'smoothstep', label: 'Smooth Step' },
-            ]}
-            fullWidth
-            description="Choose how edges render on this board."
-          />
-
-          {/* Board members and roles */}
-          <div className="pt-4">
-            <div className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Board Members</div>
-            <BoardMembersRoleEditor boardId={currentBoardId || ''} isOwnerView={boardMemberRole === 'owner'} />
-          </div>
-        </div>
-      </Modal>
+      {/* Board Settings Modal (shared) */}
+      <BoardSettingsModal open={showBoardSettings} onClose={() => setShowBoardSettings(false)} boardId={currentBoardId || ''} initialName={currentBoardName} isOwnerView={boardMemberRole === 'owner'} />
       <Modal
         open={showFeedback}
         onClose={() => { if (!fbSubmitting) setShowFeedback(false) }}
