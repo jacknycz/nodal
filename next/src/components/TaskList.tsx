@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import Checkbox from './ui/Checkbox'
-import { X, ListChecks, CrosshairSimple } from '@phosphor-icons/react'
+import { X, ListChecks, Pen } from '@phosphor-icons/react'
 import { useReactFlow } from '@xyflow/react'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import { useSupabaseUser } from '../features/auth/authUtils'
@@ -77,22 +77,10 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
     }
   }
 
-  const panToTask = (id: string) => {
+  const openEditTask = (id: string) => {
     try {
-      const n = getNodes().find((x: any) => x.id === id)
-      if (!n) return
-      const width = (n as any).width || (n as any).measured?.width || 240
-      const height = (n as any).height || (n as any).measured?.height || 140
-      const centerX = n.position.x + width / 2
-      const centerY = n.position.y + height / 2
-      setCenter(centerX, centerY, { zoom: Math.max(0.8, Math.min(1.2, getZoom())), duration: 600 })
-      const nodeOuter = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
-      const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
-      const targetEl = nodeInner || nodeOuter
-      if (targetEl) {
-        targetEl.classList.add('node-pulse-highlight')
-        window.setTimeout(() => targetEl.classList.remove('node-pulse-highlight'), 1500)
-      }
+      // Ask board to open edit modal and center on node
+      window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id } }))
     } catch {}
   }
 
@@ -126,17 +114,6 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
           </button>
         </div>
 
-        {/* Filters */}
-        {hasMultipleMembers && (
-          <div className="px-4 pt-2">
-            <Checkbox
-              checked={showMineOnly}
-              onChange={(v) => setShowMineOnly(!!v)}
-              label="Show my tasks"
-            />
-          </div>
-        )}
-
         {/* List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {tasks.length === 0 && (
@@ -150,12 +127,23 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
                 shape="circle"
               />
               <div className={`text-sm truncate flex-1 ${t.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-100'}`}>{t.title}</div>
-              <IconButton aria-label="Locate task" variant="secondaryGhost" size="sm" onClick={() => panToTask(t.id)} title="Find task on board">
-                <CrosshairSimple className="w-4 h-4" />
+              <IconButton aria-label="Edit task" variant="secondaryGhost" size="sm" onClick={() => openEditTask(t.id)} title="Edit task">
+                <Pen className="w-4 h-4" />
               </IconButton>
             </div>
           ))}
         </div>
+
+         {/* Filters */}
+         {hasMultipleMembers && (
+          <div className="px-4 mb-2">
+            <Checkbox
+              checked={showMineOnly}
+              onChange={(v) => setShowMineOnly(!!v)}
+              label="Only my tasks"
+            />
+          </div>
+        )}
       </div>
     </>
   )

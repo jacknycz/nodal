@@ -1669,6 +1669,47 @@ function BoardContent({
     }
   }, [saveStatus, currentBoardName, nodes, edges, manualSave, undo, redo])
 
+  // Update local name when renamed via settings modal
+  useEffect(() => {
+    const onName = (ev: any) => {
+      const id = ev?.detail?.boardId
+      const name = ev?.detail?.name
+      if (!id || !name) return
+      if (id !== boardId) return
+      try { setCurrentBoardName(name) } catch {}
+    }
+    window.addEventListener('nodal:board-name-updated', onName as EventListener)
+    return () => window.removeEventListener('nodal:board-name-updated', onName as EventListener)
+  }, [boardId])
+
+  // External trigger: open edit modal for a node (e.g., from TaskList)
+  useEffect(() => {
+    const onEditNode = (ev: any) => {
+      try {
+        const nodeId = ev?.detail?.id as string | undefined
+        if (!nodeId) return
+        ;(async () => {
+          try {
+            if (!boardId) { setEditNodeId(nodeId); return }
+            const ok = await acquireNodeLockRaw(boardId, nodeId, user?.id || null)
+            if (!ok) {
+              alert('This node is currently being edited by someone else.')
+              return
+            }
+            try { channelRef.current?.track({ userId: user?.id || null, editingNodeId: nodeId }) } catch {}
+            setEditNodeId(nodeId)
+            try { centerOnNodeIds([nodeId], { align: 'midLeft' }) } catch {}
+          } catch {
+            setEditNodeId(nodeId)
+            try { centerOnNodeIds([nodeId], { align: 'midLeft' }) } catch {}
+          }
+        })()
+      } catch {}
+    }
+    window.addEventListener('nodal:edit-node', onEditNode as EventListener)
+    return () => window.removeEventListener('nodal:edit-node', onEditNode as EventListener)
+  }, [boardId, user?.id, centerOnNodeIds])
+
   // Broadcast editor mode and toggle a root class for global styling (e.g., hide headers)
   useEffect(() => {
     try {

@@ -84,6 +84,19 @@ export default function BoardPage() {
     loadBoard();
   }, [boardId, user?.id]);
 
+  // Reflect runtime board name changes (e.g., via BoardSettingsModal)
+  useEffect(() => {
+    const onName = (ev: any) => {
+      const id = ev?.detail?.boardId as string | undefined
+      const name = ev?.detail?.name as string | undefined
+      if (!id || !name) return
+      if (id !== boardId) return
+      setBoard(prev => (prev ? { ...prev, name } as SavedBoard : prev))
+    }
+    window.addEventListener('nodal:board-name-updated', onName as EventListener)
+    return () => window.removeEventListener('nodal:board-name-updated', onName as EventListener)
+  }, [boardId])
+
   // Sync loaded board topic into the board store so Topbar can read it
   useEffect2(() => {
     if (board && typeof window !== 'undefined') {

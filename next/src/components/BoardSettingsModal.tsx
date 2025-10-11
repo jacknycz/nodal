@@ -37,8 +37,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
           <Button onClick={async () => {
             try {
               const newName = (pendingBoardName || '').trim()
-              if (boardId && newName && newName !== (initialName || '')) {
-                try { await boardStorage.renameBoard(boardId, newName) } catch {}
+              if (isOwnerView && boardId && newName && newName !== (initialName || '')) {
+                try {
+                  await boardStorage.renameBoard(boardId, newName)
+                  try { window.dispatchEvent(new CustomEvent('nodal:board-name-updated', { detail: { boardId, name: newName } })) } catch {}
+                } catch {}
               }
               onClose()
             } catch {}
@@ -53,6 +56,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
           onChange={(e) => setPendingBoardName((e.target as HTMLInputElement).value)}
           placeholder="Enter board title..."
           fullWidth
+          disabled={!isOwnerView}
           autoFocus
         />
         <TextInput
