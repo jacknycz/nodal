@@ -47,7 +47,9 @@ export default function TaskNode({
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showColorgoryModal, setShowColorgoryModal] = useState(false)
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>((data as any).colorgoryIds || [])
-  const contentRef = useRef<HTMLDivElement | null>(null)
+  const descriptionRef = useRef<HTMLDivElement | null>(null)
+  const [assigneeInitials, setAssigneeInitials] = useState<string>('')
+  const [assigneeLabel, setAssigneeLabel] = useState<string>('')
   const [alignStart, setAlignStart] = useState(false)
 
   const isLocked = false
@@ -60,17 +62,17 @@ export default function TaskNode({
     setCompleted(!!data.completed)
   }, [data.title, data.completed])
 
-  // Measure content height to determine vertical alignment
+  // Measure description height to determine vertical alignment of title/checkbox
   useEffect(() => {
     const measure = () => {
-      const h = contentRef.current?.offsetHeight || 0
+      const h = descriptionRef.current?.offsetHeight || 0
       setAlignStart(h > 40) // align top if content gets taller than a single-line-ish height
     }
     measure()
     let ro: ResizeObserver | null = null
     try {
       ro = new ResizeObserver(measure)
-      if (contentRef.current) ro.observe(contentRef.current)
+      if (descriptionRef.current) ro.observe(descriptionRef.current)
     } catch {}
     window.addEventListener('resize', measure)
     return () => {
@@ -120,9 +122,47 @@ export default function TaskNode({
         return stops.join(', ')
       })()
 
+  // Resolve assignee display (initials) if assigned
+  useEffect(() => {
+    const assigneeId = (data as any)?.assigneeId as string | undefined
+    if (!assigneeId) { setAssigneeInitials(''); setAssigneeLabel(''); return }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/users/by-ids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userIds: [assigneeId] }) })
+        const json = await res.json()
+        const u = Array.isArray(json.users) ? json.users[0] : null
+        const label = (u?.username || u?.email || '') as string
+        const source = label || assigneeId
+        const initials = (() => {
+          if (!source) return ''
+          if (source.includes('@')) {
+            const parts = source.replace(/@.*/, '').split(/[^a-zA-Z0-9]+/).filter(Boolean)
+            const a = (parts[0] || '').slice(0, 1)
+            const b = (parts[1] || '').slice(0, 1)
+            return (a + b).toUpperCase() || source.slice(0, 2).toUpperCase()
+          }
+          const parts = source.split(/\s+/).filter(Boolean)
+          return ((parts[0] || '').slice(0, 1) + (parts[1] || '').slice(0, 1)).toUpperCase() || source.slice(0, 2).toUpperCase()
+        })()
+        if (!cancelled) { setAssigneeInitials(initials); setAssigneeLabel(label) }
+      } catch { if (!cancelled) { setAssigneeInitials(''); setAssigneeLabel('') } }
+    })()
+    return () => { cancelled = true }
+  }, [ (data as any)?.assigneeId ])
+
+  const assigneeBgClass = (() => {
+    const id = String((data as any)?.assigneeId || '')
+    if (!id) return 'bg-primary-600'
+    const palette = ['bg-primary-600','bg-blue-600','bg-cyan-600','bg-emerald-600','bg-teal-600','bg-indigo-600','bg-violet-600','bg-fuchsia-600','bg-rose-600','bg-amber-600']
+    let hash = 0
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
+    return palette[hash % palette.length]
+  })()
+
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'min-w-[220px] max-w-[420px]' })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'relative min-w-[220px] max-w-[420px]' })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if (e.shiftKey) {
@@ -133,6 +173,14 @@ export default function TaskNode({
         
       }}
     >
+      {/* Assignee avatar initials */}
+      {(data as any)?.assigneeId && assigneeInitials && (
+        <div className="absolute -top-2 -right-2 z-10 pointer-events-auto">
+          <Tooltip content={assigneeLabel || ''} side="top">
+            <div className={`w-5 h-5 border border-white/50 rounded-full ${assigneeBgClass} text-white text-[10px] leading-[20px] flex items-center justify-center shadow`}>{assigneeInitials}</div>
+          </Tooltip>
+        </div>
+      )}
       <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
 
       {/* Colorgory ring overlay */}
@@ -151,23 +199,26 @@ export default function TaskNode({
       
 
       <div className="nodal-drag-handle cursor-move">
+        {/* Title row: checkbox + title inline */}
         <div className={`flex ${alignStart ? 'items-start' : 'items-center'} gap-2`}>
           <Checkbox
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}
-            
             size="lg"
-            className="flex-none"
             shape="circle"
           />
-          <div
-            ref={contentRef}
-            className={`text-sm leading-relaxed tiptap-content flex-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}
-            dangerouslySetInnerHTML={{ __html: (data as any)?.content || (data.title || '') }}
-          />
-          {/* inline actions removed; moved to slide-out */}
-          
+          <div className={`text-sm font-medium flex-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+            {title || 'Untitled Task'}
+          </div>
         </div>
+        {/* Optional description under title, full width */}
+        {(data as any)?.content ? (
+          <div
+            ref={descriptionRef}
+            className="mt-2 text-xs leading-relaxed tiptap-content text-gray-700 dark:text-gray-300"
+            dangerouslySetInnerHTML={{ __html: (data as any)?.content || '' }}
+          />
+        ) : null}
       </div>
 
       {/* Colorgories button moved to drawer */}

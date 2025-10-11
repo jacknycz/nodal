@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import Checkbox from './ui/Checkbox'
 import { X, ListChecks, CrosshairSimple } from '@phosphor-icons/react'
@@ -34,11 +34,33 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
   const supabase = getSupabaseClient()
   const user = useSupabaseUser()
 
+  const [showMineOnly, setShowMineOnly] = useState(false)
+  const [hasMultipleMembers, setHasMultipleMembers] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        if (!boardId) { setHasMultipleMembers(false); return }
+        const res = await fetch(`/api/board/members?boardId=${encodeURIComponent(boardId)}`)
+        if (!res.ok) { setHasMultipleMembers(false); return }
+        const json = await res.json()
+        const members = Array.isArray(json?.members) ? json.members : []
+        if (!cancelled) setHasMultipleMembers(members.length > 1)
+      } catch {
+        if (!cancelled) setHasMultipleMembers(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [boardId])
   const tasks = useMemo(() => {
-    return (nodes as any[])
+    const list = (nodes as any[])
       .filter((n) => n?.type === 'task')
-      .map((n) => ({ id: n.id, title: n?.data?.title || 'Untitled', completed: !!n?.data?.completed }))
-  }, [nodes])
+      .map((n) => ({ id: n.id, title: n?.data?.title || 'Untitled', completed: !!n?.data?.completed, assigneeId: (n?.data as any)?.assigneeId || null }))
+    if (showMineOnly && user?.id) return list.filter(t => t.assigneeId === user.id)
+    return list
+  }, [nodes, showMineOnly, user?.id])
 
   const toggleTask = async (taskId: string, next: boolean) => {
     setNodes((nds: any[]) => nds.map((n) => n.id === taskId ? { ...n, data: { ...(n.data || {}), completed: next } } : n))
@@ -103,6 +125,17 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Filters */}
+        {hasMultipleMembers && (
+          <div className="px-4 pt-2">
+            <Checkbox
+              checked={showMineOnly}
+              onChange={(v) => setShowMineOnly(!!v)}
+              label="Show my tasks"
+            />
+          </div>
+        )}
 
         {/* List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">

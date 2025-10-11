@@ -10,6 +10,7 @@ import Checkbox from './ui/Checkbox'
 import TipTapEditor from './TipTapEditor'
 import TextInput from './ui/TextInput'
 import MultiSelect from './ui/MultiSelect'
+import Select from './ui/Select'
 import ToggleGroup from './ui/ToggleGroup'
 import { useBoardStore } from '../features/board/boardSlice'
 
@@ -31,6 +32,13 @@ interface NodeEditModalProps {
   titleSizeOptions?: TitleSize[]
   showTitle?: boolean
   showTitleSize?: boolean
+  // Optional assignment selector
+  assignOptions?: Array<{ value: string; label: string }>
+  assignValue?: string | null
+  onAssignChange?: (value: string | null) => void
+  assignLabel?: string
+  // When true, auto-focus the title field even if content editor is shown
+  focusTitleFirst?: boolean
 }
 
 export default function NodeEditModal({ 
@@ -49,6 +57,11 @@ export default function NodeEditModal({
   titleSizeOptions = ['sm','md','lg'],
   showTitle = true,
   showTitleSize = true,
+  assignOptions,
+  assignValue,
+  onAssignChange,
+  assignLabel = 'Assign',
+  focusTitleFirst = false,
 }: NodeEditModalProps) {
   const [title, setTitle] = useState(initialTitle)
   const [content, setContent] = useState(initialContent)
@@ -84,7 +97,7 @@ export default function NodeEditModal({
       const active = document.activeElement as HTMLElement | null
       if (active && titleInputRef.current && active === titleInputRef.current) return
       try {
-        if (showContent && editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
+        if (!focusTitleFirst && showContent && editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
           editorHandleRef.current.focus()
         } else {
           titleInputRef.current?.focus()
@@ -92,10 +105,15 @@ export default function NodeEditModal({
       } catch {}
     }, 100)
     return () => clearTimeout(t)
-  }, [open, showContent])
+  }, [open, showContent, focusTitleFirst])
 
   const handleSave = () => {
-    onSave(title, content, selectedColorgoryIds, titleSize, pageMode)
+    const trimmed = (title || '').trim()
+    if (!trimmed) {
+      try { titleInputRef.current?.focus() } catch {}
+      return
+    }
+    onSave(trimmed, content, selectedColorgoryIds, titleSize, pageMode)
     onClose()
   }
 
@@ -124,7 +142,6 @@ export default function NodeEditModal({
       open={open}
       onClose={onClose}
       title="Edit Node"
-      description="Update the node's title and content with rich text formatting."
       className="w-full lg:max-w-[40%]! max-w-7xl! h-[85vh]!"
       backdropClassName="bg-black lg:bg-orange-950/5 dark:lg:bg-primary-500/5"
       backdropInteractive={false}
@@ -151,6 +168,7 @@ export default function NodeEditModal({
             <Button
               variant="primary"
               onClick={handleSave}
+              disabled={!title.trim()}
             >
               Save Changes
             </Button>
@@ -189,6 +207,7 @@ export default function NodeEditModal({
             )}
           </div>
         )}
+        {/* Optional assignment selector (moved below editor) */}
         {showPageMode && (
           <div className="flex-none">
             <Checkbox
@@ -219,6 +238,20 @@ export default function NodeEditModal({
                 onKeyDown={handleContentKeyDown}
                 editorHandleRef={editorHandleRef}
                 className="h-full"
+              />
+            </div>
+          </div>
+        )}
+        {Array.isArray(assignOptions) && assignOptions.length > 1 && (
+          <div className="flex-none">
+            <div className="w-full flex items-center justify-end gap-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{assignLabel}</span>
+              <Select
+                value={assignValue || ''}
+                onChange={(v) => onAssignChange?.((v as string))}
+                options={[{ value: '', label: 'Unassigned' }, ...assignOptions]}
+                size="sm"
+                className="min-w-[10rem]"
               />
             </div>
           </div>

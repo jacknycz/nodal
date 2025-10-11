@@ -98,9 +98,9 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         <TextInput
           value={boardTopic}
           onChange={(e) => setBoardTopic((e.target as HTMLInputElement).value)}
-          placeholder="e.g., AI and productivity, Personal projects..."
+          placeholder="e.g. 'garden plan', 'storyboard for short film', etc."
           label="Topic"
-          description="This helps the AI understand the context of your board. It can be changed later."
+          description="This helps the AI understand the context of your board in a few words. It can be changed later."
           fullWidth
           required
         />
@@ -109,11 +109,11 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         <TextArea
           value={description}
           onChange={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
-          placeholder="Tell us more about what you want to work on, your goals, or any specific ideas..."
+          placeholder="e.g. 'We're going to plant a garden in my backyard and I need to plan the layout and get the supplies.'"
           label="Description (optional)"
           rows={3}
           fullWidth
-          description="This provides additional context for AI-generated starter nodes."
+          description="This describes your board in a few sentences. Also gives the AI more context."
         />
       </div>
     </div>

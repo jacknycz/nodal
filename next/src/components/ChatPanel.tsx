@@ -147,6 +147,24 @@ export default function ChatPanel2() {
     }
   }
 
+  // Reduce markdown artifacts while streaming (e.g., **bold** markers mid-stream)
+  const formatAssistantForDisplay = (text: string, streaming: boolean): string => {
+    if (!text) return ''
+    if (streaming) {
+      try {
+        return text
+          .replace(/\*\*/g, '') // strip bold markers
+          .replace(/__+/g, '') // strip double underscores
+          .replace(/(?<!\w)\*(?!\w)/g, '') // singleton asterisks
+          .replace(/(?<!\w)_(?!\w)/g, '') // singleton underscores
+          .replace(/`/g, '') // strip backticks
+      } catch {
+        return text
+      }
+    }
+    return text
+  }
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading || isStreaming) return
     const userText = inputValue.trim()
@@ -257,7 +275,11 @@ export default function ChatPanel2() {
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
-                <p className="text-sm whitespace-pre-wrap">{m.role === 'assistant' ? m.content : getUserDisplayText(m.content)}</p>
+                <p className="text-sm whitespace-pre-wrap">{
+                  m.role === 'assistant'
+                    ? formatAssistantForDisplay(m.content, isStreaming && i === messages.length - 1)
+                    : getUserDisplayText(m.content)
+                }</p>
               </div>
             </div>
           ))}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import clsx from 'clsx'
 
 export type TextAreaSize = 'sm' | 'md' | 'lg'
@@ -37,23 +37,21 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     ...props
   }, ref) => {
     const textareaId = props.id || `textarea-${Math.random().toString(36).substr(2, 9)}`
-  const [isFocused, setIsFocused] = useState(false)
-
     return (
       <div className={clsx('flex flex-col gap-2', fullWidth && 'w-full')}>
-        {/* Textarea container with label inside */}
+        {label && (
+          <label htmlFor={textareaId} className={clsx('block text-sm font-medium text-gray-700 dark:text-gray-300')}>{label}{props.required && (<span aria-hidden className="ml-1 text-red-500">*</span>)}</label>
+        )}
+
+        {/* Textarea container (no label inside) */}
         <div className={clsx(
-            'relative rounded-2xl px-3 py-2 border border-transparent transition-all duration-200',
-            'bg-gray-100 dark:bg-gray-950/80', bgClassName,
-            'focus-within:bg-white dark:focus-within:bg-gray-900',
-            'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',
-            'focus-within:ring-2 focus-within:ring-primary-500/20',
-            error && 'border-red-500 dark:border-red-400 focus-within:border-red-500 dark:focus-within:border-red-400 focus-within:ring-red-500/20'
-          )}>
-          {label && (
-            <label htmlFor={textareaId} className={clsx('block text-sm font-medium text-gray-700 dark:text-gray-300')}>{label}{props.required && (<span aria-hidden className="ml-1 text-red-500">*</span>)}</label>
-          )}
-          
+          'relative rounded-2xl px-3 py-2 border border-transparent transition-all duration-200',
+          'bg-gray-100 dark:bg-gray-950/80', bgClassName,
+          'focus-within:bg-white dark:focus-within:bg-gray-900',
+          'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',
+          'focus-within:ring-2 focus-within:ring-primary-500/20',
+          error && 'border-red-500 dark:border-red-400 focus-within:border-red-500 dark:focus-within:border-red-400 focus-within:ring-red-500/20'
+        )}>
           {/* Textarea field */}
           <div className={clsx('relative', fullWidth && 'w-full')}>
             {leftIcon && (
@@ -67,8 +65,6 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
               rows={rows}
               value={value}
               onChange={onChange}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
               placeholder={props.placeholder}
               className={clsx(
                 'peer w-full bg-transparent border-none outline-none resize-none pl-1',

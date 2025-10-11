@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Plus, ClockCounterClockwise, Upload } from '@phosphor-icons/react'
+import { Plus, ClockCounterClockwise, Upload, CheckSquare, TextHOne } from '@phosphor-icons/react'
 import IconButton from './ui/IconButton'
 import Menu from './ui/Menu'
 
@@ -10,6 +10,8 @@ interface FloatingActionButtonProps {
   onAIGenerate: () => void
   onUploadDocument: () => void
   onReorganize?: () => void
+  onAddTask?: () => void
+  onAddHeadline?: () => void
   aiInitialized: boolean
   nodeCount?: number
 }
@@ -19,17 +21,21 @@ export default function FloatingActionButton({
   onAIGenerate,
   onUploadDocument,
   onReorganize,
+  onAddTask,
+  onAddHeadline,
   aiInitialized,
   nodeCount = 0,
 }: FloatingActionButtonProps) {
   const items = [
     { label: 'Add node(s)', icon: Plus, nativeClick: true, onClick: () => { console.log('[FAB] Add node(s) clicked - invoking onAddNode'); try { onAddNode(); } catch (e) { console.error('[FAB] onAddNode threw', e) } } },
+    ...(onAddTask ? [{ label: 'Add Task', icon: CheckSquare, nativeClick: true, onClick: () => { try { onAddTask?.() } catch {} } }] : []),
+    ...(onAddHeadline ? [{ label: 'Add Headline', icon: TextHOne, nativeClick: true, onClick: () => { try { onAddHeadline?.() } catch {} } }] : []),
     { label: 'Upload', icon: Upload, nativeClick: true, onClick: onUploadDocument },
     ...(onReorganize && nodeCount > 1 ? [{ label: 'Reorganize', icon: ClockCounterClockwise, nativeClick: true, onClick: onReorganize }] : []),
   ]
 
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-20 nodal-no-select">
+    <div className="fixed bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 z-20 nodal-no-select">
       <Menu
         trigger={
           <IconButton

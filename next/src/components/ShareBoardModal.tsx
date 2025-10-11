@@ -46,7 +46,12 @@ export default function ShareBoardModal({ open, onClose, boardId, boardName }: S
                 const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`)
                 const json = await res.json()
                 const list = Array.isArray(json.results) ? json.results : []
-                setResults(list.filter((r: any) => r.id !== user?.id))
+                const existingEmails = new Set(shareInvites.map(i => i.email.toLowerCase()))
+                setResults(
+                  list
+                    .filter((r: any) => r.id !== user?.id)
+                    .filter((r: any) => !r.email || !existingEmails.has(String(r.email).toLowerCase()))
+                )
             } catch { setResults([]) }
             finally { setSearching(false) }
         }

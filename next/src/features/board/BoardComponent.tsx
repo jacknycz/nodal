@@ -582,69 +582,22 @@ function BoardContent({
             }
           } catch {}
         }
-        // Use hierarchical GRID under the topic as parent
-        const nodesToPlace = brief.starterNodes.map(title => ({ title, content: descriptionsByTitle[title] || '', type: 'default' as const, parentId: topicNodeId }))
-        try {
-          const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
-          const viewport = reactFlowInstance.getViewport()
-          const context = {
-            existingNodes: [topicNode] as any,
-            existingEdges: [] as any[],
-            viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom, width: rect?.width || window.innerWidth, height: rect?.height || window.innerHeight },
-            selectedNodeIds: [] as string[],
-            focusNode: topicNode as any,
-            constraints: { minDistance: 40, avoidOverlap: true, preferredDirection: 'down' as const },
-          }
-          const placementResult = await enginePlaceNodes({
-            nodes: nodesToPlace,
-            context,
-            strategy: PlacementStrategy.AI_GENERATION,
-            algorithm: LayoutAlgorithm.GRID
-          } as any)
-          if (placementResult.success && placementResult.placements.length > 0) {
-            const generatedNodes = placementResult.placements.map((placement: any) => ({
-              id: placement.node.id,
-              type: placement.node.type,
-              position: placement.position,
-              data: { ...placement.node.data },
-            }))
-            const generatedEdges = (placementResult.connections || []).map((connection: any) => ({
-              id: connection.edge.id,
-              source: connection.edge.source,
-              target: connection.edge.target,
-              type: connection.edge.type || 'floating',
-            }))
-            setNodes([topicNode, ...generatedNodes])
-            if (generatedEdges.length > 0) setEdges(generatedEdges)
-            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-            await boardStorage.updateBoard(boardId, boardData)
-            // Save state handled by autosave hook; avoid using setSaveStatus here
-            setHasUnsavedChanges(false)
-            if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
-            router.push(`/board/${boardId}`)
-            return
-          }
-        } catch {}
-        // Fallback: simple local grid under topic
+        // Deterministic single-row placement under parent (match reorg fallback)
         const count = brief.starterNodes.length
-        const columns = Math.ceil(Math.sqrt(count))
-        const rows = Math.ceil(count / columns)
-        const spacingX = 300
-        const spacingY = 200
-        const startX = topicNode.position.x - ((columns - 1) * spacingX) / 2
-        const startY = topicNode.position.y + spacingY
+        const cellWidth = 300
+        const padding = 60
+        const rowY = topicNode.position.y + (cellWidth - 100)
+        const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+        let startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
         const generatedNodes = brief.starterNodes.map((title, index) => {
-          const r = Math.floor(index / columns)
-          const c = index % columns
-          const position = { x: startX + c * spacingX, y: startY + r * spacingY }
-          return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: '' } }
+          const position = { x: startX + index * (cellWidth + padding), y: rowY }
+          return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: descriptionsByTitle[title] || '' } }
         })
         const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
         setNodes([topicNode, ...generatedNodes])
         setEdges(generatedEdges as any)
         const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
         await boardStorage.updateBoard(boardId, boardData)
-        // Save state handled by autosave hook; avoid using setSaveStatus here
         setHasUnsavedChanges(false)
         if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
         router.push(`/board/${boardId}`)
@@ -676,67 +629,23 @@ function BoardContent({
         if (Array.isArray(nodeDataArray)) {
           // Use our intelligent placement system for board creation
           try {
-            const nodesToPlace = nodeDataArray.map((nodeData: any) => ({
-              title: nodeData.label,
-              content: nodeData.content,
-              type: 'default' as const,
-              parentId: topicNodeId
-            }))
-            const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
-            const viewport = reactFlowInstance.getViewport()
-            const context = {
-              existingNodes: [topicNode] as any,
-              existingEdges: [] as any[],
-              viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom, width: rect?.width || window.innerWidth, height: rect?.height || window.innerHeight },
-              selectedNodeIds: [] as string[],
-              focusNode: topicNode as any,
-              constraints: { minDistance: 40, avoidOverlap: true, preferredDirection: 'down' as const },
-            }
-            const placementResult = await enginePlaceNodes({
-              nodes: nodesToPlace,
-              context,
-              strategy: PlacementStrategy.AI_GENERATION,
-              algorithm: LayoutAlgorithm.GRID
-            } as any)
-
-            if (placementResult.success && (placementResult as any).placements.length > 0) {
-              const generatedNodes = (placementResult as any).placements.map((placement: any) => ({
-                id: placement.node.id,
-                type: placement.node.type,
-                position: placement.position,
-                data: { ...placement.node.data },
-              }))
-              const generatedEdges = (placementResult as any).connections.map((connection: any) => ({
-                id: connection.edge.id,
-                source: connection.edge.source,
-                target: connection.edge.target,
-                type: connection.edge.type || 'floating',
-              }))
-              setNodes([topicNode, ...generatedNodes])
-              if (generatedEdges.length > 0) setEdges(generatedEdges)
-              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-              await boardStorage.updateBoard(boardId, boardData)
-            } else {
-              // Fallback: simple local grid under topic
-              const count = nodesToPlace.length
-              const columns = Math.ceil(Math.sqrt(count))
-              const rows = Math.ceil(count / columns)
-              const spacingX = 300
-              const spacingY = 200
-              const startX = topicNode.position.x - ((columns - 1) * spacingX) / 2
-              const startY = topicNode.position.y + spacingY
-              const generatedNodes = nodesToPlace.map((n: any, index: number) => {
-                const r = Math.floor(index / columns)
-                const c = index % columns
-                const position = { x: startX + c * spacingX, y: startY + r * spacingY }
-                return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
-              })
-              const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
-              setNodes([topicNode, ...generatedNodes])
-              setEdges(generatedEdges as any)
-              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-              await boardStorage.updateBoard(boardId, boardData)
-            }
+            // Deterministic single-row placement under parent (match reorg fallback)
+            const nodesToPlace = nodeDataArray.map((nodeData: any) => ({ title: nodeData.label, content: nodeData.content }))
+            const count = nodesToPlace.length
+            const cellWidth = 300
+            const padding = 60
+            const rowY = topicNode.position.y + (cellWidth - 100)
+            const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+            let startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+            const generatedNodes = nodesToPlace.map((n: any, index: number) => {
+              const position = { x: startX + index * (cellWidth + padding), y: rowY }
+              return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
+            })
+            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
+            setNodes([topicNode, ...generatedNodes])
+            setEdges(generatedEdges as any)
+            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+            await boardStorage.updateBoard(boardId, boardData)
             
           } catch (placementError) {
             // Fallback: fan around topic
@@ -801,8 +710,9 @@ function BoardContent({
   }
   const { addNode, addNodeToStore, getViewportCenter } = useBoard()
   const nodeActions = useNodeActions({ setNodes, setEdges })
-  const { placeAINodes, placeBoardNodes, placeManualNode, findBestPosition } = usePlacement()
+  const { placeAINodes, placeBoardNodes, placeManualNode, findBestPosition, reorganizeBoardLayout } = usePlacement()
   const { reorganizeSubtree } = usePlacement()
+  const [creatingBoard, setCreatingBoard] = useState(false)
   
   // Initialize board
   useEffect(() => {
@@ -855,6 +765,7 @@ function BoardContent({
           topic: pendingBoardBrief.boardTopic || null,
         }
         try {
+          setCreatingBoard(true)
           await boardStorage.saveBoardWithId(boardId, boardName, { ...boardData, colorgories: useBoardStore.getState().colorgories || [] })
           // console.log('🔵 CREATING BLANK BOARD with ID:', boardId, 'for name:', boardName)
           setCurrentBoardName(boardName)
@@ -866,14 +777,16 @@ function BoardContent({
           // If startWithAI is true, now generate AI nodes to update the same board
           if (pendingBoardBrief.startWithAI) {
             // console.log('🤖 Starting AI generation for board ID:', boardId)
-            generateStarterNodes(pendingBoardBrief, boardId)
+            await generateStarterNodes(pendingBoardBrief, boardId)
           }
+          setCreatingBoard(false)
         } catch (error) {
           // console.error('Failed to create blank board:', error)
           // Save state handled by autosave hook
           if (onBoardStateChange) {
             onBoardStateChange(boardName, 'error', false)
           }
+          setCreatingBoard(false)
         }
       })()
     }
@@ -1523,6 +1436,39 @@ function BoardContent({
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
   const editorMode = !!editNodeId
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
+  // Task assignment UI state (to avoid calling hooks inside conditional renders)
+  const [taskAssignOptions, setTaskAssignOptions] = useState<Array<{ value: string; label: string }> | null>(null)
+  const [taskAssignee, setTaskAssignee] = useState<string | null>(null)
+
+  // Load board members once when opening a task for edit; also seed current assignee from node
+  useEffect(() => {
+    (async () => {
+      if (!editNodeId) return
+      try {
+        const n = nodes.find((nn: any) => nn.id === editNodeId)
+        if (n && n.type === 'task') {
+          try { setTaskAssignee(((n.data as any)?.assigneeId) || null) } catch {}
+          if (taskAssignOptions === null) {
+            const bid = useBoardStore.getState().currentBoardId
+            if (bid) {
+              try {
+                const res = await fetch(`/api/board/members?boardId=${encodeURIComponent(bid)}`)
+                const json = await res.json()
+                if (res.ok && Array.isArray(json.members)) {
+                  const opts = json.members.map((m: any) => ({ value: m.userId as string, label: (m.username || m.email || m.userId) as string }))
+                  setTaskAssignOptions(opts)
+                } else {
+                  setTaskAssignOptions([])
+                }
+              } catch { setTaskAssignOptions([]) }
+            } else {
+              setTaskAssignOptions([])
+            }
+          }
+        }
+      } catch {}
+    })()
+  }, [editNodeId, nodes, taskAssignOptions])
   const [showPasteLimitModal, setShowPasteLimitModal] = useState(false)
   
   // Supabase Realtime: broadcast + presence for live updates
@@ -2019,7 +1965,7 @@ function BoardContent({
             id: newId,
             type: 'task',
             position: flowPosition,
-            data: { title: '', completed: false, focusOnMount: true },
+            data: { title: '', content: '', completed: false, focusOnMount: true },
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)
@@ -2453,33 +2399,48 @@ function BoardContent({
           )
         }
         if (n.type === 'task') {
-          const initialContent = (d.content ?? d.title ?? '')
+          const initialTitle = (d.title ?? '')
+          const initialContent = (d.content ?? '')
           const toPlain = (html: string) => {
             try { const tmp = document.createElement('div'); tmp.innerHTML = html; return (tmp.textContent || tmp.innerText || '').trim() } catch { return html }
           }
+          const assignee = (typeof taskAssignee !== 'undefined' && taskAssignee !== null) ? taskAssignee : (((d as any)?.assigneeId || '') as string)
           return (
             <NodeEditModal
               open={true}
               onClose={handleCloseEditModal}
-              initialTitle={''}
+              initialTitle={initialTitle}
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
               initialTitleSize={'sm'}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
-              onSave={(_title, content) => {
-                const plain = toPlain(content || '')
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), content, title: plain } } : nn) : nds))
+              onSave={async (title, content) => {
+                const plainContent = toPlain(content || '')
+                const safeTitle = (title || '').trim() || 'Untitled Task'
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title: safeTitle, content: plainContent, assigneeId: assignee || null } } : nn) : nds))
+                // Persist assignment to DB (board_updates row; durable storage handled by autosave elsewhere)
+                try {
+                  const bid = useBoardStore.getState().currentBoardId
+                  if (bid) {
+                    await fetch('/api/board/updates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ boardId: bid, nodeId: editNodeId, updateType: 'content', data: { title: safeTitle, content: plainContent, assigneeId: assignee || null } }) })
+                  }
+                } catch {}
                 centerOnNodeIds([editNodeId!])
               }}
-              onLiveChange={(_title, content) => {
-                const plain = toPlain(content || '')
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), content, title: plain } } : nn) : nds))
-                if (editNodeId) sendLivePatch(editNodeId, { title: plain, content })
+              onLiveChange={(title, content) => {
+                const plainContent = toPlain(content || '')
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content: plainContent, assigneeId: assignee || null } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content: plainContent, assigneeId: assignee || null })
               }}
               showContent={true}
               showPageMode={false}
-              showTitle={false}
+              showTitle={true}
               showTitleSize={false}
+              assignOptions={taskAssignOptions || undefined}
+              assignValue={assignee || ''}
+              onAssignChange={(v) => setTaskAssignee(v)}
+              assignLabel="Assign"
+              focusTitleFirst={true}
             />
           )
         }
@@ -2622,6 +2583,26 @@ function BoardContent({
                 }}
                 onAIGenerate={handleOpenAINodeGenerator}
                 onUploadDocument={openUploadPicker}
+          onAddTask={() => {
+            // Mirror context menu Add Task behavior
+            const center = getViewportCenter()
+            const flowPosition = center
+            pushHistory()
+            const newId = `task-${Date.now()}`
+            const newNode: Node = { id: newId, type: 'task', position: flowPosition, data: { title: '', content: '', completed: false, focusOnMount: true } }
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+            showAddToast('added', 1)
+            setTimeout(() => { try { setEditNodeId(newId); centerOnNodeIds([newId], { align: 'midLeft' }) } catch {} }, 0)
+          }}
+          onAddHeadline={() => {
+            const center = getViewportCenter()
+            pushHistory()
+            const newId = `headline-${Date.now()}`
+            const newNode: Node = { id: newId, type: 'headline', position: center, data: { title: 'New headline', titleSize: 'sm' } as any }
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+            showAddToast('added', 1)
+            setTimeout(() => { try { setEditNodeId(newId); centerOnNodeIds([newId], { align: 'midLeft' }) } catch {} }, 0)
+          }}
                 onReorganize={() => setShowReorganizeMenu(true)}
                 aiInitialized={aiInitialized}
                 nodeCount={nodes.length}
@@ -2854,10 +2835,12 @@ function BoardContent({
         onClose={() => setShowReorganizeMenu(false)}
         nodeCount={nodes.length}
       />
-      {quickAiGenerating && (
-        <div className="fixed left-1/2 -translate-x-1/2 top-6 z-[900] px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+      {(quickAiGenerating || creatingBoard) && (
+        <div className="fixed inset-0 z-[900] flex items-center justify-center">
+          <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
           <SpinnerGap className="animate-spin" size={16} />
-          <span>Generating nodes…</span>
+          <span>{creatingBoard ? 'Creating board…' : 'Generating nodes…'}</span>
+          </div>
         </div>
       )}
       <Toast open={toastOpen} onClose={() => setToastOpen(false)} variant="success" position="top-center">
