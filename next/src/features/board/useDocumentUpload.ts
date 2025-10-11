@@ -109,8 +109,19 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
               setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
             }
           } else {
-            setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, status: 'ready' } } : n))
-            console.log('[Upload] no extractable text, marked ready', { nodeId })
+            // Fallback: provide a brief summary so the node shows content even without extraction
+            const fallbackSummary = (() => {
+              const nameOnly = (file.name || 'Document').replace(/\.[^.]+$/, '')
+              if (file.type.includes('pdf') || /\.pdf$/i.test(file.name)) {
+                return `PDF uploaded: ${nameOnly}. Preview available; text extraction disabled.`
+              }
+              if (file.type.includes('word') || file.type.includes('document') || /\.(docx?|rtf)$/i.test(file.name)) {
+                return `Document uploaded: ${nameOnly}.`
+              }
+              return `${nameOnly}`
+            })()
+            setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, content: fallbackSummary, status: 'ready' } } : n))
+            console.log('[Upload] no extractable text, showing fallback summary', { nodeId })
           }
         } catch (error: any) {
           setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, extractedText: `Text extraction failed: ${error?.message || 'Unknown error'}`, status: 'error' } } : n))

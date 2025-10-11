@@ -48,6 +48,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const [showMobilePlayer, setShowMobilePlayer] = useState(false)
   const mobileVideoRef = useRef<HTMLVideoElement | null>(null)
   const [embedHtml, setEmbedHtml] = useState<string | null>(null)
+  const expandedVideoRef = useRef<HTMLVideoElement | null>(null)
 
   const isLocked = false
   const isLockedByMe = false
@@ -111,7 +112,22 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         }
         const title = (json?.title as string) || data.title || 'Video'
         const thumb = (json?.thumbnail_url as string) || ''
-        setEmbedHtml(typeof json?.html === 'string' ? json.html : null)
+        if (typeof json?.html === 'string') {
+          let html = json.html as string
+          try {
+            const m = html.match(/src="([^"]+)"/i)
+            if (m && m[1]) {
+              const u = new URL(m[1])
+              // Add autoplay params; let sound play since user initiated expand
+              u.searchParams.set('autoplay', '1')
+              u.searchParams.set('playsinline', '1')
+              html = html.replace(m[1], u.toString())
+            }
+          } catch {}
+          setEmbedHtml(html)
+        } else {
+          setEmbedHtml(null)
+        }
         // Try to fetch favicon for the video page (host domain)
         let faviconUrl: string | undefined
         try {
@@ -213,7 +229,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   const effectiveVideoUrl = (signedVideoUrl || data.videoUrl || '') as string
   const videoId = extractYouTubeId(effectiveVideoUrl)
-  const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0` : ''
+  const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&playsinline=1` : ''
   const isMp4 = !videoId && typeof effectiveVideoUrl === 'string' && /\.mp4($|\?)/i.test(effectiveVideoUrl)
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
@@ -308,9 +324,12 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
                 {inView ? (
                   <video
+                    ref={expandedVideoRef}
                     width={800}
                     height={450}
                     controls
+                    autoPlay
+                    playsInline
                     preload="metadata"
                     poster={signedThumbUrl || data.thumbnailUrl}
                     src={effectiveVideoUrl}

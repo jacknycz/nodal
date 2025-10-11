@@ -476,10 +476,7 @@ class SupabaseStorage {
         console.error('Document not found or access denied:', dbError)
         return null
       }
-
-      // Prefer public URL (works when bucket is public); fallback to signed
-      const pub = supabase.storage.from('documents').getPublicUrl(String(docData.file_path))
-      if (pub?.data?.publicUrl) return pub.data.publicUrl
+      // Always use a time-limited signed URL to avoid 400s on non-public buckets
       const { data: signedUrl, error: urlError } = await supabase.storage
         .from('documents')
         .createSignedUrl(String(docData.file_path), 86400)
@@ -512,8 +509,6 @@ class SupabaseStorage {
   // Create or refresh a signed URL for an arbitrary storage path
   async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 86400): Promise<string | null> {
     try {
-      const pub = supabase.storage.from('documents').getPublicUrl(String(filePath))
-      if (pub?.data?.publicUrl) return pub.data.publicUrl
       const { data: signedUrl, error } = await supabase.storage
         .from('documents')
         .createSignedUrl(String(filePath), expiresInSeconds)

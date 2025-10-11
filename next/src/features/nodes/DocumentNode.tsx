@@ -115,7 +115,22 @@ export default function DocumentNode({
     data.fileName?.match(/\.(doc|docx|txt|md|csv|json)$/i)
   )
 
-  const hasContent = typeof data.content === 'string' && data.content.trim().length > 0
+  const toPlain = (html: string): string => {
+    try {
+      const div = document.createElement('div')
+      div.innerHTML = html
+      return (div.textContent || div.innerText || '').trim()
+    } catch { return html }
+  }
+
+  const rawContent = (() => {
+    const c = typeof data.content === 'string' && data.content.trim().length > 0 ? data.content : ''
+    if (c) return c
+    const extracted = (data as any)?.extractedText || (data as any)?.extracted_text || ''
+    return typeof extracted === 'string' ? extracted : ''
+  })()
+  const plainContent = rawContent ? toPlain(rawContent) : ''
+  const hasContent = plainContent.length > 0
 
   // Focus removed
 
@@ -269,13 +284,35 @@ export default function DocumentNode({
           <span className="text-2xl">{getFileIcon()}</span>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-              {data.fileName || 'Untitled Document'}
+              {data.title || data.fileName || 'Untitled Document'}
             </h3>
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <span>{formatFileSize(data.fileSize)}</span>
               <span>•</span>
               <span>{data.fileType || 'Unknown type'}</span>
             </div>
+          </div>
+          <div className="flex items-center gap-1 ml-2">
+            {isPDF && (signedPreviewUrl || data.previewUrl) && (
+              <IconButton
+                aria-label="Open PDF"
+                size="small"
+                variant="secondaryGhost"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShowPreview(true) }}
+              >
+                <FrameCorners className="w-4 h-4" />
+              </IconButton>
+            )}
+            {(signedPreviewUrl || data.previewUrl) && (
+              <IconButton
+                aria-label="Download"
+                size="small"
+                variant="secondaryGhost"
+                onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDownload() }}
+              >
+                <Download className="w-4 h-4" />
+              </IconButton>
+            )}
           </div>
           
         </div>
@@ -295,7 +332,7 @@ export default function DocumentNode({
         {/* Document description */}
         {hasContent && (
           <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-            {data.content!.length > 280 ? `${data.content!.slice(0, 280)}…` : data.content}
+            {plainContent.length > 280 ? `${plainContent.slice(0, 280)}…` : plainContent}
           </div>
         )}
       </div>

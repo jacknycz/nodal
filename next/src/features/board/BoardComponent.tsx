@@ -774,12 +774,36 @@ function BoardContent({
             onBoardStateChange(boardName, 'saved', false)
           }
           // console.log('✅ Blank board created and saved:', boardName)
+          // Always create and persist a topic node immediately so the board is interactive
+          const topicNodeId = `topic-${boardId}`
+          const topicNode = {
+            id: topicNodeId,
+            type: 'default' as const,
+            position: { x: 500, y: 400 },
+            data: { title: pendingBoardBrief.boardTopic, content: '' },
+          }
+          setNodes((prev) => {
+            const list = Array.isArray(prev) ? prev : []
+            const exists = list.some((n: any) => n.id === topicNodeId)
+            return exists ? list : [topicNode, ...list]
+          })
+          await boardStorage.updateBoard(boardId, {
+            nodes: [topicNode],
+            edges: [],
+            viewport: reactFlowInstance.getViewport(),
+            topic: pendingBoardBrief.boardTopic || null,
+            colorgories: useBoardStore.getState().colorgories || []
+          })
           // If startWithAI is true, now generate AI nodes to update the same board
           if (pendingBoardBrief.startWithAI) {
             // console.log('🤖 Starting AI generation for board ID:', boardId)
             await generateStarterNodes(pendingBoardBrief, boardId)
+            setCreatingBoard(false)
+          } else {
+            // No AI/starters: navigate immediately to the board now that topic exists
+            setCreatingBoard(false)
+            router.push(`/board/${boardId}`)
           }
-          setCreatingBoard(false)
         } catch (error) {
           // console.error('Failed to create blank board:', error)
           // Save state handled by autosave hook
@@ -2439,6 +2463,30 @@ function BoardContent({
             />
           )
         }
+        if (n.type === 'document') {
+          const initialTitle = d.title || d.fileName || 'Document'
+          const initialContent = d.content || ''
+          return (
+            <NodeEditModal
+              open={true}
+              onClose={handleCloseEditModal}
+              initialTitle={initialTitle}
+              initialContent={initialContent}
+              initialColorgoryIds={d.colorgoryIds || []}
+              initialTitleSize={(d.titleSize as any) || 'sm'}
+              onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
+              onSave={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize } } : nn) : nds))
+                centerOnNodeIds([editNodeId!])
+              }}
+              onLiveChange={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds, titleSize } } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds, titleSize })
+              }}
+              showTitleSize={true}
+            />
+          )
+        }
         if (n.type === 'task') {
           const initialTitle = (d.title ?? '')
           const initialContent = (d.content ?? '')
@@ -2877,7 +2925,7 @@ function BoardContent({
         nodeCount={nodes.length}
       />
       {(quickAiGenerating || creatingBoard) && (
-        <div className="fixed inset-0 z-[900] flex items-center justify-center">
+        <div className="fixed inset-0 z-[900] flex items-center justify-center pointer-events-none">
           <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
           <SpinnerGap className="animate-spin" size={16} />
           <span>{creatingBoard ? 'Creating board…' : 'Generating nodes…'}</span>

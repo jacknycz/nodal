@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardBrief } from '../features/board/boardTypes'
 import Modal from './ui/Modal'
@@ -28,6 +28,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [starterNodes, setStarterNodes] = useState<string[]>([])
   const [generateDescriptionsForStarter, setGenerateDescriptionsForStarter] = useState(true)
   const [generateStarterNodes, setGenerateStarterNodes] = useState(false)
+  const titleInputRef = useRef<HTMLInputElement | null>(null)
 
   // Generate a new board ID when modal opens
   React.useEffect(() => {
@@ -51,6 +52,17 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       setGenerateStarterNodes(false)
     }
   }, [starterNodes, generateStarterNodes])
+
+  // Focus the Title field when entering Step 3
+  useEffect(() => {
+    if (isOpen && currentStep === 3) {
+      // Slight delay to allow the input to mount
+      const t = setTimeout(() => {
+        try { titleInputRef.current?.focus() } catch {}
+      }, 0)
+      return () => clearTimeout(t)
+    }
+  }, [isOpen, currentStep])
 
   const handleNextStep = () => {
     if (currentStep === 1) {
@@ -200,6 +212,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           placeholder="e.g., My Project Ideas, Research Notes..."
           fullWidth
           required
+          ref={titleInputRef}
           description="This is the name of your board and how it appears in your board list."
         />
       </div>
