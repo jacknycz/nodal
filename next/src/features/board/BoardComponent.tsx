@@ -588,7 +588,7 @@ function BoardContent({
         const padding = 60
         const rowY = topicNode.position.y + (cellWidth - 100)
         const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-        let startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+        const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
         const generatedNodes = brief.starterNodes.map((title, index) => {
           const position = { x: startX + index * (cellWidth + padding), y: rowY }
           return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: descriptionsByTitle[title] || '' } }
@@ -636,7 +636,7 @@ function BoardContent({
             const padding = 60
             const rowY = topicNode.position.y + (cellWidth - 100)
             const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-            let startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+            const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
             const generatedNodes = nodesToPlace.map((n: any, index: number) => {
               const position = { x: startX + index * (cellWidth + padding), y: rowY }
               return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
