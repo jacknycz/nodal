@@ -79,10 +79,15 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
           if (file.type.includes('pdf')) {
             try {
               const resp = await fetch('/api/documents/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ signedUrl, fileName: file.name, fileType: file.type }) })
-              if (!resp.ok) throw new Error(`Extraction request failed (${resp.status})`)
-              const json = await resp.json()
-              if (typeof json?.extractedText === 'string' && json.extractedText.length > 0) extractedText = json.extractedText
+              if (resp.ok) {
+                const json = await resp.json()
+                if (typeof json?.extractedText === 'string') extractedText = json.extractedText
+              }
             } catch {}
+            if (!extractedText) {
+              const { extractTextFromFile } = await import('../storage/textExtractor')
+              extractedText = await extractTextFromFile(file, file.type, file.name)
+            }
           } else {
             const { extractTextFromFile } = await import('../storage/textExtractor')
             extractedText = await extractTextFromFile(file, file.type, file.name)

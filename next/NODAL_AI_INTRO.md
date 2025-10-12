@@ -71,7 +71,7 @@
 
 - **AI Context System**: Provided via React context (`aiContext.tsx`), available throughout the app.
 - **Node AI**: AI-powered node generation, content suggestions, and brainstorming.
-- **Document Processing**: Uploaded files are processed for text extraction and vectorization for AI context.
+- **Document Processing**: Uploaded files are processed for text extraction and vectorization for AI context. For PDFs, we extract text via a server route using `pdf-parse` (Node runtime) with a client-side `pdf.js` fallback; extracted text is persisted and used throughout the app (including chat context).
 - **Pre-Session Chat**: Users can interact with AI before board creation to refine their goals.
 - **Multi-Turn Memory**: AI maintains context across conversation turns using a message buffer.
 - **Context-Aware Suggestions**: AI provides relevant suggestions based on current board state and user history.
@@ -399,6 +399,53 @@ next/src/
   - **Streaming fix**: Fixed streaming handling in `next/src/features/ai/useUnifiedAI2.ts` and `next/src/features/ai/aiService.ts` to avoid duplicated output when providers emit full accumulated content per chunk; deltas are appended and full-content chunks replace the assistant message.
   - **System prompt relaxed**: The AI system prompt was simplified to provide minimal app grounding (nodes/edges/board context) and no editorial length/format restrictions.
   - **Model updates**: Added `gpt-5` and `gpt-5-mini` to the selectable models and model metadata (`next/src/features/ai/models.ts`, `aiTypes.ts`, `aiConfig.ts`, `aiService.ts`).
+
+### Latest Updates (October 2025)
+
+- **Menus & BoardCard**
+  - Fixed More menu trigger (pointer events) and portal rendering to avoid clipping under `content-visibility: auto` containers; added first/last item rounded corners and removed initial zoom-in artifact for portal menus.
+  - BoardCard uses a More menu with icons; "Edit" renamed to "Board Settings"; integrated a shared `BoardSettingsModal` used by both `BoardCard` and `Topbar`.
+  - Menu placement option added to open above the trigger when needed; hover styles corrected for `IconButton` variants.
+
+- **Board Settings & Title Sync**
+  - Created `BoardSettingsModal` (title/topic/edge type/members). Title input disabled for non-owners.
+  - Fixed board title save and ensured UI updates immediately via a global `nodal:board-name-updated` event; `Topbar` listens and updates state accordingly, persisting across refresh.
+
+- **Board Creation Flow**
+  - Reworked `BoardSetupModal` into 3 steps (Topic+Description → Starters/Generate options → Title+Summary); auto-focuses title field when entering step 3.
+  - Added "Generate Starter Nodes" and "Generate AI Descriptions" logic with visibility rules; ensured the original topic node never receives a generated description.
+  - Always create and persist a topic node immediately on board creation, even with no starters/AI; removed pointer-event blocking from the creating HUD.
+  - New boards use tiered row placement for starter nodes (consistent with reorg layout); improved loading UX during creation.
+
+- **Viewport & Editing**
+  - Editing any node centers viewport with the node’s left edge at horizontal mid and remains vertically centered (`align: 'midLeft'`). Applied to default/link/image/task/video/headline.
+  - Right-click context menu mediates edit actions; direct inline edit buttons removed where not desired.
+
+- **Paste & Drag-and-Drop Guards**
+  - Implemented a guard to prevent pasting/dropping more than one item at a time; shows a modal warning instead of spawning many nodes.
+
+- **FAB & LeftDock**
+  - FAB gained "Add Task" and "Add Headline" actions wired to create nodes and center viewport. LeftDock panels now animate open/close subtly.
+
+- **Task Node Overhaul**
+  - Required title; optional description; checkbox and title inline with description full width below.
+  - Assignment added with "Unassigned" default; small assignee avatar with initials/tooltip on the node.
+  - TaskList shows an "Only my tasks" filter (when multiple members) and uses a Pen icon to edit + zoom to the node.
+
+- **Document (PDF) Nodes**
+  - Restored PDF viewing: added "Open PDF" action that launches a resizable `PDFPreviewModal` (iframe-based, toolbar/nav hidden; pan/zoom supported in prior session).
+  - Title display prefers `data.title` over filename; node preview description shows plain text (HTML stripped) and falls back to `extractedText` if `content` is empty.
+  - Context-menu "Edit Node" opens `NodeEditModal` for live title/description edits; title size controls enabled and persisted.
+  - Storage improvements: always use time-limited signed URLs for documents and variants to avoid 400s on non-public buckets.
+  - Text extraction: Added `/api/documents/extract` (Node runtime) using `pdf-parse` with a client-side `pdf.js` fallback. On upload, we persist `extractedText` and generate a concise AI summary used as node content.
+
+- **Chat Integration with Documents**
+  - Chat context builder now prefers `extractedText` for selected nodes (esp. PDFs), sanitizes to plain text, and trims to a safe length before sending. This enables direct Q&A like "how many years of experience does this person have?" to work reliably.
+
+- **Quality & Fixes**
+  - Fixed half-markdown artifacts during AI streaming.
+  - Fixed various TypeScript and linter issues (hook order in BoardComponent, key props in Select, robust admin/users total, upsert board members, etc.).
+
 
 ### Key Lessons from Today's Session
 

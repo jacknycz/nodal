@@ -4,20 +4,34 @@
 
 /**
  * Extract text from PDF files using PDF.js (dynamic import)
- * Temporarily disabled due to SSR issues
  */
 export async function extractTextFromPDF(file: Blob): Promise<string> {
   try {
-    console.log('📄 PDF text extraction temporarily disabled due to compatibility issues')
-    
-    // For now, return a simple message indicating PDF processing is disabled
-    return `PDF file "${file.type}" uploaded successfully. 
-    
-Text extraction from PDFs is temporarily disabled due to technical issues.
-The file has been uploaded and can be previewed using the preview button.
+    // Client-side fallback: PDF.js in browser with worker
+    try {
+      const pdfjsLib: any = await import('pdfjs-dist/legacy/build/pdf.mjs')
+      try {
+        if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+        }
+      } catch {}
+      const arrayBuffer = await file.arrayBuffer()
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+      const pdf = await loadingTask.promise
+      let combined = ''
+      const maxPages = Math.min(pdf.numPages || 0, 50)
+      for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+        const page = await pdf.getPage(pageNum)
+        const textContent = await page.getTextContent()
+        const pageText = (textContent.items || [])
+          .map((item: any) => (item && typeof item.str === 'string' ? item.str : ''))
+          .join(' ')
+        if (pageText && pageText.trim()) combined += (combined ? '\n\n' : '') + pageText.trim()
+      }
+      return combined.replace(/\s+/g, ' ').trim()
+    } catch {}
 
-File size: ${(file.size / 1024).toFixed(1)} KB`
-    
+    return ''
   } catch (error) {
     console.error('❌ PDF text extraction failed:', error)
     return ''

@@ -186,8 +186,12 @@ export default function ChatPanel2() {
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map((n: any) => {
         const title = n?.data?.title || 'Untitled Node'
-        const raw = n?.data?.content || n?.data?.extractedText || (n?.data as any)?.extracted_text || ''
-        const content = (raw || '').toString()
+        // Prefer extractedText for documents (PDFs), then fallback to content
+        const extractedRaw = n?.data?.extractedText || (n?.data as any)?.extracted_text || ''
+        const raw = extractedRaw || n?.data?.content || ''
+        let content = getPlainText(String(raw || ''))
+        const MAX = 4000 // trim long docs to keep prompts efficient
+        if (content.length > MAX) content = content.slice(0, MAX)
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
       }).join('\n\n')
 
