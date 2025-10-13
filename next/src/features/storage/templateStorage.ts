@@ -12,6 +12,7 @@ export interface TemplateRecord {
   nodeCount: number
   edgeCount: number
   published?: boolean
+  welcome?: boolean
 }
 
 class TemplateStorage {
@@ -56,6 +57,7 @@ class TemplateStorage {
       nodeCount: t.node_count as number,
       edgeCount: t.edge_count as number,
       published: !!t.published,
+      welcome: !!t.welcome,
     }))
   }
 
@@ -78,6 +80,7 @@ class TemplateStorage {
       nodeCount: Number(data.node_count || 0),
       edgeCount: Number(data.edge_count || 0),
       published: !!data.published,
+      welcome: !!data.welcome,
     }
   }
 
@@ -92,7 +95,7 @@ class TemplateStorage {
     if (error) throw error
   }
 
-  async updateTemplate(id: string, updates: { name?: string; description?: string | null; data?: BoardData; coverUrl?: string | null; published?: boolean }): Promise<TemplateRecord> {
+  async updateTemplate(id: string, updates: { name?: string; description?: string | null; data?: BoardData; coverUrl?: string | null; published?: boolean; welcome?: boolean }): Promise<TemplateRecord> {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) throw new Error('User not authenticated')
 
@@ -101,20 +104,44 @@ class TemplateStorage {
     if (typeof updates.description !== 'undefined') payload.description = updates.description
     if (typeof updates.coverUrl !== 'undefined') payload.cover_url = updates.coverUrl
     if (typeof updates.published !== 'undefined') payload.published = updates.published
+    if (typeof updates.welcome !== 'undefined') payload.welcome = updates.welcome
     if (typeof updates.data !== 'undefined') {
       payload.data = updates.data
       payload.node_count = updates.data.nodes.length
       payload.edge_count = updates.data.edges.length
     }
 
-    const { data, error } = await supabase
-      .from('templates')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single()
+    const runUpdate = async (p: any) => {
+      const { data, error } = await supabase
+        .from('templates')
+        .update(p)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    }
 
-    if (error) throw error
+    let data: any
+    try {
+      data = await runUpdate(payload)
+    } catch (e: any) {
+      // Graceful fallback if 'welcome' column doesn't exist in DB yet
+      const includeWelcome = Object.prototype.hasOwnProperty.call(payload, 'welcome')
+      const msg = String(e?.message || e)
+      if (includeWelcome) {
+        try {
+          const { welcome, ...withoutWelcome } = payload
+          data = await runUpdate(withoutWelcome)
+          // eslint-disable-next-line no-console
+          console.warn('[templateStorage] welcome flag not persisted (missing column). Applied other updates.')
+        } catch (e2) {
+          throw e2
+        }
+      } else {
+        throw e
+      }
+    }
     return {
       id: String(data.id),
       name: String(data.name || ''),
@@ -126,6 +153,7 @@ class TemplateStorage {
       nodeCount: Number(data.node_count || 0),
       edgeCount: Number(data.edge_count || 0),
       published: !!data.published,
+      welcome: !!data.welcome,
     }
   }
 }

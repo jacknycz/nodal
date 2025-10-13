@@ -6,9 +6,10 @@ interface TooltipProps {
   content: React.ReactNode
   children: React.ReactNode
   side?: 'top' | 'bottom'
+  open?: boolean
 }
 
-export default function Tooltip({ content, children, side = 'top' }: TooltipProps) {
+export default function Tooltip({ content, children, side = 'top', open = false }: TooltipProps) {
   const isTop = side === 'top'
   return (
     <div className="relative inline-flex items-center group/tt">
@@ -16,7 +17,7 @@ export default function Tooltip({ content, children, side = 'top' }: TooltipProp
       <div
         className={[
           'pointer-events-none absolute whitespace-nowrap rounded-md px-2 py-1 text-xs text-white bg-gray-900 shadow-lg transition-opacity duration-150 z-50',
-          'opacity-0 group-hover/tt:opacity-100',
+          open ? 'opacity-100' : 'opacity-0 group-hover/tt:opacity-100',
           isTop ? '-top-8 left-1/2 -translate-x-1/2' : 'top-full mt-2 left-1/2 -translate-x-1/2',
         ].join(' ')}
         role="tooltip"

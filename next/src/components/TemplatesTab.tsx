@@ -36,6 +36,7 @@ export default function TemplatesTab({
   const [editCoverUrl, setEditCoverUrl] = React.useState('')
   const [editDescription, setEditDescription] = React.useState('')
   const [editPublished, setEditPublished] = React.useState(false)
+  const [editWelcome, setEditWelcome] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [uploadingCover, setUploadingCover] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement | null>(null)
@@ -70,6 +71,7 @@ export default function TemplatesTab({
     setEditCoverUrl(tpl.coverUrl || '')
     setEditDescription(tpl.description || '')
     setEditPublished(!!tpl.published)
+    setEditWelcome(!!tpl.welcome)
     setEditOpen(true)
   }
 
@@ -77,7 +79,7 @@ export default function TemplatesTab({
     if (!editId) return
     try {
       setSaving(true)
-      const updated = await templateStorage.updateTemplate(editId, { name: editName, description: editDescription || null, coverUrl: editCoverUrl || null, published: editPublished })
+      const updated = await templateStorage.updateTemplate(editId, { name: editName, description: editDescription || null, coverUrl: editCoverUrl || null, published: editPublished, welcome: editWelcome } as any)
       setTemplates(prev => prev.map((p: any) => p.id === editId ? updated : p))
       setEditOpen(false)
     } catch {
@@ -123,7 +125,16 @@ export default function TemplatesTab({
               No templates yet.
             </div>
           ) : (
-            (filteredTemplates.slice(0, visibleCount)).map((t: any) => {
+            (filteredTemplates
+              .slice(0, visibleCount)
+              .sort((a: any, b: any) => {
+                // Welcome templates come first
+                const aw = a?.welcome ? 1 : 0
+                const bw = b?.welcome ? 1 : 0
+                if (aw !== bw) return bw - aw
+                return 0
+              })
+            ).map((t: any) => {
               const admin = adminView
               const footer = (
                 <>
@@ -160,20 +171,21 @@ export default function TemplatesTab({
                   </Button>
                 </>
               )
+              const highlightWelcome = !!t.welcome
               return (
-                <TemplateCard
-                  key={t.id}
-                  id={t.id}
-                  name={t.name}
-                  nodeCount={t.nodeCount}
-                  edgeCount={t.edgeCount}
-                  coverUrl={t.coverUrl}
-                  description={t.description}
-                  published={admin ? t.published : undefined}
-                  admin={admin}
-                  // Show cover and description under the counts
-                  // We wedge in via name by appending description visually below using a custom footer
-                  onLoad={async () => {
+                <div key={t.id} className={highlightWelcome ? 'border-2 border-tertiary-500 rounded-xl' : undefined}>
+                  <TemplateCard
+                    id={t.id}
+                    name={t.name}
+                    nodeCount={t.nodeCount}
+                    edgeCount={t.edgeCount}
+                    coverUrl={t.coverUrl}
+                    description={t.description}
+                    published={admin ? t.published : undefined}
+                    admin={admin}
+                    // Show cover and description under the counts
+                    // We wedge in via name by appending description visually below using a custom footer
+                    onLoad={async () => {
                     try {
                       const newName = `${t.name} (copy)`
                       const { boardStorage } = await import('../features/storage/storage')
@@ -188,17 +200,18 @@ export default function TemplatesTab({
                       alert('Failed to use template')
                     }
                   }}
-                  onRename={admin ? async (newName) => {
+                    onRename={admin ? async (newName) => {
                     try {
                       const updated = await templateStorage.updateTemplate(t.id, { name: newName })
                       setTemplates(prev => prev.map((p: any) => p.id === t.id ? updated : p))
                     } catch {
                       alert('Failed to rename template')
                     }
-                  } : undefined}
-                  enableSharing={false}
-                  footerActions={footer}
-                />
+                    } : undefined}
+                    enableSharing={false}
+                    footerActions={footer}
+                  />
+                </div>
               )
             })
           )}
@@ -268,9 +281,15 @@ export default function TemplatesTab({
             <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
           </div>
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <input id="tpl-published" type="checkbox" checked={editPublished} onChange={(e) => setEditPublished(e.target.checked)} />
-              <label htmlFor="tpl-published" className="text-sm text-gray-700 dark:text-gray-300">Published</label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input id="tpl-published" type="checkbox" checked={editPublished} onChange={(e) => setEditPublished(e.target.checked)} />
+                <label htmlFor="tpl-published" className="text-sm text-gray-700 dark:text-gray-300">Published</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input id="tpl-welcome" type="checkbox" checked={editWelcome} onChange={(e) => setEditWelcome(e.target.checked)} />
+                <label htmlFor="tpl-welcome" className="text-sm text-gray-700 dark:text-gray-300">Welcome Board</label>
+              </div>
             </div>
             <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
           </div>

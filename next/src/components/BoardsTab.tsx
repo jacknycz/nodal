@@ -83,7 +83,7 @@ export default function BoardsTab({
           <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
             {sortedBoards.length === 0 ? (
               <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                No boards found. Create a new board to get started!
+                No boards found - go to the templates tab to start with the Welcome Board!
               </div>
             ) : (
               (sortedBoards).map((board: any) => (

@@ -62,6 +62,9 @@ function WelcomeContent() {
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   This intro is being forced on you. We apologize. It’ll be quick, painless, and yes — you get cool things out of it.
                 </motion.p>
+                <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  We're in <Tag variant="beta">beta</Tag> - if you find any issues, please let us know! <br/>(<span className="underline text-tertiary-700 dark:text-tertiary-200">feedback</span> button in the top right)
+                </motion.p>
                 <motion.div variants={itemVariants} className="flex justify-center mt-12">
                   <Button variant="primary" size="lg" onClick={next}>Next</Button>
                 </motion.div>
@@ -91,7 +94,7 @@ function WelcomeContent() {
                   This is your dashboard. (Get it??) It's where your boards, templates, updates, and some fun stuff live.
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex justify-center mb-4">
-                  <Image src="/welcome/board-room.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-60 rounded-lg shadow-lg" />
+                  <Image src="/welcome/board-room.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-60" />
                 </motion.div>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
@@ -109,9 +112,9 @@ function WelcomeContent() {
                   Confused? That's fair - we've go an intro board in just a second that should help.
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex justify-center mb-4 gap-6">
-                  <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
-                  <Image src="/welcome/image-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
-                  <Image src="/welcome/document-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40 rounded-lg shadow-lg" />
+                  <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
+                  <Image src="/welcome/image-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
+                  <Image src="/welcome/document-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
                 </motion.div>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
@@ -123,7 +126,7 @@ function WelcomeContent() {
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">share with friends</motion.h2>
                 <motion.div variants={itemVariants} className="flex justify-center mb-4">
-                  <Image src="/welcome/share-nodal.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-md rounded-lg shadow-lg" />
+                  <Image src="/welcome/share-nodal.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-md" />
                 </motion.div>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Share your boards with friends and family. Or enemies. Very flexible.
