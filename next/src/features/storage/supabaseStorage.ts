@@ -46,6 +46,25 @@ class SupabaseStorage {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
+      // Enforce unique board name per user
+      try {
+        const { data: exist } = await supabase
+          .from('boards')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('name', name)
+          .limit(1)
+          .maybeSingle()
+        if (exist && (exist as any).id) {
+          const err = new Error('A board with that name already exists.');
+          ;(err as any).code = 'BOARD_NAME_TAKEN'
+          throw err
+        }
+      } catch (e: any) {
+        if ((e as any)?.code === 'BOARD_NAME_TAKEN') throw e
+        // proceed on select failure; server will enforce unique if desired
+      }
+
       // compute lightweight task summary
       const taskSummary = Array.isArray((data as any).nodes)
         ? (data as any).nodes
@@ -273,6 +292,23 @@ class SupabaseStorage {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
+
+      // Enforce unique name per user on rename
+      try {
+        const { data: existList } = await supabase
+          .from('boards')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .eq('name', newName)
+        const existsOther = Array.isArray(existList) && existList.some((b: any) => String(b.id) !== String(boardId))
+        if (existsOther) {
+          const err = new Error('A board with that name already exists.');
+          ;(err as any).code = 'BOARD_NAME_TAKEN'
+          throw err
+        }
+      } catch (e: any) {
+        if ((e as any)?.code === 'BOARD_NAME_TAKEN') throw e
+      }
 
       const { error } = await supabase
         .from('boards')

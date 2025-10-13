@@ -20,8 +20,23 @@ class TemplateStorage {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth.user) throw new Error('User not authenticated')
 
+    // Auto-suffix duplicate template names for this user (1, 2, ...)
+    let finalName = name
+    try {
+      const { data: existing } = await supabase
+        .from('templates')
+        .select('name')
+        .eq('created_by', auth.user.id)
+      const existingNames = new Set((existing || []).map((t: any) => String(t.name)))
+      if (existingNames.has(finalName)) {
+        let i = 1
+        while (existingNames.has(`${name} ${i}`)) i += 1
+        finalName = `${name} ${i}`
+      }
+    } catch {}
+
     const payload = {
-      name,
+      name: finalName,
       description: description || null,
       data,
       created_at: Date.now(),
@@ -100,7 +115,26 @@ class TemplateStorage {
     if (!auth.user) throw new Error('User not authenticated')
 
     const payload: any = {}
-    if (typeof updates.name !== 'undefined') payload.name = updates.name
+    if (typeof updates.name !== 'undefined') {
+      // Prevent exact duplicate name on same user by auto-suffixing
+      let desired = updates.name
+      try {
+        const { data: auth } = await supabase.auth.getUser()
+        if (auth.user) {
+          const { data: existing } = await supabase
+            .from('templates')
+            .select('id,name')
+            .eq('created_by', auth.user.id)
+          const existingNames = new Set((existing || []).filter((t: any) => String(t.id) !== id).map((t: any) => String(t.name)))
+          if (existingNames.has(desired)) {
+            let i = 1
+            while (existingNames.has(`${desired} ${i}`)) i += 1
+            desired = `${desired} ${i}`
+          }
+        }
+      } catch {}
+      payload.name = desired
+    }
     if (typeof updates.description !== 'undefined') payload.description = updates.description
     if (typeof updates.coverUrl !== 'undefined') payload.cover_url = updates.coverUrl
     if (typeof updates.published !== 'undefined') payload.published = updates.published
