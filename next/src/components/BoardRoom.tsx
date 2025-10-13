@@ -268,12 +268,17 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   const handleDelete = async (boardId: string) => {
+    // Show loader immediately; delete can take a second
+    setLoading(true)
     try {
       const { boardStorage } = await import('../features/storage/storage')
       await boardStorage.deleteBoard(boardId)
       await loadBoards()
     } catch {
       setError('Failed to delete board')
+    } finally {
+      // loadBoards() toggles loading as well; ensure it's not stuck
+      setLoading(false)
     }
   }
 
@@ -441,7 +446,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
           {/* TAB 2 */}
           <Tab
-            label={
+            label="templates"
+            headerLabel={
               <div className="relative inline-flex items-center">
                 {canShowTemplatesHint ? (
                   <Tooltip content="Start here!" side="top" open>

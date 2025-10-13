@@ -89,6 +89,22 @@ export default function TemplatesTab({
     }
   }
 
+  const handleDeleteTemplate = async () => {
+    if (!editId) return
+    const confirm = window.confirm('Delete this template? This cannot be undone.')
+    if (!confirm) return
+    try {
+      setSaving(true)
+      await templateStorage.deleteTemplate(editId)
+      setTemplates(prev => prev.filter((p: any) => p.id !== editId))
+      setEditOpen(false)
+    } catch {
+      alert('Failed to delete template')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleEditBoard = async () => {
     if (!editId) return
     const tpl = templates.find((x: any) => x.id === editId)
@@ -226,6 +242,9 @@ export default function TemplatesTab({
         description="Update template details. Use Edit Template Board to modify the underlying board."
         actions={
           <>
+            <div className="flex-1 text-left">
+              <Button variant="dangerGhost" onClick={handleDeleteTemplate} disabled={saving}>Delete</Button>
+            </div>
             <Button variant="secondary" onClick={() => setEditOpen(false)}>Cancel</Button>
             <Button onClick={handleSaveEdit} loading={saving} disabled={saving}>Save Changes</Button>
           </>

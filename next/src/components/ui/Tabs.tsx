@@ -4,7 +4,10 @@ import { ChatCircleDots, Lightbulb, Gear } from "@phosphor-icons/react";
 type TabChildren = ReactNode | ((opts: { isActive?: boolean }) => ReactNode)
 
 type TabProps = {
+  // String key used for routing/path and internal identification
   label: string;
+  // Optional rich header label content (e.g., with Tooltip)
+  headerLabel?: ReactNode;
   icon?: ReactNode;
   children: TabChildren;
   headerClassName?: string;
@@ -83,7 +86,9 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
             id={`tab-${idx}`}
           >
             {tab.props.icon && <span className="text-base sm:text-lg" aria-hidden="true">{tab.props.icon}</span>}
-            <span className={`${active === idx ? 'inline' : 'hidden sm:inline'}`}>{tab.props.label}</span>
+            <span className={`${active === idx ? 'inline' : 'hidden sm:inline'}`}>
+              {tab.props.headerLabel ?? tab.props.label}
+            </span>
           </button>
         ))}
       </div>
