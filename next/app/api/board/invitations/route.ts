@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     // Send email to invitee using Postmark template if configured
     const templateId = Number(process.env.POSTMARK_BOARD_INVITE_TEMPLATE_ID || 0) || 41734537
-    await sendTemplatedEmail({
+    const sendResult = await sendTemplatedEmail({
       to: emailTrim,
       templateId,
       templateModel: {
@@ -90,6 +90,17 @@ export async function POST(req: NextRequest) {
         role: inviteRole,
       },
     })
+    // eslint-disable-next-line no-console
+    console.log('[Invitations] sendTemplatedEmail result', sendResult)
+
+    // Fallback to simple email if templated send failed (e.g., invalid TemplateType)
+    if (!(sendResult as any)?.ok) {
+      const subject = `"${name}" was shared with you by ${inviterLabel}`
+      const text = `You've been invited to collaborate on "${name}"\n\nOpen the board: ${link}\n\nInvited by: ${inviterLabel}${invitedUserId ? '' : `\n\nNote: You may need to create an account with this email to access the board.`}`
+      const plain = await sendEmail({ to: emailTrim, subject, text })
+      // eslint-disable-next-line no-console
+      console.log('[Invitations] plain email fallback result', plain)
+    }
 
     return NextResponse.json({ success: true, data })
   } catch (e: any) {

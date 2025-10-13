@@ -631,21 +631,21 @@ function BoardContent({
           try {
             // Deterministic single-row placement under parent (match reorg fallback)
             const nodesToPlace = nodeDataArray.map((nodeData: any) => ({ title: nodeData.label, content: nodeData.content }))
-            const count = nodesToPlace.length
+              const count = nodesToPlace.length
             const cellWidth = 300
             const padding = 60
             const rowY = topicNode.position.y + (cellWidth - 100)
             const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
             const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
-            const generatedNodes = nodesToPlace.map((n: any, index: number) => {
+              const generatedNodes = nodesToPlace.map((n: any, index: number) => {
               const position = { x: startX + index * (cellWidth + padding), y: rowY }
-              return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
-            })
+                return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
+              })
             const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
-            setNodes([topicNode, ...generatedNodes])
-            setEdges(generatedEdges as any)
-            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-            await boardStorage.updateBoard(boardId, boardData)
+              setNodes([topicNode, ...generatedNodes])
+              setEdges(generatedEdges as any)
+              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+              await boardStorage.updateBoard(boardId, boardData)
             
           } catch (placementError) {
             // Fallback: fan around topic
@@ -1106,11 +1106,11 @@ function BoardContent({
                 setShowPasteLimitModal(true)
               } else if (validFiles.length === 1) {
                 const file = validFiles[0]
-                const flowPosition = reactFlowInstance.screenToFlowPosition({
-                  x: e.clientX,
-                  y: e.clientY,
-                })
-                handleDocumentUpload(file, flowPosition)
+                  const flowPosition = reactFlowInstance.screenToFlowPosition({
+                    x: e.clientX,
+                    y: e.clientY,
+                  })
+                  handleDocumentUpload(file, flowPosition)
                 showAddToast('added', 1)
               }
           }
@@ -2691,7 +2691,7 @@ function BoardContent({
             setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
             showAddToast('added', 1)
             setTimeout(() => { try { setEditNodeId(newId); centerOnNodeIds([newId], { align: 'midLeft' }) } catch {} }, 0)
-          }}
+                }}
                 onReorganize={() => setShowReorganizeMenu(true)}
                 aiInitialized={aiInitialized}
                 nodeCount={nodes.length}

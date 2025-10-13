@@ -39,6 +39,7 @@
     "puppeteer-core": "^24.15.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "supabase": "^2.48.3",
     "uuid": "^11.1.0",
     "y-webrtc": "^10.3.0",
     "y-websocket": "^3.0.0",
