@@ -112,27 +112,24 @@ class TemplateStorage {
     }
 
     const runUpdate = async (p: any) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('templates')
-        .update(p)
+        .update(p, { returning: 'minimal' as any })
         .eq('id', id)
-        .select()
-        .single()
       if (error) throw error
-      return data
     }
 
-    let data: any
+    let data: any | null = null
     try {
-      data = await runUpdate(payload)
+      await runUpdate(payload)
     } catch (e: any) {
       // Graceful fallback if 'welcome' column doesn't exist in DB yet
       const includeWelcome = Object.prototype.hasOwnProperty.call(payload, 'welcome')
       const msg = String(e?.message || e)
-      if (includeWelcome) {
+      if (includeWelcome && (msg.includes('welcome') || String(e?.code) === '42703' || e?.status === 400)) {
         try {
           const { welcome, ...withoutWelcome } = payload
-          data = await runUpdate(withoutWelcome)
+          await runUpdate(withoutWelcome)
           // eslint-disable-next-line no-console
           console.warn('[templateStorage] welcome flag not persisted (missing column). Applied other updates.')
         } catch (e2) {
@@ -142,19 +139,27 @@ class TemplateStorage {
         throw e
       }
     }
-    return {
-      id: String(data.id),
-      name: String(data.name || ''),
-      description: data.description as string | null,
-      coverUrl: (data.cover_url as string) || null,
-      data: data.data as BoardData,
-      createdAt: Number(data.created_at || 0),
-      createdBy: String(data.created_by || ''),
-      nodeCount: Number(data.node_count || 0),
-      edgeCount: Number(data.edge_count || 0),
-      published: !!data.published,
-      welcome: !!data.welcome,
+    // Try to fetch the updated row (separate SELECT avoids 406 from return=representation)
+    try {
+      data = await this.getTemplate(id)
+    } catch {}
+    if (!data) {
+      // As a last resort, synthesize a minimal record using provided updates
+      return {
+        id,
+        name: String((payload.name ?? '')),
+        description: (payload.description ?? null) as string | null,
+        coverUrl: (payload.cover_url ?? null) as string | null,
+        data: (payload.data ?? { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } }) as BoardData,
+        createdAt: Date.now(),
+        createdBy: '',
+        nodeCount: Number(payload.node_count ?? 0),
+        edgeCount: Number(payload.edge_count ?? 0),
+        published: !!payload.published,
+        welcome: !!payload.welcome,
+      }
     }
+    return data as TemplateRecord
   }
 }
 
