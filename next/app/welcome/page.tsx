@@ -41,8 +41,14 @@ function WelcomeContent() {
       <div className="h-full min-h-screen">
         <ProductIntro
           open={true}
-          onClose={() => router.push('/')}
-          mode="page"
+          onClose={() => {
+            try {
+              const uid = (typeof window !== 'undefined') ? (localStorage.getItem('supabase.user.id') || '') : ''
+              if (uid) localStorage.setItem(`nodal.welcome.seen.${uid}`, 'true')
+            } catch {}
+            router.push('/')
+          }}
+          mode="overlay"
           slides={[
             ({ next }) => (
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
@@ -159,7 +165,13 @@ function WelcomeContent() {
                 
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
-                  <Button variant="primary" size="lg" onClick={() => router.replace('/')}>Finish</Button>
+                  <Button variant="primary" size="lg" onClick={() => {
+                    try {
+                      const uid = (typeof window !== 'undefined') ? (localStorage.getItem('supabase.user.id') || '') : ''
+                      if (uid) localStorage.setItem(`nodal.welcome.seen.${uid}`, 'true')
+                    } catch {}
+                    router.replace('/')
+                  }}>Finish</Button>
                 </motion.div>
               </motion.div>
             ),

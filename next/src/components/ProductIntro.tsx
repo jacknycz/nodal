@@ -53,8 +53,8 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
 
   const isOverlay = mode === 'overlay'
   return (
-    <div className={isOverlay ? "fixed h-full min-h-screen w-full flex inset-0 z-[200]" : "relative h-screen w-full z-0"}>
-      <div className="absolute top-12 right-8">
+    <div className={isOverlay ? "fixed h-full min-h-screen w-full flex inset-0 z-[1000]" : "relative h-screen w-full z-0"}>
+      <div className="absolute top-12 right-8 z-10">
         <IconButton aria-label="Close intro" size="md" variant="secondaryGhost" onClick={onClose}>
           ×
         </IconButton>
@@ -83,7 +83,7 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
           </AnimatePresence>
         </div>
 
-        <div className={isOverlay ? "py-6 fixed bottom-0 inset-x-0 flex justify-center z-[300]" : "py-6 absolute bottom-0 inset-x-0 flex justify-center"}>
+        <div className={isOverlay ? "py-6 fixed bottom-0 inset-x-0 flex justify-center z-[1100]" : "py-6 absolute bottom-0 inset-x-0 flex justify-center"}>
           <div className="flex items-center gap-2">
             {Array.from({ length: total }).map((_, i) => (
               <IconButton

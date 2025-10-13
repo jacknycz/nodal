@@ -43,6 +43,24 @@ export function useSupabaseUser() {
       setUser(data.user ?? null)
       // Also log the session
       const sessionResult = await supabase.auth.getSession()
+      try {
+        if (data.user && typeof window !== 'undefined') {
+          try { localStorage.setItem('supabase.user.id', data.user.id) } catch {}
+          const key = `nodal.welcome.seen.${data.user.id}`
+          const had = localStorage.getItem('nodal.auth.hadUser') === 'true'
+          // If first time we’ve seen a real user in this browser, mark and redirect to welcome if not seen
+          if (!had) {
+            localStorage.setItem('nodal.auth.hadUser', 'true')
+          }
+          const seen = localStorage.getItem(key) === 'true'
+          if (!seen && window.location.pathname !== '/welcome') {
+            // Defer to allow app layout to mount
+            setTimeout(() => {
+              try { window.location.assign('/welcome') } catch {}
+            }, 0)
+          }
+        }
+      } catch {}
     }
     getUser()
     const { data: listener } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
