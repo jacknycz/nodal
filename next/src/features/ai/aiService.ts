@@ -412,12 +412,13 @@ export class OpenAIService {
       messages.push({ role: 'user' as const, content: prompt })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || 'https://api.openai.com/v1'
+    const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || '/api/ai'
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`
+        // The server route reads the key from server env; allow an override header if needed
+        ...(this.config.apiKey ? { 'x-openai-api-key': this.config.apiKey } : {})
       },
       body: JSON.stringify({
         model,
@@ -468,12 +469,12 @@ export class OpenAIService {
       { role: 'user' as const, content: prompt }
     ]
 
-    const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || 'https://api.openai.com/v1'
+    const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || '/api/ai'
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`
+        ...(this.config.apiKey ? { 'x-openai-api-key': this.config.apiKey } : {})
       },
       body: JSON.stringify({
         model,

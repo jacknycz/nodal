@@ -340,16 +340,18 @@ export function AIProvider({ children }: AIProviderProps) {
       try {
         // console.log('[aiContext] Loading initial AI configuration...')
         const savedConfig = await configManager.loadConfig()
-        if (savedConfig) {
-          // console.log('[aiContext] Found saved config, attempting to initialize AI service...')
+        if (savedConfig && savedConfig.apiKey) {
           const success = await initialize(savedConfig.apiKey)
-          if (success) {
-            // console.log('[aiContext] AI service initialized successfully!')
-          } else {
-            console.warn('[aiContext] Failed to initialize AI service with saved config - leaving key for manual correction')
+          if (!success) {
+            if (process.env.NODE_ENV === 'development') {
+              // Quieter in production; avoid noisy console warnings for invalid keys
+              console.debug('[aiContext] Saved API key present but failed to initialize; prompting user to update key')
+            }
           }
         } else {
-          console.log('[aiContext] No saved AI configuration found')
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('[aiContext] No saved API key')
+          }
         }
       } catch (err) {
         console.error('[aiContext] Failed to load initial AI configuration:', err)
