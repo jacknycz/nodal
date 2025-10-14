@@ -125,7 +125,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           label="Description (optional)"
           rows={3}
           fullWidth
-          description="This describes your board in a few sentences. Also gives the AI more context."
+          description="Describe your board in a few sentences. This also gives the AI more context."
         />
       </div>
     </div>
@@ -183,7 +183,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
             checked={generateStarterNodes}
             onChange={(checked) => setGenerateStarterNodes(!!checked)}
             label="Generate Starter Nodes"
-            description="Let AI create a few starter nodes for you."
+            description="Pre-populate the board - let AI create a few starter nodes for you."
           />
         </div>
       )}
@@ -213,20 +213,31 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
           fullWidth
           required
           ref={titleInputRef}
-          description="This is the name of your board and how it appears in your board list."
+          description="This is the name of your board and how it appears in your board room."
         />
       </div>
       
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Board Summary</h3>
-        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-          <div><strong>Topic:</strong> {boardTopic || 'Not specified'}</div>
-          <div><strong>Description:</strong> {description || 'Not specified'}</div>
-          <div>
-            <strong>Starter nodes:</strong> {starterNodes.length > 0
-              ? starterNodes.join(', ')
-              : (generateStarterNodes ? 'AI Generated' : 'None')}
-          </div>
+      <div className="mt-8">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Board Summary</h3>
+        <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-700">
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+              <tr className="bg-white/70 dark:bg-gray-950/50">
+                <td className="w-40 px-3 py-2 font-medium text-gray-900 dark:text-white align-top">Topic</td>
+                <td className="px-3 py-2">{boardTopic || 'Not specified'}</td>
+              </tr>
+              <tr className="bg-white/60 dark:bg-gray-950/50">
+                <td className="w-40 px-3 py-2 font-medium text-gray-900 dark:text-white align-top">Description</td>
+                <td className="px-3 py-2">{description || 'Not specified'}</td>
+              </tr>
+              <tr className="bg-white/70 dark:bg-gray-950/50">
+                <td className="w-40 px-3 py-2 font-medium text-gray-900 dark:text-white align-top">Starter nodes</td>
+                <td className="px-3 py-2">
+                  {starterNodes.length > 0 ? starterNodes.join(', ') : (generateStarterNodes ? 'AI Generated' : 'None')}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -262,7 +273,11 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       open={isOpen}
       onClose={onClose}
       title={currentStep === 1 ? "Set Up Your Board" : currentStep === 2 ? "Choose Your Starters" : "Save Your Board"}
-      description={currentStep === 1 ? "Tell us about what you want to work on" : currentStep === 2 ? "Add or generate starter nodes and optional descriptions" : "Give your board a name"}
+      description={currentStep === 1
+        ? "Tell us about what you want to work on"
+        : currentStep === 2
+          ? "Add or generate starter nodes and optional descriptions.\n(check 'Generate Starter Nodes' to pre-populate the board)"
+          : "Give your board a name"}
       className="max-w-2xl text-center"
       currentStep={currentStep - 1} // 0-indexed for the step indicator
       totalSteps={3}

@@ -143,7 +143,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
 
         {title && <h2 className="text-lg md:text-xl font-fredoka font-medium text-gray-900 dark:text-white mb-2">{title}</h2>}
-        {description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{description}</p>}
+        {description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line">{description}</p>}
         <div className={`flex-1 min-h-0 h-full ${scrollBody ? '' : 'overflow-hidden'}`}>{children}</div>
         {(() => {
           const hasActions = !!actions && (React.Children.count(actions as any) > 0)
