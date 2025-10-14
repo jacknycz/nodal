@@ -1932,14 +1932,16 @@ function BoardContent({
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <ul className="list-disc pl-5 space-y-2">
-              <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
-              <li><strong>Shift + click</strong> a node (with another selected) to connect them.</li>
-              <li><strong>Hold Shift</strong> + click and drag to select multiple nodes with a marquee.</li>
-              <li><strong>Drag & drop</strong> documents or images onto the board to create nodes.</li>
-              <li><strong>Drag</strong> nodes to reposition; use the delete key to remove selected nodes.</li>
-              <li><strong>Double-click</strong> a node to expand or open editing.</li>
-              <li><strong>Use the FAB</strong> (bottom center) to quickly add nodes, upload, or generate with AI.</li>
+              <li><strong>Cmd/Ctrl + click</strong> nodes to multi-select.</li>
+              <li><strong>Shift + click</strong> a second node to quickly connect to the first.</li>
+              <li><strong>Shift + drag</strong> to marquee-select multiple nodes.</li>
+              <li><strong>Right‑click</strong> the board or a node for context actions.</li>
+              <li><strong>Drag & drop</strong> images or PDFs to create Image/Document nodes.</li>
+              <li><strong>Paste</strong> a single file or URL to create a node (one at a time).</li>
+              <li><strong>Double‑click</strong> a node to expand or open editing.</li>
+              <li><strong>Use the FAB</strong> to add a Task/Headline, upload, or generate with AI.</li>
               <li><strong>Use MiniMap/Controls</strong> to navigate large boards quickly.</li>
+              <li><strong>Delete/Backspace</strong> removes selected nodes. Use Undo/Redo from the Left Dock if needed.</li>
             </ul>
           </div>
         </div>
