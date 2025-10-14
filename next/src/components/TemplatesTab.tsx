@@ -29,6 +29,27 @@ export default function TemplatesTab({
 }: TemplatesTabProps) {
   const adminView = isAdmin(user)
   const filteredTemplates = React.useMemo(() => adminView ? templates : templates.filter((t: any) => !!t.published), [adminView, templates])
+  // Default viewport for Welcome templates (tweak as desired)
+  const welcomeViewport = React.useMemo(() => ({ x: -480, y: -240, zoom: 1 }), [])
+
+  // Helper: create a board from a template with a unique name and optional welcome viewport
+  const createBoardFromTemplate = React.useCallback(async (tpl: any, baseName: string) => {
+    const { boardStorage } = await import('../features/storage/storage')
+    // Build a unique name (… copy, … copy 2, … copy 3, …)
+    let candidate = baseName
+    try {
+      const existing = await boardStorage.getAllBoards()
+      const names = new Set((existing || []).map((b: any) => String(b.name)))
+      if (names.has(candidate)) {
+        let i = 2
+        while (names.has(`${baseName} ${i}`)) i += 1
+        candidate = `${baseName} ${i}`
+      }
+    } catch {}
+    const payloadData = tpl?.welcome ? { ...(tpl?.data || {}), viewport: welcomeViewport } : tpl?.data
+    const id = await boardStorage.saveBoard(candidate, payloadData)
+    return { id }
+  }, [welcomeViewport])
   const [visibleCount, setVisibleCount] = React.useState(() => Math.min(filteredTemplates.length, 24))
   const [editOpen, setEditOpen] = React.useState(false)
   const [editId, setEditId] = React.useState<string | null>(null)
@@ -110,9 +131,9 @@ export default function TemplatesTab({
     const tpl = templates.find((x: any) => x.id === editId)
     if (!tpl) return
     try {
-      const { boardStorage } = await import('../features/storage/storage')
-      const id = await boardStorage.saveBoard(tpl.name, tpl.data)
+      const { id } = await createBoardFromTemplate(tpl, tpl.name)
       try { localStorage.setItem(`templateMapping:${id}`, tpl.id) } catch {}
+      const { boardStorage } = await import('../features/storage/storage')
       const newBoard = await boardStorage.loadBoard(id)
       setEditOpen(false)
       if (newBoard) {
@@ -169,9 +190,9 @@ export default function TemplatesTab({
                     onClick={async (e) => {
                       e.stopPropagation()
                       try {
-                        const newName = `${t.name} (copy)`
+                        const base = `${t.name} (copy)`
+                        const { id } = await createBoardFromTemplate(t, base)
                         const { boardStorage } = await import('../features/storage/storage')
-                        const id = await boardStorage.saveBoard(newName, t.data)
                         const newBoard = await boardStorage.loadBoard(id)
                         if (newBoard) {
                           onOpenBoard(newBoard)
@@ -203,9 +224,9 @@ export default function TemplatesTab({
                     // We wedge in via name by appending description visually below using a custom footer
                     onLoad={async () => {
                     try {
-                      const newName = `${t.name} (copy)`
+                      const base = `${t.name} (copy)`
+                      const { id } = await createBoardFromTemplate(t, base)
                       const { boardStorage } = await import('../features/storage/storage')
-                      const id = await boardStorage.saveBoard(newName, t.data)
                       const newBoard = await boardStorage.loadBoard(id)
                       if (newBoard) {
                         onOpenBoard(newBoard)
