@@ -355,7 +355,7 @@ export default function ChatPanel2() {
               }}
               placeholder={selectedNodes.length > 0
                 ? `Ask about ${selectedNodes.length === 1 ? 'this node' : 'these nodes'}...`
-                : 'Chat with Nodal...'}
+                : 'Chat with Nobot...'}
               rows={1}
               fullWidth
               className="resize-none scrollbar-none text-base! md:text-sm!"
