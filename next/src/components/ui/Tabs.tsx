@@ -39,7 +39,9 @@ export const Tab = ({ children, isActive }: TabProps) => {
 
 export const Tabs = ({ children }: { children: ReactNode }) => {
   const [active, setActive] = useState(0);
-  const tabs = Array.isArray(children) ? children : [children];
+  // Normalize children and filter out falsy/non-element entries (e.g., conditional tabs)
+  const tabs = (React.Children.toArray(children) as React.ReactElement[])
+    .filter((c) => React.isValidElement(c));
 
   // Support selecting tab via pathname: /<label>
   useEffect(() => {

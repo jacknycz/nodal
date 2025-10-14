@@ -28,6 +28,7 @@ interface BoardRoomProps {
 type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
+  const SHOW_COMMUNITY = false
   const TemplatesTab = dynamic(() => import('./TemplatesTab'), {
     ssr: false,
     loading: () => (
@@ -450,7 +451,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             headerLabel={
               <div className="relative inline-flex items-center">
                 {canShowTemplatesHint ? (
-                  <Tooltip content="Start here!" side="top" variant="error" open>
+                  <Tooltip content="Start here!" side="top" variant="danger" open>
                     <span>templates</span>
                   </Tooltip>
                 ) : (
@@ -474,13 +475,15 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             />
           </Tab>
 
-          {/* TAB 3 */}
-          <Tab
-            label="community"
-            icon={<Users size={44} className="h-6 w-6" weight="duotone" />}
-          >
-            <CommunityTab />
-          </Tab>
+          {/* TAB 3 - Community (temporarily hidden for launch) */}
+          {SHOW_COMMUNITY && (
+            <Tab
+              label="community"
+              icon={<Users size={44} className="h-6 w-6" weight="duotone" />}
+            >
+              <CommunityTab />
+            </Tab>
+          )}
 
           {/* TAB 4 */}
           <Tab
