@@ -798,7 +798,11 @@ export default function AddNodesModal({
               <div className="mt-3 text-xs text-gray-600 dark:text-gray-300">Selected: {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''}</div>
             )}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">We’ll create a {tab === 'images' ? 'Image' : 'Document'} node based on the file.</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {tab === 'images'
+              ? 'We accept .png, .jpg, .jpeg, .gif, .webp, .svg, and .heic image types.'
+              : 'We accept .pdf, .doc, .docx, .txt, .md, .markdown, .csv, and .json document types.'}
+          </div>
         </div>
       )}
       {/* Mobile-only: URL tab */}

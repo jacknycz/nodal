@@ -6,7 +6,7 @@ import Checkbox from './ui/Checkbox'
 import Loader from './ui/Loader'
 import BoardCard from './BoardCard'
 import Button from './ui/Button'
-import { PlusIcon } from '@phosphor-icons/react'
+import { PlusIcon, ArrowFatUp } from '@phosphor-icons/react'
 
 interface BoardsTabProps {
   searchQuery: string
@@ -83,7 +83,7 @@ export default function BoardsTab({
           <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
             {sortedBoards.length === 0 ? (
               <div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-16">
-                No boards found - go to the templates tab to start with the Welcome Board!
+                No boards found - go to the templates tab <ArrowFatUp size={14} weight="duotone" className="inline-block text-primary-500" /> to start with the Welcome Board!
               </div>
             ) : (
               (sortedBoards).map((board: any) => (

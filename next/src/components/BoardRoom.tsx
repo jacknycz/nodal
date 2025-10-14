@@ -450,7 +450,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             headerLabel={
               <div className="relative inline-flex items-center">
                 {canShowTemplatesHint ? (
-                  <Tooltip content="Start here!" side="top" open>
+                  <Tooltip content="Start here!" side="top" variant="error" open>
                     <span>templates</span>
                   </Tooltip>
                 ) : (
