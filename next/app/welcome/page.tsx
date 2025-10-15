@@ -104,7 +104,7 @@ function WelcomeContent() {
                   Nodes are everything. Content, docs, links, images - connect them, group them, leave them alone - they're good like that.
                 </motion.p>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  Confused? That's fair - we've go an intro board in just a second that should help.
+                  Confused? That's fair - we've got an intro board in just a second that should help.
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex w-full justify-center items-center mb-4 gap-4 overflow-hidden">
                   <div className="w-1/3 flex items-center justify-center">
