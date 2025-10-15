@@ -167,6 +167,7 @@ export default function BoardContextMenu({
         min-w-[200px] nodal-no-select"
         style={{ left: (menuPos?.x ?? position.x), top: (menuPos?.y ?? position.y) }}
         ref={menuRef}
+        data-board-context-menu
       >
         {nodeId ? (
           <>

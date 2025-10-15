@@ -293,7 +293,8 @@ export default function Topbar({
                         </IconButton>
                       )}
                       <span
-                        className="truncate text-gray-900 dark:text-white font-medium font-fredoka
+                        className="truncate hidden md:flex
+                        text-gray-900 dark:text-white font-medium font-fredoka
                         text-xs sm:text-sm max-w-[140px] sm:max-w-[200px]"
                         title={currentBoardName}
                       >
@@ -382,7 +383,7 @@ export default function Topbar({
                 <div className="hidden sm:flex items-center gap-1 lg:gap-3">
                   <IconButton
                     aria-label="Share board"
-                    variant="secondaryGhost"
+                    variant="secondaryOutline"
                     size="small"
                     onClick={() => setShowShareModal(true)}
                   >
@@ -394,23 +395,6 @@ export default function Topbar({
                   />
                   <DocumentsMenu
                     onDeleteNode={onDeleteNode}
-                  />
-                </div>
-                {/* Mobile More menu */}
-                <div className="sm:hidden">
-                  <Menu
-                    trigger={
-                      <IconButton aria-label="More" size="md" variant="secondaryGhost">
-                        <Plus className="w-4 h-4" />
-                      </IconButton>
-                    }
-                    align="right"
-                    items={[
-                      { label: 'AI Settings', onClick: () => onToggleTestMode?.() },
-                      { label: 'Share board', onClick: () => handleShareBoard() },
-                      { label: 'Copy link', onClick: () => handleCopyLink() },
-                      { label: 'Feedback', onClick: () => setShowFeedback(true) },
-                    ]}
                   />
                 </div>
               </>

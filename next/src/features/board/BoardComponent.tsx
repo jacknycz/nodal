@@ -229,6 +229,96 @@ function BoardContent({
     }
   }, [])
 
+  // Mobile: single-tap opens context menu (simulate right-click)
+  useEffect(() => {
+    let startX = 0
+    let startY = 0
+    let startT = 0
+    let startTarget: EventTarget | null = null
+    const TAP_MAX_MS = 300
+    const MOVE_CANCEL_PX = 10
+    let isTracking = false
+    let suppressNextClickUntil = 0
+
+    const cancel = () => { isTracking = false; startTarget = null }
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) { cancel(); return }
+      const t = e.touches[0]
+      startX = t.clientX
+      startY = t.clientY
+      startT = Date.now()
+      startTarget = e.target
+      isTracking = true
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isTracking) return
+      const t = e.touches[0]
+      const dx = t.clientX - startX
+      const dy = t.clientY - startY
+      if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) cancel()
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!isTracking) return
+      const dt = Date.now() - startT
+      const t = (e.changedTouches && e.changedTouches[0]) || null
+      const endX = t ? t.clientX : startX
+      const endY = t ? t.clientY : startY
+      const dx = endX - startX
+      const dy = endY - startY
+      const moved = Math.hypot(dx, dy)
+      // Treat as tap if quick and not moved much
+      if (dt <= TAP_MAX_MS && moved <= MOVE_CANCEL_PX) {
+        try {
+          e.preventDefault()
+          e.stopPropagation()
+        } catch {}
+        try {
+          const elAtPoint = (startTarget as HTMLElement) || (document.elementFromPoint(endX, endY) as HTMLElement)
+          let el: HTMLElement | null = elAtPoint
+          let nodeId: string | null = null
+          while (el && el !== document.body) {
+            try {
+              const cls = el.classList ? Array.from(el.classList) : []
+              if (cls.some((c) => c === 'react-flow__node' || c === 'xyflow__node')) {
+                nodeId = el.getAttribute('data-id') || null
+                break
+              }
+              el = el.parentElement
+            } catch { break }
+          }
+          setPendingSourceNodeId(nodeId)
+          setContextMenu({ isOpen: true, position: { x: endX, y: endY } })
+          suppressNextClickUntil = Date.now() + 350
+        } catch {}
+      }
+      cancel()
+    }
+
+    document.addEventListener('touchstart', onTouchStart as any, { capture: true })
+    document.addEventListener('touchmove', onTouchMove as any, { capture: true })
+    document.addEventListener('touchend', onTouchEnd as any, { capture: true })
+    const onClickCapture = (e: MouseEvent) => {
+      if (suppressNextClickUntil && Date.now() < suppressNextClickUntil) {
+        // Allow clicks inside the context menu itself
+        const target = e.target as HTMLElement | null
+        if (target && target.closest('[data-board-context-menu]')) return
+        e.preventDefault()
+        e.stopPropagation()
+        suppressNextClickUntil = 0
+      }
+    }
+    document.addEventListener('click', onClickCapture, true)
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart as any, true)
+      document.removeEventListener('touchmove', onTouchMove as any, true)
+      document.removeEventListener('touchend', onTouchEnd as any, true)
+      document.removeEventListener('click', onClickCapture, true)
+    }
+  }, [])
+
   const showAddToast = useCallback((kind: 'added' | 'generated', count: number) => {
     if (!count || count < 1) return
     const noun = count === 1 ? 'node' : 'nodes'

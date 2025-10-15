@@ -61,7 +61,7 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
   return (
     <div className="w-full">
       {/* Tab headers */}
-      <div className="flex gap-2 border-b border-gray-200/50 dark:border-primary-700/20 dark:bg-slate-950/80 rounded-t-xl sm:rounded-tl-4xl" role="tablist" aria-label="Sections">
+      <div className="flex border-b border-gray-200/50 dark:border-primary-700/20 dark:bg-slate-950/80 rounded-t-xl sm:rounded-tl-4xl" role="tablist" aria-label="Sections">
         {tabs.map((tab: any, idx) => (
           <button
             key={idx}
@@ -77,9 +77,11 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
                 }
               } catch {}
             }}
-            className={`flex cursor-pointer items-center gap-1 sm:gap-2 px-3 py-2 sm:px-4 sm:py-3 rounded-t-xl text-base sm:text-lg font-fredoka font-medium transition-colors ${
+            className={`flex cursor-pointer items-center gap-1 sm:gap-2 px-3 py-3 md:py-2 
+              rounded-t-xl border-r border-r-gray-200/50 dark:border-r-primary-700/20 
+              text-base sm:text-lg font-fredoka font-medium transition-colors ${
               active === idx
-                ? (tab.props.activeHeaderClassName || "text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")
+                ? (tab.props.activeHeaderClassName || "bg-white dark:bg-primary-500/20 text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")
                 : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent")
             }`}
             role="tab"
@@ -88,7 +90,7 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
             id={`tab-${idx}`}
           >
             {tab.props.icon && <span className="text-base sm:text-lg" aria-hidden="true">{tab.props.icon}</span>}
-            <span className={`${active === idx ? 'inline' : 'hidden sm:inline'}`}>
+            <span className={`${active === idx ? 'inline' : 'inline sm:inline'}`}>
               {tab.props.headerLabel ?? tab.props.label}
             </span>
           </button>

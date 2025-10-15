@@ -199,10 +199,12 @@ export default function AvatarMenu({
     <Menu
       className="z-[500]"
       trigger={
-        <div className="relative">
+        <div className="relative gap-1 flex items-center">
           <IconButton
             aria-label="User menu"
             className="p-0!"
+            variant="secondaryGhost"
+            size="small"
           >
             {getUserAvatar() ? (
               <Image 

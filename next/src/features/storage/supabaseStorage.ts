@@ -40,6 +40,51 @@ interface DocumentMetadata {
 }
 
 class SupabaseStorage {
+  private async sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  private isTransientStorageError(err: any): boolean {
+    const msg = String(err?.message || '').toLowerCase()
+    const status = Number(err?.status || 0)
+    return (
+      status >= 500 ||
+      msg.includes('bad gateway') ||
+      msg.includes('unexpected token') || // HTML error page parsed as JSON
+      msg.includes('502') ||
+      msg.includes('temporarily') ||
+      msg.includes('timeout')
+    )
+  }
+
+  private async createSignedUrlWithRetry(filePath: string, expiresInSeconds: number, attempts = 3): Promise<string | null> {
+    let lastErr: any = null
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(String(filePath), expiresInSeconds)
+        if (error) throw error
+        return data.signedUrl
+      } catch (err: any) {
+        lastErr = err
+        if (i < attempts - 1 && this.isTransientStorageError(err)) {
+          const backoff = 250 * Math.pow(2, i)
+          try { await this.sleep(backoff) } catch {}
+          continue
+        }
+        break
+      }
+    }
+    // Only warn for non-404 style errors
+    const msg = String(lastErr?.message || '')
+    const status = Number(lastErr?.status || 0)
+    const isNotFound = msg.toLowerCase().includes('object not found') || status === 404 || status === 400
+    if (!isNotFound) {
+      console.warn('[storage] createSignedUrl failed', { filePath, status, msg: msg.slice(0, 140) })
+    }
+    return null
+  }
   // Save a board to Supabase
   async saveBoard(name: string, data: Omit<BoardData, 'lastModified'>): Promise<string> {
     try {
@@ -512,12 +557,10 @@ class SupabaseStorage {
         console.error('Document not found or access denied:', dbError)
         return null
       }
-      // Always use a time-limited signed URL to avoid 400s on non-public buckets
-      const { data: signedUrl, error: urlError } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(String(docData.file_path), 86400)
-      if (urlError) { console.error('Failed to generate signed URL:', urlError); return null }
-      return signedUrl.signedUrl
+      // Always use a time-limited signed URL; retry on transient 5xx/HTML errors
+      const url = await this.createSignedUrlWithRetry(String(docData.file_path), 86400)
+      if (!url) return null
+      return url
     } catch (error) {
       console.error('Failed to get signed URL from Supabase:', error)
       return null
@@ -545,11 +588,9 @@ class SupabaseStorage {
   // Create or refresh a signed URL for an arbitrary storage path
   async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 86400): Promise<string | null> {
     try {
-      const { data: signedUrl, error } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(String(filePath), expiresInSeconds)
-      if (error) throw error
-      return signedUrl.signedUrl
+      const url = await this.createSignedUrlWithRetry(String(filePath), expiresInSeconds)
+      if (!url) throw new Error('Failed to create signed URL')
+      return url
     } catch (error: any) {
       const msg = String(error?.message || '')
       const status = Number(error?.status || 0)

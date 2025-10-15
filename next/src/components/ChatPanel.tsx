@@ -21,7 +21,11 @@ export default function ChatPanel2() {
   const [isOpen, setIsOpen] = useState(() => {
     if (typeof window === 'undefined') return false
     const saved = localStorage.getItem(panelKey)
-    if (saved === 'true' || saved === 'false') return saved === 'true'
+    const isMdUpLocal = window.matchMedia('(min-width: 768px)').matches
+    if (saved === 'true' || saved === 'false') {
+      // On mobile, default to closed even if a previous session saved it as open
+      return isMdUpLocal ? (saved === 'true') : false
+    }
     return false
   })
   const [inputValue, setInputValue] = useState('')
@@ -91,6 +95,11 @@ export default function ChatPanel2() {
       window.removeEventListener('resize', onChange)
     }
   }, [])
+
+  // Persist open state per-board; ensures consistent behavior across navigations
+  useEffect(() => {
+    try { localStorage.setItem(panelKey, String(isOpen)) } catch {}
+  }, [isOpen, panelKey])
 
   const resizingRef = useRef(false)
   const startRef = useRef<{ x: number; y: number; width: number; height: number }>({ x: 0, y: 0, width: 384, height: panelHeight })

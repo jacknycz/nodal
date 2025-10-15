@@ -35,6 +35,8 @@ export default function AISettingsMenu({
       trigger={
         <IconButton
           aria-label="AI Settings"
+          variant="secondaryOutline"
+          size="small"
         >
           <Robot size={24} className='w-5 h-5' />
         </IconButton>

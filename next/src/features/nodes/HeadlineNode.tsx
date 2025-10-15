@@ -22,8 +22,8 @@ export default function HeadlineNode({ data }: HeadlineNodeProps) {
   const sizeClass = size === 'lg' ? 'text-[72px]' : size === 'md' ? 'text-[64px]' : size === 'xl' ? 'text-[96px]' : 'text-[48px]'
 
   return (
-    <div className="pointer-events-auto bg-transparent">
-      <div className={`font-bold leading-tight ${sizeClass} text-gray-900 dark:text-white select-text`}>{title}</div>
+    <div className="pointer-events-auto flex bg-transparent">
+      <div className={`font-bold whitespace-nowrap flex leading-tight ${sizeClass} text-gray-900 dark:text-white select-text`}>{title}</div>
     </div>
   )
 }
