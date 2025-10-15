@@ -235,6 +235,7 @@ function BoardContent({
     let startY = 0
     let startT = 0
     let startTarget: EventTarget | null = null
+    let startInCanvas = false
     const TAP_MAX_MS = 300
     const MOVE_CANCEL_PX = 10
     let isTracking = false
@@ -250,6 +251,33 @@ function BoardContent({
       startT = Date.now()
       startTarget = e.target
       isTracking = true
+      // Limit handling to the board canvas area only
+      try {
+        const el = (e.target as HTMLElement) || null
+        startInCanvas = !!(el && (el.closest('.react-flow') || el.closest('.xyflow')))
+        if (!startInCanvas) { isTracking = false; return }
+      } catch { startInCanvas = false }
+
+      // If context menu is already open
+      try {
+        const targetEl = (e.target as HTMLElement) || null
+        const insideMenu = !!(targetEl && targetEl.closest('[data-board-context-menu]'))
+        if (contextMenu.isOpen) {
+          if (insideMenu) {
+            // Let taps inside menu pass through; don't track to avoid reopening
+            isTracking = false
+            return
+          }
+          // Tapped outside menu while open: close and consume this tap
+          e.preventDefault(); e.stopPropagation()
+          setContextMenu({ isOpen: false, position: null })
+          isTracking = false
+          suppressNextClickUntil = Date.now() + 300
+          return
+        }
+        // If tap starts inside menu container while closed (edge case), ignore
+        if (insideMenu) { isTracking = false; return }
+      } catch {}
     }
 
     const onTouchMove = (e: TouchEvent) => {
@@ -270,7 +298,7 @@ function BoardContent({
       const dy = endY - startY
       const moved = Math.hypot(dx, dy)
       // Treat as tap if quick and not moved much
-      if (dt <= TAP_MAX_MS && moved <= MOVE_CANCEL_PX) {
+      if (dt <= TAP_MAX_MS && moved <= MOVE_CANCEL_PX && startInCanvas) {
         try {
           e.preventDefault()
           e.stopPropagation()
@@ -289,6 +317,9 @@ function BoardContent({
               el = el.parentElement
             } catch { break }
           }
+          // If tap ended inside the menu container, do nothing
+          const endTarget = (e.target as HTMLElement) || null
+          if (endTarget && endTarget.closest('[data-board-context-menu]')) { cancel(); return }
           setPendingSourceNodeId(nodeId)
           setContextMenu({ isOpen: true, position: { x: endX, y: endY } })
           suppressNextClickUntil = Date.now() + 350
@@ -304,7 +335,7 @@ function BoardContent({
       if (suppressNextClickUntil && Date.now() < suppressNextClickUntil) {
         // Allow clicks inside the context menu itself
         const target = e.target as HTMLElement | null
-        if (target && target.closest('[data-board-context-menu]')) return
+        if (target && (target.closest('[data-board-context-menu]') || target.closest('[role="dialog"]'))) return
         e.preventDefault()
         e.stopPropagation()
         suppressNextClickUntil = 0
