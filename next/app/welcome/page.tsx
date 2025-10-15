@@ -72,7 +72,7 @@ function WelcomeContent() {
             ),
             ({ next, prev }) => (
               <div className="flex h-full min-h-screen w-full items-center justify-center px-6">
-                <motion.div variants={slideContainerVariants} className="w-full text-center">
+                <motion.div variants={slideContainerVariants} className="w-full text-center px-4">
                   <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">choose your style</motion.h2>
                   <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                     Pick your style. (you can change it later - anytime, menu in the top right)
@@ -88,7 +88,7 @@ function WelcomeContent() {
               </div>
             ),
             ({ next, prev }) => (
-              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
+              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">your own board room</motion.h2>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   This is your dashboard. (Get it??) It's where your boards, templates, updates, and some fun stuff live.
@@ -103,7 +103,7 @@ function WelcomeContent() {
               </motion.div>
             ),
             ({ next,prev }) => (
-              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
+              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">meet the nodes</motion.h2>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Nodes are everything. Content, docs, links, images - connect them, group them, leave them alone - they're good like that.
@@ -111,7 +111,7 @@ function WelcomeContent() {
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Confused? That's fair - we've go an intro board in just a second that should help.
                 </motion.p>
-                <motion.div variants={itemVariants} className="flex justify-center mb-4 gap-6">
+                <motion.div variants={itemVariants} className="flex max-w-full justify-center mb-4 gap-6">
                   <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
                   <Image src="/welcome/image-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
                   <Image src="/welcome/document-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
@@ -123,7 +123,7 @@ function WelcomeContent() {
               </motion.div>
             ),
             ({ next,prev }) => (
-              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
+              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">share with friends</motion.h2>
                 <motion.div variants={itemVariants} className="flex justify-center mb-4">
                   <Image src="/welcome/share-nodal.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-md" />
