@@ -51,7 +51,7 @@ function WelcomeContent() {
           mode="overlay"
           slides={[
             ({ next }) => (
-              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
+              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
                 <motion.div variants={itemVariants} className="flex justify-center mb-4">
                   <Loader size="xl" />
                 </motion.div>
@@ -63,7 +63,7 @@ function WelcomeContent() {
                   This intro is being forced on you. We apologize. It’ll be quick, painless, and yes — you get cool things out of it.
                 </motion.p>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  We're in <Tag variant="beta">beta</Tag> - if you find any issues, please let us know! <br/>(<span className="underline text-tertiary-700 dark:text-tertiary-200">feedback</span> button in the top right)
+                  We're in <Tag variant="beta">beta</Tag> (and we'll call mobile <Tag variant="beta">baby beta</Tag> at the moment) - if you find any issues, please let us know! <br/>(<span className="underline text-tertiary-700 dark:text-tertiary-200">feedback</span> button in the top right)
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex justify-center mt-12">
                   <Button variant="primary" size="lg" onClick={next}>Next</Button>
