@@ -551,6 +551,23 @@ function BoardContent({
   const colorgoriesState = useBoardStore((s: any) => s.colorgories || [])
   const prevColorgoriesRef = useRef<any[]>([])
 
+  // Helper: ignore transient view-only properties (like node position/selection) when checking for real changes
+  const normalizeNodesForCompare = useCallback((list: Node[] = []) => {
+    try {
+      return list.map((n: any) => ({
+        id: n?.id,
+        type: n?.type,
+        data: n?.data, // include real content/props
+        // position is intentionally omitted to avoid saves on drag
+        // selected/dragging/positionAbsolute omitted as well
+        width: (n as any)?.width, // keep width/resizes as a meaningful change
+        height: (n as any)?.height,
+      }))
+    } catch {
+      return list
+    }
+  }, [])
+
   // When edge type preference changes, update existing edges
   useEffect(() => {
     setEdges((eds) => (Array.isArray(eds) ? eds.map(e => ({ ...e, type: toVisualEdgeType(edgeTypePref) as any })) : eds))
@@ -568,7 +585,7 @@ function BoardContent({
     triggerAutosaveRef.current(nodes, edges)
   }, [edgeTypePref])
   
-  // Simple effect to trigger autosave when nodes/edges change
+  // Simple effect to trigger autosave when nodes/edges change (excluding pure position/selection moves)
   useEffect(() => {
     // Skip during initialization
     if (!isInitializedRef.current) {
@@ -585,8 +602,8 @@ function BoardContent({
       return
     }
     
-    // Check if nodes or edges have actually changed
-    const nodesChanged = JSON.stringify(nodes) !== JSON.stringify(prevNodesRef.current)
+    // Check if nodes or edges have actually changed (ignoring transient position/selection)
+    const nodesChanged = JSON.stringify(normalizeNodesForCompare(nodes)) !== JSON.stringify(normalizeNodesForCompare(prevNodesRef.current))
     const edgesChanged = JSON.stringify(edges) !== JSON.stringify(prevEdgesRef.current)
     
     // Only trigger autosave if there are actual changes
@@ -602,7 +619,7 @@ function BoardContent({
     // Update previous values
     prevNodesRef.current = nodes
     prevEdgesRef.current = edges
-  }, [nodes, edges, currentBoardName, saveStatus])
+  }, [nodes, edges, currentBoardName, saveStatus, normalizeNodesForCompare])
   
   // Trigger save when colorgories (names/order/visibility) change
   useEffect(() => {
