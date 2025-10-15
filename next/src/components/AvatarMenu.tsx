@@ -198,6 +198,7 @@ export default function AvatarMenu({
     <>
     <Menu
       className="z-[500]"
+      portal
       trigger={
         <div className="relative gap-1 flex items-center">
           <IconButton

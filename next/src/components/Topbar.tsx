@@ -102,6 +102,25 @@ export default function Topbar({
       setTopbarHeight(height);
     }
   }, [setTopbarHeight]);
+
+  // Mobile: blur active input/search on any tap outside it
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      try {
+        const isMobile = typeof window !== 'undefined' && !window.matchMedia('(min-width: 768px)').matches
+        if (!isMobile) return
+        const active = document.activeElement as HTMLElement | null
+        if (!active) return
+        const isEditable = active.isContentEditable || active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('role') === 'combobox'
+        if (!isEditable) return
+        const target = e.target as HTMLElement | null
+        if (target && active.contains(target)) return
+        ;(active as any).blur?.()
+      } catch {}
+    }
+    document.addEventListener('touchstart', onTouchStart, true)
+    return () => document.removeEventListener('touchstart', onTouchStart, true)
+  }, [])
   // Fetch current user's role on this board for UI gating
   useEffect(() => {
     const loadRole = async () => {
