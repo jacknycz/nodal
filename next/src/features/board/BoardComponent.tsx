@@ -240,6 +240,7 @@ function BoardContent({
     const MOVE_CANCEL_PX = 10
     let isTracking = false
     let suppressNextClickUntil = 0
+    const justClosedUntilRef = { current: 0 }
 
     const cancel = () => { isTracking = false; startTarget = null }
 
@@ -262,7 +263,7 @@ function BoardContent({
       try {
         const targetEl = (e.target as HTMLElement) || null
         const insideMenu = !!(targetEl && targetEl.closest('[data-board-context-menu]'))
-        if (contextMenu.isOpen) {
+        if (contextMenuOpenRef.current) {
           if (insideMenu) {
             // Let taps inside menu pass through; don't track to avoid reopening
             isTracking = false
@@ -273,6 +274,7 @@ function BoardContent({
           setContextMenu({ isOpen: false, position: null })
           isTracking = false
           suppressNextClickUntil = Date.now() + 300
+          justClosedUntilRef.current = suppressNextClickUntil
           return
         }
         // If tap starts inside menu container while closed (edge case), ignore
@@ -299,6 +301,7 @@ function BoardContent({
       const moved = Math.hypot(dx, dy)
       // Treat as tap if quick and not moved much
       if (dt <= TAP_MAX_MS && moved <= MOVE_CANCEL_PX && startInCanvas) {
+        if (Date.now() < justClosedUntilRef.current) { cancel(); return }
         try {
           e.preventDefault()
           e.stopPropagation()
@@ -581,6 +584,8 @@ function BoardContent({
   const prevEdgesRef = useRef<Edge[]>([])
   const colorgoriesState = useBoardStore((s: any) => s.colorgories || [])
   const prevColorgoriesRef = useRef<any[]>([])
+  const contextMenuOpenRef = useRef<boolean>(false)
+  useEffect(() => { contextMenuOpenRef.current = (typeof contextMenu?.isOpen === 'boolean' ? contextMenu.isOpen : false) }, [contextMenu?.isOpen])
 
   // Helper: ignore transient view-only properties (like node position/selection) when checking for real changes
   const normalizeNodesForCompare = useCallback((list: Node[] = []) => {
