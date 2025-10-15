@@ -30,7 +30,7 @@ export default function TemplatesTab({
   const adminView = isAdmin(user)
   const filteredTemplates = React.useMemo(() => adminView ? templates : templates.filter((t: any) => !!t.published), [adminView, templates])
   // Default viewport for Welcome templates (tweak as desired)
-  const welcomeViewport = React.useMemo(() => ({ x: -480, y: -240, zoom: 1 }), [])
+  const welcomeViewport = React.useMemo(() => ({ x: -300, y: 0, zoom: 1 }), [])
 
   // Helper: create a board from a template with a unique name and optional welcome viewport
   const createBoardFromTemplate = React.useCallback(async (tpl: any, baseName: string) => {
@@ -190,6 +190,8 @@ export default function TemplatesTab({
                     onClick={async (e) => {
                       e.stopPropagation()
                       try {
+                        (e.currentTarget as HTMLButtonElement).disabled = true
+                        ;(e.currentTarget as HTMLButtonElement).classList.add('opacity-70')
                         const base = `${t.name} (copy)`
                         const { id } = await createBoardFromTemplate(t, base)
                         const { boardStorage } = await import('../features/storage/storage')
@@ -201,6 +203,11 @@ export default function TemplatesTab({
                         }
                       } catch (e) {
                         alert('Failed to use template')
+                      } finally {
+                        try {
+                          (e.currentTarget as HTMLButtonElement).disabled = false
+                          ;(e.currentTarget as HTMLButtonElement).classList.remove('opacity-70')
+                        } catch {}
                       }
                     }}
                   >
@@ -222,21 +229,7 @@ export default function TemplatesTab({
                     admin={admin}
                     // Show cover and description under the counts
                     // We wedge in via name by appending description visually below using a custom footer
-                    onLoad={async () => {
-                    try {
-                      const base = `${t.name} (copy)`
-                      const { id } = await createBoardFromTemplate(t, base)
-                      const { boardStorage } = await import('../features/storage/storage')
-                      const newBoard = await boardStorage.loadBoard(id)
-                      if (newBoard) {
-                        onOpenBoard(newBoard)
-                      } else if (typeof window !== 'undefined') {
-                        window.location.href = `/board/${id}`
-                      }
-                    } catch (e) {
-                      alert('Failed to use template')
-                    }
-                  }}
+                    onLoad={() => { if (admin) openEdit(t) }}
                     onRename={admin ? async (newName) => {
                     try {
                       const updated = await templateStorage.updateTemplate(t.id, { name: newName })

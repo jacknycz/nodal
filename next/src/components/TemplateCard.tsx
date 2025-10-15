@@ -155,13 +155,13 @@ function TemplateCard({
   }
 
   const handleCardClick = () => {
-    if (showShareModal || showDeleteModal || isEditingTitle) return
-    onLoad()
+    // Intentionally disabled: use explicit buttons only (e.g., Use, Edit)
+    return
   }
 
   return (
     <div
-      className={`${className ? className + ' ' : ''}group relative shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl bg-white dark:bg-gray-950/60 dark:hover:bg-slate-700/98 border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer`}
+      className={`${className ? className + ' ' : ''}group relative shadow-xl shadow-gray-200/20 dark:shadow-none bg-white dark:bg-gray-950/60 border-transparent p-4 rounded-2xl border transition-all duration-200`}
       onClick={handleCardClick}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 160px' as any }}
     >
