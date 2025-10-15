@@ -53,15 +53,15 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
 
   const isOverlay = mode === 'overlay'
   return (
-    <div className={isOverlay ? "fixed h-full min-h-screen w-full flex inset-0 z-[1000]" : "relative h-screen w-full z-0"}>
-      <div className="absolute top-12 right-8 z-10">
-        <IconButton aria-label="Close intro" size="md" variant="secondaryGhost" onClick={onClose}>
+    <div className={isOverlay ? "fixed h-full min-h-[100dvh] w-full flex inset-0 z-[1000]" : "relative h-full min-h-[100dvh] w-full z-0"}>
+      <div className="absolute top-6 right-6 z-10">
+        <IconButton aria-label="Close intro" size="md" variant="primaryOutline" onClick={onClose}>
           ×
         </IconButton>
       </div>
 
-      <div className={isOverlay ? "h-full relative min-h-screen w-full flex flex-col bg-white dark:bg-primary-950 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white"}>
-        <div className="flex h-full min-h-screen items-center justify-center">
+      <div className={isOverlay ? "h-full min-h-[100dvh] relative w-full flex flex-col bg-white dark:bg-primary-950 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white"}>
+        <div className="flex h-full min-h-[100dvh] items-center justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={index}
