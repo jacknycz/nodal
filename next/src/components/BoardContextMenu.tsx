@@ -91,6 +91,16 @@ export default function BoardContextMenu({
       }
     }
 
+    const handleTouchStart = (e: TouchEvent) => {
+      if (showDelete) return
+      if (!menuRef.current) return
+      const target = (e.target as Node) || null
+      if (!target) return
+      if (!menuRef.current.contains(target)) {
+        onClose()
+      }
+    }
+
     const handleContextMenu = (e: MouseEvent) => {
       if (showDelete) return
       if (!menuRef.current) return
@@ -107,11 +117,13 @@ export default function BoardContextMenu({
     }
 
     document.addEventListener('mousedown', handleMouseDown, true)
+    document.addEventListener('touchstart', handleTouchStart as any, true)
     document.addEventListener('contextmenu', handleContextMenu, true)
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       document.removeEventListener('mousedown', handleMouseDown, true)
+      document.removeEventListener('touchstart', handleTouchStart as any, true)
       document.removeEventListener('contextmenu', handleContextMenu, true)
       document.removeEventListener('keydown', handleKeyDown)
     }
