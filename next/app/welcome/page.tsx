@@ -32,8 +32,8 @@ function WelcomeContent() {
   const { isDark, toggleTheme } = useTheme()
 
   return (
-    <div className="min-h-[100svh] h-[100svh]">
-      <div className="h-full min-h-[100svh]">
+    <div className="min-h-[100dvh] h-[100dvh]">
+      <div className="h-full min-h-[100dvh]">
         <ProductIntro
           open={true}
           onClose={() => {
@@ -66,7 +66,7 @@ function WelcomeContent() {
               </motion.div>
             ),
             ({ next, prev }) => (
-              <div className="flex h-full min-h-[100svh] w-full items-center justify-center px-6">
+              <div className="flex h-full min-h-[100dvh] w-full items-center justify-center px-6">
                 <motion.div variants={slideContainerVariants} className="w-full text-center px-4">
                   <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">choose your style</motion.h2>
                   <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
