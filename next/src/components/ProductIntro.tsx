@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { Variants } from 'motion/react'
 import Button from './ui/Button'
@@ -25,6 +25,7 @@ interface ProductIntroProps {
 export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }: ProductIntroProps) {
   const [index, setIndex] = useState(0)
   const total = slides?.length ?? 0
+  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -61,7 +62,36 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
       </div>
 
       <div className={isOverlay ? "h-full min-h-[100dvh] relative w-full flex flex-col bg-white dark:bg-primary-950 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white"}>
-        <div className="flex h-full min-h-[100dvh] items-center justify-center">
+        <div
+          className="flex h-full min-h-[100dvh] items-center justify-center"
+          onTouchStart={(e) => {
+            if (e.touches.length !== 1) return
+            const t = e.touches[0]
+            touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() }
+          }}
+          onTouchEnd={(e) => {
+            const start = touchStartRef.current
+            touchStartRef.current = null
+            if (!start) return
+            const t = e.changedTouches && e.changedTouches[0]
+            if (!t) return
+            const dx = t.clientX - start.x
+            const dy = t.clientY - start.y
+            const adx = Math.abs(dx)
+            const ady = Math.abs(dy)
+            const dt = Date.now() - start.t
+            // Horizontal swipe threshold with angle guard and quick flick support
+            const distanceOk = adx > 48 && adx > ady * 1.2
+            const quickFlick = dt < 220 && adx > 24 && adx > ady * 1.1
+            if (distanceOk || quickFlick) {
+              if (dx < 0) {
+                next()
+              } else {
+                prev()
+              }
+            }
+          }}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={index}
