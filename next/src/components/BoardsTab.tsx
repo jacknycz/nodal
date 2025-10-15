@@ -54,6 +54,7 @@ export default function BoardsTab({
                 variant="primary"
                 onClick={() => onOpenBoard(null)}
                 className="block md:hidden flex-none"
+                size="lg"
               >
                 new board
               </Button>
