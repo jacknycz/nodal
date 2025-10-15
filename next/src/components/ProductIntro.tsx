@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { Variants } from 'motion/react'
 import Button from './ui/Button'
@@ -24,13 +24,13 @@ interface ProductIntroProps {
 
 export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }: ProductIntroProps) {
   const [index, setIndex] = useState(0)
+  const [dir, setDir] = useState(1) // 1 = forward, -1 = back
   const total = slides?.length ?? 0
-  const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
   const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.2, ease: 'easeOut' } },
-    exit: { opacity: 0, transition: { duration: 0.15, ease: 'easeIn' } },
+    hidden: (d: number = 1) => ({ opacity: 0, x: d * 40 }),
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: 'easeOut' } },
+    exit: (d: number = 1) => ({ opacity: 0, x: -d * 60, transition: { duration: 0.18, ease: 'easeIn' } }),
   }
 
   useEffect(() => {
@@ -47,8 +47,8 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
 
   if (!open) return null
 
-  const next = () => setIndex(i => Math.min(i + 1, Math.max(0, total - 1)))
-  const prev = () => setIndex(i => Math.max(i - 1, 0))
+  const next = () => { setDir(1); setIndex(i => Math.min(i + 1, Math.max(0, total - 1))) }
+  const prev = () => { setDir(-1); setIndex(i => Math.max(i - 1, 0)) }
 
   const slideContent = slides && slides[index]
 
@@ -62,36 +62,7 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
       </div>
 
       <div className={isOverlay ? "h-full min-h-[100dvh] relative w-full flex flex-col bg-white dark:bg-primary-950 text-gray-900 dark:text-white" : "h-full w-full flex flex-col bg-white dark:bg-gray-950 text-gray-900 dark:text-white"}>
-        <div
-          className="flex h-full min-h-[100dvh] items-center justify-center"
-          onTouchStart={(e) => {
-            if (e.touches.length !== 1) return
-            const t = e.touches[0]
-            touchStartRef.current = { x: t.clientX, y: t.clientY, t: Date.now() }
-          }}
-          onTouchEnd={(e) => {
-            const start = touchStartRef.current
-            touchStartRef.current = null
-            if (!start) return
-            const t = e.changedTouches && e.changedTouches[0]
-            if (!t) return
-            const dx = t.clientX - start.x
-            const dy = t.clientY - start.y
-            const adx = Math.abs(dx)
-            const ady = Math.abs(dy)
-            const dt = Date.now() - start.t
-            // Horizontal swipe threshold with angle guard and quick flick support
-            const distanceOk = adx > 48 && adx > ady * 1.2
-            const quickFlick = dt < 220 && adx > 24 && adx > ady * 1.1
-            if (distanceOk || quickFlick) {
-              if (dx < 0) {
-                next()
-              } else {
-                prev()
-              }
-            }
-          }}
-        >
+        <div className="flex h-full min-h-[100dvh] items-center justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={index}
@@ -99,7 +70,21 @@ export default function ProductIntro({ open, onClose, slides, mode = 'overlay' }
               initial="hidden"
               animate="visible"
               exit="exit"
+              custom={dir}
               className="w-full"
+              drag="x"
+              dragElastic={0.2}
+              dragMomentum={false}
+              dragConstraints={{ left: 0, right: 0 }}
+              onDragEnd={(_e: any, info: any) => {
+                const { offset, velocity } = info || ({} as any)
+                const dx = (offset?.x as number) ?? 0
+                const vx = (velocity?.x as number) ?? 0
+                const goNext = dx < -80 || vx < -600
+                const goPrev = dx > 80 || vx > 600
+                if (goNext && index < total - 1) { setDir(1); setIndex(index + 1); return }
+                if (goPrev && index > 0) { setDir(-1); setIndex(index - 1); return }
+              }}
             >
               {slideContent ? (
                 <>{slideContent({ next, prev, close: onClose, index, total })}</>

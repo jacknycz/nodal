@@ -106,10 +106,16 @@ function WelcomeContent() {
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Confused? That's fair - we've go an intro board in just a second that should help.
                 </motion.p>
-                <motion.div variants={itemVariants} className="flex max-w-full justify-center mb-4 gap-6">
-                  <Image src="/welcome/nodal-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
-                  <Image src="/welcome/image-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
-                  <Image src="/welcome/document-node.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-40" />
+                <motion.div variants={itemVariants} className="flex w-full justify-center items-center mb-4 gap-4 overflow-hidden">
+                  <div className="w-1/3 flex items-center justify-center">
+                    <Image src="/welcome/nodal-node.svg" alt="Node" width={720} height={420} className="w-full h-auto object-contain" />
+                  </div>
+                  <div className="w-1/3 flex items-center justify-center">
+                    <Image src="/welcome/image-node.svg" alt="Image node" width={720} height={420} className="w-full h-auto object-contain" />
+                  </div>
+                  <div className="w-1/3 flex items-center justify-center">
+                    <Image src="/welcome/document-node.svg" alt="Document node" width={720} height={420} className="w-full h-auto object-contain" />
+                  </div>
                 </motion.div>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">
                   <Button variant="secondary" size="lg" onClick={prev}>Previous</Button>
@@ -121,7 +127,7 @@ function WelcomeContent() {
               <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">share with friends</motion.h2>
                 <motion.div variants={itemVariants} className="flex justify-center mb-4">
-                  <Image src="/welcome/share-nodal.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-md" />
+                  <Image src="/welcome/share-nodal.svg" alt="Board room" width={720} height={420} className="mx-auto max-w-full md:max-w-md" />
                 </motion.div>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Share your boards with friends and family. Or enemies. Very flexible.
@@ -136,7 +142,7 @@ function WelcomeContent() {
               </motion.div>
             ),
             ({ next,prev }) => (
-              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto">
+              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">be our friend?</motion.h2>
                 <motion.div variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   <div className="flex items-center justify-center gap-4">
