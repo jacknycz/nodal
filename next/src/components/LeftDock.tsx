@@ -169,7 +169,7 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
   )
 
   return (
-    <div className="fixed z-50 left-0 top-13 md:top-16" data-left-dock aria-label="Left dock" ref={containerRef}>
+    <div className="fixed z-50 left-0 top-12 md:top-16" data-left-dock aria-label="Left dock" ref={containerRef}>
       {/* Desktop/Tablet */}
       <div className="hidden md:block">
         {Panel}

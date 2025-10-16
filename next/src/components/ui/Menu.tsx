@@ -44,11 +44,15 @@ export default function Menu({
 }: MenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const portalRef = useRef<HTMLDivElement>(null)
   const [portalPos, setPortalPos] = useState<{ left: number; top: number } | null>(null)
 
   useEffect(() => {
     const handlePointerDownOutside = (event: Event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const inTrigger = !!(menuRef.current && menuRef.current.contains(target))
+      const inPortal = !!(portalRef.current && portalRef.current.contains(target))
+      if (!inTrigger && !inPortal) {
         setIsOpen(false)
       }
     }
@@ -145,6 +149,7 @@ export default function Menu({
       {portal && typeof document !== 'undefined'
         ? createPortal(
             <div
+              ref={portalRef}
               onMouseEnter={openOnHover ? () => { cancelClose(); setIsOpen(true) } : undefined}
               onMouseLeave={openOnHover ? () => closeMenuWithDelay(150) : undefined}
               className={`fixed z-[1200] ${width || 'w-56'} rounded-2xl overflow-hidden 
