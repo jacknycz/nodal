@@ -289,8 +289,7 @@ export default function ProfileTab() {
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
       {/* Profile Card */}
-      <div className="rounded-3xl border border-gray-200/70 dark:border-gray-800 bg-white/70 dark:bg-gray-900/60 backdrop-blur-sm shadow-xl p-6 md:p-8">
-        <div className="flex items-start gap-6">
+      <div className="flex-col md:flex-row items-start gap-6">
           {/* Avatar */}
           <div className="relative flex flex-col items-center">
             <div className="w-24 h-24 md:w-28 md:h-28 rounded-full ring-4 ring-white/60 dark:ring-gray-800 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 shadow-md">
@@ -300,14 +299,18 @@ export default function ProfileTab() {
                 <span className="text-2xl font-semibold">{(user?.email || 'U').slice(0,1).toUpperCase()}</span>
               )}
             </div>
-            <div className="mt-2">
+
+            <div className="mt-2 flex items-center gap-2">
+            {/* Role tag */}
+            <Tag variant="secondary" className="ml-1">{String((user as any)?.app_metadata?.role || 'user').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</Tag>
+            
               <LinkUI onClick={() => { setAvatarPreview(null); avatarBlobRef.current = null; setShowAvatarModal(true) }}>Edit avatar</LinkUI>
             </div>
           </div>
 
           {/* Main info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 w-full">
+            <div className="flex items-center gap-3 w-full">
               <div className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
                 {profile?.username || 'Add a username'}
               </div>
@@ -324,8 +327,6 @@ export default function ProfileTab() {
               ) : (
                 <Button size="sm" onClick={() => { setUsernameInput(''); setShowUsernameModal(true) }}>Add Username</Button>
               )}
-              {/* Role tag */}
-              <Tag variant="secondary" className="ml-1">{String((user as any)?.app_metadata?.role || 'user').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</Tag>
             </div>
 
             <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -346,7 +347,6 @@ export default function ProfileTab() {
             {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
           </div>
         </div>
-      </div>
 
       {/* Notifications */}
       <div className="mt-8">

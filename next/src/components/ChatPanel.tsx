@@ -12,6 +12,7 @@ import Button from './ui/Button'
 import { OpenAIModel } from '@/features/ai/aiTypes'
 import Select from './ui/Select'
 import { MODELS } from '../features/ai/models'
+import IconButton from './ui/IconButton'
 
 export default function ChatPanel2() {
   const currentBoardId = useBoardStore((s) => s.currentBoardId)
@@ -217,17 +218,18 @@ export default function ChatPanel2() {
   return (
     <>
       {/* Toggle */}
-      <button
+      <IconButton
         onClick={() => setIsOpen(true)}
-        className={`fixed right-4 z-[200] p-3 bottom-4 md:bottom-auto md:top-16 cursor-pointer
-          border-2 border-primary-500 bg-white/20 backdrop-blur-sm text-primary-700 dark:text-white rounded-full shadow-lg hover:bg-primary-500 hover:text-white dark:hover:bg-primary-700 transition-all duration-200 ease-out 
+        className={`fixed right-2 z-[200] bottom-2 md:bottom-auto md:top-16 cursor-pointer bg-white dark:bg-gray-900
           ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
           }`}
-        title="Open Chat"
+        aria-label="Open Chat"
+        variant="primaryOutline"
+        size="lg"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <Chat className="w-5 h-5" />
-      </button>
+      </IconButton>
 
       {/* Panel */}
       <div

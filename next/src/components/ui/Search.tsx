@@ -60,7 +60,8 @@ export default function FloatingSearch({
           peer w-full rounded-full border border-transparent dark:border-primary-500/20
           shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-primary-500/40
           bg-white dark:bg-gray-900/80
-          pl-10 pr-9 pt-5 pb-2
+          pl-10 pr-9 pt-3 pb-1
+          md:pl-10 md:pr-9 md:pt-5 md:pb-2
           text-base! md:text-sm! text-gray-900 dark:text-gray-100
           placeholder-transparent
           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500

@@ -273,10 +273,10 @@ export default function Topbar({
       bg-white/10 backdrop-blur-sm
       dark:bg-transparent dark:backdrop-blur-none dark:bg-gradient-to-b dark:from-black dark:via-black/80 dark:to-black/0
       ">
-        <div className="flex items-center px-3 sm:px-4 py-1 gap-6">
+        <div className="flex items-center px-2 sm:px-4 py-1 gap-6">
           {/* Left - Logo */}
           <div className="flex-shrink-0 flex space-y-0 md:flex-col">
-            <div className="flex gap-4">
+            <div className="flex gap-2 md:gap-4">
               <button
                 onClick={onOpenBoardRoom}
                 className="focus:outline-none cursor-pointer flex items-center gap-2"

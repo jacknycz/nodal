@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from 'react'
-import { ListChecks, Tag as TagIcon, Info, X, ArrowCounterClockwise, ArrowClockwise } from '@phosphor-icons/react'
+import { ListChecks, Tag as TagIcon, Info, X, ArrowCounterClockwise, ArrowClockwise, Sidebar } from '@phosphor-icons/react'
 import TaskList from './TaskList'
 import ColorgoryManager from './ColorgoryManager'
+import IconButton from './ui/IconButton'
 
 type DockKey = 'tasks' | 'colorgories' | 'tips' | null
 
@@ -21,6 +22,26 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
+
+  // Mobile toggle state
+  const [isMdUp, setIsMdUp] = useState<boolean>(() => (typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false))
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [panelEntered, setPanelEntered] = useState(false)
+  useEffect(() => {
+    const mq = typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)') : null
+    const onChange = () => setIsMdUp(!!mq?.matches)
+    onChange()
+    mq?.addEventListener('change', onChange)
+    return () => mq?.removeEventListener('change', onChange)
+  }, [])
+  useEffect(() => {
+    if (mobileOpen) {
+      const t = setTimeout(() => setPanelEntered(true), 0)
+      return () => clearTimeout(t)
+    } else {
+      setPanelEntered(false)
+    }
+  }, [mobileOpen])
 
   // Close any open submenu on outside click/tap
   useEffect(() => {
@@ -50,14 +71,10 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
     return () => window.removeEventListener('nodal:history-state', onHist as EventListener)
   }, [])
 
-  return (
+  const Panel = (
     <div
-      className="fixed z-50 left-0 top-12 md:top-16 flex flex-col gap-2 p-2 rounded-r-xl 
-      border border-l-0 border-transparent dark:border-gray-700 
-      bg-white/80 dark:bg-gray-900/80 shadow-lg shadow-orange-950/10 dark:shadow-none backdrop-blur-sm nodal-no-select"
-      data-left-dock
-      aria-label="Left dock"
-      ref={containerRef}
+      className="flex flex-col gap-2 p-2 rounded-r-xl border border-l-0 border-transparent dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 shadow-lg shadow-orange-950/10 dark:shadow-none backdrop-blur-sm nodal-no-select"
+      data-left-dock-panel
     >
       {/* Undo / Redo */}
       <div className="flex flex-col gap-2">
@@ -147,6 +164,34 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
           </div>
         </div>
       )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="fixed z-50 left-0 top-13 md:top-16" data-left-dock aria-label="Left dock" ref={containerRef}>
+      {/* Desktop/Tablet */}
+      <div className="hidden md:block">
+        {Panel}
+      </div>
+      {/* Mobile */}
+      <div className="block md:hidden">
+        {mobileOpen && (
+          <div className={`transition-transform duration-200 ease-out ${panelEntered ? 'translate-x-0' : '-translate-x-full'}`}>
+            {Panel}
+          </div>
+        )}
+        <div className={`ml-2 ${mobileOpen ? 'mt-2' : ''}`}>
+          <IconButton 
+            aria-label="Toggle left dock" 
+            variant="primaryOutline"
+            className="bg-white dark:bg-gray-900"
+            size="lg" 
+            onClick={() => setMobileOpen(v => !v)}
+          >
+            <Sidebar size={14} className="w-5 h-5" weight="duotone" />
+          </IconButton>
+        </div>
       </div>
     </div>
   )
