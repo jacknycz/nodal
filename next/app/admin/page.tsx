@@ -93,11 +93,11 @@ export default function AdminUsersPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto min-h-screen bg-gray-950 text-gray-100">
       <h1 className="text-2xl font-bold mb-4">Admin</h1>
-      <h2 className="text-xl font-semibold mb-2">Users</h2>
+      {/* <h2 className="text-xl font-semibold mb-2">Users</h2> */}
       {loading && <div>Loading…</div>}
       {error && <div className="text-red-600">{error}</div>}
 
-      {!loading && !error && (
+      {/* {!loading && !error && (
         <div className="overflow-x-auto rounded-lg border border-gray-800 bg-gray-900">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-800 text-left">
@@ -147,7 +147,7 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
-      )}
+      )} */}
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-2">Feedback</h2>
