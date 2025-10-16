@@ -81,7 +81,7 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
         <button
           type="button"
           title="Undo"
-          onClick={() => { if (canUndo) try { window.dispatchEvent(new CustomEvent('nodal:undo')) } catch {} }}
+          onClick={() => { if (canUndo) try { window.dispatchEvent(new CustomEvent('nodal:undo')) } catch { } }}
           className={`${baseBtn} ${neutral} ${!canUndo ? disabledCls : ''}`}
           disabled={!canUndo}
         >
@@ -90,7 +90,7 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
         <button
           type="button"
           title="Redo"
-          onClick={() => { if (canRedo) try { window.dispatchEvent(new CustomEvent('nodal:redo')) } catch {} }}
+          onClick={() => { if (canRedo) try { window.dispatchEvent(new CustomEvent('nodal:redo')) } catch { } }}
           className={`${baseBtn} ${neutral} ${!canRedo ? disabledCls : ''}`}
           disabled={!canRedo}
         >
@@ -100,13 +100,13 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
       <hr className="border-gray-200 dark:border-gray-800 shadow-sm shadow-gray-400/10 dark:shadow-gray-950/90 my-1" />
       <div className="relative">
         <button
-        type="button"
-        title="Tasks"
-        aria-pressed={openKey === 'tasks'}
-        onClick={() => setOpenKey(prev => prev === 'tasks' ? null : 'tasks')}
-        className={`${baseBtn} ${openKey === 'tasks' ? activeCls : neutral}`}
-      >
-        <ListChecks className="w-5 h-5" />
+          type="button"
+          title="Tasks"
+          aria-pressed={openKey === 'tasks'}
+          onClick={() => setOpenKey(prev => prev === 'tasks' ? null : 'tasks')}
+          className={`${baseBtn} ${openKey === 'tasks' ? activeCls : neutral}`}
+        >
+          <ListChecks className="w-5 h-5" />
         </button>
         {openKey === 'tasks' && (
           <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
@@ -116,13 +116,13 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
       </div>
       <div className="relative">
         <button
-        type="button"
-        title="Colorgories"
-        aria-pressed={openKey === 'colorgories'}
-        onClick={() => setOpenKey(prev => prev === 'colorgories' ? null : 'colorgories')}
-        className={`${baseBtn} ${openKey === 'colorgories' ? activeCls : neutral}`}
-      >
-        <TagIcon className="w-5 h-5" />
+          type="button"
+          title="Colorgories"
+          aria-pressed={openKey === 'colorgories'}
+          onClick={() => setOpenKey(prev => prev === 'colorgories' ? null : 'colorgories')}
+          className={`${baseBtn} ${openKey === 'colorgories' ? activeCls : neutral}`}
+        >
+          <TagIcon className="w-5 h-5" />
         </button>
         {openKey === 'colorgories' && (
           <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
@@ -131,39 +131,39 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
         )}
       </div>
       <div className="relative">
-      <button
-        type="button"
-        title="Tips & Info"
-        aria-pressed={openKey === 'tips'}
-        onClick={() => setOpenKey(prev => prev === 'tips' ? null : 'tips')}
-        className={`${baseBtn} ${openKey === 'tips' ? activeCls : neutral}`}
-      >
-        <Info className="w-5 h-5" />
-      </button>
-      {openKey === 'tips' && (
-        <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
-          <div className="rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
-            <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
-              <div className="flex items-center space-x-2">
-                <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
-                <span className="text-xs text-gray-600 dark:text-gray-300">Tips & Info</span>
+        <button
+          type="button"
+          title="Tips & Info"
+          aria-pressed={openKey === 'tips'}
+          onClick={() => setOpenKey(prev => prev === 'tips' ? null : 'tips')}
+          className={`${baseBtn} ${openKey === 'tips' ? activeCls : neutral}`}
+        >
+          <Info className="w-5 h-5" />
+        </button>
+        {openKey === 'tips' && (
+          <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
+            <div className="rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
+              <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
+                <div className="flex items-center space-x-2">
+                  <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
+                  <span className="text-xs text-gray-600 dark:text-gray-300">Tips & Info</span>
+                </div>
+                <button onClick={() => setOpenKey(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={() => setOpenKey(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              <ul className="list-disc pl-5 space-y-2">
-                <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
-                <li><strong>Shift + click</strong> a node (with another selected) to connect them.</li>
-                <li><strong>Drag & drop</strong> files onto the board to create nodes.</li>
-                <li><strong>Double-click</strong> a node to open editing.</li>
-                <li>Use the bottom FAB to add nodes, upload, or generate.</li>
-              </ul>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
+                  <li><strong>Shift + click</strong> a node (with another selected) to connect them.</li>
+                  <li><strong>Drag & drop</strong> files onto the board to create nodes.</li>
+                  <li><strong>Double-click</strong> a node to open editing.</li>
+                  <li>Use the bottom FAB to add nodes, upload, or generate.</li>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   )
@@ -176,22 +176,22 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
       </div>
       {/* Mobile */}
       <div className="block md:hidden">
-        {mobileOpen && (
-          <div className={`transition-transform duration-200 ease-out ${panelEntered ? 'translate-x-0' : '-translate-x-full'}`}>
-            {Panel}
-          </div>
-        )}
-        <div className={`ml-2 ${mobileOpen ? 'mt-2' : ''}`}>
-          <IconButton 
-            aria-label="Toggle left dock" 
+        <div className={`ml-2 mb-2 ${mobileOpen ? '' : ''}`}>
+          <IconButton
+            aria-label="Toggle left dock"
             variant="primaryOutline"
             className="bg-white dark:bg-gray-900"
-            size="lg" 
+            size="lg"
             onClick={() => setMobileOpen(v => !v)}
           >
             <Sidebar size={14} className="w-5 h-5" weight="duotone" />
           </IconButton>
         </div>
+        {mobileOpen && (
+          <div className={`transition-transform duration-200 ease-out ${panelEntered ? 'translate-x-0' : '-translate-x-full'}`}>
+            {Panel}
+          </div>
+        )}
       </div>
     </div>
   )
