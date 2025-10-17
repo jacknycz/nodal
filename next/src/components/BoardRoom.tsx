@@ -354,7 +354,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   return (
     <div className="relative min-h-screen pt-12" role="main" aria-labelledby="welcome-heading">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-white dark:bg-black" aria-hidden>
-        <div className="absolute inset-0 min-h-[100dvh]" style={{ height: '100dvh' }}>
+        <div className="absolute left-0 right-0 top-0 h-[200dvh]">
           <div className="absolute inset-0 
           bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 
           dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
