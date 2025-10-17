@@ -698,12 +698,13 @@ export default function AddNodesModal({
               const f = e.dataTransfer.files && e.dataTransfer.files[0]
               if (!f) return
               if (f.type !== 'video/mp4' && !/\.mp4$/i.test(f.name)) { alert('Only MP4 videos are supported.'); return }
-              if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); return }
+              if (f.size > 50 * 1024 * 1024) { try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Uploads limited to 50MB during beta', variant: 'danger' } })) } catch {}; return }
               setSelectedFile(f)
             }}
           >
             <div className="text-sm text-gray-700 dark:text-gray-200">Drag & drop an MP4 here</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">or</div>
+            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Uploads limited to 50MB during beta.</div>
             <div className="mt-3">
               <label className={`inline-block px-3 py-1.5 rounded-md border ${canUploadVideo ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 cursor-pointer' : 'bg-gray-100/60 dark:bg-gray-800/60 border-gray-300/60 dark:border-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed'}`}
                 onClick={(e) => { if (!canUploadVideo) { e.preventDefault() } }}
@@ -717,7 +718,7 @@ export default function AddNodesModal({
                     if (!f) return
                     if (!canUploadVideo) { alert('Uploading videos is a Pro feature. Upgrade to upload videos.'); (e.target as HTMLInputElement).value = ''; return }
                     if (f.type !== 'video/mp4') { alert('Only MP4 videos are supported.'); (e.target as HTMLInputElement).value = ''; return }
-                    if (f.size > 200 * 1024 * 1024) { alert('Video exceeds the 200MB limit. Please choose a smaller file.'); (e.target as HTMLInputElement).value = ''; return }
+                    if (f.size > 50 * 1024 * 1024) { try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Uploads limited to 50MB during beta', variant: 'danger' } })) } catch {}; (e.target as HTMLInputElement).value = ''; return }
                     setSelectedFile(f)
                   }}
                   disabled={!canUploadVideo}
@@ -802,6 +803,7 @@ export default function AddNodesModal({
             {tab === 'images'
               ? 'We accept .png, .jpg, .jpeg, .gif, .webp, .svg, and .heic image types.'
               : 'We accept .pdf, .doc, .docx, .txt, .md, .markdown, .csv, and .json document types.'}
+            <div>Uploads limited to 50MB during beta.</div>
           </div>
         </div>
       )}
@@ -875,7 +877,7 @@ export default function AddNodesModal({
               <div className="mt-2"><Tag variant="beta">Pro Feature</Tag></div>
             )}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">We'll create nodes for each file (Image, Video, or Document).</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">We'll create nodes for each file (Image, Video, or Document). Uploads limited to 50MB during beta.</div>
         </div>
       )}
     </Modal>

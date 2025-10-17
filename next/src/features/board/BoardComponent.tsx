@@ -217,6 +217,7 @@ function BoardContent({
   const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
+  const [toastVariant, setToastVariant] = useState<'success' | 'info' | 'warning' | 'danger'>('success')
   const [quickAiGenerating, setQuickAiGenerating] = useState(false)
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
   const toVisualEdgeType = useCallback((pref: string) => {
@@ -360,7 +361,24 @@ function BoardContent({
     const article = count === 1 ? 'a ' : ''
     const msg = `${verb} ${article}${count === 1 ? noun : count + ' ' + noun}!`
     setToastMessage(msg)
+    setToastVariant('success')
     setToastOpen(true)
+  }, [])
+
+  // Global toast listener (used by uploads and other flows)
+  useEffect(() => {
+    const onToast = (ev: any) => {
+      try {
+        const d = (ev as CustomEvent)?.detail || {}
+        const msg = String(d.message || d.text || '')
+        if (!msg) return
+        setToastMessage(msg)
+        setToastVariant((d.variant as any) || 'info')
+        setToastOpen(true)
+      } catch {}
+    }
+    window.addEventListener('nodal:toast', onToast as EventListener)
+    return () => window.removeEventListener('nodal:toast', onToast as EventListener)
   }, [])
   
   // Close LeftDock panels on click-away / Escape / external right-click
@@ -1115,12 +1133,12 @@ function BoardContent({
         try { document.body.removeChild(input) } catch {}
       }
 
-      input.addEventListener('change', () => {
+      input.addEventListener('change', async () => {
         const file = input.files?.[0]
         if (file) {
           const viewportCenter = getViewportCenter()
-          handleDocumentUpload(file, viewportCenter)
-          showAddToast('added', 1)
+          const ok = await handleDocumentUpload(file, viewportCenter)
+          if (ok) showAddToast('added', 1)
         }
         cleanup()
       }, { once: true })
@@ -1253,8 +1271,7 @@ function BoardContent({
                     x: e.clientX,
                     y: e.clientY,
                   })
-                  handleDocumentUpload(file, flowPosition)
-                showAddToast('added', 1)
+                  ;(async () => { const ok = await handleDocumentUpload(file, flowPosition); if (ok) showAddToast('added', 1) })()
               }
           }
         }
@@ -1307,8 +1324,7 @@ function BoardContent({
             e.preventDefault()
             // Only allow one
             const file = files[0]
-            handleDocumentUpload(file as File, center)
-            showAddToast('added', 1)
+            ;(async () => { const ok = await handleDocumentUpload(file as File, center); if (ok) showAddToast('added', 1) })()
             return
           }
         }
@@ -2218,6 +2234,26 @@ function BoardContent({
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)
+          // Open edit modal and align view to the right of the node (like Task)
+          setTimeout(() => {
+            try {
+              setEditNodeId(newId)
+              centerOnNodeIds([newId], { align: 'midLeft' })
+            } catch {}
+          }, 0)
+          // If we were adding as a child of a pending source node, connect them
+          if (pendingSourceNodeId) {
+            const newEdge: Edge = { id: `edge-${Date.now()}`, source: pendingSourceNodeId, target: newId, type: toVisualEdgeType(edgeTypePref) as any }
+            setEdges((eds) => {
+              const list = Array.isArray(eds) ? eds : []
+              const exists = list.some((e: any) => (
+                (e.source === newEdge.source && e.target === newEdge.target) ||
+                (e.source === newEdge.target && e.target === newEdge.source)
+              ))
+              if (exists) return eds
+              return [...list, newEdge]
+            })
+          }
           setContextMenu({ isOpen: false, position: null })
           setPendingSourceNodeId(null)
           setPendingNodePosition(null)
@@ -3053,11 +3089,11 @@ function BoardContent({
             showAddToast('added', 1)
             centerOnNodeIds([newNode.id])
           }}
-          onUploadSubmit={(file) => {
+          onUploadSubmit={async (file) => {
             const center = pendingNodePosition || getViewportCenter()
-            handleDocumentUpload(file as File, center)
+            const ok = await handleDocumentUpload(file as File, center)
             setShowUnifiedAddModal(false)
-            showAddToast('added', 1)
+            if (ok) showAddToast('added', 1)
             centerOnPositions([{ x: center.x, y: center.y }])
           }}
         />
@@ -3077,7 +3113,7 @@ function BoardContent({
           </div>
         </div>
       )}
-      <Toast open={toastOpen} onClose={() => setToastOpen(false)} variant="success" position="top-center">
+      <Toast open={toastOpen} onClose={() => setToastOpen(false)} variant={toastVariant} position="top-center">
         {toastMessage}
       </Toast>
     </div>

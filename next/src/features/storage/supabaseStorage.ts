@@ -587,19 +587,8 @@ class SupabaseStorage {
 
   // Create or refresh a signed URL for an arbitrary storage path
   async getSignedUrlForPath(filePath: string, expiresInSeconds: number = 86400): Promise<string | null> {
-    try {
-      const url = await this.createSignedUrlWithRetry(String(filePath), expiresInSeconds)
-      if (!url) throw new Error('Failed to create signed URL')
-      return url
-    } catch (error: any) {
-      const msg = String(error?.message || '')
-      const status = Number(error?.status || 0)
-      const isNotFound = msg.toLowerCase().includes('object not found') || status === 404 || status === 400
-      if (!isNotFound) {
-        console.error('Failed to get signed URL for path:', error)
-      }
-      return null
-    }
+    const url = await this.createSignedUrlWithRetry(String(filePath), expiresInSeconds)
+    return url || null
   }
 
   // Upload an image variant for a given documentId under a stable path

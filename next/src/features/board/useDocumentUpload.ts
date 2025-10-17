@@ -23,7 +23,7 @@ interface UseDocumentUploadParams {
 }
 
 export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtractable, localBoardIdRef, addNodeToStore, setNodes }: UseDocumentUploadParams) {
-  const handleDocumentUpload = useCallback(async (file: File, position: { x: number; y: number }) => {
+  const handleDocumentUpload = useCallback(async (file: File, position: { x: number; y: number }): Promise<boolean> => {
     const nodeId = `document-${Date.now()}`
     try {
       console.log('[Upload] start', { name: file.name, type: file.type, size: file.size, position })
@@ -31,10 +31,10 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
       const isVideo = file.type.startsWith('video/') || /\.(mp4)$/i.test(file.name)
 
-      // Enforce 200MB size limit for videos
-      if (isVideo && file.size > 200 * 1024 * 1024) {
-        alert('Video exceeds the 200MB limit (Pro feature). Please choose a smaller file.')
-        return
+      // Enforce 50MB size limit during beta for videos
+      if (isVideo && file.size > 50 * 1024 * 1024) {
+        try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Uploads limited to 50MB during beta', variant: 'danger' } })) } catch {}
+        return false
       }
 
       // Optimistic node
@@ -267,6 +267,8 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
 
         await Promise.allSettled([generateVariants(), generateCaption()])
       } else if (isVideo) {
+        // Mark as processing while generating thumbnail/variants
+        setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, status: 'processing' } } : n))
         // Video upload: generate thumbnail and finalize
         const thumbBlob = await new Promise<Blob | null>((resolve) => {
           const v = document.createElement('video')
@@ -300,10 +302,12 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
         // Keep documentId and mark ready; VideoNode will resolve a fresh signed URL for playback
         setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, type: 'video', data: { ...n.data, type: 'video', status: 'ready' } } : n))
       }
+      return true
     } catch (error) {
       // Update optimistic node to error state
       setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'error', extractedText: 'File upload failed' } } : n))
       console.error('[Upload] failed; error node added', error)
+      return false
     }
   }, [boardStorage, supabaseStorage, isTextExtractable, localBoardIdRef, addNodeToStore, setNodes])
 

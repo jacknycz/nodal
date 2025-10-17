@@ -237,6 +237,14 @@ export default function BoardContextMenu({
               </button>
             )}
 
+            {!multiSelected && hasChildren && onOrganizeSubtree && (
+              <button onClick={() => handleAction(() => onOrganizeSubtree(nodeId!))}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
+                <TreeView size={18} className="w-4 h-4" />
+                Reorganize Children
+              </button>
+            )}
+
             {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
 
             {/* Bottom section: Colorgory, then Delete */}

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle, TreeView } from '@phosphor-icons/react/ssr'
-import { ArrowsOut, ArrowsIn, Pencil, PlayCircle } from '@phosphor-icons/react'
+import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, Warning } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -21,7 +21,7 @@ interface VideoNodeData {
   title?: string
   videoUrl?: string
   thumbnailUrl?: string
-  status?: 'idle' | 'loading' | 'ready' | 'error'
+  status?: 'idle' | 'uploading' | 'processing' | 'loading' | 'ready' | 'error'
   colorgoryIds?: string[]
   content?: string
 }
@@ -49,6 +49,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const mobileVideoRef = useRef<HTMLVideoElement | null>(null)
   const [embedHtml, setEmbedHtml] = useState<string | null>(null)
   const expandedVideoRef = useRef<HTMLVideoElement | null>(null)
+  const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
 
   const isLocked = false
   const isLockedByMe = false
@@ -183,9 +184,9 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         setSignedThumbUrl(url)
       } catch {}
     }
-    refreshThumb()
+    const t0 = setTimeout(() => { refreshThumb() }, 800)
     const t = setInterval(refreshThumb, 45 * 60 * 1000)
-    return () => clearInterval(t)
+    return () => { clearInterval(t); clearTimeout(t0) }
   }, [(data as any)?.documentId])
 
   // Attempt to enter fullscreen and play when mobile overlay appears
@@ -233,6 +234,31 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const isMp4 = !videoId && typeof effectiveVideoUrl === 'string' && /\.mp4($|\?)/i.test(effectiveVideoUrl)
 
   const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
+  const isBusy = (data.status === 'uploading' || data.status === 'processing')
+
+  // Status visibility auto-hide (mirror ImageNode)
+  useEffect(() => {
+    setShowStatus(true)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    if (data.status === 'ready') {
+      timer = setTimeout(() => setShowStatus(false), 5000)
+    }
+    return () => { if (timer) clearTimeout(timer) }
+  }, [data.status])
+
+  const getStatusIcon = () => {
+    switch (data.status) {
+      case 'uploading':
+      case 'processing':
+        return <Spinner className="w-4 h-4 animate-spin text-blue-500" />
+      case 'ready':
+        return <CheckCircle className="w-4 h-4 text-green-500" />
+      case 'error':
+        return <Warning className="w-4 h-4 text-red-500" />
+      default:
+        return null
+    }
+  }
 
   // Ensure expanded video sits above other nodes
   useEffect(() => {
@@ -280,24 +306,26 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               <img src={signedThumbUrl || data.thumbnailUrl!} alt={data.title || 'Video'} className="w-full h-[160px] rounded-md object-cover cursor-pointer" />
             ) : (
               <div className="w-full h-[160px] rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm">
-                {loading ? 'Loading…' : 'No thumbnail'}
+                {isBusy ? 'Uploading…' : (loading ? 'Loading…' : 'No thumbnail')}
               </div>
             )}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="pointer-events-auto">
-                <IconButton variant="secondaryGhost" size="lg" aria-label="Expand video" onClick={(e) => {
-                  e.stopPropagation()
-                  const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
-                  if (isMobile) {
-                    const href = effectiveVideoUrl || data.videoUrl
-                    if (href) { setShowMobilePlayer(true); return }
-                  }
-                  setExpanded(true)
-                }}>
-                  <PlayCircle size={44} weight="duotone" />
-                </IconButton>
+            {!isBusy && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="pointer-events-auto">
+                  <IconButton variant="secondaryGhost" size="lg" aria-label="Expand video" onClick={(e) => {
+                    e.stopPropagation()
+                    const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
+                    if (isMobile) {
+                      const href = effectiveVideoUrl || data.videoUrl
+                      if (href) { setShowMobilePlayer(true); return }
+                    }
+                    setExpanded(true)
+                  }}>
+                    <PlayCircle size={44} weight="duotone" />
+                  </IconButton>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <div className="relative w-full">
@@ -362,6 +390,14 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           <div className="text-sm font-medium text-gray-900 dark:text-white">
             {data.title || 'Video'}
           </div>
+          {data.status && (
+            <div className={`mt-1 pointer-events-none flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
+              {getStatusIcon()}
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+              </span>
+            </div>
+          )}
           {effectiveVideoUrl && (
             <div className="mt-1 inline-flex truncate items-center gap-1 min-w-0 w-full">
               {Boolean((data as any).faviconUrl) && (

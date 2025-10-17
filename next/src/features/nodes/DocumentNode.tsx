@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil, TreeView } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil, TreeView, FileDoc, FileTxt, Image, File } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import NodeEditModal from '../../components/NodeEditModal'
@@ -135,11 +135,11 @@ export default function DocumentNode({
   // Focus removed
 
   const getFileIcon = () => {
-    if (isImage) return '🖼️'
+    if (isImage) return <Image size={44} weight="duotone" />
     if (isPDF) return <FilePdf size={44} weight="duotone" />
-    if (data.fileType?.includes('word') || data.fileName?.match(/\.(doc|docx)$/i)) return '📝'
-    if (data.fileType?.includes('text') || data.fileName?.match(/\.(txt|md|csv)$/i)) return '📄'
-    return '📄'
+    if (data.fileType?.includes('word') || data.fileName?.match(/\.(doc|docx)$/i)) return <FileDoc size={44} weight="duotone" />
+    if (data.fileType?.includes('text') || data.fileName?.match(/\.(txt|md|csv)$/i)) return <FileTxt size={44} weight="duotone" />
+    return <File size={44} weight="duotone" />
   }
 
   const getStatusIcon = () => {
