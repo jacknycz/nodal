@@ -35,15 +35,16 @@ export default function FloatingActionButton({
   ]
 
   return (
-    <div className="fixed bottom-2 md:bottom-4 left-1/2 transform -translate-x-1/2 z-20 nodal-no-select">
+    <div className="fixed bottom-2 left-2 md:bottom-4 md:left-1/2 md:transform md:-translate-x-1/2 z-20 nodal-no-select">
       <Menu
         trigger={
           <IconButton
             aria-label="Open Actions"
             size="lg"
-            className="w-14 h-14 bg-white/70 border border-gray-200/50 dark:border-none dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-900 text-white rounded-full shadow-2xl flex items-center justify-center"
+            variant="primaryOutline"
+            className="bg-white/70 border border-gray-200/50 dark:border-none dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-900 text-white"
           >
-            <img src="/nodal.svg" alt="Nodal" className="w-8 h-8" />
+            <img src="/nodal.svg" alt="Nodal" className="w-6 h-6" />
           </IconButton>
         }
         items={items}

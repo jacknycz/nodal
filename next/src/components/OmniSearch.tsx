@@ -55,7 +55,7 @@ export default function OmniSearch() {
   const showResults = !!query && (isFocused || isHoveringResults)
 
   return (
-    <div className="fixed top-12 md:top-2 right-2 md:left-1/2 md:-translate-x-1/2 z-[600] w-64 nodal-no-select">
+    <div className="fixed bottom-3 md:top-2 left-1/2 -translate-x-1/2 z-[600] w-64 nodal-no-select">
       <FloatingSearch
         label="Search nodes"
         value={query}
@@ -69,7 +69,7 @@ export default function OmniSearch() {
       <div
         onMouseEnter={() => setIsHoveringResults(true)}
         onMouseLeave={() => setIsHoveringResults(false)}
-        className={`mt-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
+        className={`absolute left-0 right-0 md:top-full md:mt-2 bottom-full mb-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
           showResults ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
