@@ -10,7 +10,10 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize
   loading?: boolean
   fullWidth?: boolean
+  // Deprecated: use iconLeft or iconRight instead
   icon?: React.ReactNode
+  iconLeft?: React.ReactNode
+  iconRight?: React.ReactNode
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
@@ -19,7 +22,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primaryOutline: 'bg-transparent hover:bg-primary-50 text-primary-600 border border-primary-600 hover:border-primary-700',
   secondary: 'bg-gray-400 hover:bg-gray-600 text-white dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white',
   secondaryGhost: 'bg-transparent hover:bg-gray-100 text-gray-900 dark:hover:bg-gray-600 dark:text-white',
-  secondaryOutline: 'bg-transparent hover:bg-gray-100 text-gray-900 dark:hover:bg-gray-600 dark:text-white border border-gray-900 dark:border-gray-100',
+  secondaryOutline: 'bg-transparent hover:bg-gray-100 text-gray-900 dark:hover:bg-gray-600 dark:text-white border border-gray-400 dark:border-gray-100',
   danger: 'bg-red-500 hover:bg-red-600 text-white',
   dangerGhost: 'bg-transparent hover:bg-red-100 text-red-500',
   dangerOutline: 'bg-transparent hover:bg-red-100 text-red-500 border border-red-500',
@@ -45,9 +48,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     disabled = false,
     fullWidth = false,
     icon,
+    iconLeft,
+    iconRight,
     className = '',
     ...props
   }, ref) => {
+    const leftIcon = iconLeft ?? icon
+    const rightIcon = iconRight
     return (
       <button
         ref={ref}
@@ -68,8 +75,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
         )}
-        {icon && <span className="mr-2">{icon}</span>}
+        {leftIcon && <span className="mr-2 inline-flex items-center">{leftIcon}</span>}
         {children}
+        {rightIcon && <span className="ml-2 inline-flex items-center">{rightIcon}</span>}
       </button>
     )
   }

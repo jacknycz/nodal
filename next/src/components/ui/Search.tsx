@@ -94,7 +94,7 @@ export default function FloatingSearch({
           top-1/2 -translate-y-1/2 text-base
 
           /* when focused or filled */
-          peer-focus:top-3 peer-focus:text-sm peer-focus:text-primary-500
+          peer-focus:top-2 peer-focus:text-sm peer-focus:text-primary-500
           peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-sm
         "
       >

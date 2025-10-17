@@ -55,7 +55,7 @@ export default function OmniSearch() {
   const showResults = !!query && (isFocused || isHoveringResults)
 
   return (
-    <div className="fixed bottom-3 md:top-2 left-1/2 -translate-x-1/2 z-[600] w-64 nodal-no-select">
+    <div className="fixed bottom-3 md:top-2 left-1/2 -translate-x-1/2 z-[1100] w-64 nodal-no-select">
       <FloatingSearch
         label="Search nodes"
         value={query}
@@ -69,8 +69,12 @@ export default function OmniSearch() {
       <div
         onMouseEnter={() => setIsHoveringResults(true)}
         onMouseLeave={() => setIsHoveringResults(false)}
+        onTouchStart={(e) => { e.stopPropagation(); setIsHoveringResults(true) }}
+        onMouseDownCapture={(e) => { e.preventDefault(); e.stopPropagation() }}
+        onTouchStartCapture={(e) => { e.preventDefault(); e.stopPropagation() }}
+        data-omni-search-results
         className={`absolute left-0 right-0 md:top-full md:mt-2 bottom-full mb-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
-          showResults ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+          showResults ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
         {showResults && results.length === 0 && (
@@ -81,13 +85,18 @@ export default function OmniSearch() {
             {results.map((r) => (
               <li
                 key={r.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => panToNode(r.id)}
+                onTouchStart={(e) => { e.stopPropagation() }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); panToNode(r.id); setIsFocused(false); setIsHoveringResults(false) }}
                 className="px-3 py-2 text-sm text-gray-800 dark:text-gray-200 border-b border-gray-200/60 dark:border-gray-700/60 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
               >
                 <div className="flex items-center gap-2 justify-between">
                   <div className="min-w-0 truncate">{r.title}</div>
                   <button
                     onClick={(e) => { e.stopPropagation(); panToNode(r.id) }}
+                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); panToNode(r.id); setIsFocused(false); setIsHoveringResults(false) }}
                     className="flex-none text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition-colors"
                     title="Center on node"
                   >

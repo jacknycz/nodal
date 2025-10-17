@@ -7,7 +7,7 @@ import Button from './ui/Button'
 import Tag from './ui/Tag'
 import Select from './ui/Select'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
-import { PushPin } from '@phosphor-icons/react/dist/ssr'
+import { ArrowRight, CaretCircleRight, PushPin, Share, ShareFat } from '@phosphor-icons/react/dist/ssr'
 import ShareBoardModal from './ShareBoardModal'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Menu from './ui/Menu'
@@ -99,16 +99,17 @@ function BoardCard({
       className="group relative flex flex-col 
       shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
       bg-white dark:bg-gray-950/60 dark:hover:bg-slate-700/98
-      border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200 cursor-pointer"
-      onClick={handleCardClick}
+      border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200"
+      // onClick={handleCardClick}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 160px' as any }}
     >
       {typeof isPinned !== 'undefined' && onTogglePin && (
         <IconButton
           aria-label={isPinned ? 'Unpin board' : 'Pin board'}
           onClick={(e) => { e.stopPropagation(); onTogglePin() }}
-          variant={isPinned ? 'primary' : 'secondaryGhost'}
-          className={`absolute top-0 right-0 z-20 ${isPinned ? 'text-tertiary-500 bg-tertiary-50/50! dark:bg-transparent! hover:bg-tertiary-50' : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200'}`}
+          variant={isPinned ? 'primaryGhost' : 'secondaryGhost'}
+          className={`absolute top-0 right-0 z-20 ${isPinned ? '' : 'opacity-50 hover:opacity-100'}`}
+          size="small"
         >
           <PushPin size={16} weight="duotone" />
         </IconButton>
@@ -177,30 +178,46 @@ function BoardCard({
       <div className="col-span-2 mt-auto pt-3 flex items-center justify-between gap-2">
         {footerActions ? footerActions : (
           <>
-            {enableSharing && (
-              <Button
-                variant="secondary"
-                size="small"
-                onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
-                title="Share board"
-              >
-                Share
-              </Button>
-            )}
-            <Menu
-              trigger={
-                <IconButton aria-label="More actions" size="small" variant="primaryOutline">
-                  <Image src="/nodal.svg" alt="More" width={16} height={16} className="opacity-90" />
+            {/* Left: More menu */}
+            <div className="flex items-center gap-2">
+              <Menu
+                trigger={
+                  <IconButton aria-label="More actions" size="small" variant="primaryOutline">
+                    <Image src="/nodal.svg" alt="More" width={16} height={16} className="opacity-90" />
+                  </IconButton>
+                }
+                align="left"
+                portal
+                placement="above"
+                items={[
+                  { label: 'Board Settings', icon: GearSix, onClick: () => { setShowSettingsModal(true) } },
+                  { label: 'Delete', icon: Trash, onClick: () => { setShowDeleteModal(true) } },
+                ]}
+              />
+              {enableSharing && (
+                <IconButton
+                  variant="secondaryOutline"
+                  size="small"
+                  onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
+                  aria-label="Share board"
+                >
+                  <ShareFat size={16} weight="duotone" className="w-4 h-4" />
                 </IconButton>
-              }
-              align="right"
-              portal
-              placement="above"
-              items={[
-                { label: 'Board Settings', icon: GearSix, onClick: () => { setShowSettingsModal(true) } },
-                { label: 'Delete', icon: Trash, onClick: () => { setShowDeleteModal(true) } },
-              ]}
-            />
+              )}
+            </div>
+
+            {/* Right: Share + Edit */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="small"
+                onClick={(e) => { e.stopPropagation(); onLoad() }}
+                title="Open board"
+                iconRight={<CaretCircleRight size={16} weight="duotone" className="w-5 h-4" />}
+              >
+                Open
+              </Button>
+            </div>
           </>
         )}
       </div>

@@ -46,6 +46,30 @@ export default function Menu({
   const menuRef = useRef<HTMLDivElement>(null)
   const portalRef = useRef<HTMLDivElement>(null)
   const [portalPos, setPortalPos] = useState<{ left: number; top: number } | null>(null)
+  // Re-clamp portal position after open to avoid covering trigger and keep within viewport
+  useEffect(() => {
+    if (!isOpen || !portal || !portalRef.current || !menuRef.current || !portalPos) return
+    const raf = requestAnimationFrame(() => {
+      try {
+        const menuRect = portalRef.current!.getBoundingClientRect()
+        const triggerRect = menuRef.current!.getBoundingClientRect()
+        const margin = 8
+        let baseLeft = align === 'right' ? triggerRect.right : triggerRect.left
+        let baseTop = placement === 'above' ? (triggerRect.top - 8) : (triggerRect.bottom + 8)
+        // Effective position after transforms
+        let effLeft = baseLeft + (align === 'right' ? -menuRect.width : 0)
+        let effTop = baseTop + (placement === 'above' ? -menuRect.height : 0)
+        // Clamp to viewport
+        effLeft = Math.max(margin, Math.min(effLeft, window.innerWidth - margin - menuRect.width))
+        effTop = Math.max(margin, Math.min(effTop, window.innerHeight - margin - menuRect.height))
+        // Recompute base positions to keep current transform model
+        baseLeft = effLeft + (align === 'right' ? menuRect.width : 0)
+        baseTop = effTop + (placement === 'above' ? menuRect.height : 0)
+        setPortalPos({ left: baseLeft, top: baseTop })
+      } catch {}
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isOpen, portal, align, placement, portalPos])
 
   useEffect(() => {
     const handlePointerDownOutside = (event: Event) => {
@@ -162,7 +186,10 @@ export default function Menu({
               style={{
                 left: portalPos ? portalPos.left : 0,
                 top: portalPos ? portalPos.top : 0,
-                transform: `${align === 'right' ? 'translateX(-100%)' : 'none'} ${placement === 'above' ? ' translateY(-100%)' : ''}`.trim()
+                transform: [
+                  (align === 'right') ? 'translateX(-100%)' : '',
+                  (placement === 'above') ? 'translateY(-100%)' : ''
+                ].filter(Boolean).join(' ')
               }}
             >
               {customContent ? (
