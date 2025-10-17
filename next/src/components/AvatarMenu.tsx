@@ -13,7 +13,7 @@ import Image from 'next/image'
 import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
-import { COLORGORY_DEFS } from '../features/board/colorgoryColors'
+import Avatar from './ui/Avatar'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -177,22 +177,13 @@ export default function AvatarMenu({
   const displayRole = admin ? 'Admin' : roleLabel
 
   // Get avatar url only from our profiles table (ignore Google picture entirely)
-  const getUserAvatar = () => {
-    if (!user) return null
-    return profile?.avatar_url || null
-  }
+  const getUserAvatar = () => (!user ? null : (profile?.avatar_url || null))
 
   const getInitials = () => {
     const source = (profile?.username || user?.email || user?.id || 'U').toString()
     return source.slice(0, 2).toUpperCase()
   }
 
-  const getInitialsColor = () => {
-    const palette = COLORGORY_DEFS.map(d => d.hex)
-    const str = (profile?.username || user?.email || user?.id || 'U').toString()
-    const hash = Array.from(str).reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)
-    return palette[Math.abs(hash) % palette.length]
-  }
 
   return (
     <>
@@ -201,26 +192,8 @@ export default function AvatarMenu({
       portal
       trigger={
         <div className="relative gap-1 flex items-center">
-          <IconButton
-            aria-label="User menu"
-            className="p-0!"
-            variant="secondaryGhost"
-            size="small"
-          >
-            {getUserAvatar() ? (
-              <Image 
-                src={getUserAvatar()}
-                alt={getUserDisplayName()}
-                width={32}
-                height={32}
-                className="w-8 h-8 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-                unoptimized
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-gray-200 dark:border-gray-700" style={{ backgroundColor: getInitialsColor() }}>
-                {getInitials()}
-              </div>
-            )}
+          <IconButton aria-label="User menu" className="p-0!" variant="secondaryGhost" size="small">
+            <Avatar src={getUserAvatar()} name={getUserDisplayName()} email={user?.email || null} size="sm" border />
           </IconButton>
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] leading-[18px] text-white text-center font-semibold shadow-sm">
@@ -236,20 +209,7 @@ export default function AvatarMenu({
           {/* User Info */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center space-x-3">
-              {getUserAvatar() ? (
-                <Image 
-                  src={getUserAvatar()}
-                  alt={getUserDisplayName()}
-                  width={40}
-                  height={40}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white border-2 border-gray-200 dark:border-gray-700" style={{ backgroundColor: getInitialsColor() }}>
-                  {getInitials()}
-                </div>
-              )}
+              <Avatar src={getUserAvatar()} name={getUserDisplayName()} email={user?.email || null} size="md" border />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {getUserDisplayName()}

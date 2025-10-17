@@ -9,6 +9,7 @@ import TextInput from './ui/TextInput'
 import Modal from './ui/Modal'
 import LinkUI from './ui/Link'
 import Tag from './ui/Tag'
+import Avatar from './ui/Avatar'
 import { User } from '@phosphor-icons/react/dist/ssr'
 
 function useDebounced<T>(value: T, delay = 400) {
@@ -292,13 +293,7 @@ export default function ProfileTab() {
       <div className="flex-col md:flex-row items-start gap-6">
           {/* Avatar */}
           <div className="relative flex flex-col items-center">
-            <div className="w-24 h-24 md:w-28 md:h-28 rounded-full ring-4 ring-white/60 dark:ring-gray-800 overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 shadow-md">
-              {(profile?.avatar_url) ? (
-                <NextImage src={profile.avatar_url} alt="avatar" width={112} height={112} className="w-full h-full object-cover" priority sizes="112px" />
-              ) : (
-                <span className="text-2xl font-semibold">{(user?.email || 'U').slice(0,1).toUpperCase()}</span>
-              )}
-            </div>
+            <Avatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || null} email={user?.email || null} size="xl" ring border className="shadow-md" />
 
             <div className="mt-2 flex items-center gap-2">
             {/* Role tag */}
