@@ -290,15 +290,12 @@ export default function ProfileTab() {
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
       {/* Profile Card */}
-      <div className="flex-col md:flex-row items-start gap-6">
+      <div className="flex flex-row items-center gap-6 md:gap-12">
           {/* Avatar */}
           <div className="relative flex flex-col items-center">
             <Avatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || null} email={user?.email || null} size="xl" ring border className="shadow-md" />
 
             <div className="mt-2 flex items-center gap-2">
-            {/* Role tag */}
-            <Tag variant="secondary" className="ml-1">{String((user as any)?.app_metadata?.role || 'user').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</Tag>
-            
               <LinkUI onClick={() => { setAvatarPreview(null); avatarBlobRef.current = null; setShowAvatarModal(true) }}>Edit avatar</LinkUI>
             </div>
           </div>
@@ -322,6 +319,11 @@ export default function ProfileTab() {
               ) : (
                 <Button size="sm" onClick={() => { setUsernameInput(''); setShowUsernameModal(true) }}>Add Username</Button>
               )}
+
+              {/* Role tag */}
+            <div>
+              <Tag variant="secondary" className="ml-1">{String((user as any)?.app_metadata?.role || 'user').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</Tag>
+              </div>
             </div>
 
             <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">

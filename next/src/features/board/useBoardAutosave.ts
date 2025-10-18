@@ -61,6 +61,10 @@ export function useBoardAutosave({ boardStorage, templateStorage, getViewport, g
 
   const manualSave = useCallback(async (nodes: Node[], edges: Edge[], name?: string) => {
     try {
+      // Safety: never overwrite an existing board with an empty state
+      if (!name && localBoardIdRef.current && (!nodes || nodes.length === 0) && (!edges || edges.length === 0)) {
+        return
+      }
       setSaveStatus('saving')
       setHasUnsavedChanges(false)
       const edgeType = useBoardStore.getState().edgeType

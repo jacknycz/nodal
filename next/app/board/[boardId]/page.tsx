@@ -136,17 +136,21 @@ export default function BoardPage() {
               onOpenBoardRoom={handleOpenBoardRoom}
             />
           </div>
-          <BoardComponent
-            key={board ? `${boardId}-ready` : `${boardId}-loading`}
-            initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
-            onBoardStateChange={handleBoardStateChange}
-            screenshotMode={screenshotMode}
-            boardId={boardId}
-          />
+          {board ? (
+            <BoardComponent
+              key={`${boardId}-ready`}
+              initialBoard={{ nodes: board.data.nodes, edges: board.data.edges }}
+              onBoardStateChange={handleBoardStateChange}
+              screenshotMode={screenshotMode}
+              boardId={boardId}
+            />
+          ) : (
+            <div className="h-full" />
+          )}
 
           {/* Loading overlay over board (not fullscreen blockout) */}
           {loading && (
-            <div className="fixed inset-0 z-[950] flex items-center justify-center bg-white/60 dark:bg-black/40 backdrop-blur-sm">
+            <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-white/60 dark:bg-black/40 backdrop-blur-sm">
               <div className="px-4 py-3 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-3">
                 <Loader size="md" />
                 <span className="text-sm text-gray-700 dark:text-gray-200">Loading your board…</span>
@@ -156,7 +160,7 @@ export default function BoardPage() {
 
           {/* Error overlay (keeps UI visible) */}
           {!loading && error && (
-            <div className="fixed inset-0 z-[950] flex items-center justify-center">
+            <div className="fixed inset-0 z-[1400] flex items-center justify-center">
               <div className="px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 text-sm shadow">
                 Error loading board: {error}
               </div>
