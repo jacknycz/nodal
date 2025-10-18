@@ -125,37 +125,44 @@ export default function BoardPage() {
   return (
     <ThemeProvider>
       <AIProvider>
-        {loading ? (
-          <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-            <Loader size="lg" className="mb-4" />
-            <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
-              Loading your board...
-            </p>
-          </div>
-        ) : error ? (
-          <div className="min-h-screen flex items-center justify-center">
-            <span>Error: {error}</span>
-          </div>
-        ) : (
-          <div className="h-screen">
-            {/* Hide topbar in editor mode */}
-            <div className={editorMode ? 'hidden' : ''}>
-              <Topbar
+        <div className="h-screen relative">
+          {/* Hide topbar in editor mode */}
+          <div className={editorMode ? 'hidden' : ''}>
+            <Topbar
               currentBoardName={board?.name}
               saveStatus={saveStatus}
               hasUnsavedChanges={hasUnsavedChanges}
               isBoardView={true}
               onOpenBoardRoom={handleOpenBoardRoom}
-              />
-            </div>
-            <BoardComponent 
-              initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
-              onBoardStateChange={handleBoardStateChange}
-              screenshotMode={screenshotMode}
-              boardId={boardId} // <-- Pass boardId prop
             />
           </div>
-        )}
+          <BoardComponent
+            key={board ? `${boardId}-ready` : `${boardId}-loading`}
+            initialBoard={board ? { nodes: board.data.nodes, edges: board.data.edges } : undefined}
+            onBoardStateChange={handleBoardStateChange}
+            screenshotMode={screenshotMode}
+            boardId={boardId}
+          />
+
+          {/* Loading overlay over board (not fullscreen blockout) */}
+          {loading && (
+            <div className="fixed inset-0 z-[950] flex items-center justify-center bg-white/60 dark:bg-black/40 backdrop-blur-sm">
+              <div className="px-4 py-3 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                <Loader size="md" />
+                <span className="text-sm text-gray-700 dark:text-gray-200">Loading your board…</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error overlay (keeps UI visible) */}
+          {!loading && error && (
+            <div className="fixed inset-0 z-[950] flex items-center justify-center">
+              <div className="px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 text-sm shadow">
+                Error loading board: {error}
+              </div>
+            </div>
+          )}
+        </div>
       </AIProvider>
     </ThemeProvider>
   );

@@ -414,7 +414,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       */}
 
       {/* Scrollable Board/Sidebar Section */}
-      <div className="relative flex flex-col md:flex-row mx-4 md:mx-6 lg:mx-8 z-20 
+      <div className="relative flex flex-col lg:flex-row mx-4 md:mx-6 lg:mx-8 z-20 
       shadow dark:shadow-2xl dark:shadow-gray-950/70 
       backdrop-blur-sm bg-white/70 dark:bg-slate-950/70
       border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl">
@@ -497,8 +497,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         </Tabs>
 
         {/* SIDEBAR */}
-        <div className="w-full md:w-96 md:min-w-[24rem] md:max-w-[24rem] flex-none shrink-0 mt-8 md:-mt-16 min-h-screen rounded-t-4xl 
-        bg-white dark:bg-slate-950/90 p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 sticky top-12 self-start z-30" style={{ scrollbarGutter: 'stable' }}>
+        <div className="w-full lg:w-96 lg:min-w-[24rem] lg:max-w-[24rem] flex-none shrink-0 mt-8 lg:-mt-16 lg:min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 
+        p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 lg:sticky lg:top-12 self-start z-30" style={{ scrollbarGutter: 'stable' }}>
           <div className="flex flex-none justify-end">
             <Button
               onClick={handleNewBoardClick}
