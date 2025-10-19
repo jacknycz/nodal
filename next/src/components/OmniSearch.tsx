@@ -56,24 +56,25 @@ export default function OmniSearch() {
 
   return (
     <div className="fixed bottom-3 md:top-2 left-1/2 -translate-x-1/2 z-[1100] w-64 nodal-no-select">
-      <FloatingSearch
-        label="Search nodes"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        className=""
-        id="omni-search"
-      />
-      {/* Results dropdown */}
-      <div
+      <div className="relative">
+        <FloatingSearch
+          label="Search nodes"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          className=""
+          id="omni-search"
+        />
+        {/* Results dropdown */}
+        <div
         onMouseEnter={() => setIsHoveringResults(true)}
         onMouseLeave={() => setIsHoveringResults(false)}
         onTouchStart={(e) => { e.stopPropagation(); setIsHoveringResults(true) }}
         onMouseDownCapture={(e) => { e.preventDefault(); e.stopPropagation() }}
         onTouchStartCapture={(e) => { e.preventDefault(); e.stopPropagation() }}
         data-omni-search-results
-        className={`absolute left-0 right-0 md:top-full md:mt-2 bottom-full mb-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
+        className={`absolute left-0 right-0 top-auto bottom-full mb-2 md:bottom-auto md:mb-0 md:top-full md:mt-2 rounded-2xl shadow-xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/60 transition-all duration-150 overflow-hidden ${
           showResults ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
@@ -107,6 +108,7 @@ export default function OmniSearch() {
             ))}
           </ul>
         )}
+        </div>
       </div>
     </div>
   )
