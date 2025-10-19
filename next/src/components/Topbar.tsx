@@ -2,7 +2,6 @@
 import { useTheme } from '../contexts/ThemeContext'
 import type { SavedBoard } from '../features/storage/storage'
 import AvatarMenu from './AvatarMenu'
-import AISettingsMenu from './AISettingsMenu'
 import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
@@ -408,10 +407,6 @@ export default function Topbar({
                   >
                     <ShareFat size={44} weight="duotone" className="w-4 h-4" />
                   </IconButton>
-                  <AISettingsMenu
-                    isTestMode={isTestMode}
-                    onToggleTestMode={onToggleTestMode}
-                  />
                   <DocumentsMenu
                     onDeleteNode={onDeleteNode}
                   />

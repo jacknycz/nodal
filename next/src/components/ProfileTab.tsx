@@ -290,7 +290,7 @@ export default function ProfileTab() {
   return (
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
       {/* Profile Card */}
-      <div className="flex flex-row items-center gap-6 md:gap-12">
+      <div className="flex flex-row items-start gap-6 md:gap-12">
           {/* Avatar */}
           <div className="relative flex flex-col items-center">
             <Avatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || null} email={user?.email || null} size="xl" ring border className="shadow-md" />
@@ -326,7 +326,7 @@ export default function ProfileTab() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
               {/* Email */}
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
                 <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</div>
