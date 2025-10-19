@@ -1,4 +1,6 @@
 import { useCallback } from 'react'
+import { useUserRole } from '../auth/roles'
+import { getUserStorageUsageBytes, getPlanForRole, getPlanLimits } from '../storage/usage'
 import { getOpenAIService } from '../ai/aiService'
 import { useBoardStore } from './boardSlice'
 
@@ -23,6 +25,7 @@ interface UseDocumentUploadParams {
 }
 
 export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtractable, localBoardIdRef, addNodeToStore, setNodes }: UseDocumentUploadParams) {
+  const { role, isPro, isAdmin } = useUserRole()
   const handleDocumentUpload = useCallback(async (file: File, position: { x: number; y: number }): Promise<boolean> => {
     const nodeId = `document-${Date.now()}`
     try {
@@ -31,9 +34,21 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
       const isVideo = file.type.startsWith('video/') || /\.(mp4)$/i.test(file.name)
 
-      // Enforce 50MB size limit during beta for videos
-      if (isVideo && file.size > 50 * 1024 * 1024) {
-        try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Uploads limited to 50MB during beta', variant: 'danger' } })) } catch {}
+      // Enforce per-plan upload size limit (all types)
+      const plan = getPlanForRole(role)
+      const { uploadLimitBytes, totalBytes } = getPlanLimits(plan)
+      if (file.size > uploadLimitBytes) {
+        const mb = Math.round(uploadLimitBytes / (1024 * 1024))
+        try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Upload limit is ${mb}MB for your plan`, variant: 'danger' } })) } catch {}
+        return false
+      }
+      // Enforce total storage cap before optimistic add
+      const used = await getUserStorageUsageBytes()
+      if (used + file.size > totalBytes) {
+        const toMB = (n: number) => Math.round(n / (1024 * 1024))
+        try {
+          window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Storage limit reached (${toMB(used)}MB / ${toMB(totalBytes)}MB). Upgrade to Pro for more.`, variant: 'warning' } }))
+        } catch {}
         return false
       }
 

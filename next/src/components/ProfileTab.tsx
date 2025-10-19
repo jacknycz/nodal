@@ -10,6 +10,7 @@ import Modal from './ui/Modal'
 import LinkUI from './ui/Link'
 import Tag from './ui/Tag'
 import Avatar from './ui/Avatar'
+import { useStorageUsage } from '../features/storage/usage'
 import { User } from '@phosphor-icons/react/dist/ssr'
 
 function useDebounced<T>(value: T, delay = 400) {
@@ -24,6 +25,7 @@ function useDebounced<T>(value: T, delay = 400) {
 export default function ProfileTab() {
   const user = useSupabaseUser()
   const client = getSupabaseClient()
+  const storage = useStorageUsage()
   const [loading, setLoading] = React.useState(true)
   const [profile, setProfile] = React.useState<{ username: string | null; avatar_url: string | null; display_name: string | null } | null>(null)
   // Notifications
@@ -340,6 +342,25 @@ export default function ProfileTab() {
                 </div>
                 <Button onClick={onResetPassword}>Change</Button>
               </div>
+              {/* Storage */}
+              {(() => {
+                const toMB = (n: number) => Math.round(n / (1024 * 1024))
+                const isAdminPlan = storage.plan === 'admin'
+                const label = isAdminPlan ? 'Unlimited' : `${toMB(storage.usedBytes)} MB / ${toMB(storage.totalBytes)} MB`
+                return (
+                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Storage</div>
+                      <div className="text-xs text-gray-700 dark:text-gray-300">{label}</div>
+                    </div>
+                    {!isAdminPlan && (
+                      <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                        <div className="h-full bg-primary-500 transition-all" style={{ width: `${storage.percentUsed}%` }} />
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
             {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
           </div>
