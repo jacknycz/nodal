@@ -1051,6 +1051,201 @@ function BoardContent({
     }
     done()
   }, [setEdges, clearConnecting, pushHistory])
+
+  // Shared helpers: apply/remove primary blue hover ring overlay on a node element
+  const applyConnectHover = useCallback((el: HTMLElement | null) => {
+    if (!el) return
+    try {
+      const existing = el.querySelector('[data-connect-hover]') as HTMLElement | null
+      if (existing) return
+      // Ensure position context for overlay
+      if (getComputedStyle(el).position === 'static') {
+        el.style.position = 'relative'
+      }
+      const overlay = document.createElement('div')
+      overlay.setAttribute('data-connect-hover', 'true')
+      overlay.style.position = 'absolute'
+      overlay.style.inset = '0'
+      overlay.style.border = '2px solid #3b82f6'
+      overlay.style.borderRadius = 'inherit'
+      overlay.style.pointerEvents = 'none'
+      overlay.style.boxShadow = '0 0 12px rgba(59,130,246,0.35)'
+      overlay.style.zIndex = '2'
+      el.appendChild(overlay)
+    } catch {}
+  }, [])
+
+  const clearConnectHover = useCallback((el: HTMLElement | null) => {
+    if (!el) return
+    try {
+      const overlay = el.querySelector('[data-connect-hover]') as HTMLElement | null
+      if (overlay && overlay.parentElement) {
+        overlay.parentElement.removeChild(overlay)
+      }
+      el.classList.remove('ring-2', 'ring-primary-500')
+      el.style.outline = ''
+      el.style.outlineOffset = ''
+      el.style.boxShadow = ''
+    } catch {}
+  }, [])
+
+  // Preview state for manual Shift+Drag connection
+  const [manualConnectPreview, setManualConnectPreview] = useState<{
+    source: { x: number; y: number }
+    pointer: { x: number; y: number }
+    overTarget: boolean
+  } | null>(null)
+
+  // Shift + click + drag to connect two nodes by dropping on a node surface
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (!e.shiftKey) return
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      const nodeEl = target.closest?.('.react-flow__node') as HTMLElement | null
+      const sourceId = nodeEl?.getAttribute?.('data-id') || null
+      if (!sourceId) return
+      // Start a manual connect operation
+      try { e.preventDefault(); e.stopPropagation() } catch {}
+      connectingSourceRef.current = sourceId
+      setConnectingSource(sourceId)
+
+      // Compute source center relative to wrapper for preview line
+      const wrapper = reactFlowWrapper.current as HTMLElement | null
+      const wrapRect = wrapper?.getBoundingClientRect()
+      const nodeRect = nodeEl.getBoundingClientRect()
+      if (wrapRect) {
+        const sx = nodeRect.left + nodeRect.width / 2 - wrapRect.left
+        const sy = nodeRect.top + nodeRect.height / 2 - wrapRect.top
+        setManualConnectPreview({ source: { x: sx, y: sy }, pointer: { x: sx, y: sy }, overTarget: false })
+      }
+
+      let hoveredTargetEl: HTMLElement | null = null
+      const clearHover = () => {
+        if (hoveredTargetEl) {
+          clearConnectHover(hoveredTargetEl)
+          hoveredTargetEl = null
+        }
+      }
+
+      const handleMouseMove = (mv: MouseEvent) => {
+        const wrapperMv = reactFlowWrapper.current as HTMLElement | null
+        const rect = wrapperMv?.getBoundingClientRect()
+        if (!rect) return
+        const px = mv.clientX - rect.left
+        const py = mv.clientY - rect.top
+        // Detect if hovering over a valid target node (not the source)
+        let overTarget = false
+        let candidateEl: HTMLElement | null = null
+        try {
+          const elAt = document.elementFromPoint(mv.clientX, mv.clientY) as HTMLElement | null
+          const dropNode = elAt?.closest?.('.react-flow__node, .xyflow__node') as HTMLElement | null
+          const targetId = dropNode?.getAttribute?.('data-id') || null
+          overTarget = !!(targetId && targetId !== sourceId)
+          candidateEl = (overTarget ? dropNode : null)
+        } catch {}
+        if (candidateEl !== hoveredTargetEl) {
+          // Remove previous highlight
+          clearHover()
+          // Add highlight to new target
+          if (candidateEl) {
+            applyConnectHover(candidateEl)
+            hoveredTargetEl = candidateEl
+          }
+        }
+        setManualConnectPreview(prev => prev ? { ...prev, pointer: { x: px, y: py }, overTarget } : prev)
+      }
+
+      const handleMouseUp = (up: MouseEvent) => {
+        try { up.preventDefault(); up.stopPropagation() } catch {}
+        const source = connectingSourceRef.current
+        const done = () => clearConnecting()
+        if (!source) { done(); cleanup(); return }
+        // Find node under cursor on mouseup
+        const x = up.clientX
+        const y = up.clientY
+        const elAt = document.elementFromPoint(x, y) as HTMLElement | null
+        const dropNode = elAt?.closest?.('.react-flow__node, .xyflow__node') as HTMLElement | null
+        const targetId = dropNode?.getAttribute?.('data-id') || null
+        if (targetId && targetId !== source) {
+          pushHistory()
+          const newEdge: Edge = {
+            id: `edge-${Date.now()}`,
+            source: source,
+            target: targetId,
+            type: toVisualEdgeType(edgeTypePref) as any,
+          }
+          setEdges((eds) => {
+            const list = Array.isArray(eds) ? eds : []
+            const exists = list.some((e: any) => (
+              (e.source === newEdge.source && e.target === newEdge.target) ||
+              (e.source === newEdge.target && e.target === newEdge.source)
+            ))
+            if (exists) return eds
+            return [...list, newEdge]
+          })
+          try { channelRef.current?.send({ type: 'broadcast', event: 'edge:add', payload: { edge: newEdge, userId: user?.id || null, ts: Date.now() } }) } catch {}
+        }
+        setManualConnectPreview(null)
+        done()
+        cleanup()
+      }
+
+      const cleanup = () => {
+        document.removeEventListener('mouseup', handleMouseUp, true)
+        document.removeEventListener('mousemove', handleMouseMove, true)
+        clearHover()
+      }
+
+      document.addEventListener('mousemove', handleMouseMove, true)
+      document.addEventListener('mouseup', handleMouseUp, true)
+    }
+
+    document.addEventListener('mousedown', onMouseDown, true)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown, true)
+    }
+  }, [setEdges, setConnectingSource, clearConnecting, pushHistory, toVisualEdgeType, edgeTypePref, user?.id])
+
+  // Show blue hover ring when connecting from a handle as well (not only Shift+Drag)
+  useEffect(() => {
+    let hoveredEl: HTMLElement | null = null
+    const clear = () => {
+      if (hoveredEl) {
+        clearConnectHover(hoveredEl)
+        hoveredEl = null
+      }
+    }
+    const onMove = (e: MouseEvent) => {
+      // If we are not in any connect operation, clear and exit
+      if (!connectingSourceRef.current) { clear(); return }
+      // Skip if manual shift-drag preview is active (handled by that logic already)
+      if (manualConnectPreview) return
+      let candidate: HTMLElement | null = null
+      try {
+        const elAt = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null
+        const nodeEl = elAt?.closest?.('.react-flow__node, .xyflow__node') as HTMLElement | null
+        const targetId = nodeEl?.getAttribute?.('data-id') || null
+        const sourceId = connectingSourceRef.current
+        if (targetId && sourceId && targetId !== sourceId) candidate = nodeEl
+      } catch {}
+      if (candidate !== hoveredEl) {
+        clear()
+        if (candidate) {
+          applyConnectHover(candidate)
+          hoveredEl = candidate
+        }
+      }
+    }
+    const onUp = () => { clear() }
+    document.addEventListener('mousemove', onMove, true)
+    document.addEventListener('mouseup', onUp, true)
+    return () => {
+      document.removeEventListener('mousemove', onMove, true)
+      document.removeEventListener('mouseup', onUp, true)
+      clear()
+    }
+  }, [manualConnectPreview])
   
   // Handle adding nodes
   const handleAddNode = useCallback((nodeData: { title: string; content?: string }, position: { x: number; y: number }) => {
@@ -2036,6 +2231,25 @@ function BoardContent({
         {/* (cursor presence paused) */}
         
         {/** Removed FAB and ChatPanel from inside ReactFlow to avoid stacking context issues */}
+        {/* Manual shift-drag preview line */}
+        {manualConnectPreview && (
+          <div className="pointer-events-none absolute inset-0 z-[10]">
+            <svg className="w-full h-full" viewBox={`0 0 ${reactFlowWrapper.current?.clientWidth || 0} ${reactFlowWrapper.current?.clientHeight || 0}`}
+              preserveAspectRatio="none">
+              {/* Glow/halo */}
+              <line x1={manualConnectPreview.source.x} y1={manualConnectPreview.source.y}
+                    x2={manualConnectPreview.pointer.x} y2={manualConnectPreview.pointer.y}
+                    stroke="var(--edge-default-color)" strokeWidth="8" strokeOpacity="0.18" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ filter: 'drop-shadow(0 0 8px var(--edge-default-glow))' }} />
+              {/* Main line (always default edge color); no arrow; marker switches to primary ring when connectable */}
+              <line x1={manualConnectPreview.source.x} y1={manualConnectPreview.source.y}
+                    x2={manualConnectPreview.pointer.x} y2={manualConnectPreview.pointer.y}
+                    stroke="var(--edge-default-color)"
+                    strokeWidth="3" strokeOpacity="1" strokeLinecap="round" strokeLinejoin="round"
+                    markerEnd={manualConnectPreview.overTarget ? 'url(#edge-circle-blue)' : undefined} />
+            </svg>
+          </div>
+        )}
       </ReactFlow>
       
       {isBoardView && (

@@ -11,40 +11,26 @@ const CustomConnectionLine: ConnectionLineComponent = ({
 }) => {
   return (
     <g>
-      {/* Main connection line */}
+      {/* Main connection line (match default edge styling) */}
       <path
         fill="none"
-        stroke="var(--edge-ai-color)" // Uses CSS variable for theme support
-        strokeWidth={3} // Thicker line for better visibility
-        className="animated"
+        stroke="var(--edge-default-color)"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         d={`M ${fromX} ${fromY} L ${toX} ${toY}`}
-        style={{
-          filter: 'drop-shadow(0 0 4px var(--edge-ai-glow))', // Glow effect
-        }}
+        style={{ filter: 'drop-shadow(0 0 6px var(--edge-default-glow))' }}
       />
-      
-      {/* Secondary line for better visibility */}
-      <path
+
+      {/* Target ring (primary-500, no fill) */}
+      <circle
+        cx={toX}
+        cy={toY}
+        r={4.5}
         fill="none"
-        stroke="var(--connection-outline)" // Will add this CSS variable
-        strokeWidth={5} // Thicker outline
-        d={`M ${fromX} ${fromY} L ${toX} ${toY}`}
-        style={{
-          filter: 'drop-shadow(0 0 2px var(--connection-outline-glow))',
-        }}
-      />
-      
-      {/* Target circle */}
-      <circle 
-        cx={toX} 
-        cy={toY} 
-        fill="var(--edge-ai-color)" // Blue fill
-        r={4} // Slightly larger
-        stroke="var(--connection-outline)" // White border
+        stroke="#3b82f6"
         strokeWidth={2}
-        style={{
-          filter: 'drop-shadow(0 0 4px var(--edge-ai-glow))',
-        }}
+        style={{ filter: 'drop-shadow(0 0 6px rgba(59,130,246,0.35))' }}
       />
     </g>
   )
