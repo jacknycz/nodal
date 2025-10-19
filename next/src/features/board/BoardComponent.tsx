@@ -230,7 +230,7 @@ function BoardContent({
     }
   }, [])
 
-  // Mobile: single-tap opens context menu; double-tap opens Edit modal
+  // Mobile: single-tap opens context menu
   useEffect(() => {
     let startX = 0
     let startY = 0
@@ -242,8 +242,6 @@ function BoardContent({
     let isTracking = false
     let suppressNextClickUntil = 0
     const justClosedUntilRef = { current: 0 }
-    let lastTapAt = 0
-    let lastTapNodeId: string | null = null
 
     const cancel = () => { isTracking = false; startTarget = null }
 
@@ -326,17 +324,6 @@ function BoardContent({
           // If tap ended inside the menu container, do nothing
           const endTarget = (e.target as HTMLElement) || null
           if (endTarget && endTarget.closest('[data-board-context-menu]')) { cancel(); return }
-          // Double-tap detection on the same node: open Edit instead of context menu
-          const now = Date.now()
-          if (nodeId && lastTapNodeId === nodeId && (now - lastTapAt) <= 300) {
-            try { window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id: nodeId } })) } catch {}
-            setContextMenu({ isOpen: false, position: null })
-            lastTapAt = 0; lastTapNodeId = null
-            cancel();
-            return
-          }
-          lastTapAt = now
-          lastTapNodeId = nodeId || null
           setPendingSourceNodeId(nodeId)
           setContextMenu({ isOpen: true, position: { x: endX, y: endY } })
           suppressNextClickUntil = Date.now() + 350
