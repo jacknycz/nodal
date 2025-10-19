@@ -7,7 +7,7 @@ import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Modal from '../../components/ui/Modal'
@@ -123,17 +123,13 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         />
       )}
 
-      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
+      <Handle type="target" position={Position.Top} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
 
       <div className="cursor-default">
         <div className="relative w-full">
-          {data.thumbnailUrl ? (
+          {data.thumbnailUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={data.thumbnailUrl} alt={data.title || 'Link'} className="w-full h-[140px] rounded-md object-cover" />
-          ) : (
-            <div className="w-full h-[140px] rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm">
-              {loading ? 'Loading…' : 'No preview'}
-            </div>
           )}
         </div>
         <div className="mt-2">
@@ -180,7 +176,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
         />
       )}
 
-      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
+      <Handle type="source" position={Position.Bottom} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
     </div>
   )
 }

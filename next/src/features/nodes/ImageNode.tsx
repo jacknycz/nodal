@@ -10,7 +10,7 @@ import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Checkbox from '../../components/ui/Checkbox'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
 
 import { supabaseStorage } from '../storage/supabaseStorage'
@@ -247,7 +247,7 @@ export default function ImageNode({
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
+      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
       style={{ width: `${Math.round(nodeWidth)}px`, ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
       onClick={(e) => {
       }}
@@ -264,7 +264,7 @@ export default function ImageNode({
           }}
         />
       )}
-      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
+      <Handle type="target" position={Position.Top} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
 
 
 
@@ -442,11 +442,11 @@ export default function ImageNode({
                   dangerouslySetInnerHTML={{ __html: data.content }}
                 />
               )}
-              {data.status && (
+              {data.status && data.status !== 'ready' && (
                 <div className={`mt-2 pointer-events-none flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
                   {getStatusIcon()}
                   <span className="text-xs text-gray-600 dark:text-gray-400">
-                    {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+                    {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : 'Error'}
                   </span>
                 </div>
               )}
@@ -543,7 +543,7 @@ export default function ImageNode({
         <Resize size={32} weight="duotone" className="w-4 h-4" />
       </div>
 
-      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
+      <Handle type="source" position={Position.Bottom} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
     </div>
   )
 }

@@ -12,7 +12,7 @@ import { useSupabaseUser } from '../auth/authUtils'
 import Tag from '../../components/ui/Tag'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
  
@@ -222,7 +222,7 @@ export default function NodalNode(props: any) {
       <Handle
         type="target"
         position={Position.Top}
-        className={NODE_HANDLE_CLASS}
+        className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`}
       />
 
       
@@ -357,7 +357,7 @@ export default function NodalNode(props: any) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className={NODE_HANDLE_CLASS}
+        className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`}
       />
     </div>
   )

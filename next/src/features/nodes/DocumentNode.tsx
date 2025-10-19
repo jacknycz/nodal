@@ -13,7 +13,7 @@ import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import Checkbox from '../../components/ui/Checkbox'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -255,7 +255,7 @@ export default function DocumentNode({
  
   return (
     <div 
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
+      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
@@ -275,7 +275,7 @@ export default function DocumentNode({
           }}
         />
       )}
-      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
+      <Handle type="target" position={Position.Top} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
 
       
 
@@ -318,7 +318,7 @@ export default function DocumentNode({
         </div>
         
         {/* Status indicator */}
-        {data.status && (
+        {data.status && data.status !== 'ready' && (
           <div className={`flex items-center gap-1 mb-3 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
             {getStatusIcon()}
             <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -421,7 +421,7 @@ export default function DocumentNode({
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
+      <Handle type="source" position={Position.Bottom} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
     </div>
   )
 } 

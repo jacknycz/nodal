@@ -10,7 +10,7 @@ import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import Tag from '../../components/ui/Tag'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -181,7 +181,7 @@ export default function TaskNode({
           </Tooltip>
         </div>
       )}
-      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
+      <Handle type="target" position={Position.Top} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
 
       {/* Colorgory ring overlay */}
       {isDark && swatchColors.length > 0 && (
@@ -274,7 +274,7 @@ export default function TaskNode({
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
+      <Handle type="source" position={Position.Bottom} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
     </div>
   )
 }

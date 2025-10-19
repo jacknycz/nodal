@@ -12,7 +12,7 @@ import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import { supabaseStorage } from '../storage/supabaseStorage'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS } from './nodeStyles'
+import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -275,7 +275,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   }, [expanded, id])
 
   return (
-    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
+    <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {/* Colorgory ring overlay (hidden when expanded) */}
       {!expanded && isDark && swatchColors.length > 0 && (
         <div
@@ -289,7 +289,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         />
       )}
 
-      <Handle type="target" position={Position.Top} className={NODE_HANDLE_CLASS} />
+      <Handle type="target" position={Position.Top} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
 
       <div className="cursor-default">
         {!expanded ? (
@@ -386,15 +386,15 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             </div>
           </div>
         )}
-        <div className="mt-2">
+        <div className="mt-1">
           <div className="text-sm font-medium text-gray-900 dark:text-white">
             {data.title || 'Video'}
           </div>
-          {data.status && (
+          {data.status && data.status !== 'ready' && (
             <div className={`mt-1 pointer-events-none flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
               {getStatusIcon()}
               <span className="text-xs text-gray-600 dark:text-gray-400">
-                {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : data.status === 'ready' ? 'Ready' : 'Error'}
+                {data.status === 'uploading' ? 'Uploading…' : data.status === 'processing' ? 'Processing...' : 'Error'}
               </span>
             </div>
           )}
@@ -490,7 +490,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         </div>
       </Modal>
 
-      <Handle type="source" position={Position.Bottom} className={NODE_HANDLE_CLASS} />
+      <Handle type="source" position={Position.Bottom} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
     </div>
   )
 }
