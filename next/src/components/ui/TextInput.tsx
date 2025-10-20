@@ -16,9 +16,9 @@ interface TextInputProps
 
 const sizeClasses: Record<TextInputSize, string> = {
   // Align heights with IconButton/Button/Select
-  sm: "h-8 text-sm",
-  md: "h-10 text-sm",
-  lg: "h-12 text-base",
+  sm: "h-8 px-3 py-1 text-sm",
+  md: "h-10 px-3 py-2 text-sm",
+  lg: "h-12 px-3 py-2 text-base",
 };
 
 const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
@@ -52,7 +52,8 @@ const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
           )}
           
         <div className={clsx(
-            "relative rounded-full px-3 py-2 border border-transparent transition-all duration-200",
+            "relative rounded-full border border-transparent transition-all duration-200",
+            sizeClasses[size],
             "bg-gray-100 dark:bg-gray-950/80",
             "focus-within:bg-white dark:focus-within:bg-gray-900",
             "focus-within:border-primary-500 dark:focus-within:border-primary-400/50",

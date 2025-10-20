@@ -88,6 +88,7 @@ export default function Topbar({
   const supabase = getSupabaseClient()
   const [showSavedStatus, setShowSavedStatus] = useState(true)
   const [showBoardSettings, setShowBoardSettings] = useState(false)
+  const [hideBoardSettingsVisual, setHideBoardSettingsVisual] = useState(false)
   const [pendingBoardName, setPendingBoardName] = useState('')
   const [pendingBoardTopic2, setPendingBoardTopic2] = useState('')
   const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
@@ -119,6 +120,18 @@ export default function Topbar({
     }
     document.addEventListener('touchstart', onTouchStart, true)
     return () => document.removeEventListener('touchstart', onTouchStart, true)
+  }, [])
+
+  // Close Board Settings when requested by nested UIs (e.g., ColorgoryManager Add flow)
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const hide = !!(e?.detail?.hide)
+        setHideBoardSettingsVisual(hide)
+      } catch { setHideBoardSettingsVisual(false) }
+    }
+    window.addEventListener('nodal:board-settings-visual-hide', handler as any)
+    return () => window.removeEventListener('nodal:board-settings-visual-hide', handler as any)
   }, [])
   // Fetch current user's role on this board for UI gating
   useEffect(() => {
@@ -466,7 +479,17 @@ export default function Topbar({
         </div>
       </Modal>
       {/* Board Settings Modal (shared) */}
-      <BoardSettingsModal open={showBoardSettings} onClose={() => setShowBoardSettings(false)} boardId={currentBoardId || ''} initialName={currentBoardName} isOwnerView={boardMemberRole === 'owner'} />
+      <BoardSettingsModal
+        open={showBoardSettings}
+        onClose={() => setShowBoardSettings(false)}
+        boardId={currentBoardId || ''}
+        initialName={currentBoardName}
+        isOwnerView={boardMemberRole === 'owner'}
+        className={`transition-opacity duration-200 ${hideBoardSettingsVisual ? 'opacity-0 invisible pointer-events-none scale-95' : 'opacity-100 visible scale-100'}`}
+        backdropClassName={hideBoardSettingsVisual ? 'bg-transparent' : undefined}
+        backdropInteractive={!hideBoardSettingsVisual}
+        closeOnBackdropClick={!hideBoardSettingsVisual}
+      />
       <Modal
         open={showFeedback}
         onClose={() => { if (!fbSubmitting) setShowFeedback(false) }}

@@ -67,6 +67,8 @@ export default function BoardContextMenu({
   const [colorgoryHover, setColorgoryHover] = React.useState(false)
   const [colorgoryFlipLeft, setColorgoryFlipLeft] = React.useState(false)
   const [showDelete, setShowDelete] = React.useState(false)
+  const colorgoryMenuRef = React.useRef<HTMLDivElement | null>(null)
+  const [colorgoryYOffset, setColorgoryYOffset] = React.useState(0)
   const multiSelected = React.useMemo(() => {
     return Array.isArray(selectedIds) && selectedIds.length > 1 && !!nodeId && selectedIds.includes(nodeId)
   }, [selectedIds, nodeId])
@@ -165,6 +167,26 @@ export default function BoardContextMenu({
     }
   }, [colorgoryHover, isOpen])
 
+  // Clamp colorgory submenu vertically within viewport
+  React.useEffect(() => {
+    if (!isOpen) return
+    if (!colorgoryHover) { setColorgoryYOffset(0); return }
+    const raf = requestAnimationFrame(() => {
+      try {
+        const el = colorgoryMenuRef.current
+        if (!el) return
+        const rect = el.getBoundingClientRect()
+        const vh = window.innerHeight
+        const margin = 8
+        const minOffset = margin - rect.top // positive -> move down
+        const maxOffset = (vh - margin - rect.height) - rect.top // negative -> move up
+        const clamped = Math.max(minOffset, Math.min(0, maxOffset))
+        setColorgoryYOffset(clamped)
+      } catch { setColorgoryYOffset(0) }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [colorgoryHover, isOpen])
+
   if (!isOpen || !position) return null
 
   const handleAction = (action: () => void) => {
@@ -257,7 +279,7 @@ export default function BoardContextMenu({
                 <CaretRight size={16} weight="duotone" className="transition-transform duration-200 text-gray-400" /> 
               </div>
               {colorgoryHover && (
-                <div className={`absolute ${colorgoryFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]`}>
+                <div ref={colorgoryMenuRef} className={`absolute ${colorgoryFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]`} style={{ transform: `translateY(${colorgoryYOffset}px)` }}>
                   <div className="grid grid-cols-2 gap-1">
                     {(colorgoriesVisible || []).map((c: any) => {
                       const checked = nodeColorgoryIds.includes(c.id)

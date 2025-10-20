@@ -389,6 +389,10 @@ function BoardContent({
       if (!leftDockActive) return
       const target = e.target as Element | null
       if (!target) return
+      // Ignore clicks inside any modal portal
+      if (target.closest?.('[data-modal-root]')) {
+        return
+      }
       const insideDock = target.closest?.('[data-left-dock]')
       const insidePanel = target.closest?.('[data-left-dock-panel]')
       if (!insideDock && !insidePanel) {
@@ -2034,9 +2038,14 @@ function BoardContent({
     window.addEventListener('nodal:undo', onUndo as EventListener)
     window.addEventListener('nodal:redo', onRedo as EventListener)
     // Immediate save trigger (e.g., from ColorgoryManager changes)
-    const saveNow = (e: Event) => {
+    const saveNow = async (e: Event) => {
       if (!localBoardIdRef.current) return
-      manualSave(nodes, edges).catch(() => {})
+      try {
+        const edgeType = useBoardStore.getState().edgeType
+        const colorgories = useBoardStore.getState().colorgories || []
+        const viewport = reactFlowInstance.getViewport()
+        await boardStorage.updateBoard(localBoardIdRef.current, { nodes, edges, viewport, colorgories, meta: ({ edgeType } as any) })
+      } catch {}
     }
     window.addEventListener('nodal:save-now', saveNow as EventListener)
     return () => {

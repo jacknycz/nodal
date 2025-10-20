@@ -50,6 +50,7 @@ const Modal: React.FC<ModalProps> = ({
   const [isVisible, setIsVisible] = useState(false)
   const [shouldRender, setShouldRender] = useState(false)
   const openedAtRef = useRef<number>(0)
+  const contentRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (open) {
@@ -78,13 +79,35 @@ const Modal: React.FC<ModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
+  // While modal is open, stop global capture-phase outside click/touch handlers from firing for events INSIDE the modal only
+  useEffect(() => {
+    if (!open) return
+    const stopIfInside = (e: Event) => {
+      const target = e.target as Node | null
+      const el = contentRef.current
+      if (el && target && el.contains(target)) {
+        try { e.stopPropagation() } catch {}
+      }
+    }
+    document.addEventListener('mousedown', stopIfInside, true)
+    document.addEventListener('touchstart', stopIfInside, true)
+    document.addEventListener('pointerdown', stopIfInside, true)
+    document.addEventListener('contextmenu', stopIfInside, true)
+    return () => {
+      document.removeEventListener('mousedown', stopIfInside, true)
+      document.removeEventListener('touchstart', stopIfInside, true)
+      document.removeEventListener('pointerdown', stopIfInside, true)
+      document.removeEventListener('contextmenu', stopIfInside, true)
+    }
+  }, [open])
+
   if (!shouldRender) return null;
 
   // Only render if we're in the browser
   if (typeof window === 'undefined') return null;
 
   return ReactDOM.createPortal(
-    <div className={`fixed inset-0 z-[1500] flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''} ${backdropInteractive ? '' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[1500] flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''}`} data-modal-root>
       {/* Backdrop */}
       <div
         className={`absolute inset-0 ${backdropClassName || 'bg-black'} transition-all duration-200 ease-out ${
@@ -103,14 +126,15 @@ const Modal: React.FC<ModalProps> = ({
       {/* Modal content */}
       <div
         className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl pointer-events-auto 
-          max-w-lg w-full mx-4 p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] overflow-hidden ${
+          max-w-lg w-full mx-4 p-4 md:p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] overflow-hidden ${
           isVisible 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-95 -translate-y-1'
         } ${className || ''}`}
         role="dialog"
         aria-modal="true"
-        onClick={e => e.stopPropagation()}
+        ref={contentRef}
+        data-modal-root
       >
         {showCloseButton && (
           <button

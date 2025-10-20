@@ -37,7 +37,7 @@ export const Tab = ({ children, isActive }: TabProps) => {
   return <>{children}</>;
 };
 
-export const Tabs = ({ children }: { children: ReactNode }) => {
+export const Tabs = ({ children, disableRouting = false }: { children: ReactNode; disableRouting?: boolean }) => {
   const [active, setActive] = useState(0);
   // Normalize children and filter out falsy/non-element entries (e.g., conditional tabs)
   const tabs = (React.Children.toArray(children) as React.ReactElement[])
@@ -45,6 +45,7 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
 
   // Support selecting tab via pathname: /<label>
   useEffect(() => {
+    if (disableRouting) return;
     if (typeof window === 'undefined') return;
     const applyPath = () => {
       const path = window.location.pathname.replace(/^\/+/, '').toLowerCase();
@@ -56,17 +57,23 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
     const onPop = () => applyPath();
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [tabs]);
+  }, [tabs, disableRouting]);
 
   return (
     <div className="w-full">
       {/* Tab headers */}
-      <div className="flex border-b border-gray-200/50 dark:border-primary-700/20 dark:bg-slate-950/80 rounded-t-xl sm:rounded-tl-4xl" role="tablist" aria-label="Sections">
+      <div 
+        className="flex border-b-3 border-gray-200/50 dark:border-primary-700/20 border-inset 
+        rounded-t-xl" 
+        role="tablist" 
+        aria-label="Sections"
+      >
         {tabs.map((tab: any, idx) => (
           <button
             key={idx}
             onClick={() => {
               setActive(idx);
+              if (disableRouting) return;
               try {
                 if (typeof window !== 'undefined') {
                   const label = String(tab?.props?.label || '').toLowerCase();
@@ -77,12 +84,12 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
                 }
               } catch {}
             }}
-            className={`flex cursor-pointer items-center gap-1 sm:gap-2 px-3 py-3 md:py-2 
-              rounded-t-xl border-r border-r-gray-200/50 dark:border-r-primary-700/20 
+            className={`flex cursor-pointer items-center gap-1 sm:gap-2 px-3 py-2 md:py-3 -mb-[3px]
+              rounded-t-xl
               text-base sm:text-lg font-fredoka font-medium transition-colors ${
               active === idx
-                ? (tab.props.activeHeaderClassName || "bg-white dark:bg-primary-500/20 text-primary-800 dark:text-gray-100 border-b-2 border-primary-500")
-                : (tab.props.headerClassName || "text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-200 border-b-2 border-transparent")
+                ? (tab.props.activeHeaderClassName || "bg-white dark:bg-primary-500/20 text-primary-600 dark:text-gray-100 border-b-3 border-primary-500")
+                : (tab.props.headerClassName || "text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-gray-200 border-b-3 border-gray-200/50 dark:border-primary-700/20")
             }`}
             role="tab"
             aria-selected={active === idx}
@@ -102,6 +109,7 @@ export const Tabs = ({ children }: { children: ReactNode }) => {
         id={`tabpanel-${active}`}
         role="tabpanel"
         aria-labelledby={`tab-${active}`}
+        className="py-4"
       >
         {React.cloneElement(tabs[active] as React.ReactElement<any>, { isActive: true } as any)}
       </div>

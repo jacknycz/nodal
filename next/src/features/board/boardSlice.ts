@@ -20,7 +20,7 @@ const initialState: BoardState = {
   freeChatMode: false, // Add default value
   topbarHeight: 49, // Default, can be updated dynamically
   connectingSourceId: null,
-  colorgories: COLORGORY_DEFS.map((d, idx) => ({ id: d.id, color: d.id, name: d.name, order: idx, visible: idx < 4 })),
+  colorgories: COLORGORY_DEFS.map((d, idx) => ({ id: d.id, color: d.id, name: d.name, order: idx, visible: true })),
   edgeType: 'floating',
   hoveredEdgeId: null,
 }

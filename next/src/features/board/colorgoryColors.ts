@@ -40,6 +40,27 @@ export const colorgoryHexById: Record<string, string> = colorgoryHexByIdDark
 
 // Helper to get the correct color for current theme (defaults to dark on server)
 export function getColorgoryHex(id: string, isDark?: boolean): string {
+  // First, check dynamic board store for custom colorgories and hex overrides
+  try {
+    // Lazy import to avoid circular require issues
+    const { useBoardStore } = require('./boardSlice') as typeof import('./boardSlice')
+    const colorgories = (useBoardStore?.getState?.() as any)?.colorgories as Array<{ id: string; color: string }> | undefined
+    const entry = Array.isArray(colorgories) ? colorgories.find(c => c.id === id) : undefined
+    if (entry && typeof entry.color === 'string') {
+      const color = entry.color
+      if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
+        return color
+      }
+      // If color references a built-in id, use mapping below
+      if (colorgoryHexByIdDark[color]) {
+        const dark0 = typeof isDark === 'boolean'
+          ? isDark
+          : (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true)
+        const table0 = dark0 ? colorgoryHexByIdDark : colorgoryHexByIdLight
+        return table0[color] || colorgoryHexByIdDark[color]
+      }
+    }
+  } catch {}
   const dark = typeof isDark === 'boolean'
     ? isDark
     : (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true)
