@@ -2,6 +2,7 @@
 import { useTheme } from '../contexts/ThemeContext'
 import type { SavedBoard } from '../features/storage/storage'
 import AvatarMenu from './AvatarMenu'
+import Avatar from './ui/Avatar'
 import DocumentsMenu from './DocumentsMenu'
 import ShareMenu from './ShareMenu'
 import React, { useState, useRef, useEffect } from 'react'
@@ -46,6 +47,7 @@ interface TopbarProps {
   onLoadBoard?: (board: SavedBoard) => void
   isBoardView?: boolean;
   onDeleteNode?: (nodeId: string) => void;
+  publicViewer?: boolean;
 }
 
 export default function Topbar({
@@ -61,7 +63,8 @@ export default function Topbar({
   onOpenSettings,
   onLoadBoard,
   isBoardView = false,
-  onDeleteNode
+  onDeleteNode,
+  publicViewer = false
 }: TopbarProps) {
   const { isDark } = useTheme()
   const router = useRouter()
@@ -256,27 +259,13 @@ export default function Topbar({
   // Helper to get avatar for a user_id (others only: small circle)
   const getPresenceAvatar = (userId: string, email?: string | null) => {
     if (user && user.id === userId) {
-      // Current user: show their avatar if available
-      const avatar = user.user_metadata?.avatar_url || user.user_metadata?.picture
-      if (avatar) {
-        return <Image src={avatar} alt="avatar" width={24} height={24} className="w-6 h-6 rounded-full object-cover border-2 border-white" unoptimized />
-      }
+      const src = (user.user_metadata?.avatar_url || user.user_metadata?.picture) || null
+      const displayName = (user.user_metadata?.full_name || user.email || 'User') as string
+      return <Avatar src={src} name={displayName} email={user.email || null} size="xs" border />
     }
-    // Fallback: colored initials from email (first two letters), else user_id
-    const initialsSource = (email && typeof email === 'string') ? String(email).split('@')[0] : userId
-    const initials = initialsSource.slice(0, 2).toUpperCase()
-    // Pick a color from colorgories deterministically by userId/email
-    const colors: string[] = (Array.isArray(colorgories) ? colorgories.map((c: any) => c?.color).filter(Boolean) : []).filter((v: any) => typeof v === 'string')
-    const fallbackColors = ['#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444']
-    const palette = colors.length > 0 ? colors : fallbackColors
-    const hashStr = (initialsSource || userId)
-    const hash = Array.from(hashStr).reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)
-    const color = palette[Math.abs(hash) % palette.length]
-    return (
-      <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 border-white" style={{ backgroundColor: color }}>
-        {initials}
-      </div>
-    )
+    // For others, seed by email/userId and let Avatar compute palette/initials
+    const displayName = (email && typeof email === 'string') ? String(email).split('@')[0] : userId
+    return <Avatar src={null} name={displayName} email={email || null} size="xs" border />
   }
 
   return (
@@ -364,25 +353,25 @@ export default function Topbar({
 
                     {/* Save Status */}
                     <div className="flex items-center gap-2 text-xs">
-                      {saveStatus === 'saving' && (
+                      {!publicViewer && saveStatus === 'saving' && (
                         <div className="flex items-center text-blue-600 dark:text-blue-400">
                           <div className="w-2 h-2 mr-1 bg-blue-600 rounded-full animate-pulse"></div>
                           <span>Saving...</span>
                         </div>
                       )}
-                      {saveStatus === 'saved' && !hasUnsavedChanges && (
+                      {!publicViewer && saveStatus === 'saved' && !hasUnsavedChanges && (
                         <div className="flex items-center text-green-600 dark:text-green-400">
                           <div className="w-2 h-2 mr-1 bg-green-600 rounded-full"></div>
                           <span className={`transition-opacity duration-500 ${showSavedStatus ? 'opacity-100' : 'opacity-0'}`}>Saved</span>
                         </div>
                       )}
-                      {saveStatus === 'unsaved' && hasUnsavedChanges && (
+                      {!publicViewer && saveStatus === 'unsaved' && hasUnsavedChanges && (
                         <div className="flex items-center text-orange-600 dark:text-orange-400">
                           <div className="w-2 h-2 mr-2 bg-orange-600 rounded-full"></div>
                           <span>Unsaved changes</span>
                         </div>
                       )}
-                      {saveStatus === 'error' && (
+                      {!publicViewer && saveStatus === 'error' && (
                         <div className="flex items-center text-red-600 dark:text-red-400">
                           <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
                           <span>Save failed</span>
@@ -402,19 +391,21 @@ export default function Topbar({
 
           {/* Right - Controls */}
           <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3 justify-end">
-            <div className="flex md:flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2">
-              <Tag variant="beta" className="ml-2">
-                BETA
-              </Tag>
-              <LinkUI onClick={() => setShowFeedback(true)}>Feedback</LinkUI>
-            </div>
+            {!publicViewer && (
+              <div className="flex md:flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2">
+                <Tag variant="beta" className="ml-2">
+                  BETA
+                </Tag>
+                <LinkUI onClick={() => setShowFeedback(true)}>Feedback</LinkUI>
+              </div>
+            )}
 
-            {isBoardView && (
+            {isBoardView && !publicViewer && (
               <>
                 <div className="hidden sm:flex items-center gap-1 lg:gap-3">
                   <IconButton
                     aria-label="Share board"
-                    variant="secondaryOutline"
+                    variant="primaryGhost"
                     size="small"
                     onClick={() => setShowShareModal(true)}
                   >
@@ -426,12 +417,18 @@ export default function Topbar({
                 </div>
               </>
             )}
+            {isBoardView && publicViewer && (
+              <Button variant="primary" onClick={() => { if (typeof window !== 'undefined') window.location.href = '/' }}>
+                Sign Up
+              </Button>
+            )}
             {!isBoardView && (
               <IconButton aria-label="Product intro" size="md" onClick={() => router.push('/welcome')}>
                 <Info className="w-5 h-5" />
               </IconButton>
             )}
 
+            {!publicViewer && (
             <AvatarMenu
               currentBoardName={currentBoardName}
               saveStatus={saveStatus}
@@ -444,6 +441,7 @@ export default function Topbar({
               onLoadBoard={onLoadBoard}
               isBoardView={isBoardView}
             />
+            )}
 
           </div>
         </div>
@@ -490,70 +488,74 @@ export default function Topbar({
         backdropInteractive={!hideBoardSettingsVisual}
         closeOnBackdropClick={!hideBoardSettingsVisual}
       />
-      <Modal
-        open={showFeedback}
-        onClose={() => { if (!fbSubmitting) setShowFeedback(false) }}
-        title="Send Feedback"
-        description="Hey! Thank you for doing this - give me all the feedback you can give! I will steal all the ideas and let me know if something is broken - or could just be better."
-        actions={
-          <>
-            <Button variant="secondary" onClick={() => setShowFeedback(false)} disabled={fbSubmitting}>Cancel</Button>
-            <Button onClick={async () => {
-              setFbError(null)
-              if (!fbQuick.trim()) { setFbError('Quick version is required'); return }
-              try {
-                setFbSubmitting(true)
-                await fetch('/api/admin/feedback', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    quick: fbQuick.trim(),
-                    details: fbDetails.trim() || null,
-                    categories: { idea: fbIdea, broken: fbBroken },
-                    user: { id: user?.id || null, email: user?.email || null },
-                    board: { id: currentBoardId || null, name: currentBoardName || null },
-                  })
-                })
-                setShowFeedback(false)
-                setFbIdea(false); setFbBroken(false); setFbQuick(''); setFbDetails('')
-                setShowFbThanks(true)
-                setTimeout(() => setShowFbThanks(false), 2200)
-              } catch {
-                setFbError('Failed to submit')
-              } finally {
-                setFbSubmitting(false)
-              }
-            }} disabled={fbSubmitting}>Submit</Button>
-          </>
-        }
-      >
-        <div className="space-y-3 py-2">
-          <div className="flex items-center gap-4">
-            <Checkbox checked={fbIdea} onChange={setFbIdea} label="I have an idea" />
-            <Checkbox checked={fbBroken} onChange={setFbBroken} label="Your thing is broken" />
-          </div>
-          <TextInput
-            label="the quick version"
-            placeholder="Short summary (required)"
-            value={fbQuick}
-            onChange={(e) => setFbQuick((e.target as HTMLInputElement).value)}
-            required
-            fullWidth
-          />
-          <TextArea
-            label="give us the details"
-            placeholder="Optional details"
-            value={fbDetails}
-            onChange={(e) => setFbDetails((e.target as HTMLTextAreaElement).value)}
-            rows={4}
-            fullWidth
-          />
-          {fbError && <div className="text-xs text-red-600 dark:text-red-400">{fbError}</div>}
-        </div>
-      </Modal>
-      <Toast open={showFbThanks} onClose={() => setShowFbThanks(false)} variant="success" autoHideMs={2200}>
-        Thank you SO MUCH for your feedback! We're making Nodal better as fast as we can!
-      </Toast>
+      {!publicViewer && (
+        <>
+          <Modal
+            open={showFeedback}
+            onClose={() => { if (!fbSubmitting) setShowFeedback(false) }}
+            title="Send Feedback"
+            description="Hey! Thank you for doing this - give me all the feedback you can give! I will steal all the ideas and let me know if something is broken - or could just be better."
+            actions={
+              <>
+                <Button variant="secondary" onClick={() => setShowFeedback(false)} disabled={fbSubmitting}>Cancel</Button>
+                <Button onClick={async () => {
+                  setFbError(null)
+                  if (!fbQuick.trim()) { setFbError('Quick version is required'); return }
+                  try {
+                    setFbSubmitting(true)
+                    await fetch('/api/admin/feedback', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        quick: fbQuick.trim(),
+                        details: fbDetails.trim() || null,
+                        categories: { idea: fbIdea, broken: fbBroken },
+                        user: { id: user?.id || null, email: user?.email || null },
+                        board: { id: currentBoardId || null, name: currentBoardName || null },
+                      })
+                    })
+                    setShowFeedback(false)
+                    setFbIdea(false); setFbBroken(false); setFbQuick(''); setFbDetails('')
+                    setShowFbThanks(true)
+                    setTimeout(() => setShowFbThanks(false), 2200)
+                  } catch {
+                    setFbError('Failed to submit')
+                  } finally {
+                    setFbSubmitting(false)
+                  }
+                }} disabled={fbSubmitting}>Submit</Button>
+              </>
+            }
+          >
+            <div className="space-y-3 py-2">
+              <div className="flex items-center gap-4">
+                <Checkbox checked={fbIdea} onChange={setFbIdea} label="I have an idea" />
+                <Checkbox checked={fbBroken} onChange={setFbBroken} label="Your thing is broken" />
+              </div>
+              <TextInput
+                label="the quick version"
+                placeholder="Short summary (required)"
+                value={fbQuick}
+                onChange={(e) => setFbQuick((e.target as HTMLInputElement).value)}
+                required
+                fullWidth
+              />
+              <TextArea
+                label="give us the details"
+                placeholder="Optional details"
+                value={fbDetails}
+                onChange={(e) => setFbDetails((e.target as HTMLTextAreaElement).value)}
+                rows={4}
+                fullWidth
+              />
+              {fbError && <div className="text-xs text-red-600 dark:text-red-400">{fbError}</div>}
+            </div>
+          </Modal>
+          <Toast open={showFbThanks} onClose={() => setShowFbThanks(false)} variant="success" autoHideMs={2200}>
+            Thank you SO MUCH for your feedback! We're making Nodal better as fast as we can!
+          </Toast>
+        </>
+      )}
     </>
   )
 } 

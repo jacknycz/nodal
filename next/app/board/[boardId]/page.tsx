@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSupabaseUser } from '../../../src/features/auth/authUtils'
+import { getSupabaseClient } from '../../../src/features/auth/supabaseClient'
 import { useRouter } from 'next/navigation'
 import BoardComponent from '../../../src/features/board/BoardComponent';
 import { boardStorage } from '../../../src/features/storage/storage';
@@ -27,21 +28,10 @@ export default function BoardPage() {
   const screenshotMode = searchParams.get('screenshot') === 'true';
   const user = useSupabaseUser()
   const router = useRouter()
+  const supabase = getSupabaseClient()
+  const [canEdit, setCanEdit] = useState(false)
 
-  // Redirect unauthenticated users to login (root), but avoid transient flicker on session refresh
-  useEffect(() => {
-    if (user === undefined) return // auth still resolving
-    if (user && (user as any).id) {
-      try { localStorage.setItem('nodal.auth.hadUser', 'true') } catch {}
-      return
-    }
-    // user is null here
-    const hadUser = typeof window !== 'undefined' ? localStorage.getItem('nodal.auth.hadUser') === 'true' : false
-    if (!hadUser) {
-      router.replace('/')
-    }
-    // If hadUser was true, skip redirect to prevent flash when session briefly resets on focus
-  }, [user, router])
+  // Do not redirect unauthenticated users; allow viewing public boards
 
   useEffect(() => {
     const loadBoard = async () => {
@@ -80,9 +70,36 @@ export default function BoardPage() {
     };
 
     if (!boardId) return
-    if (!user || !(user as any).id) return // wait for stable authenticated user
     loadBoard();
-  }, [boardId, user?.id]);
+  }, [boardId]);
+
+  // Determine whether current user can edit this board (owner or editor member)
+  useEffect(() => {
+    const check = async () => {
+      try {
+        if (!boardId || !board) { setCanEdit(false); return }
+        // Unauthenticated or public viewers cannot edit
+        if (!user?.id) { setCanEdit(false); return }
+        // Owner can edit
+        if (board.userId && user.id === board.userId) { setCanEdit(true); return }
+        // Check membership role
+        const { data, error } = await supabase
+          .from('board_members')
+          .select('role')
+          .eq('board_id', boardId)
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (!error && (data?.role === 'owner' || data?.role === 'editor')) {
+          setCanEdit(true)
+        } else {
+          setCanEdit(false)
+        }
+      } catch {
+        setCanEdit(false)
+      }
+    }
+    check()
+  }, [boardId, board, user?.id, supabase])
 
   // Reflect runtime board name changes (e.g., via BoardSettingsModal)
   useEffect(() => {
@@ -122,18 +139,21 @@ export default function BoardPage() {
     return () => window.removeEventListener('nodal:editor-mode', handler as EventListener)
   }, [])
 
+  const isAccessBlocked = !loading && !board
+  const isPublicViewer = !!board?.isPublic && !user?.id
   return (
     <ThemeProvider>
       <AIProvider>
         <div className="h-screen relative">
-          {/* Hide topbar in editor mode */}
-          <div className={editorMode ? 'hidden' : ''}>
+          {/* Hide topbar in editor mode or when access is blocked (private board) */}
+          <div className={(editorMode || isAccessBlocked) ? 'hidden' : ''}>
             <Topbar
               currentBoardName={board?.name}
               saveStatus={saveStatus}
               hasUnsavedChanges={hasUnsavedChanges}
               isBoardView={true}
               onOpenBoardRoom={handleOpenBoardRoom}
+              publicViewer={isPublicViewer}
             />
           </div>
           {board ? (
@@ -143,6 +163,7 @@ export default function BoardPage() {
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}
+              readOnly={!canEdit}
             />
           ) : (
             <div className="h-full" />
@@ -159,10 +180,12 @@ export default function BoardPage() {
           )}
 
           {/* Error overlay (keeps UI visible) */}
-          {!loading && error && (
-            <div className="fixed inset-0 z-[1400] flex items-center justify-center">
-              <div className="px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 text-sm shadow">
-                Error loading board: {error}
+          {!loading && !board && (
+            <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-white dark:bg-black">
+              <div className="px-6 py-4 rounded-xl bg-white/95 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 text-center shadow">
+                <div className="text-base font-semibold text-gray-900 dark:text-white mb-1">This board is private</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">You don't have access. Log in or ask the owner to invite you.</div>
+                <a href="/" className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm">Log in</a>
               </div>
             </div>
           )}

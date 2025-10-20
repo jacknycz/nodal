@@ -83,6 +83,7 @@ interface BoardProps {
   boardName?: string // Add board name for existing boards
   screenshotMode?: boolean // Add screenshot mode
   onDeleteNode?: (nodeId: string) => void // Add delete function prop
+  readOnly?: boolean
 }
 
 // Add migrateNodeData definition if missing
@@ -146,6 +147,7 @@ function BoardContent({
   boardName, // Add this parameter
   screenshotMode = false, // Add screenshotMode
   onDeleteNode, // Add delete function prop
+  readOnly = false,
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
@@ -593,6 +595,7 @@ function BoardContent({
     localBoardIdRef,
     onBoardStateChange,
     currentBoardName,
+    disabled: readOnly,
   })
   const triggerAutosaveRef = useRef(triggerAutosave)
   triggerAutosaveRef.current = triggerAutosave
@@ -1370,6 +1373,7 @@ function BoardContent({
     let isFileBeingDragged = false
 
     const handleGlobalDragOver = (e: DragEvent) => {
+      if (readOnly) return
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         e.preventDefault()
         e.stopPropagation()
@@ -1377,6 +1381,7 @@ function BoardContent({
     }
 
     const handleGlobalDrop = (e: DragEvent) => {
+      if (readOnly) return
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         e.preventDefault()
         e.stopPropagation()
@@ -1384,6 +1389,7 @@ function BoardContent({
     }
 
     const handleWindowDragEnter = (e: DragEvent) => {
+      if (readOnly) return
       // Only activate if we have files and haven't already activated
       if (!isFileBeingDragged && e.dataTransfer?.types.includes("Files")) {
         e.preventDefault() // This is the key fix - tell browser this is a custom drop zone
@@ -1394,6 +1400,7 @@ function BoardContent({
     }
 
     const handleWindowDragOver = (e: DragEvent) => {
+      if (readOnly) return
       // Always prevent default for file drags
       if (e.dataTransfer?.types.includes("Files")) {
         e.preventDefault()
@@ -1412,6 +1419,7 @@ function BoardContent({
     }
 
     const handleWindowDrop = (e: DragEvent) => {
+      if (readOnly) return
       // Always prevent default for file drops
       if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
         e.preventDefault()
@@ -1493,12 +1501,13 @@ function BoardContent({
       window.removeEventListener("dragend", handleWindowDragEnd)
       window.removeEventListener("drop", handleWindowDrop)
     }
-  }, [handleDocumentUpload, showAddToast])
+  }, [handleDocumentUpload, showAddToast, readOnly])
   
   // Paste handler: supports URLs (video/link) and files (image/pdf/etc.)
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       try {
+        if (readOnly) return
         // Skip when focus is in an editor/input or contentEditable
         const active = (document.activeElement as HTMLElement | null)
         if (active) {
@@ -1575,10 +1584,10 @@ function BoardContent({
 
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
-  }, [getViewportCenter, handleDocumentUpload, setNodes, showAddToast])
+  }, [getViewportCenter, handleDocumentUpload, setNodes, showAddToast, readOnly])
   
   // Keyboard shortcuts via hook
-  useBoardShortcuts(() => { saveBoard() })
+  useBoardShortcuts(() => { if (!readOnly) { saveBoard() } })
   
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
@@ -1621,9 +1630,10 @@ function BoardContent({
     return () => { try { delete (window as any).__deleteNodeFromBoard } catch {} }
   }, [handleNodeDelete])
 
-  // Intercept Delete key to confirm before deleting
+  // Intercept Delete key to confirm before deleting (disabled in read-only)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if (readOnly) return
       if (e.key !== 'Delete') return
       // Ignore when editing inputs/editors
       const active = document.activeElement as HTMLElement | null
@@ -1640,7 +1650,7 @@ function BoardContent({
     }
     document.addEventListener('keydown', onKeyDown, true)
     return () => document.removeEventListener('keydown', onKeyDown, true)
-  }, [])
+  }, [readOnly])
 
   // Ensure right-click on selection overlay opens our pane context menu (not pass-through)
   useEffect(() => {
@@ -1667,6 +1677,7 @@ function BoardContent({
     }
 
     const onContextMenu = (e: MouseEvent) => {
+      if (readOnly) return
       if (!isSelectionOverlay(e)) return
       e.preventDefault()
       e.stopPropagation()
@@ -1674,6 +1685,7 @@ function BoardContent({
       setContextMenu({ isOpen: true, position: { x: e.clientX, y: e.clientY } })
     }
     const onMouseDown = (e: MouseEvent) => {
+      if (readOnly) return
       if (e.button !== 2) return
       if (!isSelectionOverlay(e)) return
       e.preventDefault()
@@ -1685,7 +1697,7 @@ function BoardContent({
       document.removeEventListener('contextmenu', onContextMenu, true)
       document.removeEventListener('mousedown', onMouseDown, true)
     }
-  }, [])
+  }, [readOnly])
 
   const handleNodeUpdate = useCallback(async (nodeId: string, updates: Partial<{ label: string; title: string; content: string }>) => {
     pushHistory()
@@ -1719,10 +1731,11 @@ function BoardContent({
   }, [setNodes, boardId, user?.id, supabase, pushHistory])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
+    if (readOnly) return
     pushHistory()
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
     try { channelRef.current?.send({ type: 'broadcast', event: 'edge:remove', payload: { edgeId, userId: user?.id || null, ts: Date.now() } }) } catch {}
-  }, [setEdges, pushHistory, boardId, user?.id])
+  }, [setEdges, pushHistory, boardId, user?.id, readOnly])
 
   // Shift+Click connect: connect from the single selected node to clicked node
   const handleShiftClickConnect = useCallback((targetId: string) => {
@@ -1756,6 +1769,7 @@ function BoardContent({
       onNodeDelete: handleNodeDelete,
       onNodeUpdate: handleNodeUpdate,
       onEdgeDelete: handleEdgeDelete,
+      readOnly,
       acquireNodeLock,
       releaseNodeLock,
       isNodeLocked,
@@ -2154,11 +2168,14 @@ function BoardContent({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={handleNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
+        onNodesChange={readOnly ? undefined : handleNodesChange}
+        onEdgesChange={readOnly ? undefined : onEdgesChange}
+        onConnect={readOnly ? undefined : onConnect}
         onNodeDoubleClick={(event: React.MouseEvent, node: any) => {
           try { event.preventDefault(); event.stopPropagation() } catch {}
+          if (readOnly) return
           try { window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id: node?.id } })) } catch {}
         }}
         onNodeClick={(event: React.MouseEvent, node: any) => {
@@ -2169,18 +2186,20 @@ function BoardContent({
             if (editorMode) { event.preventDefault(); return }
             event.preventDefault()
             event.stopPropagation()
+            if (readOnly) return
             setPendingSourceNodeId(node?.id || null)
             setContextMenu({
               isOpen: true,
               position: { x: event.clientX, y: event.clientY }
             })
           }}
-        onConnectStart={onConnectStart}
-        onConnectEnd={onConnectEnd}
+        onConnectStart={readOnly ? undefined : onConnectStart}
+        onConnectEnd={readOnly ? undefined : onConnectEnd}
         onSelectionChange={handleSelectionChange}
         onPaneClick={(event) => {
           // If we're awaiting a placement click (triggered by FAB), capture this click and open the modal
           if (awaitingNodePlacement) {
+            if (readOnly) { setAwaitingNodePlacement(false); return }
             try {
               const flowPosition = reactFlowInstance.screenToFlowPosition({ x: (event as any).clientX, y: (event as any).clientY })
               setPendingNodePosition(flowPosition)
@@ -2206,6 +2225,7 @@ function BoardContent({
         }}
         onPaneContextMenu={(event) => {
           if (editorMode) { event.preventDefault(); return }
+          if (readOnly) { event.preventDefault(); return }
           event.preventDefault();
           // Right-click on empty pane (not a node)
           setPendingSourceNodeId(null)
@@ -2265,9 +2285,10 @@ function BoardContent({
         <LeftDock
           active={leftDockActive}
           onToggle={(key) => setLeftDockActive(prev => (prev === key ? null : key))}
+          disabled={readOnly}
         />
       )}
-      {isBoardView && !editorMode && (
+      {isBoardView && !editorMode && !readOnly && (
         <FloatingActionButton
           onAddNode={() => {
             console.log('[BoardComponent] onAddNode called')
@@ -3063,7 +3084,7 @@ function BoardContent({
             </Modal>
           )}
           {/* NodeSetupModal deprecated for add-new-node; using NodeEditModal instead */}
-          {isBoardView && !editorMode && (
+          {isBoardView && !editorMode && !readOnly && (
             <>
               <FloatingActionButton
                 onAddNode={() => {
@@ -3114,7 +3135,7 @@ function BoardContent({
       )}
       {/* Legacy NodeAddModal removed; using unified AddNodesModal */}
 
-      {showUnifiedAddModal && (
+      {showUnifiedAddModal && !readOnly && (
         <AddNodesModal
           open={showUnifiedAddModal}
           onClose={() => setShowUnifiedAddModal(false)}

@@ -20,14 +20,16 @@ interface UseBoardAutosaveParams {
   localBoardIdRef: React.MutableRefObject<string | null>
   onBoardStateChange?: (name: string, status: 'saved' | 'saving' | 'error', hasChanges: boolean) => void
   currentBoardName: string
+  disabled?: boolean
 }
 
-export function useBoardAutosave({ boardStorage, templateStorage, getViewport, getColorgories, localBoardIdRef, onBoardStateChange, currentBoardName }: UseBoardAutosaveParams) {
+export function useBoardAutosave({ boardStorage, templateStorage, getViewport, getColorgories, localBoardIdRef, onBoardStateChange, currentBoardName, disabled = false }: UseBoardAutosaveParams) {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const triggerAutosave = useCallback((nodes: Node[], edges: Edge[]) => {
+    if (disabled) return
     // Safety: never autosave empty arrays (prevents accidental wipes)
     if ((!nodes || nodes.length === 0) && (!edges || edges.length === 0)) return
     if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current)
@@ -55,11 +57,12 @@ export function useBoardAutosave({ boardStorage, templateStorage, getViewport, g
         onBoardStateChange?.(currentBoardName, 'error', true)
       }
     }, 2000)
-  }, [boardStorage, templateStorage, getViewport, getColorgories, localBoardIdRef, onBoardStateChange, currentBoardName])
+  }, [boardStorage, templateStorage, getViewport, getColorgories, localBoardIdRef, onBoardStateChange, currentBoardName, disabled])
 
   useEffect(() => () => { if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current) }, [])
 
   const manualSave = useCallback(async (nodes: Node[], edges: Edge[], name?: string) => {
+    if (disabled) return
     try {
       // Safety: never overwrite an existing board with an empty state
       if (!name && localBoardIdRef.current && (!nodes || nodes.length === 0) && (!edges || edges.length === 0)) {
@@ -83,7 +86,7 @@ export function useBoardAutosave({ boardStorage, templateStorage, getViewport, g
       setHasUnsavedChanges(true)
       onBoardStateChange?.(currentBoardName, 'error', true)
     }
-  }, [boardStorage, getViewport, getColorgories, localBoardIdRef, onBoardStateChange, currentBoardName])
+  }, [boardStorage, getViewport, getColorgories, localBoardIdRef, onBoardStateChange, currentBoardName, disabled])
 
   return { saveStatus, hasUnsavedChanges, setHasUnsavedChanges, triggerAutosave, manualSave }
 }

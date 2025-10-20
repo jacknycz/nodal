@@ -6,6 +6,7 @@ import type { OpenAIModel } from '../features/ai/aiTypes'
 import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
 import Select from './ui/Select'
+import Range from './ui/Range'
 import { MODELS } from '../features/ai/models'
 
 interface AISettingsMenuProps {
@@ -69,22 +70,18 @@ export default function AISettingsMenu({
           </div>
 
           <div className="mb-1">
-            <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-300">
-              Creativity (Temperature: {temperature})
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
+            <Range
+              label={`Creativity (Temperature: ${temperature})`}
+              min={0}
+              max={1}
+              step={0.05}
               value={temperature}
-              onChange={e => setTemperature(parseFloat(e.target.value))}
-              className="w-full"
+              onChange={(v) => setTemperature(v)}
+              fullWidth
+              size="sm"
+              startLabel="Focused"
+              endLabel="Creative"
             />
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>Focused</span>
-              <span>Creative</span>
-            </div>
           </div>
         </div>
       }

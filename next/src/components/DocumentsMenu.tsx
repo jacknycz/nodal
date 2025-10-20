@@ -60,7 +60,7 @@ export default function DocumentsMenu({
       trigger={
         <IconButton
         aria-label="Documents"
-        variant="secondaryOutline"
+        variant="primaryGhost"
         size="small"
         >
           <Files size={24} className='w-5 h-5' />

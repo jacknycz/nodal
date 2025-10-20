@@ -45,6 +45,7 @@ interface ImageNodeProps {
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
   onLiveResize?: (nodeId: string, width: number) => void
+  readOnly?: boolean
 }
 
 export default function ImageNode({
@@ -56,6 +57,7 @@ export default function ImageNode({
   onQuickAddNodes,
   onOrganizeSubtree,
   onLiveResize,
+  readOnly = false,
 }: ImageNodeProps) {
   const SHOW_ADD_CONNECTED = false
   const [showEditModal, setShowEditModal] = useState(false)
@@ -194,6 +196,7 @@ export default function ImageNode({
   }, [(data as any)?.width, maxWidth])
   const resizeStartRef = React.useRef<{ startX: number; startW: number } | null>(null)
   const onResizeDown = (e: React.MouseEvent) => {
+    if (readOnly) return
     e.stopPropagation(); e.preventDefault()
     resizeStartRef.current = { startX: e.clientX, startW: nodeWidth }
     isResizingRef.current = true
@@ -531,6 +534,7 @@ export default function ImageNode({
       </Modal>
 
       {/* Node-level resize handle (bottom-right) */}
+      {!readOnly && (
       <div
         className="nodrag nopan
         hidden md:flex absolute -bottom-2 -right-2 w-6 h-6 items-center justify-center rounded-full
@@ -542,6 +546,7 @@ export default function ImageNode({
       >
         <Resize size={32} weight="duotone" className="w-4 h-4" />
       </div>
+      )}
 
       <Handle type="source" position={Position.Bottom} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
     </div>

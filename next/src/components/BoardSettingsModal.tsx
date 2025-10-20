@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import Select from './ui/Select'
+import Range from './ui/Range'
 import Button from './ui/Button'
 import { boardStorage } from '../features/storage/storage'
 import { useBoardStore } from '../features/board/boardSlice'
@@ -19,6 +20,7 @@ import IconButton from './ui/IconButton'
 import Toast from './ui/Toast'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Tag from './ui/Tag'
+import { getSupabaseClient } from '../features/auth/supabaseClient'
 
 interface Props {
   open: boolean
@@ -42,6 +44,8 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const { model, setModel, temperature, setTemperature } = useAISettingsStore()
   const { isDark, setTheme } = useTheme()
   const user = useSupabaseUser()
+  const supabase = getSupabaseClient()
+  const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
 
   // Inline share/invite state (mirrors ShareBoardModal)
   const [shareInput, setShareInput] = useState('')
@@ -54,6 +58,16 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
 
   useEffect(() => { if (open) setPendingBoardName(initialName || '') }, [open, initialName])
   // no local tab state
+
+  useEffect(() => {
+    if (!open || !boardId) return
+    ;(async () => {
+      try {
+        const { data } = await supabase.from('boards').select('is_public').eq('id', boardId).maybeSingle()
+        setPendingIsPublic(!!(data as any)?.is_public)
+      } catch { setPendingIsPublic(false) }
+    })()
+  }, [open, boardId, supabase])
 
   useEffect(() => {
     if (!open) return
@@ -135,6 +149,27 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         <Tabs disableRouting>
           <Tab label="board" headerLabel="Board">
             <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">Visibility</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Private boards are members-only. Public boards can be viewed by anyone with the link (editing is members-only).</div>
+                </div>
+                <div>
+                  <Select
+                    label=""
+                    value={pendingIsPublic ? 'public' : 'private'}
+                    onChange={async (v: any) => {
+                      const next = v === 'public'
+                      setPendingIsPublic(next)
+                      if (!isOwnerView) return
+                      try { await supabase.from('boards').update({ is_public: next }).eq('id', boardId) } catch {}
+                    }}
+                    options={[{ label: 'Private', value: 'private' }, { label: 'Public', value: 'public' }]}
+                    className="w-24!"
+                    disabled={!isOwnerView}
+                  />
+                </div>
+              </div>
               <TextInput
                 label="Board title"
                 value={pendingBoardName}
@@ -142,7 +177,6 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 placeholder="Enter board title..."
                 fullWidth
                 disabled={!isOwnerView}
-                autoFocus
               />
               <TextInput
                 label="Board topic"
@@ -185,22 +219,17 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 fullWidth
               />
               <div>
-                <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-300">
-                  Creativity (Temperature: {temperature})
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={temperature}
-                  onChange={(e) => setTemperature(parseFloat((e.target as HTMLInputElement).value))}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>Focused</span>
-                  <span>Creative</span>
-                </div>
+              <Range
+                label={`Creativity (Temperature: ${temperature})`}
+                min={0}
+                max={1}
+                step={0.05}
+                value={temperature}
+                onChange={(v) => setTemperature(v)}
+                fullWidth
+                startLabel="Focused"
+                endLabel="Creative"
+              />
               </div>
             </div>
           </Tab>

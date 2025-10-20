@@ -65,7 +65,7 @@ export default function Avatar({ src, name, email, seed, size = 'md', className 
   }, [seed, name, email, palette])
 
   const sz = sizeClasses[size]
-  const outerRing = ring ? 'ring-2 ring-white dark:ring-black' : ''
+  const outerRing = ring ? 'ring-1 ring-white dark:ring-black' : ''
   const borderCls = border ? 'border-2 border-gray-200 dark:border-gray-700' : ''
 
   if (src) {

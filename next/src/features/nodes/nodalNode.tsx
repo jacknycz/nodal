@@ -82,6 +82,7 @@ export default function NodalNode(props: any) {
   }, [data.width])
   const resizeStartRef = useRef<{ startX: number; startW: number } | null>(null)
   const onResizeDown = (e: React.MouseEvent) => {
+    if ((props as any)?.readOnly) return
     if (pageMode) return
     e.stopPropagation(); e.preventDefault()
     resizeStartRef.current = { startX: e.clientX, startW: nodeWidth }
@@ -344,7 +345,7 @@ export default function NodalNode(props: any) {
       </Modal>
 
       {/* Resize handle for default nodes */}
-      {!pageMode && (
+      {!pageMode && !(props as any)?.readOnly && (
         <div
           className="nodrag nopan hidden md:flex absolute -bottom-2 -right-2 w-6 h-6 items-center justify-center rounded-full bg-white dark:bg-primary-900 text-primary-600 dark:text-white cursor-se-resize shadow-lg hover:shadow-xl transition-opacity duration-200 ease-out opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
           onMouseDown={onResizeDown}

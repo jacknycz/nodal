@@ -11,9 +11,10 @@ type DockKey = 'tasks' | 'colorgories' | 'tips' | null
 interface LeftDockProps {
   active: DockKey
   onToggle: (key: Exclude<DockKey, null>) => void
+  disabled?: boolean
 }
 
-export default function LeftDock({ active, onToggle }: LeftDockProps) {
+export default function LeftDock({ active, onToggle, disabled = false }: LeftDockProps) {
   const baseBtn = "w-10 h-10 cursor-pointer rounded-lg flex items-center justify-center transition-colors duration-150"
   const neutral = "bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 dark:text-gray-200"
   const activeCls = "bg-primary-600 text-white hover:bg-primary-600"
@@ -84,18 +85,18 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
         <button
           type="button"
           title="Undo"
-          onClick={() => { if (canUndo) try { window.dispatchEvent(new CustomEvent('nodal:undo')) } catch { } }}
-          className={`${baseBtn} ${neutral} ${!canUndo ? disabledCls : ''}`}
-          disabled={!canUndo}
+          onClick={() => { if (disabled) return; if (canUndo) try { window.dispatchEvent(new CustomEvent('nodal:undo')) } catch { } }}
+          className={`${baseBtn} ${neutral} ${(disabled || !canUndo) ? disabledCls : ''}`}
+          disabled={disabled || !canUndo}
         >
           <ArrowCounterClockwise className="w-5 h-5" />
         </button>
         <button
           type="button"
           title="Redo"
-          onClick={() => { if (canRedo) try { window.dispatchEvent(new CustomEvent('nodal:redo')) } catch { } }}
-          className={`${baseBtn} ${neutral} ${!canRedo ? disabledCls : ''}`}
-          disabled={!canRedo}
+          onClick={() => { if (disabled) return; if (canRedo) try { window.dispatchEvent(new CustomEvent('nodal:redo')) } catch { } }}
+          className={`${baseBtn} ${neutral} ${(disabled || !canRedo) ? disabledCls : ''}`}
+          disabled={disabled || !canRedo}
         >
           <ArrowClockwise className="w-5 h-5" />
         </button>
@@ -106,8 +107,9 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
           type="button"
           title="Tasks"
           aria-pressed={openKey === 'tasks'}
-          onClick={() => setOpenKey(prev => prev === 'tasks' ? null : 'tasks')}
-          className={`${baseBtn} ${openKey === 'tasks' ? activeCls : neutral}`}
+          onClick={() => { if (disabled) return; setOpenKey(prev => prev === 'tasks' ? null : 'tasks') }}
+          className={`${baseBtn} ${openKey === 'tasks' ? activeCls : neutral} ${disabled ? disabledCls : ''}`}
+          disabled={disabled}
         >
           <ListChecks className="w-5 h-5" />
         </button>
@@ -123,8 +125,9 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
           type="button"
           title="Tips & Info"
           aria-pressed={openKey === 'tips'}
-          onClick={() => setOpenKey(prev => prev === 'tips' ? null : 'tips')}
-          className={`${baseBtn} ${openKey === 'tips' ? activeCls : neutral}`}
+          onClick={() => { if (disabled) return; setOpenKey(prev => prev === 'tips' ? null : 'tips') }}
+          className={`${baseBtn} ${openKey === 'tips' ? activeCls : neutral} ${disabled ? disabledCls : ''}`}
+          disabled={disabled}
         >
           <Info className="w-5 h-5" />
         </button>
@@ -170,7 +173,8 @@ export default function LeftDock({ active, onToggle }: LeftDockProps) {
             variant="primaryOutline"
             className="bg-white dark:bg-gray-900"
             size="lg"
-            onClick={() => setMobileOpen(v => !v)}
+            onClick={() => { if (disabled) return; setMobileOpen(v => !v) }}
+            disabled={disabled}
           >
             <Sidebar size={14} className="w-5 h-5" weight="duotone" />
           </IconButton>

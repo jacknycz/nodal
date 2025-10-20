@@ -12,7 +12,7 @@ interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> 
 const variantClasses: Record<IconButtonVariant, string> = {
   default: 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200',
   primary: 'bg-primary-500 hover:bg-primary-600 text-white',
-  primaryGhost: 'bg-transparent hover:bg-primary-100 text-primary-600',
+  primaryGhost: 'bg-transparent hover:border-2 hover:border-primary-600 text-primary-600',
   primaryOutline: 'bg-transparent border-2 border-primary-500 text-primary-600 hover:bg-primary-50 hover:border-primary-600 hover:text-primary-700 dark:hover:bg-primary-900/20',
   secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200',
   secondaryGhost: 'bg-transparent hover:bg-gray-100 text-gray-700 dark:hover:bg-gray-600 dark:text-gray-200',
