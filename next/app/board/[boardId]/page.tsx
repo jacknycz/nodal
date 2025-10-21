@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useSupabaseUser } from '../../../src/features/auth/authUtils'
 import { getSupabaseClient } from '../../../src/features/auth/supabaseClient'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import BoardComponent from '../../../src/features/board/BoardComponent';
 import { boardStorage } from '../../../src/features/storage/storage';
 import type { SavedBoard } from '../../../src/features/storage/storage';
@@ -89,7 +90,8 @@ export default function BoardPage() {
           .eq('board_id', boardId)
           .eq('user_id', user.id)
           .maybeSingle()
-        if (!error && (data?.role === 'owner' || data?.role === 'editor')) {
+        const role = (data as any)?.role as string | undefined
+        if (!error && (role === 'owner' || role === 'editor')) {
           setCanEdit(true)
         } else {
           setCanEdit(false)
@@ -185,7 +187,7 @@ export default function BoardPage() {
               <div className="px-6 py-4 rounded-xl bg-white/95 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 text-center shadow">
                 <div className="text-base font-semibold text-gray-900 dark:text-white mb-1">This board is private</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">You don't have access. Log in or ask the owner to invite you.</div>
-                <a href="/" className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm">Log in</a>
+                <Link href="/" className="inline-flex items-center justify-center px-3 py-1.5 rounded-md bg-primary-600 text-white text-sm">Log in</Link>
               </div>
             </div>
           )}

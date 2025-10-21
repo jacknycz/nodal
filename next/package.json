@@ -36,6 +36,7 @@
     "pdf2json": "^3.2.0",
     "pdfjs-dist": "^5.4.54",
     "postmark": "^4.0.5",
+    "stripe": "^16.0.0",
     "puppeteer-core": "^24.15.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",

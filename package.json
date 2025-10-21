@@ -1,6 +1,14 @@
 {
+  "scripts": {
+    "dev": "npm --prefix next run dev",
+    "build": "npm --prefix next run build",
+    "start": "npm --prefix next run start",
+    "install:next": "npm --prefix next install",
+    "postinstall": "npm --prefix next install"
+  },
   "dependencies": {
     "docker": "^1.0.0",
+    "stripe": "^16.0.0",
     "ws": "^8.18.3",
     "y-webrtc": "^10.3.0",
     "yjs": "^13.6.27"
