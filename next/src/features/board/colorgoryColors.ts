@@ -40,12 +40,10 @@ export const colorgoryHexById: Record<string, string> = colorgoryHexByIdDark
 
 // Helper to get the correct color for current theme (defaults to dark on server)
 export function getColorgoryHex(id: string, isDark?: boolean): string {
-  // First, check dynamic board store for custom colorgories and hex overrides
+  // First, check dynamic colorgories (registered by boardSlice) for custom hex overrides
   try {
-    // Lazy import to avoid circular require issues
-    const { useBoardStore } = require('./boardSlice') as typeof import('./boardSlice')
-    const colorgories = (useBoardStore?.getState?.() as any)?.colorgories as Array<{ id: string; color: string }> | undefined
-    const entry = Array.isArray(colorgories) ? colorgories.find(c => c.id === id) : undefined
+    const colorgories = getRegisteredColorgories?.()
+    const entry = Array.isArray(colorgories) ? colorgories.find((c: any) => c?.id === id) : undefined
     if (entry && typeof entry.color === 'string') {
       const color = entry.color
       if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(color)) {
@@ -66,6 +64,12 @@ export function getColorgoryHex(id: string, isDark?: boolean): string {
     : (typeof document !== 'undefined' ? document.documentElement.classList.contains('dark') : true)
   const table = dark ? colorgoryHexByIdDark : colorgoryHexByIdLight
   return table[id] || colorgoryHexByIdDark[id] || '#9ca3af'
+}
+
+// Optional registration from boardSlice to avoid circular imports and require()
+let getRegisteredColorgories: (() => Array<{ id: string; color?: string }>) | null = null
+export function registerColorgoriesGetter(fn: () => Array<{ id: string; color?: string }>) {
+  getRegisteredColorgories = fn
 }
 
 

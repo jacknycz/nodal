@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, DocumentEmbedding, Colorgory } from './boardTypes'
-import { COLORGORY_DEFS } from './colorgoryColors'
+import { COLORGORY_DEFS, registerColorgoriesGetter } from './colorgoryColors'
 
 const initialState: BoardState = {
   nodes: [],
@@ -214,3 +214,8 @@ export const useBoardStore = create<BoardState & BoardActions & {
     }) : n)
   })),
 })) 
+
+// Register a getter so utilities can read current colorgories without importing the store directly
+try {
+  registerColorgoriesGetter(() => (useBoardStore.getState().colorgories || []) as any)
+} catch {}
