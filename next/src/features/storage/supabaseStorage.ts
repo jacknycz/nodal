@@ -318,13 +318,18 @@ class SupabaseStorage {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('boards')
         .delete()
         .eq('id', boardId)
         .eq('user_id', user.id)
+        .select('id')
 
       if (error) throw error
+      const deletedCount = Array.isArray(data) ? data.length : (data ? 1 : 0)
+      if (deletedCount === 0) {
+        throw new Error('Delete did not match any rows (not owner or already deleted)')
+      }
       console.log(`Board deleted from Supabase successfully`)
     } catch (error) {
       console.error('Failed to delete board from Supabase:', error)

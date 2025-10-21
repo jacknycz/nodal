@@ -18,6 +18,7 @@ import BoardSettingsModal from './BoardSettingsModal'
 interface BoardCardProps {
   id: string
   name: string
+  ownerId?: string
   lastModified?: number
   nodeCount?: number
   edgeCount?: number
@@ -38,6 +39,7 @@ interface BoardCardProps {
 function BoardCard({
   id,
   name,
+  ownerId,
   lastModified,
   nodeCount,
   edgeCount,
@@ -62,6 +64,7 @@ function BoardCard({
   const [showShareModal, setShowShareModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const user = useSupabaseUser()
+  const canDelete = !!user?.id && (!!ownerId && user.id === ownerId)
 
   useEffect(() => { setNewName(name) }, [name])
   // All share logic moved into shared ShareBoardModal
@@ -191,7 +194,7 @@ function BoardCard({
                 placement="above"
                 items={[
                   { label: 'Board Settings', icon: GearSix, onClick: () => { setShowSettingsModal(true) } },
-                  { label: 'Delete', icon: Trash, onClick: () => { setShowDeleteModal(true) } },
+                  ...(canDelete ? [{ label: 'Delete', icon: Trash, onClick: () => { setShowDeleteModal(true) } }] : []),
                 ]}
               />
               {enableSharing && (

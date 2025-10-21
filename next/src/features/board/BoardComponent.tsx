@@ -28,6 +28,7 @@ import HeadlineNode from '../nodes/HeadlineNode'
 import TaskNode from '../nodes/TaskNode'
 import VideoNode from '../nodes/VideoNode'
 import LinkNode from '../nodes/LinkNode'
+import SpotifyNode from '../nodes/SpotifyNode'
 import { useBoardStore } from './boardSlice'
 import FloatingEdge from './FloatingEdge'
 import FloatingStraightEdge from './FloatingStraightEdge'
@@ -128,6 +129,7 @@ export const nodeTypes = {
   video: (props: any) => <VideoNode {...props} {...stableHandlers} />,
   link: (props: any) => <LinkNode {...props} {...stableHandlers} />,
   headline: (props: any) => <HeadlineNode {...props} {...stableHandlers} />,
+  spotify: (props: any) => <SpotifyNode {...props} {...stableHandlers} />,
 };
 
 export const edgeTypes = {
@@ -1553,12 +1555,20 @@ function BoardContent({
         }
         let url: URL | null = null
         try { url = new URL(trimmed) } catch {}
+        if (!url) {
+          // Try to extract a URL from arbitrary pasted text (e.g., code blocks)
+          const m = trimmed.match(/https?:\/\/[\w.-]+\.[\w.-]+[^\s)"']*/i)
+          if (m && m[0]) {
+            try { url = new URL(m[0]) } catch { url = null }
+          }
+        }
         if (!url) return
         e.preventDefault()
 
         const href = url.toString()
         const host = url.hostname.toLowerCase()
         const isYouTube = host.includes('youtube.com') || host.includes('youtu.be')
+        const isSpotify = host.includes('open.spotify.com')
 
         if (isYouTube) {
           const newNode: Node = {
@@ -1566,6 +1576,23 @@ function BoardContent({
             type: 'video',
             position: center,
             data: { title: 'Video', videoUrl: href, status: 'idle' } as any,
+          }
+          setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
+          showAddToast('added', 1)
+        } else if (isSpotify) {
+          let embedUrl = ''
+          try {
+            const u = new URL(href)
+            u.hostname = 'open.spotify.com'
+            u.pathname = `/embed${u.pathname}`
+            u.search = ''
+            embedUrl = u.toString()
+          } catch { embedUrl = href.replace('open.spotify.com/', 'open.spotify.com/embed/') }
+          const newNode: Node = {
+            id: `spotify-${Date.now()}`,
+            type: 'spotify',
+            position: center,
+            data: { title: 'Spotify', spotifyUrl: href, embedUrl, status: 'loading' } as any,
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)

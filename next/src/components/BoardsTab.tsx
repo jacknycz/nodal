@@ -106,6 +106,7 @@ export default function BoardsTab({
                 key={board.id}
                 id={board.id}
                 name={board.name}
+                ownerId={(board as any).userId}
                 lastModified={board.lastModified}
                 nodeCount={board.nodeCount}
                 edgeCount={board.edgeCount}
