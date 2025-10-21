@@ -67,9 +67,9 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
     try {
       const u = new URL(originalUrl)
       const cleanPath = u.pathname.replace(/^\/+/, '').replace(/\/$/, '')
-      // Podcast episodes may use a different base
+      // Podcast episodes
       if (cleanPath.startsWith('episode/')) {
-        return `https://open.spotify.com/embed-podcast/${cleanPath}`
+        return `https://open.spotify.com/embed/${cleanPath}`
       }
       if (cleanPath.startsWith('embed/')) {
         return `https://open.spotify.com/${cleanPath}`
@@ -113,6 +113,15 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
     return getSpotifyEmbedUrl(data.embedUrl || data.spotifyUrl)
   }, [data.embedUrl, data.spotifyUrl])
 
+  const embedHeight = useMemo(() => {
+    try {
+      const url = new URL(effectiveEmbed)
+      const p = url.pathname.replace(/^\/+/, '')
+      if (p.startsWith('track/') || p.startsWith('episode/')) return 152
+      return 380 // playlist/album/artist defaults
+    } catch { return 152 }
+  }, [effectiveEmbed])
+
   // Render any content as plain text to avoid interpreting pasted JSX/HTML
   const plainContent = useMemo(() => {
     const raw = data.content || ''
@@ -139,15 +148,16 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
 
       <div className="cursor-default">
         <div className="relative w-full">
-          <div className="w-[500px] h-[152px] bg-black rounded-md overflow-hidden">
+          <div className="w-full bg-black rounded-md overflow-hidden" style={{ height: `${embedHeight}px` }}>
             {(effectiveEmbed || oembedHtml) ? (
               effectiveEmbed ? (
                 <iframe
                   key={effectiveEmbed}
                   src={effectiveEmbed}
-                  width="500"
-                  height="152"
-                  style={{ border: 0 }}
+                  width="100%"
+                  height={embedHeight}
+                  frameBorder={0}
+                  style={{ borderRadius: '12px', border: 0 }}
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   loading="lazy"
                   title={data.title || 'Spotify player'}
@@ -158,9 +168,9 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
             ) : (
               data.thumbnailUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={data.thumbnailUrl} alt={data.title || 'Spotify'} className="w-full h-[152px] object-cover" />
+                <img src={data.thumbnailUrl} alt={data.title || 'Spotify'} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-[152px] flex items-center justify-center text-gray-400 text-sm">{data.status === 'loading' ? 'Loading…' : 'Spotify'}</div>
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">{data.status === 'loading' ? 'Loading…' : 'Spotify'}</div>
               )
             )}
           </div>

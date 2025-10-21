@@ -262,9 +262,10 @@ export class OpenAIService {
         
                  // Don't retry on certain errors
          const aiError = this.categorizeError(error)
-         if (aiError.code === AIErrorCode.INVALID_API_KEY || 
-             aiError.code === AIErrorCode.CONTENT_FILTERED || 
-             aiError.code === AIErrorCode.CONTEXT_TOO_LONG) {
+        if (aiError.code === AIErrorCode.INVALID_API_KEY || 
+            aiError.code === AIErrorCode.CONTENT_FILTERED || 
+            aiError.code === AIErrorCode.CONTEXT_TOO_LONG ||
+            aiError.code === AIErrorCode.RATE_LIMIT_EXCEEDED) {
            throw aiError
          }
         
