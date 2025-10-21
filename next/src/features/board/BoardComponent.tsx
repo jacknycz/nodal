@@ -873,7 +873,14 @@ function BoardContent({
         router.push(`/board/${boardId}`)
       }
     } catch (error) {
-      // console.error('Failed to generate starter nodes:', error)
+      try {
+        const msg = String((error as any)?.message || error || '')
+        if (msg.toLowerCase().includes('token') && msg.toLowerCase().includes('limit')) {
+          setToastVariant('warning')
+          setToastMessage('Monthly AI token limit reached. Manage your plan in Profile → AI Tokens.')
+          setToastOpen(true)
+        }
+      } catch {}
       // Navigate to the board even if AI generation fails
       router.push(`/board/${boardId}`)
     }

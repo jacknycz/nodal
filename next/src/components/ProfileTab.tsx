@@ -12,6 +12,7 @@ import Tag from './ui/Tag'
 import Avatar from './ui/Avatar'
 import { useStorageUsage } from '../features/storage/usage'
 import { User } from '@phosphor-icons/react/dist/ssr'
+import { useAIUsage } from '../features/ai/usage'
 
 function useDebounced<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = React.useState(value)
@@ -26,6 +27,7 @@ export default function ProfileTab() {
   const user = useSupabaseUser()
   const client = getSupabaseClient()
   const storage = useStorageUsage()
+  const ai = useAIUsage()
   const [loading, setLoading] = React.useState(true)
   const [profile, setProfile] = React.useState<{ username: string | null; avatar_url: string | null; display_name: string | null } | null>(null)
   // Notifications
@@ -361,6 +363,34 @@ export default function ProfileTab() {
                   </div>
                 )
               })()}
+              {/* AI Tokens */}
+              {(() => {
+                const s = ai.summary
+                const isUnlimited = (s?.cap ?? 0) === Number.MAX_SAFE_INTEGER
+                const pct = s ? (isUnlimited ? 0 : Math.min(100, Math.round((s.total / Math.max(1, s.cap)) * 100))) : 0
+                const fmt = (n: number) => n.toLocaleString()
+                const label = !s ? '—' : isUnlimited ? 'Unlimited' : `${fmt(s.total)} / ${fmt(s.cap)}`
+                const barColor = ai.exceeded ? 'bg-red-500' : (ai.warn80 ? 'bg-orange-500' : 'bg-primary-500')
+                return (
+                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">AI Tokens (month)</div>
+                      <div className={`text-xs ${ai.exceeded ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>{label}</div>
+                    </div>
+                    {!isUnlimited && (
+                      <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                        <div className={`h-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    )}
+                    {ai.warn80 && !ai.exceeded && (
+                      <div className="mt-2 text-[11px] text-orange-600 dark:text-orange-400">You have used 80% of your monthly token cap.</div>
+                    )}
+                    {ai.exceeded && (
+                      <div className="mt-2 text-[11px] text-red-600 dark:text-red-400">Monthly AI token limit reached. Visit Profile to upgrade or buy packs.</div>
+                    )}
+                  </div>
+                )
+              })()}
             </div>
             {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
           </div>
@@ -641,9 +671,9 @@ export default function ProfileTab() {
                     while (attempt < 3) {
                       try {
                         const candidate = attempt === 0 ? deriveBaseUsername() : `${deriveBaseUsername()}_${Math.floor(Math.random()*1000)}`.slice(0,24)
-                        const { data: upData, error: upErr } = await supabase
+                        const { data: upData, error: upErr } = await (supabase as any)
                           .from('profiles')
-                          .upsert({ id: user.id, username: candidate, avatar_url: url }, { onConflict: 'id' })
+                          .upsert({ id: user.id, username: candidate, avatar_url: url } as any, { onConflict: 'id' } as any)
                           .select('username')
                           .maybeSingle()
                         if (upErr) throw upErr

@@ -11,6 +11,7 @@ import type {
   AIActionType
 } from './aiTypes'
 import { AIErrorCode } from './aiTypes'
+import { getSupabaseClient } from '../auth/supabaseClient'
 
 // Model Information Database
 export const MODEL_INFO: Record<OpenAIModel, ModelInfo> = {
@@ -209,6 +210,14 @@ export class OpenAIService {
           details: error as Record<string, unknown>
         }
       }
+      if (errorObj.status === 402) {
+        return {
+          code: AIErrorCode.QUOTA_EXCEEDED,
+          message: errorObj.message || 'Monthly AI token limit reached',
+          timestamp: now,
+          details: error as Record<string, unknown>
+        }
+      }
       
       if (errorObj.status === 400 && errorObj.message?.includes('maximum context length')) {
         return {
@@ -265,7 +274,8 @@ export class OpenAIService {
         if (aiError.code === AIErrorCode.INVALID_API_KEY || 
             aiError.code === AIErrorCode.CONTENT_FILTERED || 
             aiError.code === AIErrorCode.CONTEXT_TOO_LONG ||
-            aiError.code === AIErrorCode.RATE_LIMIT_EXCEEDED) {
+           aiError.code === AIErrorCode.RATE_LIMIT_EXCEEDED ||
+            aiError.code === AIErrorCode.QUOTA_EXCEEDED) {
            throw aiError
          }
         
@@ -414,12 +424,20 @@ export class OpenAIService {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || '/api/ai'
+    let authHeader: Record<string, string> = {}
+    try {
+      const supabase = getSupabaseClient()
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      if (token) authHeader = { 'Authorization': `Bearer ${token}` }
+    } catch {}
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         // The server route reads the key from server env; allow an override header if needed
-        ...(this.config.apiKey ? { 'x-openai-api-key': this.config.apiKey } : {})
+        ...(this.config.apiKey ? { 'x-openai-api-key': this.config.apiKey } : {}),
+        ...authHeader
       },
       body: JSON.stringify({
         model,
@@ -471,11 +489,19 @@ export class OpenAIService {
     ]
 
     const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || '/api/ai'
+    let authHeader: Record<string, string> = {}
+    try {
+      const supabase = getSupabaseClient()
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      if (token) authHeader = { 'Authorization': `Bearer ${token}` }
+    } catch {}
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.config.apiKey ? { 'x-openai-api-key': this.config.apiKey } : {})
+        ...(this.config.apiKey ? { 'x-openai-api-key': this.config.apiKey } : {}),
+        ...authHeader
       },
       body: JSON.stringify({
         model,

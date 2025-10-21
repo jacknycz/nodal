@@ -22,6 +22,34 @@ export async function POST(req: NextRequest) {
       if (hdr) userId = hdr
     }
 
+    // Soft cap check before proxying
+    try {
+      if (userId) {
+        // Determine monthly cap from role
+        let cap = 15000
+        try {
+          const prof = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
+          const role = (prof.data as any)?.role || 'User'
+          const rl = String(role).toLowerCase()
+          if (rl === 'pro') cap = 100000
+          if (rl === 'admin') cap = Number.MAX_SAFE_INTEGER
+        } catch {}
+        if (cap !== Number.MAX_SAFE_INTEGER) {
+          const now = new Date()
+          const start = new Date(now.getFullYear(), now.getMonth(), 1)
+          const { data: usageRows } = await supabase
+            .from('ai_usage')
+            .select('tokens_used')
+            .eq('user_id', userId)
+            .gte('created_at', start.toISOString())
+          const used = (usageRows || []).reduce((s: number, r: any) => s + Number(r.tokens_used || 0), 0)
+          if (used >= cap) {
+            return NextResponse.json({ error: 'Monthly AI token limit reached. Visit Profile to upgrade or buy packs.' }, { status: 402 })
+          }
+        }
+      }
+    } catch {}
+
     const apiKey = process.env.OPENAI_API_KEY || req.headers.get('x-openai-api-key') || ''
     if (!apiKey) return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 })
 

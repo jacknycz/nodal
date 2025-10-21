@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { getSupabaseClient } from '../auth/supabaseClient'
 
 export type Plan = 'Free' | 'Pro' | 'Admin'
 
@@ -23,27 +24,37 @@ export function useAIUsage() {
   const [error, setError] = useState<string | null>(null)
   const [summary, setSummary] = useState<UsageSummary | null>(null)
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await fetch('/api/usage', { headers: {} })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json?.error || 'Failed to load usage')
-        setSummary({ total: json.total, cap: json.cap, remaining: json.remaining, pct: json.pct })
-      } catch (e: any) {
-        setError(e?.message || 'Failed to load usage')
-      } finally {
-        setLoading(false)
-      }
+  const fetchUsage = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const supabase = getSupabaseClient()
+      const { data } = await supabase.auth.getSession()
+      const token = data?.session?.access_token
+      const res = await fetch('/api/usage', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error || 'Failed to load usage')
+      setSummary({ total: json.total, cap: json.cap, remaining: json.remaining, pct: json.pct })
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load usage')
+      setSummary(null)
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
 
-  const warn80 = !!summary && summary.cap !== Number.MAX_SAFE_INTEGER && summary.total >= 0.8 * summary.cap
+  useEffect(() => {
+    fetchUsage()
+    const id = setInterval(fetchUsage, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [fetchUsage])
 
-  return { loading, error, summary, warn80 }
+  const warn80 = !!summary && summary.cap !== Number.MAX_SAFE_INTEGER && summary.total >= 0.8 * summary.cap && summary.total < summary.cap
+  const exceeded = !!summary && summary.cap !== Number.MAX_SAFE_INTEGER && summary.total >= summary.cap
+
+  return { loading, error, summary, warn80, exceeded, refresh: fetchUsage }
 }
 
 

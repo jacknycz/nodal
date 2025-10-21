@@ -13,6 +13,7 @@ import { OpenAIModel } from '@/features/ai/aiTypes'
 import Select from './ui/Select'
 import { MODELS } from '../features/ai/models'
 import IconButton from './ui/IconButton'
+import Toast from './ui/Toast'
 
 export default function ChatPanel2() {
   const currentBoardId = useBoardStore((s) => s.currentBoardId)
@@ -45,6 +46,14 @@ export default function ChatPanel2() {
     error,
     clearError,
   } = useUnifiedAI2()
+  const [quotaToastOpen, setQuotaToastOpen] = useState(false)
+  useEffect(() => {
+    if (!error) return
+    const msg = String(error).toLowerCase()
+    if (msg.includes('token') && msg.includes('limit')) {
+      setQuotaToastOpen(true)
+    }
+  }, [error])
 
 
 
@@ -217,6 +226,9 @@ export default function ChatPanel2() {
 
   return (
     <>
+      <Toast open={quotaToastOpen} onClose={() => setQuotaToastOpen(false)} variant="warning" autoHideMs={4000}>
+        Monthly AI token limit reached. <a href="/profile" className="underline font-semibold">Manage plan</a>
+      </Toast>
       {/* Toggle */}
       <IconButton
         onClick={() => setIsOpen(true)}
