@@ -611,11 +611,16 @@ export class OpenAIService {
   // Health Check
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.generate({
-        prompt: 'Test',
-        maxTokens: 5
-      })
-      return !!response.content
+      // Lightweight reachability/auth check that does NOT consume AI tokens
+      let authHeader: Record<string, string> = {}
+      try {
+        const supabase = getSupabaseClient()
+        const { data } = await supabase.auth.getSession()
+        const token = data?.session?.access_token
+        if (token) authHeader = { 'Authorization': `Bearer ${token}` }
+      } catch {}
+      const res = await fetch('/api/usage', { headers: { ...authHeader } })
+      return res.ok
     } catch {
       return false
     }
