@@ -1,0 +1,10 @@
+{
+  "crons": [
+    {
+      "path": "/api/usage/report?key=prod_THI5TVbAZ7Mlk7",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}
+
+
