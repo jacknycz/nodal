@@ -31,9 +31,14 @@ export default function ProfileTab() {
   const storage = useStorageUsage()
   const ai = useAIUsage()
   const { role } = useUserRole()
+  const isProLike = React.useMemo(() => {
+    const cap = ai.summary?.cap
+    const capImpliesPro = typeof cap === 'number' && (cap === Number.MAX_SAFE_INTEGER || cap === 100000)
+    return role === 'Pro' || role === 'Admin' || capImpliesPro
+  }, [role, ai.summary?.cap])
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false)
   const [redirecting, setRedirecting] = React.useState(false)
-  const [billingToast, setBillingToast] = React.useState<{ open: boolean; msg: string; variant?: 'success'|'info'|'warning'|'danger' }>({ open: false, msg: '' })
+  const [billingToast, setBillingToast] = React.useState<{ open: boolean; msg: string; variant?: 'success' | 'info' | 'warning' | 'danger' }>({ open: false, msg: '' })
   const [loading, setLoading] = React.useState(true)
   const [profile, setProfile] = React.useState<{ username: string | null; avatar_url: string | null; display_name: string | null } | null>(null)
   // Notifications
@@ -111,7 +116,7 @@ export default function ProfileTab() {
         if (changedAt) {
           const last = new Date(changedAt)
           const now = new Date()
-          const days = (now.getTime() - last.getTime()) / (1000*60*60*24)
+          const days = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24)
           setIsUsernameOnCooldown(days < 30)
         } else {
           setIsUsernameOnCooldown(false)
@@ -136,7 +141,7 @@ export default function ProfileTab() {
       const list = Array.isArray(json.notifications) ? json.notifications : []
       setNotifications(list)
       setUnreadCount(list.filter((n: any) => !n.read_at).length)
-    } catch {}
+    } catch { }
     finally { setLoadingNotifs(false) }
   }, [user?.id])
 
@@ -154,9 +159,9 @@ export default function ProfileTab() {
 
   const markAllRead = async () => {
     if (!user?.id) return
-    try { await fetch('/api/notifications', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ userId: user.id, markAll: true }) }) } catch {}
+    try { await fetch('/api/notifications', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ userId: user.id, markAll: true }) }) } catch { }
     refreshNotifications()
-    try { window.dispatchEvent(new CustomEvent('nodal:notifications-updated', { detail: { reset: true } })) } catch {}
+    try { window.dispatchEvent(new CustomEvent('nodal:notifications-updated', { detail: { reset: true } })) } catch { }
   }
 
   const markOneRead = async (id: string) => {
@@ -164,14 +169,14 @@ export default function ProfileTab() {
     // Optimistic UI
     setNotifications((prev) => prev.map((n: any) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n))
     setUnreadCount((c) => Math.max(0, c - 1))
-    try { window.dispatchEvent(new CustomEvent('nodal:notifications-updated', { detail: { delta: -1 } })) } catch {}
+    try { window.dispatchEvent(new CustomEvent('nodal:notifications-updated', { detail: { delta: -1 } })) } catch { }
     try {
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ userId: user.id, ids: [id] })
       })
-    } catch {}
+    } catch { }
     refreshNotifications()
   }
 
@@ -183,7 +188,7 @@ export default function ProfileTab() {
       const res = await fetch(`/api/connections?userId=${encodeURIComponent(user.id)}`)
       const json = await res.json()
       setConnections(Array.isArray(json.connections) ? json.connections : [])
-    } catch {}
+    } catch { }
     finally { setLoadingConns(false) }
   }, [user?.id])
 
@@ -227,14 +232,14 @@ export default function ProfileTab() {
       setConnSearch('')
       setConnResults([])
       refreshConnections()
-    } catch {}
+    } catch { }
   }
 
-  const updateConnection = async (id: string, action: 'accept'|'decline'|'block'|'unblock'|'cancel') => {
+  const updateConnection = async (id: string, action: 'accept' | 'decline' | 'block' | 'unblock' | 'cancel') => {
     try {
       await fetch(`/api/connections/${encodeURIComponent(id)}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action }) })
       refreshConnections()
-    } catch {}
+    } catch { }
   }
 
   React.useEffect(() => {
@@ -301,105 +306,106 @@ export default function ProfileTab() {
     <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
       {/* Profile Card */}
       <div className="flex flex-row items-start gap-6 md:gap-12">
-          {/* Avatar */}
-          <div className="relative flex flex-col items-center">
-            <Avatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || null} email={user?.email || null} size="xl" ring border className="shadow-md" />
+        {/* Avatar */}
+        <div className="relative flex flex-col items-center">
+          <Avatar src={profile?.avatar_url} name={profile?.display_name || profile?.username || null} email={user?.email || null} size="xl" ring border className="shadow-md" />
 
-            <div className="mt-2 flex items-center gap-2">
-              <LinkUI onClick={() => { setAvatarPreview(null); avatarBlobRef.current = null; setShowAvatarModal(true) }}>Edit avatar</LinkUI>
+          <div className="mt-2 flex items-center gap-2">
+            <LinkUI onClick={() => { setAvatarPreview(null); avatarBlobRef.current = null; setShowAvatarModal(true) }}>Edit avatar</LinkUI>
+          </div>
+        </div>
+
+        {/* Main info */}
+        <div className="flex-1 w-full">
+          <div className="flex items-center gap-3 w-full">
+            <div className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
+              {profile?.username || 'NA'}
+            </div>
+            {profile?.username ? (
+              <LinkUI
+                onClick={() => { if (!isUsernameOnCooldown) { setUsernameInput(profile?.username || ''); setShowUsernameModal(true) } }}
+              >
+                {isUsernameOnCooldown ? (
+                  <span title="You changed your username in the last 30 days" className="pointer-events-none opacity-50">Edit</span>
+                ) : (
+                  'Edit'
+                )}
+              </LinkUI>
+            ) : (
+              <Button size="sm" onClick={() => { setUsernameInput(''); setShowUsernameModal(true) }}>Add Username</Button>
+            )}
+
+            {/* Role tag (stabilized) */}
+            <div>
+              <Tag variant="secondary" className="ml-1">{role}</Tag>
             </div>
           </div>
 
-          {/* Main info */}
-          <div className="flex-1 w-full">
-            <div className="flex items-center gap-3 w-full">
-              <div className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
-                {profile?.username || 'Add a username'}
-              </div>
-              {profile?.username ? (
-                <LinkUI
-                  onClick={() => { if (!isUsernameOnCooldown) { setUsernameInput(profile?.username || ''); setShowUsernameModal(true) } }}
-                >
-                  {isUsernameOnCooldown ? (
-                    <span title="You changed your username in the last 30 days" className="pointer-events-none opacity-50">Edit</span>
-                  ) : (
-                    'Edit'
-                  )}
-                </LinkUI>
-              ) : (
-                <Button size="sm" onClick={() => { setUsernameInput(''); setShowUsernameModal(true) }}>Add Username</Button>
-              )}
-
-              {/* Role tag */}
-            <div>
-              <Tag variant="secondary" className="ml-1">{String((user as any)?.app_metadata?.role || 'user').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</Tag>
-              </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+            {/* Email */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
+              <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</div>
+              <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100 break-words">{user?.email || '—'}</div>
             </div>
-
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-              {/* Email */}
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
-                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</div>
-                <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100 break-words">{user?.email || '—'}</div>
+            {/* Password */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Password</div>
+                <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">••••••••</div>
               </div>
-              {/* Password */}
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Password</div>
-                  <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">••••••••</div>
+              <Button onClick={onResetPassword}>Change</Button>
+            </div>
+            {/* Storage */}
+            {(() => {
+              const toMB = (n: number) => Math.round(n / (1024 * 1024))
+              const isAdminPlan = storage.plan === 'admin'
+              const label = isAdminPlan ? 'Unlimited' : `${toMB(storage.usedBytes)} MB / ${toMB(storage.totalBytes)} MB`
+              return (
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Storage</div>
+                    <div className="text-xs text-gray-700 dark:text-gray-300">{label}</div>
+                  </div>
+                  {!isAdminPlan && (
+                    <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                      <div className="h-full bg-primary-500 transition-all" style={{ width: `${storage.percentUsed}%` }} />
+                    </div>
+                  )}
                 </div>
-                <Button onClick={onResetPassword}>Change</Button>
-              </div>
-              {/* Storage */}
-              {(() => {
-                const toMB = (n: number) => Math.round(n / (1024 * 1024))
-                const isAdminPlan = storage.plan === 'admin'
-                const label = isAdminPlan ? 'Unlimited' : `${toMB(storage.usedBytes)} MB / ${toMB(storage.totalBytes)} MB`
-                return (
-                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Storage</div>
-                      <div className="text-xs text-gray-700 dark:text-gray-300">{label}</div>
-                    </div>
-                    {!isAdminPlan && (
-                      <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                        <div className="h-full bg-primary-500 transition-all" style={{ width: `${storage.percentUsed}%` }} />
-                      </div>
-                    )}
+              )
+            })()}
+            {/* AI Tokens */}
+            {(() => {
+              const s = ai.summary
+              const isUnlimited = (s?.cap ?? 0) === Number.MAX_SAFE_INTEGER
+              const pct = s ? (isUnlimited ? 0 : Math.min(100, Math.round((s.total / Math.max(1, s.cap)) * 100))) : 0
+              const fmt = (n: number) => n.toLocaleString()
+              const label = !s ? '—' : isUnlimited ? 'Unlimited' : `${fmt(s.total)} / ${fmt(s.cap)}`
+              const barColor = ai.exceeded ? 'bg-red-500' : (ai.warn80 ? 'bg-orange-500' : 'bg-primary-500')
+              return (
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">AI Tokens (month)</div>
+                    <div className={`text-xs ${ai.exceeded ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>{label}</div>
                   </div>
-                )
-              })()}
-              {/* AI Tokens */}
-              {(() => {
-                const s = ai.summary
-                const isUnlimited = (s?.cap ?? 0) === Number.MAX_SAFE_INTEGER
-                const pct = s ? (isUnlimited ? 0 : Math.min(100, Math.round((s.total / Math.max(1, s.cap)) * 100))) : 0
-                const fmt = (n: number) => n.toLocaleString()
-                const label = !s ? '—' : isUnlimited ? 'Unlimited' : `${fmt(s.total)} / ${fmt(s.cap)}`
-                const barColor = ai.exceeded ? 'bg-red-500' : (ai.warn80 ? 'bg-orange-500' : 'bg-primary-500')
-                return (
-                  <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">AI Tokens (month)</div>
-                      <div className={`text-xs ${ai.exceeded ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>{label}</div>
+                  {!isUnlimited && (
+                    <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
+                      <div className={`h-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
                     </div>
-                    {!isUnlimited && (
-                      <div className="mt-2 h-2 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                        <div className={`h-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    )}
-                    {ai.warn80 && !ai.exceeded && (
-                      <div className="mt-2 text-[11px] text-orange-600 dark:text-orange-400">You have used 80% of your monthly token cap.</div>
-                    )}
-                    {ai.exceeded && (
-                      <div className="mt-2 text-[11px] text-red-600 dark:text-red-400">Monthly AI token limit reached. Visit Profile to upgrade or buy packs.</div>
-                    )}
-                  </div>
-                )
-              })()}
-              {/* Upgrade / Manage Billing */}
-            <div className="mt-4 grid grid-cols-1">
-              {role === 'User' ? (
+                  )}
+                  {ai.warn80 && !ai.exceeded && (
+                    <div className="mt-2 text-[11px] text-orange-600 dark:text-orange-400">You have used 80% of your monthly token cap.</div>
+                  )}
+                  {ai.exceeded && (
+                    <div className="mt-2 text-[11px] text-red-600 dark:text-red-400">Monthly AI token limit reached. Visit Profile to upgrade or buy packs.</div>
+                  )}
+                </div>
+              )
+            })()}
+            
+            {/* Upgrade / Manage Billing */}
+            <div className="col-span-full">
+              {!isProLike ? (
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-gray-900 dark:text-white">Upgrade for more Storage and AI</div>
@@ -428,10 +434,10 @@ export default function ProfileTab() {
                 </div>
               )}
             </div>
-            </div>
-            {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
           </div>
+          {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
         </div>
+      </div>
 
       {/* Notifications */}
       <div className="mt-8">
@@ -457,24 +463,24 @@ export default function ProfileTab() {
               const primary = unread.concat(read.slice(0, Math.max(0, 5 - unread.length)))
               const remainingRead = read.slice(Math.max(0, 5 - unread.length))
               const Item = ({ n }: { n: any }) => {
-              let title = n.title as string
-              let bodyNode: React.ReactNode = n.body as string
-              const p = (n.payload || {}) as any
-              if (n.type === 'board_invite') {
-                const inviter = p?.inviterLabel || ''
-                const boardName = p?.boardName || ''
-                const link = p?.link || (p?.boardId ? `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${p.boardId}` : null)
-                title = inviter ? `New board shared with you by ${inviter}` : 'New board shared with you'
-                bodyNode = (
-                  <span>
-                    You have been invited to {link && boardName ? (
-                      <a href={link} className="text-primary-600 dark:text-primary-400 underline">"{boardName}"</a>
-                    ) : (
-                      boardName ? `"${boardName}"` : 'a board'
-                    )}
-                  </span>
-                )
-              }
+                let title = n.title as string
+                let bodyNode: React.ReactNode = n.body as string
+                const p = (n.payload || {}) as any
+                if (n.type === 'board_invite') {
+                  const inviter = p?.inviterLabel || ''
+                  const boardName = p?.boardName || ''
+                  const link = p?.link || (p?.boardId ? `${typeof window !== 'undefined' ? window.location.origin : ''}/board/${p.boardId}` : null)
+                  title = inviter ? `New board shared with you by ${inviter}` : 'New board shared with you'
+                  bodyNode = (
+                    <span>
+                      You have been invited to {link && boardName ? (
+                        <a href={link} className="text-primary-600 dark:text-primary-400 underline">"{boardName}"</a>
+                      ) : (
+                        boardName ? `"${boardName}"` : 'a board'
+                      )}
+                    </span>
+                  )
+                }
                 return (
                   <div key={n.id} className="p-3 flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
                     <div className={`w-2 h-2 mt-1 rounded-full ${n.read_at ? 'bg-transparent border border-gray-300 dark:border-gray-600' : 'bg-blue-500'}`} />
@@ -699,7 +705,7 @@ export default function ProfileTab() {
                   if (url) {
                     // Ensure a row exists; username may be required by schema, so derive a fallback if needed
                     const deriveBaseUsername = () => {
-                      const baseRaw = (profile?.username || (user.email ? user.email.split('@')[0] : `user_${String(user.id).slice(0,6)}`) || 'user')
+                      const baseRaw = (profile?.username || (user.email ? user.email.split('@')[0] : `user_${String(user.id).slice(0, 6)}`) || 'user')
                       const sanitized = baseRaw.toLowerCase().replace(/[^a-z0-9_.]/g, '_')
                       return (sanitized.length ? sanitized.slice(0, 24) : 'user')
                     }
@@ -707,7 +713,7 @@ export default function ProfileTab() {
                     let lastErr: any = null
                     while (attempt < 3) {
                       try {
-                        const candidate = attempt === 0 ? deriveBaseUsername() : `${deriveBaseUsername()}_${Math.floor(Math.random()*1000)}`.slice(0,24)
+                        const candidate = attempt === 0 ? deriveBaseUsername() : `${deriveBaseUsername()}_${Math.floor(Math.random() * 1000)}`.slice(0, 24)
                         const { data: upData, error: upErr } = await (supabase as any)
                           .from('profiles')
                           .upsert({ id: user.id, username: candidate, avatar_url: url } as any, { onConflict: 'id' } as any)
@@ -786,7 +792,7 @@ export default function ProfileTab() {
                   onChange={async (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0]
                     if (!file) return
-                    if (!file.type.startsWith('image/')) { setSaveError('Please upload an image.'); (e.target as HTMLInputElement).value=''; return }
+                    if (!file.type.startsWith('image/')) { setSaveError('Please upload an image.'); (e.target as HTMLInputElement).value = ''; return }
                     try {
                       const url = URL.createObjectURL(file)
                       const img = new Image()

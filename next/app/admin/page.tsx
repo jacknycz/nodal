@@ -17,6 +17,7 @@ interface LiteUser {
   createdAt: string
   lastSignInAt: string | null
   confirmedAt: string | null
+  paid?: boolean
 }
 
 export default function AdminUsersPage() {
@@ -97,13 +98,15 @@ export default function AdminUsersPage() {
       {loading && <div>Loading…</div>}
       {error && <div className="text-red-600">{error}</div>}
 
-      {/* {!loading && !error && (
+      {/* Users */}
+      {!loading && !error && (
         <div className="overflow-x-auto rounded-lg border border-gray-800 bg-gray-900">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-800 text-left">
               <tr>
                 <th className="px-3 py-2">Email</th>
                 <th className="px-3 py-2">Role</th>
+                <th className="px-3 py-2">Paid</th>
                 <th className="px-3 py-2">Created</th>
                 <th className="px-3 py-2">Last sign-in</th>
                 <th className="px-3 py-2">Actions</th>
@@ -114,6 +117,7 @@ export default function AdminUsersPage() {
                 <tr key={u.id} className="border-t border-gray-800">
                   <td className="px-3 py-2">{u.email || '—'}</td>
                   <td className="px-3 py-2 capitalize">{u.role || 'User'}</td>
+                  <td className="px-3 py-2">{u.paid ? 'Yes' : '—'}</td>
                   <td className="px-3 py-2">{new Date(u.createdAt).toLocaleString()}</td>
                   <td className="px-3 py-2">{u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleString() : '—'}</td>
                   <td className="px-3 py-2">
@@ -147,7 +151,7 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
-      )} */}
+      )}
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-2">Feedback</h2>

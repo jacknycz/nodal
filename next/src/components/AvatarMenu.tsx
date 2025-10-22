@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { User, GearSix, SquaresFour, SignOut } from '@phosphor-icons/react/dist/ssr'
 import type { SavedBoard } from '../features/storage/storage'
 import { signOut, useSupabaseUser } from '../features/auth/authUtils'
-import { getUserRoleFromMetadata, isAdmin } from '../features/auth/roles'
+import { useUserRole, isAdmin } from '../features/auth/roles'
 import TemplatePickerModal from './TemplatePickerModal'
 import { templateStorage } from '../features/storage/templateStorage'
 import { boardStorage } from '../features/storage/storage'
@@ -14,6 +14,7 @@ import Menu from './ui/Menu'
 import IconButton from './ui/IconButton'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import Avatar from './ui/Avatar'
+import { useRouter } from 'next/navigation'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -43,6 +44,7 @@ export default function AvatarMenu({
   isBoardView = false
 }: AvatarMenuProps) {
   const user = useSupabaseUser()
+  const router = useRouter()
   const [recentBoards, setRecentBoards] = useState<SavedBoard[]>([])
   const [pendingInvites, setPendingInvites] = useState<any[]>([])
   const [showTemplatePicker, setShowTemplatePicker] = useState(false)
@@ -172,9 +174,9 @@ export default function AvatarMenu({
     return 'User'
   }
 
-  const roleLabel = getUserRoleFromMetadata(user)
+  const { role } = useUserRole()
   const admin = isAdmin(user)
-  const displayRole = admin ? 'Admin' : roleLabel
+  const displayRole = admin ? 'Admin' : role
 
   // Get avatar url only from our profiles table (ignore Google picture entirely)
   const getUserAvatar = () => (!user ? null : (profile?.avatar_url || null))
@@ -221,7 +223,7 @@ export default function AvatarMenu({
             </div>
             <div className="mt-2">
               <button
-                onClick={() => { if (typeof window !== 'undefined') window.location.href = '/profile' }}
+                onClick={() => router.push('/profile')}
                 className="cursor-pointer text-xs text-primary-600 dark:text-primary-400 hover:underline"
               >
                 View Profile{unreadCount > 0 ? ` (${unreadCount > 99 ? '99+' : unreadCount})` : ''}
