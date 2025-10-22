@@ -20,6 +20,8 @@ import TasksSidebar from './TasksSidebar'
 import BoardsTab from './BoardsTab'
 // Gradient background only (no external images)
 import Tooltip from './ui/Tooltip'
+import Toast from './ui/Toast'
+import { getSupabaseClient } from '../features/auth/supabaseClient'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -75,6 +77,34 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
+  const [upgradeToast, setUpgradeToast] = useState(false)
+
+  // Handle Stripe success return: verify and refresh session
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      const success = url.searchParams.get('upgrade') === 'success'
+      const sessionId = url.searchParams.get('session_id')
+      if (!success || !sessionId) return
+      (async () => {
+        try {
+          const supa = getSupabaseClient()
+          const { data } = await supa.auth.getSession()
+          const token = data?.session?.access_token
+          const res = await fetch(`/api/billing/verify?session_id=${encodeURIComponent(sessionId)}`, { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+          if (res.ok) {
+            try { await supa.auth.refreshSession() } catch {}
+            setUpgradeToast(true)
+          }
+        } finally {
+          // Clean params
+          url.searchParams.delete('upgrade')
+          url.searchParams.delete('session_id')
+          window.history.replaceState({}, '', url.toString())
+        }
+      })()
+    } catch {}
+  }, [])
 
   const loadBoards = async () => {
     try {
@@ -540,6 +570,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         onComplete={handleBoardSetupComplete}
         onClose={handleCancelSetup}
       />
+      <Toast open={upgradeToast} onClose={() => setUpgradeToast(false)} variant="success">Welcome to Pro!</Toast>
     </div>
   )
 }

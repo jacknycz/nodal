@@ -13,6 +13,8 @@ import Avatar from './ui/Avatar'
 import { useStorageUsage } from '../features/storage/usage'
 import { User } from '@phosphor-icons/react/dist/ssr'
 import { useAIUsage } from '../features/ai/usage'
+import Toast from './ui/Toast'
+import { useUserRole } from '../features/auth/roles'
 
 function useDebounced<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = React.useState(value)
@@ -28,6 +30,10 @@ export default function ProfileTab() {
   const client = getSupabaseClient()
   const storage = useStorageUsage()
   const ai = useAIUsage()
+  const { role } = useUserRole()
+  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false)
+  const [redirecting, setRedirecting] = React.useState(false)
+  const [billingToast, setBillingToast] = React.useState<{ open: boolean; msg: string; variant?: 'success'|'info'|'warning'|'danger' }>({ open: false, msg: '' })
   const [loading, setLoading] = React.useState(true)
   const [profile, setProfile] = React.useState<{ username: string | null; avatar_url: string | null; display_name: string | null } | null>(null)
   // Notifications
@@ -391,6 +397,37 @@ export default function ProfileTab() {
                   </div>
                 )
               })()}
+              {/* Upgrade / Manage Billing */}
+            <div className="mt-4 grid grid-cols-1">
+              {role === 'User' ? (
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Upgrade for more Storage and AI</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Go Pro to unlock 5GB storage and 100k AI tokens/month.</div>
+                  </div>
+                  <Button onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Manage billing</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Update payment details or cancel your subscription.</div>
+                  </div>
+                  <Button variant="secondary" onClick={async () => {
+                    try {
+                      const { data } = await getSupabaseClient().auth.getSession()
+                      const token = data?.session?.access_token
+                      const res = await fetch('/api/billing/portal', { method: 'POST', headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+                      const json = await res.json()
+                      if (!res.ok || !json?.url) throw new Error(json?.error || 'Failed to open billing')
+                      window.location.assign(json.url)
+                    } catch (e: any) {
+                      setBillingToast({ open: true, msg: e?.message || 'Failed to open billing', variant: 'danger' })
+                    }
+                  }}>Manage</Button>
+                </div>
+              )}
+            </div>
             </div>
             {resetMsg && <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{resetMsg}</div>}
           </div>
@@ -891,6 +928,48 @@ export default function ProfileTab() {
           <div className="text-xs text-gray-500 dark:text-gray-400">Max saved size 256×256. Larger uploads are center-cropped and resized.</div>
         </div>
       </Modal>
+
+      {/* Upgrade Modal */}
+      <Modal
+        open={showUpgradeModal}
+        onClose={() => { if (!redirecting) setShowUpgradeModal(false) }}
+        title="Upgrade to Nodal Pro"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowUpgradeModal(false)} disabled={redirecting}>Cancel</Button>
+            <Button onClick={async () => {
+              setRedirecting(true)
+              try {
+                const { data } = await getSupabaseClient().auth.getSession()
+                const token = data?.session?.access_token
+                const res = await fetch('/api/billing/checkout', { method: 'POST', headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+                const json = await res.json()
+                if (!res.ok || !json?.url) throw new Error(json?.error || 'Failed to start checkout')
+                window.location.assign(json.url)
+              } catch (e: any) {
+                setBillingToast({ open: true, msg: e?.message || 'Checkout failed', variant: 'danger' })
+                setRedirecting(false)
+              }
+            }} loading={redirecting}>
+              Continue to Checkout
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <div className="text-sm text-gray-700 dark:text-gray-200">Nodal Pro (monthly) includes:</div>
+          <ul className="text-sm text-gray-700 dark:text-gray-200 list-disc pl-5">
+            <li>5GB total storage</li>
+            <li>100k AI tokens per month</li>
+            <li>Priority token processing</li>
+          </ul>
+          <div className="text-xs text-gray-500 dark:text-gray-400">You’ll be redirected to Stripe Checkout to complete your purchase.</div>
+        </div>
+      </Modal>
+
+      <Toast open={billingToast.open} onClose={() => setBillingToast({ open: false, msg: '' })} variant={billingToast.variant || 'info'}>
+        {billingToast.msg}
+      </Toast>
     </div>
   )
 }

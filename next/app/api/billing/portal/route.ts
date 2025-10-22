@@ -1,0 +1,41 @@
+import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
+import { getSupabaseServiceClient } from '../../../../src/features/storage/supabaseService'
+
+export const runtime = 'nodejs'
+
+export async function POST(req: NextRequest) {
+  try {
+    const stripeKey = process.env.STRIPE_SECRET_KEY
+    if (!stripeKey) return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 })
+    const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' })
+
+    // Identify user
+    const supabase = getSupabaseServiceClient()
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const token = authHeader.slice(7)
+    const { data: { user } } = await supabase.auth.getUser(token)
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Find or create customer by email
+    let customerId: string | null = null
+    if (user.email) {
+      const list = await stripe.customers.list({ email: user.email, limit: 1 })
+      if (list.data.length > 0) customerId = list.data[0].id
+    }
+    if (!customerId) {
+      const created = await stripe.customers.create({ email: user.email || undefined, metadata: { user_id: user.id } })
+      customerId = created.id
+    }
+
+    const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || ''
+    const returnUrl = `${origin}/profile`
+    const portal = await stripe.billingPortal.sessions.create({ customer: customerId, return_url: returnUrl })
+    return NextResponse.json({ url: portal.url })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Portal failed' }, { status: 500 })
+  }
+}
+
+

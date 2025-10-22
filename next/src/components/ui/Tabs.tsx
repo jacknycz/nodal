@@ -109,7 +109,7 @@ export const Tabs = ({ children, disableRouting = false }: { children: ReactNode
         id={`tabpanel-${active}`}
         role="tabpanel"
         aria-labelledby={`tab-${active}`}
-        className="py-4"
+        className=""
       >
         {React.cloneElement(tabs[active] as React.ReactElement<any>, { isActive: true } as any)}
       </div>
