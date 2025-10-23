@@ -265,8 +265,8 @@ export default function ImageNode({
       onClick={(e) => {
       }}
     >
-      {/* Colorgory ring overlay (hidden when expanded) */}
-      {!expanded && isDark && swatchColors.length > 0 && (
+      {/* Colorgory ring overlay (shown in all states) */}
+      {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -467,7 +467,7 @@ export default function ImageNode({
 
           {/* Accordion content */}
           <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
-            <div className="mt-2 mb-6">
+            <div className="pt-1 pb-6 px-3">
               <div className="text-sm font-medium text-gray-900 dark:text-white">
                 {data.title || data.fileName || 'Image'}
               </div>

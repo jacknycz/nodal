@@ -148,7 +148,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
       >
         <Tabs disableRouting>
           <Tab label="board" headerLabel="Board">
-            <div className="space-y-3">
+            <div className="space-y-6 py-4">
               <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 p-3">
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-white">Visibility</div>

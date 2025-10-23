@@ -234,7 +234,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&playsinline=1` : ''
   const isMp4 = !videoId && typeof effectiveVideoUrl === 'string' && /\.mp4($|\?)/i.test(effectiveVideoUrl)
 
-  const containerWidthClass = expanded ? 'w-[820px]' : 'w-[260px]'
+  const containerWidthClass = expanded ? 'w-[800px]' : 'w-[260px]'
   const isBusy = (data.status === 'uploading' || data.status === 'processing')
 
   // Status visibility auto-hide (mirror ImageNode)
@@ -277,8 +277,8 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   return (
     <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
-      {/* Colorgory ring overlay (hidden when expanded) */}
-      {!expanded && isDark && swatchColors.length > 0 && (
+      {/* Colorgory ring overlay (shown in all states) */}
+      {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
@@ -305,7 +305,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           }}>
             {/* Reserve height to prevent collapse */}
             <div style={{ height: 160 }} aria-hidden />
-            {(signedThumbUrl || data.thumbnailUrl) ? (
+            {(signedThumbUrl || data.thumbnailUrl) && !(isBusy) ? (
               <>
                 {!thumbLoaded && (
                   <div className="absolute inset-0 rounded-md bg-gray-200 dark:bg-gray-800 animate-pulse" />
@@ -347,16 +347,16 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         ) : (
           <div className="relative w-full">
             {embedHtml ? (
-              <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
+              <div className="w-full h-[450px] bg-black rounded-md overflow-hidden">
                 {inView && (
-                  <div className="w-[800px] h-[450px]" dangerouslySetInnerHTML={{ __html: embedHtml! }} />
+                  <div className="w-full h-[450px]" dangerouslySetInnerHTML={{ __html: embedHtml! }} />
                 )}
               </div>
             ) : embedSrc ? (
-              <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
+              <div className="w-full h-[450px] bg-black rounded-md overflow-hidden">
                 {inView && (
                 <iframe
-                  width="800"
+                  width="100%"
                   height="450"
                   src={embedSrc}
                   title={data.title || 'YouTube video'}
@@ -366,11 +366,11 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                 />)}
               </div>
             ) : isMp4 ? (
-              <div className="w-[800px] h-[450px] bg-black rounded-md overflow-hidden">
+              <div className="w-full h-[450px] bg-black rounded-md overflow-hidden">
                 {inView ? (
                   <video
                     ref={expandedVideoRef}
-                    width={800}
+                    width={0}
                     height={450}
                     controls
                     autoPlay
@@ -378,7 +378,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                     preload="metadata"
                     poster={signedThumbUrl || data.thumbnailUrl}
                     src={effectiveVideoUrl}
-                    className="w-[800px] h-[450px] object-contain bg-black"
+                    className="w-full h-[450px] object-contain bg-black"
                     onError={async () => {
                       try {
                         const docId = (data as any)?.documentId
@@ -390,11 +390,11 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                     }}
                   />
                 ) : (
-                  <div className="w-[800px] h-[450px] bg-black text-gray-100 rounded-md flex items-center justify-center">Video</div>
+                  <div className="w-full h-[450px] bg-black text-gray-100 rounded-md flex items-center justify-center">Video</div>
                 )}
               </div>
             ) : (
-              <div className="w-[800px] h-[450px] bg-gray-900 text-gray-100 rounded-md flex items-center justify-center">No video URL</div>
+              <div className="w-full h-[450px] bg-gray-900 text-gray-100 rounded-md flex items-center justify-center">No video URL</div>
             )}
             <div className="absolute top-1 left-1">
               <IconButton variant="default" size="sm" aria-label="Minimize video" onClick={(e) => { e.stopPropagation(); setExpanded(false) }}>
@@ -403,7 +403,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             </div>
           </div>
         )}
-        <div className="mt-1">
+        <div className="pt-1 pb-6 px-3">
           <div className="text-sm font-medium text-gray-900 dark:text-white">
             {data.title || 'Video'}
           </div>

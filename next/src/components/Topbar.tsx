@@ -141,14 +141,23 @@ export default function Topbar({
     const loadRole = async () => {
       if (!currentBoardId || !user?.id) { setBoardMemberRole(null); return }
       try {
-        const { data, error } = await supabase
-          .from('board_members')
+        const { data, error } = await (supabase.from('board_members') as any)
           .select('role')
           .eq('board_id', currentBoardId)
           .eq('user_id', user.id)
           .maybeSingle()
-        if (!error && data?.role) {
-          setBoardMemberRole(data.role as any)
+        const roleRow = data as any
+        if (!error && roleRow?.role) {
+          setBoardMemberRole(roleRow.role as any)
+          return
+        }
+        // Fallback: if no membership row, check ownership directly on boards
+        const { data: boardRow } = await (supabase.from('boards') as any)
+          .select('user_id')
+          .eq('id', currentBoardId)
+          .maybeSingle()
+        if (boardRow && (boardRow as any).user_id === user.id) {
+          setBoardMemberRole('owner')
         } else {
           setBoardMemberRole(null)
         }
@@ -196,7 +205,7 @@ export default function Topbar({
     if (!currentBoardId || !user?.id) return
     let interval: NodeJS.Timeout | null = null
     const upsertPresence = async () => {
-      await supabase.from('board_presence').upsert({
+      await (supabase.from('board_presence') as any).upsert({
         board_id: currentBoardId,
         user_id: user.id,
         user_email: user.email || null,

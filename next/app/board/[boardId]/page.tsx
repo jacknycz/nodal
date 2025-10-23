@@ -16,6 +16,7 @@ import { AIProvider } from '../../../src/features/ai/aiContext';
 import Topbar from '../../../src/components/Topbar';
 import { useEffect as useEffect2 } from 'react';
 import { useBoardStore } from '../../../src/features/board/boardSlice';
+import Toast from '../../../src/components/ui/Toast'
 
 export default function BoardPage() {
   const params = useParams();
@@ -171,15 +172,13 @@ export default function BoardPage() {
             <div className="h-full" />
           )}
 
-          {/* Loading overlay over board (not fullscreen blockout) */}
-          {loading && (
-            <div className="fixed inset-0 z-[1400] flex items-center justify-center bg-white/60 dark:bg-black/40 backdrop-blur-sm">
-              <div className="px-4 py-3 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-3">
-                <Loader size="md" />
-                <span className="text-sm text-gray-700 dark:text-gray-200">Loading your board…</span>
-              </div>
+          {/* Loading toast */}
+          <Toast open={loading} variant="info" position="top-center">
+            <div className="flex items-center gap-2">
+              <Loader size="sm" />
+              <span className="text-sm leading-none">Loading your board…</span>
             </div>
-          )}
+          </Toast>
 
           {/* Error overlay (keeps UI visible) */}
           {!loading && !board && (

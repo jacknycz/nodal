@@ -29,6 +29,11 @@ interface ModalProps {
   alignLeftLg?: boolean
 }
 
+// Track global modal open count to safely lock/unlock body scroll
+let __modalOpenCount = 0
+let __prevHtmlOverflow: string | null = null
+let __prevBodyOverflow: string | null = null
+
 const Modal: React.FC<ModalProps> = ({ 
   open, 
   onClose, 
@@ -67,6 +72,28 @@ const Modal: React.FC<ModalProps> = ({
         setShouldRender(false)
       }, 200) // Match the transition duration
       return () => clearTimeout(timer)
+    }
+  }, [open])
+
+  // Lock document scrolling while any modal is open
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!open) return
+    __modalOpenCount += 1
+    if (__modalOpenCount === 1) {
+      __prevHtmlOverflow = document.documentElement.style.overflow
+      __prevBodyOverflow = document.body.style.overflow
+      document.documentElement.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      __modalOpenCount = Math.max(0, __modalOpenCount - 1)
+      if (__modalOpenCount === 0) {
+        document.documentElement.style.overflow = __prevHtmlOverflow || ''
+        document.body.style.overflow = __prevBodyOverflow || ''
+        __prevHtmlOverflow = null
+        __prevBodyOverflow = null
+      }
     }
   }, [open])
 
@@ -126,7 +153,7 @@ const Modal: React.FC<ModalProps> = ({
       {/* Modal content */}
       <div
         className={`relative z-10 bg-white dark:bg-gray-900 rounded-4xl shadow-2xl pointer-events-auto 
-          max-w-lg w-full mx-4 p-4 md:p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] overflow-hidden ${
+          max-w-lg w-full mx-4 p-4 md:p-6 flex flex-col transition-all duration-200 ease-out max-h-[85vh] ${
           isVisible 
             ? 'opacity-100 scale-100 translate-y-0' 
             : 'opacity-0 scale-95 -translate-y-1'
@@ -168,7 +195,7 @@ const Modal: React.FC<ModalProps> = ({
 
         {title && <h2 className="text-lg md:text-xl font-fredoka font-medium text-gray-900 dark:text-white mb-2">{title}</h2>}
         {description && <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 whitespace-pre-line">{description}</p>}
-        <div className={`flex-1 min-h-0 h-full ${scrollBody ? '' : 'overflow-hidden'}`}>{children}</div>
+        <div className={`flex-1 min-h-0 h-full ${scrollBody ? 'overflow-y-auto scrollbar-themed' : 'overflow-hidden'}`}>{children}</div>
         {(() => {
           const hasActions = !!actions && (React.Children.count(actions as any) > 0)
           return hasActions ? (

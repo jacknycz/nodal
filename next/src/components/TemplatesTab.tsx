@@ -45,7 +45,7 @@ export default function TemplatesTab({
         while (names.has(`${baseName} ${i}`)) i += 1
         candidate = `${baseName} ${i}`
       }
-    } catch {}
+    } catch { }
     const payloadData = tpl?.welcome ? { ...(tpl?.data || {}), viewport: welcomeViewport } : tpl?.data
     const id = await boardStorage.saveBoard(candidate, payloadData)
     return { id }
@@ -70,14 +70,14 @@ export default function TemplatesTab({
       if (visibleCount >= filteredTemplates.length) return
       setVisibleCount((c) => Math.min(filteredTemplates.length, c + 24))
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        ;(window as any).requestIdleCallback(pump, { timeout: 1200 })
+        ; (window as any).requestIdleCallback(pump, { timeout: 1200 })
       } else {
         setTimeout(pump, 0)
       }
     }
     if (filteredTemplates.length > 30) {
       if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        ;(window as any).requestIdleCallback(pump, { timeout: 1200 })
+        ; (window as any).requestIdleCallback(pump, { timeout: 1200 })
       } else {
         setTimeout(pump, 0)
       }
@@ -132,7 +132,7 @@ export default function TemplatesTab({
     if (!tpl) return
     try {
       const { id } = await createBoardFromTemplate(tpl, tpl.name)
-      try { localStorage.setItem(`templateMapping:${id}`, tpl.id) } catch {}
+      try { localStorage.setItem(`templateMapping:${id}`, tpl.id) } catch { }
       const { boardStorage } = await import('../features/storage/storage')
       const newBoard = await boardStorage.loadBoard(id)
       setEditOpen(false)
@@ -191,7 +191,7 @@ export default function TemplatesTab({
                       e.stopPropagation()
                       try {
                         (e.currentTarget as HTMLButtonElement).disabled = true
-                        ;(e.currentTarget as HTMLButtonElement).classList.add('opacity-70')
+                          ; (e.currentTarget as HTMLButtonElement).classList.add('opacity-70')
                         const base = `${t.name} (copy)`
                         const { id } = await createBoardFromTemplate(t, base)
                         const { boardStorage } = await import('../features/storage/storage')
@@ -206,8 +206,8 @@ export default function TemplatesTab({
                       } finally {
                         try {
                           (e.currentTarget as HTMLButtonElement).disabled = false
-                          ;(e.currentTarget as HTMLButtonElement).classList.remove('opacity-70')
-                        } catch {}
+                            ; (e.currentTarget as HTMLButtonElement).classList.remove('opacity-70')
+                        } catch { }
                       }
                     }}
                   >
@@ -231,12 +231,12 @@ export default function TemplatesTab({
                     // We wedge in via name by appending description visually below using a custom footer
                     onLoad={() => { if (admin) openEdit(t) }}
                     onRename={admin ? async (newName) => {
-                    try {
-                      const updated = await templateStorage.updateTemplate(t.id, { name: newName })
-                      setTemplates(prev => prev.map((p: any) => p.id === t.id ? updated : p))
-                    } catch {
-                      alert('Failed to rename template')
-                    }
+                      try {
+                        const updated = await templateStorage.updateTemplate(t.id, { name: newName })
+                        setTemplates(prev => prev.map((p: any) => p.id === t.id ? updated : p))
+                      } catch {
+                        alert('Failed to rename template')
+                      }
                     } : undefined}
                     enableSharing={false}
                     footerActions={footer}
@@ -253,7 +253,7 @@ export default function TemplatesTab({
         open={editOpen}
         onClose={() => setEditOpen(false)}
         title="Edit Template"
-        description="Update template details. Use Edit Template Board to modify the underlying board."
+        // description="Update template details. Use Edit Template Board to modify the underlying board."
         actions={
           <>
             <div className="flex-1 text-left">
@@ -264,8 +264,23 @@ export default function TemplatesTab({
           </>
         }
       >
-        <div className="space-y-3 py-2">
-          <TextInput label="Name" value={editName} onChange={(e) => setEditName((e.target as HTMLInputElement).value)} fullWidth />
+        <div className="space-y-6 py-2">
+          <div className="space-y-3">
+            <TextInput label="Name" value={editName} onChange={(e) => setEditName((e.target as HTMLInputElement).value)} fullWidth />
+            <div className="pb-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <input id="tpl-published" type="checkbox" checked={editPublished} onChange={(e) => setEditPublished(e.target.checked)} />
+                  <label htmlFor="tpl-published" className="text-sm text-gray-700 dark:text-gray-300">Published</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="tpl-welcome" type="checkbox" checked={editWelcome} onChange={(e) => setEditWelcome(e.target.checked)} />
+                  <label htmlFor="tpl-welcome" className="text-sm text-gray-700 dark:text-gray-300">Welcome Board</label>
+                </div>
+              </div>
+              <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
+            </div>
+          </div>
           <div className="space-y-3">
             {editCoverUrl ? (
               <img src={editCoverUrl} alt="Template cover" className="w-full h-40 object-cover rounded-md border border-gray-200 dark:border-gray-700" />
@@ -310,22 +325,10 @@ export default function TemplatesTab({
             </div>
           </div>
           <TextArea label="Description" value={editDescription} onChange={(e) => setEditDescription((e.target as HTMLTextAreaElement).value)} rows={3} fullWidth />
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+          {/* <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
-          </div>
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <input id="tpl-published" type="checkbox" checked={editPublished} onChange={(e) => setEditPublished(e.target.checked)} />
-                <label htmlFor="tpl-published" className="text-sm text-gray-700 dark:text-gray-300">Published</label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input id="tpl-welcome" type="checkbox" checked={editWelcome} onChange={(e) => setEditWelcome(e.target.checked)} />
-                <label htmlFor="tpl-welcome" className="text-sm text-gray-700 dark:text-gray-300">Welcome Board</label>
-              </div>
-            </div>
-            <Button variant="secondaryGhost" onClick={handleEditBoard}>Edit Template Board</Button>
-          </div>
+          </div> */}
+
         </div>
       </Modal>
     </div>

@@ -89,7 +89,7 @@ export const Tabs = ({ children, disableRouting = false }: { children: ReactNode
               text-base sm:text-lg font-fredoka font-medium transition-colors ${
               active === idx
                 ? (tab.props.activeHeaderClassName || "bg-white dark:bg-primary-500/20 text-primary-600 dark:text-gray-100 border-b-3 border-primary-500")
-                : (tab.props.headerClassName || "text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-gray-200 border-b-3 border-gray-200/50 dark:border-primary-700/20")
+                : (tab.props.headerClassName || "text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-gray-200 border-b-3 border-gray-200/50 hover:border-primary-500/70 dark:border-primary-700/20")
             }`}
             role="tab"
             aria-selected={active === idx}

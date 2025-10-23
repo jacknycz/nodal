@@ -1743,15 +1743,14 @@ function BoardContent({
     // Broadcast the update to other users via Supabase
     if (boardId && user?.id) {
       try {
-        const { error } = await supabase
-          .from('board_updates')
+        const { error } = await (supabase.from('board_updates') as any)
           .insert({
             board_id: boardId,
             node_id: nodeId,
             update_type: 'content',
             data: updates,
             user_id: user.id
-          })
+          } as any)
         
         if (error) {
           // console.error('[BoardComponent] Failed to broadcast node update:', error)
@@ -1885,7 +1884,7 @@ function BoardContent({
                 const res = await fetch(`/api/board/members?boardId=${encodeURIComponent(bid)}`)
                 const json = await res.json()
                 if (res.ok && Array.isArray(json.members)) {
-                  const opts = json.members.map((m: any) => ({ value: m.userId as string, label: (m.username || m.email || m.userId) as string }))
+                  const opts = json.members.map((m: any) => ({ value: String(m.user_id), label: String(m.username || m.email || m.user_id) }))
                   setTaskAssignOptions(opts)
                 } else {
                   setTaskAssignOptions([])

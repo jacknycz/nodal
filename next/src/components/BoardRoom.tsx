@@ -22,6 +22,11 @@ import BoardsTab from './BoardsTab'
 import Tooltip from './ui/Tooltip'
 import Toast from './ui/Toast'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
+import Modal from './ui/Modal'
+import TextInput from './ui/TextInput'
+import DateInput from './ui/DateInput'
+import TipTapEditor from './TipTapEditor'
+import { PencilSimple, Plus } from '@phosphor-icons/react/dist/ssr'
 
 interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
@@ -78,6 +83,19 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
   const [upgradeToast, setUpgradeToast] = useState(false)
+  // Nodal News
+  type NewsArticle = { id: string; title: string; content: string; published: boolean; created_at: string }
+  const [news, setNews] = useState<NewsArticle[]>([])
+  const [newsLoading, setNewsLoading] = useState(false)
+  const [newsError, setNewsError] = useState<string | null>(null)
+  const [showNewsModal, setShowNewsModal] = useState(false)
+  const [editingArticle, setEditingArticle] = useState<NewsArticle | null>(null)
+  const [newsTitle, setNewsTitle] = useState('')
+  const [newsContent, setNewsContent] = useState('')
+  const [newsPublished, setNewsPublished] = useState(true)
+  const [newsSaving, setNewsSaving] = useState(false)
+  const [newsDate, setNewsDate] = useState<string>('')
+  const [showDeleteNews, setShowDeleteNews] = useState(false)
 
   // Handle Stripe success return: verify and refresh session
   useEffect(() => {
@@ -105,6 +123,97 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       })()
     } catch {}
   }, [])
+
+  // Load Nodal News
+  useEffect(() => {
+    const loadNews = async () => {
+      try {
+        setNewsLoading(true)
+        setNewsError(null)
+        const supa = getSupabaseClient()
+        const base = supa.from('nodal_news').select('id,title,content,published,created_at').order('created_at', { ascending: false })
+        const { data, error } = isAdmin(user) ? await base : await base.eq('published', true).limit(3)
+        if (error) throw error
+        setNews((data || []) as any)
+      } catch (e: any) {
+        setNewsError(e?.message || 'Failed to load news')
+        setNews([])
+      } finally {
+        setNewsLoading(false)
+      }
+    }
+    loadNews()
+  }, [user])
+
+  const openCreateArticle = () => {
+    setEditingArticle(null)
+    setNewsTitle('')
+    setNewsContent('')
+    setNewsPublished(true)
+    try { setNewsDate(new Date().toISOString().slice(0,10)) } catch { setNewsDate('') }
+    setShowNewsModal(true)
+  }
+
+  const openEditArticle = (a: NewsArticle) => {
+    setEditingArticle(a)
+    setNewsTitle(a.title || '')
+    setNewsContent(a.content || '')
+    setNewsPublished(!!a.published)
+    try { setNewsDate(new Date(a.created_at).toISOString().slice(0,10)) } catch { setNewsDate('') }
+    setShowNewsModal(true)
+  }
+
+  const saveArticle = async () => {
+    try {
+      setNewsSaving(true)
+      const supa = getSupabaseClient()
+      const payload: any = {
+        title: newsTitle.trim() || 'Untitled',
+        content: newsContent || '',
+        published: !!newsPublished,
+        ...(newsDate ? { created_at: new Date(newsDate).toISOString() } : {})
+      }
+      if (editingArticle?.id) payload.id = editingArticle.id
+      const { data, error } = await supa.from('nodal_news').upsert(payload, { onConflict: 'id' }).select('*').limit(1)
+      if (error) throw error
+      // Refresh list
+      const created = (data || [])[0] as NewsArticle | undefined
+      if (created) {
+        // Optimistic: merge/replace in list
+        setNews(prev => {
+          const idx = prev.findIndex(x => x.id === created.id)
+          if (idx >= 0) {
+            const copy = [...prev]
+            copy[idx] = created
+            return copy
+          }
+          return [created, ...prev].sort((a,b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        })
+      }
+      setShowNewsModal(false)
+    } catch (e) {
+      alert((e as any)?.message || 'Failed to save')
+    } finally {
+      setNewsSaving(false)
+    }
+  }
+
+  const deleteArticle = async () => {
+    if (!editingArticle?.id) return
+    try {
+      setNewsSaving(true)
+      const supa = getSupabaseClient()
+      const { error } = await supa.from('nodal_news').delete().eq('id', editingArticle.id)
+      if (error) throw error
+      setNews(prev => prev.filter(x => x.id !== editingArticle.id))
+      setShowDeleteNews(false)
+      setShowNewsModal(false)
+    } catch (e) {
+      alert((e as any)?.message || 'Failed to delete')
+    } finally {
+      setNewsSaving(false)
+    }
+  }
 
   const loadBoards = async () => {
     try {
@@ -552,9 +661,37 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           </SidebarSection>
 
           <SidebarSection showOn={['boards']}>
-            <div className="flex flex-col gap-4 mt-8">
-              <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
-              <span className="text-sm text-gray-500 dark:text-gray-400">Coming soon (for real, excited for this piece)</span>
+            <div className="flex flex-col gap-3 mt-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>
+                {isAdmin(user) && (
+                  <Button size="sm" variant="secondary" onClick={openCreateArticle}><Plus className="w-4 h-4 mr-1" />Add article</Button>
+                )}
+              </div>
+              {newsLoading && <div className="text-xs text-gray-500 dark:text-gray-400">Loading…</div>}
+              {newsError && <div className="text-xs text-red-600 dark:text-red-400">{newsError}</div>}
+              {!newsLoading && news.length === 0 && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">No articles yet.</div>
+              )}
+              <div className="flex flex-col gap-3">
+                {news.map((a) => (
+                  <div key={a.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">{a.title || 'Untitled'}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">{new Date(a.created_at).toLocaleDateString()}</div>
+                      </div>
+                      {isAdmin(user) && (
+                        <Button size="sm" variant="secondary" onClick={() => openEditArticle(a)}><PencilSimple className="w-3 h-3 mr-1" />Edit</Button>
+                      )}
+                    </div>
+                    <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 tiptap-content" dangerouslySetInnerHTML={{ __html: a.content || '' }} />
+                    {isAdmin(user) && !a.published && (
+                      <div className="mt-2 inline-block text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Draft</div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </SidebarSection>
           
@@ -570,6 +707,52 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         onComplete={handleBoardSetupComplete}
         onClose={handleCancelSetup}
       />
+
+      {/* Nodal News Modal */}
+      <Modal
+        open={showNewsModal}
+        onClose={() => { if (!newsSaving) setShowNewsModal(false) }}
+        title={editingArticle ? 'Edit Article' : 'Add Article'}
+        actions={
+          <div className="w-full flex items-center justify-between">
+            <div>
+              {editingArticle && (
+                <Button variant="danger" onClick={() => setShowDeleteNews(true)} disabled={newsSaving}>Delete</Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setShowNewsModal(false)} disabled={newsSaving}>Cancel</Button>
+              <Button onClick={saveArticle} loading={newsSaving}>Save</Button>
+            </div>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <TextInput label="Title" value={newsTitle} onChange={(e) => setNewsTitle((e.target as HTMLInputElement).value)} fullWidth required />
+          <DateInput label="Date" value={newsDate} onChange={(e) => setNewsDate((e.target as HTMLInputElement).value)} fullWidth required />
+          <div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Content</div>
+            <TipTapEditor content={newsContent} onChange={setNewsContent} />
+          </div>
+          <Checkbox checked={newsPublished} onChange={setNewsPublished} label="Published" />
+        </div>
+      </Modal>
+
+      {/* Confirm Delete Article */}
+      <Modal
+        open={showDeleteNews}
+        onClose={() => setShowDeleteNews(false)}
+        title="Delete article"
+        description="Are you sure you want to delete this article? This cannot be undone."
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowDeleteNews(false)} disabled={newsSaving}>Cancel</Button>
+            <Button variant="danger" onClick={deleteArticle} loading={newsSaving}>Delete</Button>
+          </>
+        }
+      >
+        <div className="text-sm text-gray-600 dark:text-gray-300">{editingArticle?.title}</div>
+      </Modal>
       <Toast open={upgradeToast} onClose={() => setUpgradeToast(false)} variant="success">Welcome to Pro!</Toast>
     </div>
   )

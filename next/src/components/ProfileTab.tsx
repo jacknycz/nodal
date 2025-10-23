@@ -15,6 +15,7 @@ import { User } from '@phosphor-icons/react/dist/ssr'
 import { useAIUsage } from '../features/ai/usage'
 import Toast from './ui/Toast'
 import { useUserRole } from '../features/auth/roles'
+import Tooltip from './ui/Tooltip'
 
 function useDebounced<T>(value: T, delay = 400) {
   const [debounced, setDebounced] = React.useState(value)
@@ -74,6 +75,11 @@ export default function ProfileTab() {
   const [isAvatarDragOver, setIsAvatarDragOver] = React.useState(false)
   const panRef = React.useRef<{ active: boolean; sx: number; sy: number; startTx: number; startTy: number }>({ active: false, sx: 0, sy: 0, startTx: 0, startTy: 0 })
   const cropSize = 256
+  const [showChangePwd, setShowChangePwd] = React.useState(false)
+  const [pwd1, setPwd1] = React.useState('')
+  const [pwd2, setPwd2] = React.useState('')
+  const [pwdErr, setPwdErr] = React.useState<string | null>(null)
+  const [pwdSaving, setPwdSaving] = React.useState(false)
 
   // Cooldown state computed from profile row (username_changed_at) if available
   const [isUsernameOnCooldown, setIsUsernameOnCooldown] = React.useState(false)
@@ -319,7 +325,7 @@ export default function ProfileTab() {
         <div className="flex-1 w-full">
           <div className="flex items-center gap-3 w-full">
             <div className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white truncate">
-              {profile?.username || 'NA'}
+              {profile?.username || '---'}
             </div>
             {profile?.username ? (
               <LinkUI
@@ -353,7 +359,7 @@ export default function ProfileTab() {
                 <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Password</div>
                 <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100">••••••••</div>
               </div>
-              <Button onClick={onResetPassword}>Change</Button>
+              <Button variant="secondary" size="sm" onClick={() => { setPwd1(''); setPwd2(''); setPwdErr(null); setShowChangePwd(true) }}>Change</Button>
             </div>
             {/* Storage */}
             {(() => {
@@ -411,7 +417,13 @@ export default function ProfileTab() {
                     <div className="text-sm font-semibold text-gray-900 dark:text-white">Need more?</div>
                     <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Go Pro to unlock 5GB storage and 100k AI tokens/month.</div>
                   </div>
-                  <Button onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>
+                  <Tooltip 
+                    content="Coming soon!"
+                    variant="primary"
+                    open={true}
+                  >
+                    <Button disabled onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>
+                  </Tooltip>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
@@ -661,6 +673,59 @@ export default function ProfileTab() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal
+        open={showChangePwd}
+        onClose={() => { if (!pwdSaving) setShowChangePwd(false) }}
+        title="Change Password"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setShowChangePwd(false)} disabled={pwdSaving}>Cancel</Button>
+            <Button
+              onClick={async () => {
+                setPwdErr(null)
+                if (!pwd1 || pwd1.length < 8) { setPwdErr('Password must be at least 8 characters.'); return }
+                if (pwd1 !== pwd2) { setPwdErr('Passwords do not match.'); return }
+                try {
+                  setPwdSaving(true)
+                  const { error } = await getSupabaseClient().auth.updateUser({ password: pwd1 })
+                  if (error) throw error
+                  setResetMsg('Password updated successfully.')
+                  setShowChangePwd(false)
+                } catch (e: any) {
+                  setPwdErr(e?.message || 'Failed to update password')
+                } finally {
+                  setPwdSaving(false)
+                }
+              }}
+              loading={pwdSaving}
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <TextInput
+            label="New password"
+            type="password"
+            value={pwd1}
+            onChange={(e) => setPwd1((e.target as HTMLInputElement).value)}
+            fullWidth
+            required
+          />
+          <TextInput
+            label="Confirm password"
+            type="password"
+            value={pwd2}
+            onChange={(e) => setPwd2((e.target as HTMLInputElement).value)}
+            fullWidth
+            required
+          />
+          {pwdErr && <div className="text-xs text-red-600 dark:text-red-400">{pwdErr}</div>}
+        </div>
       </Modal>
 
       <Modal

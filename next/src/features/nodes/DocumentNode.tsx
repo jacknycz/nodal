@@ -135,11 +135,11 @@ export default function DocumentNode({
   // Focus removed
 
   const getFileIcon = () => {
-    if (isImage) return <Image size={44} weight="duotone" />
-    if (isPDF) return <FilePdf size={44} weight="duotone" />
-    if (data.fileType?.includes('word') || data.fileName?.match(/\.(doc|docx)$/i)) return <FileDoc size={44} weight="duotone" />
-    if (data.fileType?.includes('text') || data.fileName?.match(/\.(txt|md|csv)$/i)) return <FileTxt size={44} weight="duotone" />
-    return <File size={44} weight="duotone" />
+    if (isImage) return <Image className="text-primary-500" size={44} weight="duotone" />
+    if (isPDF) return <FilePdf className="text-red-500" size={44} weight="duotone" />
+    if (data.fileType?.includes('word') || data.fileName?.match(/\.(doc|docx)$/i)) return <FileDoc className="text-blue-500" size={44} weight="duotone" />
+    if (data.fileType?.includes('text') || data.fileName?.match(/\.(txt|md|csv)$/i)) return <FileTxt className="text-gray-500" size={44} weight="duotone" />
+    return <File className="text-gray-500" size={44} weight="duotone" />
   }
 
   const getStatusIcon = () => {
@@ -255,7 +255,7 @@ export default function DocumentNode({
  
   return (
     <div 
-      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass}` })}
+      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass} bg-white/90 dark:bg-gray-800 rounded-lg shadow-sm shadow-orange-950/20` })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {

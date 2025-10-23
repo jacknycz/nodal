@@ -213,7 +213,7 @@ export default function NodalNode(props: any) {
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg"
           style={{
-            padding: 6,
+            padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
             // Draw only the ring via masking (outer minus inner)
             ...( { WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)', WebkitMaskComposite: 'xor', maskComposite: 'exclude' } as any )

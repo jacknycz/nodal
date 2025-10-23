@@ -8,13 +8,28 @@ export async function GET(req: NextRequest) {
     if (!boardId) return NextResponse.json({ error: 'Missing boardId' }, { status: 400 })
 
     const supabase = getSupabaseServiceClient()
-    const { data: members, error } = await supabase
+    const { data: membersRaw, error } = await supabase
       .from('board_members')
       .select('user_id, role')
       .eq('board_id', boardId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    const ids = (members || []).map((m: any) => m.user_id)
+
+    // Include owner from boards.user_id if not present
+    let members: Array<{ user_id: string; role: string }> = Array.isArray(membersRaw) ? [...membersRaw as any] : []
+    try {
+      const { data: boardRow } = await supabase
+        .from('boards')
+        .select('user_id')
+        .eq('id', boardId)
+        .maybeSingle()
+      const ownerId = (boardRow as any)?.user_id as string | undefined
+      if (ownerId && !members.some(m => m.user_id === ownerId)) {
+        members.unshift({ user_id: ownerId, role: 'owner' })
+      }
+    } catch {}
+
+    const ids = members.map((m: any) => m.user_id)
 
     // Fetch emails and usernames
     const [{ users }, { data: profiles }] = await Promise.all([
