@@ -408,7 +408,7 @@ export default function ProfileTab() {
               {!isProLike ? (
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Upgrade for more Storage and AI</div>
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">Need more?</div>
                     <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Go Pro to unlock 5GB storage and 100k AI tokens/month.</div>
                   </div>
                   <Button onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>

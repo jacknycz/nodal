@@ -48,6 +48,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const [showMobilePlayer, setShowMobilePlayer] = useState(false)
   const mobileVideoRef = useRef<HTMLVideoElement | null>(null)
   const [embedHtml, setEmbedHtml] = useState<string | null>(null)
+  const [thumbLoaded, setThumbLoaded] = useState(false)
   const expandedVideoRef = useRef<HTMLVideoElement | null>(null)
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
 
@@ -293,7 +294,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
       <div className="cursor-default">
         {!expanded ? (
-          <div className="relative w-full" onClick={(e) => {
+          <div className="relative w-full overflow-hidden" onClick={(e) => {
             e.stopPropagation()
             const isMobile = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768)
             if (isMobile) {
@@ -302,12 +303,28 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             }
             setExpanded(true)
           }}>
+            {/* Reserve height to prevent collapse */}
+            <div style={{ height: 160 }} aria-hidden />
             {(signedThumbUrl || data.thumbnailUrl) ? (
-              <img src={signedThumbUrl || data.thumbnailUrl!} alt={data.title || 'Video'} className="w-full h-[160px] rounded-md object-cover cursor-pointer" />
+              <>
+                {!thumbLoaded && (
+                  <div className="absolute inset-0 rounded-md bg-gray-200 dark:bg-gray-800 animate-pulse" />
+                )}
+                <img
+                  src={signedThumbUrl || data.thumbnailUrl!}
+                  alt={data.title || 'Video'}
+                  className={`absolute inset-0 w-full h-full rounded-md object-cover cursor-pointer transition-opacity duration-200 ${thumbLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  onLoad={() => setThumbLoaded(true)}
+                />
+              </>
             ) : (
-              <div className="w-full h-[160px] rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm">
-                {isBusy ? 'Uploading…' : (loading ? 'Loading…' : 'No thumbnail')}
-              </div>
+              ((data as any)?.documentId ? (
+                <div className="absolute inset-0 rounded-md bg-gray-200 dark:bg-gray-800 animate-pulse" />
+              ) : (
+                <div className="absolute inset-0 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm">
+                  {isBusy ? 'Uploading…' : (loading ? 'Loading…' : 'No thumbnail')}
+                </div>
+              ))
             )}
             {!isBusy && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

@@ -99,7 +99,7 @@ export default function AdminUsersPage() {
       {error && <div className="text-red-600">{error}</div>}
 
       {/* Users */}
-      {!loading && !error && (
+      {!loading && !error && ['jack.nycz@gmail.com','jack@nodalapp.com'].includes(String(user?.email || '').toLowerCase()) && (
         <div className="overflow-x-auto rounded-lg border border-gray-800 bg-gray-900">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-800 text-left">

@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown, CaretCircleUp, Info, Resize } from '@phosphor-icons/react'
+import { Trash, CheckCircle, Warning, Spinner, PlusCircle, Pencil, TreeView, CaretCircleDown, CaretCircleUp, Info, Resize, ArrowsOut, ArrowsIn } from '@phosphor-icons/react'
 // Using a standard <img> so we can control srcSet with signed URLs
 import Modal from '../../components/ui/Modal'
 import NodeEditModal from '../../components/NodeEditModal'
 import Button from '../../components/ui/Button'
+import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import Checkbox from '../../components/ui/Checkbox'
 import { getColorgoryHex } from '../board/colorgoryColors'
@@ -248,10 +249,19 @@ export default function ImageNode({
       return stops.join(', ')
     })()
 
+  // Compute display width: when expanded, allow a larger temporary width without persisting
+  const expandedTargetWidth = Math.max(800, nodeWidth)
+  const displayWidth = expanded ? Math.min(maxWidth, expandedTargetWidth) : nodeWidth
+
+  // Choose best source based on view
+  const chosenSrc = expanded
+    ? (signedVariant1920 || data.variant1920Url || signedVariant800 || data.variant800Url || signedPreviewUrl || data.previewUrl || '')
+    : (signedVariant800 || data.variant800Url || signedPreviewUrl || data.previewUrl || '')
+
   return (
     <div
       className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
-      style={{ width: `${Math.round(nodeWidth)}px`, ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
+      style={{ width: `${Math.round(displayWidth)}px`, ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
       onClick={(e) => {
       }}
     >
@@ -274,7 +284,7 @@ export default function ImageNode({
       <div className="relative cursor-default">
         {/* Image content */}
         <div
-          className="relative w-full select-none"
+          className="relative w-full select-none overflow-hidden"
           onClick={(e) => {
             e.stopPropagation()
             if (expanded) {
@@ -384,27 +394,52 @@ export default function ImageNode({
             pinchStartRef.current = null
           }}
         >
-          {(signedPreviewUrl || data.previewUrl) ? (
+          {/* Reserve height to avoid layout collapse while media resolves */}
+          <div style={{ height: expanded ? 400 : 180 }} aria-hidden />
+          {(signedPreviewUrl || data.previewUrl || signedVariant800 || signedVariant1920 || data.variant800Url || data.variant1920Url) ? (
+            <>
+            {!isLoaded && (
+              <div className={`absolute inset-0 rounded-md bg-gray-200 dark:bg-gray-800 animate-pulse`} />
+            )}
             <img
-              key={`${signedPreviewUrl || data.previewUrl}|${signedVariant800 || data.variant800Url || ''}|${signedVariant1920 || data.variant1920Url || ''}`}
-              src={signedVariant800 || data.variant800Url || signedPreviewUrl || data.previewUrl!}
+              key={`${chosenSrc}`}
+              src={chosenSrc}
               srcSet={[
                 (signedVariant800 || data.variant800Url) ? `${signedVariant800 || data.variant800Url} 800w` : null,
                 (signedVariant1920 || data.variant1920Url) ? `${signedVariant1920 || data.variant1920Url} 1920w` : null,
               ].filter(Boolean).join(', ')}
-              sizes={`${Math.round(nodeWidth)}px`}
+              sizes={`${Math.round(displayWidth)}px`}
               alt={data.title || data.fileName || 'Image'}
-              className={`w-full h-auto rounded-md object-contain cursor-pointer ${!isLoaded ? 'blur-sm saturate-50' : ''}`}
+              className={`absolute inset-0 w-full h-full rounded-md object-cover object-center cursor-pointer transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
               style={{}}
               onLoad={() => setIsLoaded(true)}
               onError={handleImageError}
               draggable={false}
             />
+            </>
           ) : (
-            <div className={`rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm ${expanded ? 'w-[800px] h-[400px]' : 'w-full h-[180px]'}`}>
-              No preview
-            </div>
+            // If this is a recent upload with a documentId, the signed URL can lag.
+            // Show a skeleton instead of "No preview" until we resolve once.
+            (data.documentId ? (
+              <div className={`absolute inset-0 rounded-md bg-gray-200 dark:bg-gray-800 animate-pulse`} />
+            ) : (
+              <div className={`absolute inset-0 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-sm`}>
+                No preview
+              </div>
+            ))
           )}
+
+          {/* Expand/Collapse control */}
+          <div className="absolute top-1 right-1 z-10">
+            <IconButton
+              variant="default"
+              size="sm"
+              aria-label={expanded ? 'Minimize image' : 'Expand image'}
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
+            >
+              {expanded ? <ArrowsIn size={14} /> : <ArrowsOut size={14} />}
+            </IconButton>
+          </div>
 
         </div>
 
@@ -432,7 +467,7 @@ export default function ImageNode({
 
           {/* Accordion content */}
           <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
-            <div className="my-2">
+            <div className="mt-2 mb-6">
               <div className="text-sm font-medium text-gray-900 dark:text-white">
                 {data.title || data.fileName || 'Image'}
               </div>
