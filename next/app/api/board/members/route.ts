@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Include owner from boards.user_id if not present
-    let members: Array<{ user_id: string; role: string }> = Array.isArray(membersRaw) ? [...membersRaw as any] : []
+    const members: Array<{ user_id: string; role: string }> = Array.isArray(membersRaw) ? [...membersRaw as any] : []
     try {
       const { data: boardRow } = await supabase
         .from('boards')
