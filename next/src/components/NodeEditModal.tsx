@@ -143,7 +143,7 @@ export default function NodeEditModal({
       onClose={onClose}
       title="Edit Node"
       className="w-full lg:max-w-[40%]! max-w-7xl! h-[85vh]!"
-      backdropClassName="bg-black lg:bg-orange-950/5 dark:lg:bg-primary-500/5"
+      backdropClassName="bg-black lg:bg-orange-950/5 dark:lg:bg-gray-900/50"
       backdropInteractive={false}
       closeOnBackdropClick={false}
       scrollBody={false}

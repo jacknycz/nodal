@@ -28,7 +28,14 @@ export async function GET(req: NextRequest) {
       .select('tokens_used, created_at, model')
       .eq('user_id', userId)
       .gte('created_at', start.toISOString())
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      // Graceful fallback if table does not exist yet (relation does not exist)
+      const msg = String(error.message || '')
+      if (msg.includes('relation') && msg.includes('does not exist')) {
+        return NextResponse.json({ total: 0, cap: 15000, remaining: 15000, pct: 0, records: [] })
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
 
     const total = (data || []).reduce((s: number, r: any) => s + Number(r.tokens_used || 0), 0)
 

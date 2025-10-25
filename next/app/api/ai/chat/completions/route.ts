@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
 
     // Soft cap check before proxying
     try {
+      const boardIdHeader = req.headers.get('x-board-id') || null
       if (userId) {
         // Determine monthly cap from role
         let cap = 15000
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
         try {
           if (userId) {
             const estTokens = Math.ceil(fullContent.length / 4)
-            await supabase.from('ai_usage').insert({ user_id: userId, tokens_used: estTokens, model: model || null })
+            await supabase.from('ai_usage').insert({ user_id: userId, tokens_used: estTokens, model: model || null, board_id: boardIdHeader })
           }
         } catch {}
       }
@@ -133,9 +134,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(json, { status: resp.status })
     }
     try {
+      const boardIdHeader = req.headers.get('x-board-id') || null
       const tokens = Number(json?.usage?.total_tokens || 0)
       if (userId && tokens > 0) {
-        await supabase.from('ai_usage').insert({ user_id: userId, tokens_used: tokens, model: model || null })
+        await supabase.from('ai_usage').insert({ user_id: userId, tokens_used: tokens, model: model || null, board_id: boardIdHeader })
       }
     } catch {}
     return NextResponse.json(json)
