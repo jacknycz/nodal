@@ -134,7 +134,7 @@ const Modal: React.FC<ModalProps> = ({
   if (typeof window === 'undefined') return null;
 
   return ReactDOM.createPortal(
-    <div className={`fixed inset-0 z-[1500] flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''}`} data-modal-root>
+    <div className={`fixed inset-0 z-[1500] flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''} ${backdropInteractive ? '' : 'pointer-events-none'}`} data-modal-root>
       {/* Backdrop */}
       <div
         className={`absolute inset-0 ${backdropClassName || 'bg-black'} transition-all duration-200 ease-out ${
