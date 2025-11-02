@@ -193,19 +193,19 @@ export default function ChatPanel2() {
 
   // Node-generation intent detection
   const isNodeCreationIntent = (text: string): boolean => {
-    const t = (text || '').toLowerCase()
+    const t = (text || '').toLowerCase().trim()
     if (!t) return false
     if (t.startsWith('/nodes')) return true
-    return [
-      'make nodes',
-      'add nodes',
-      'create nodes',
-      'generate nodes',
-      'make some nodes',
-      'add some nodes',
-      'create some nodes',
-      'generate some nodes',
-    ].some((p) => t.includes(p))
+    const s = t.replace(/\s+/g, ' ')
+    const patterns = [
+      /\b(make|create|add|generate)\s+(?:some|a few|several|more|new)?\s*[^\n]{0,80}?\s*nodes?\b/i,
+      /\b(turn|convert)\s+[^\n]{0,80}?\s+into\s+nodes?\b/i,
+      /\b(make|create|add|generate)\s+[^\n]{0,80}?\s+into\s+nodes?\b/i,
+      /\b(make|create|add|generate)\s+[^\n]{0,80}?\s+as\s+nodes?\b/i,
+      /\b(suggest|propose|brainstorm|draft)\s+[^\n]{0,80}?\s*nodes?\b/i,
+      /\bnodes?\s+(please|plz)\b/i,
+    ]
+    return patterns.some((re) => re.test(s))
   }
 
   const NODE_FORMAT_DIRECTIVE = `You are Nobot, the AI assistant inside Nodal — a mind-mapping and idea-building app where users organize thoughts as "Nodes" on "Boards."
@@ -320,7 +320,7 @@ NODE CONTENT: [Body 2]`
       {/* Toggle */}
       <IconButton
         onClick={() => setIsOpen(true)}
-        className={`fixed right-2 z-[200] bottom-2 md:bottom-auto md:top-16 cursor-pointer bg-white dark:bg-gray-900
+        className={`fixed right-2 z-200 bottom-2 md:bottom-auto md:top-16 cursor-pointer bg-white dark:bg-gray-900
           ${isOpen ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
           }`}
         aria-label="Open Chat"
@@ -333,7 +333,7 @@ NODE CONTENT: [Body 2]`
 
       {/* Panel */}
       <div
-        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-[700] md:z-[300] max-h-[calc(100dvh-80px)] bg-white backdrop-blur-xs dark:bg-gray-900/80 shadow-xl shadow-orange-950/10 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-700 md:z-300 max-h-[calc(100dvh-80px)] bg-white backdrop-blur-xs dark:bg-gray-900/80 shadow-xl shadow-orange-950/10 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
         style={
           (isMdUp
