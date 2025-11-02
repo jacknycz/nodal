@@ -1310,6 +1310,76 @@ function BoardContent({
     })
   }, [setNodes])
   
+  // Handle nodes added from ChatPanel (Nobot node generation)
+  useEffect(() => {
+    const onAddNodes = (ev: Event) => {
+      if (readOnly) return
+      try {
+        const detail = (ev as CustomEvent<any>)?.detail
+        const itemsAll: Array<{ title: string; content?: string }> = Array.isArray(detail?.nodes) ? detail.nodes : []
+        const items = itemsAll.slice(0, 10)
+        if (!items.length) return
+        pushHistory()
+        const selectedIds: string[] = (useBoardStore.getState().selectedNodeIds || []) as any
+        const singleSelectedId = Array.isArray(selectedIds) && selectedIds.length === 1 ? selectedIds[0] : null
+
+        if (singleSelectedId) {
+          // Place in a grid below the selected node and connect edges
+          const storeNodes = (useBoardStore.getState().nodes || []) as any[]
+          const parent = storeNodes.find((n) => n.id === singleSelectedId)
+          const baseX = parent?.position?.x ?? getViewportCenter().x
+          const baseY = (parent?.position?.y ?? getViewportCenter().y) + 300
+          const spacingX = 260
+          const spacingY = 200
+          const columns = Math.min(items.length, 4)
+          const rows = Math.ceil(items.length / columns)
+          const startX = baseX - ((columns - 1) * spacingX) / 2
+          const createdIds: string[] = []
+          let idx = 0
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < columns; c++) {
+              if (idx >= items.length) break
+              const pos = { x: startX + c * spacingX, y: baseY + r * spacingY }
+              const id = `node-${Date.now()}-${idx}`
+              const it = items[idx]
+              const newNode: Node = { id, type: 'default', position: pos, data: { title: String(it.title || ''), content: String(it.content || '') } as any }
+              handleAddNodeToStore(newNode)
+              createdIds.push(id)
+              idx++
+            }
+          }
+          if (createdIds.length > 0) {
+            const edgesToAdd = createdIds.map((cid) => ({ id: `edge-${Date.now()}-${cid}`, source: singleSelectedId, target: cid, type: 'floating' as any }))
+            setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
+          }
+          showAddToast('generated', items.length)
+        } else {
+          // Place around viewport center without connections
+          const center = getViewportCenter()
+          const cols = Math.ceil(Math.sqrt(items.length))
+          const xGap = 240
+          const yGap = 160
+          const xOffsetBase = -((cols - 1) * xGap) / 2
+          items.forEach((it, idx) => {
+            const col = idx % cols
+            const row = Math.floor(idx / cols)
+            const position = { x: center.x + xOffsetBase + col * xGap, y: center.y + row * yGap }
+            const newNode: Node = {
+              id: `node-${Date.now()}-${idx}`,
+              type: 'default',
+              position,
+              data: { title: it.title || 'Untitled', content: it.content || '' } as any,
+            }
+            handleAddNodeToStore(newNode)
+          })
+          showAddToast('generated', items.length)
+        }
+      } catch {}
+    }
+    window.addEventListener('nodal:add-nodes', onAddNodes as EventListener)
+    return () => window.removeEventListener('nodal:add-nodes', onAddNodes as EventListener)
+  }, [readOnly, getViewportCenter, handleAddNodeToStore, showAddToast, pushHistory])
+
   const saveBoard = useCallback(async (name?: string) => {
     await manualSave(nodes, edges, name)
   }, [manualSave, nodes, edges])

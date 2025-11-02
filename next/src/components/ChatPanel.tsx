@@ -147,11 +147,10 @@ export default function ChatPanel2() {
   // For user messages with hidden context prefix, only show the original user text
   const getUserDisplayText = (text: string): string => {
     if (!text) return ''
-    if (text.startsWith('Context - ')) {
-      const marker = '\n\nUser message: '
-      const idx = text.indexOf(marker)
-      if (idx >= 0) return text.slice(idx + marker.length)
-    }
+    // Always try to show only the original user input (hide any injected context/directives)
+    const marker = '\n\nUser message: '
+    const idx = text.indexOf(marker)
+    if (idx >= 0) return text.slice(idx + marker.length)
     return text
   }
 
@@ -181,7 +180,76 @@ export default function ChatPanel2() {
         return text
       }
     }
-    return text
+    try {
+      // If assistant echoed our directive/context, trim everything before the first NODE TITLE
+      const firstNodeIdx = text.indexOf('NODE TITLE:')
+      const hasNodeBlocks = firstNodeIdx >= 0 && text.indexOf('NODE CONTENT:') >= 0
+      if (hasNodeBlocks) {
+        return text.slice(firstNodeIdx)
+      }
+      return text
+    } catch { return text }
+  }
+
+  // Node-generation intent detection
+  const isNodeCreationIntent = (text: string): boolean => {
+    const t = (text || '').toLowerCase()
+    if (!t) return false
+    if (t.startsWith('/nodes')) return true
+    return [
+      'make nodes',
+      'add nodes',
+      'create nodes',
+      'generate nodes',
+      'make some nodes',
+      'add some nodes',
+      'create some nodes',
+      'generate some nodes',
+    ].some((p) => t.includes(p))
+  }
+
+  const NODE_FORMAT_DIRECTIVE = `You are Nobot, the AI assistant inside Nodal — a mind-mapping and idea-building app where users organize thoughts as "Nodes" on "Boards."
+
+When the user asks you to "make nodes," "add nodes," or a similar request, respond only with nodes relevant to the current context.
+
+Use this structured format for your entire response:
+
+NODE TITLE: [A short, clear title for the node]
+NODE CONTENT: [Any relevant content, formatted in plain text or HTML if needed]
+
+Each node should represent a distinct idea, insight, or action related to:
+- The current conversation,
+- The topic or goal of the active Board,
+- The currently selected Node (if provided).
+
+If the user specifies how many nodes to create, follow that exactly. If not specified, create the number of nodes that feels most appropriate (up to 10).
+The tone and style of the node content should match the user’s board context (e.g., brainstorming → creative; project planning → structured; research → factual).
+
+Do not include explanations, lists, or conversational text outside of the node format.
+
+Only output in the following pattern:
+NODE TITLE: [Title 1]
+NODE CONTENT: [Body 1]
+
+NODE TITLE: [Title 2]
+NODE CONTENT: [Body 2]`
+
+  const awaitingNodesRef = useRef<boolean>(false)
+  const [pendingNodes, setPendingNodes] = useState<{ assistantId: string; nodes: Array<{ title: string; content: string }> } | null>(null)
+
+  const parseNodesFromAssistant = (text: string): Array<{ title: string; content: string }> => {
+    const results: Array<{ title: string; content: string }> = []
+    if (!text) return results
+    try {
+      const pattern = /NODE TITLE:\s*(.+?)\s*\n+NODE CONTENT:\s*([\s\S]*?)(?=\n+NODE TITLE:|$)/g
+      let match: RegExpExecArray | null
+      while ((match = pattern.exec(text)) !== null) {
+        const title = (match[1] || '').trim()
+        const content = (match[2] || '').trim()
+        if (title) results.push({ title, content })
+      }
+    } catch {}
+    return results
   }
 
   const handleSend = async () => {
@@ -196,6 +264,8 @@ export default function ChatPanel2() {
 
     // Build contextual message with selected/focused nodes
     let contextualMessage = userText
+    const wantsNodes = isNodeCreationIntent(userText)
+    awaitingNodesRef.current = wantsNodes
 
     // Board context (title/topic and primer about nodes/edges)
     const boardTitle = boardBrief?.boardName || 'Untitled Board'
@@ -215,14 +285,32 @@ export default function ChatPanel2() {
       }).join('\n\n')
 
       const label = `Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}`
-      contextualMessage = `${boardInfo}\n\nContext - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
+      const base = `${boardInfo}\n\nContext - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
+      contextualMessage = wantsNodes ? `${NODE_FORMAT_DIRECTIVE}\n\n${base}` : base
     } else {
-      contextualMessage = `${boardInfo}\n\nUser message: ${userText}`
+      const base = `${boardInfo}\n\nUser message: ${userText}`
+      contextualMessage = wantsNodes ? `${NODE_FORMAT_DIRECTIVE}\n\n${base}` : base
     }
 
     await sendMessageStream(contextualMessage)
   }
   // Node generation removed from ChatPanel2
+
+  // After streaming completes, if we requested nodes, parse and add them to the board
+  useEffect(() => {
+    if (isStreaming) return
+    if (!awaitingNodesRef.current) return
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
+    if (!lastAssistant || !lastAssistant.content) {
+      awaitingNodesRef.current = false
+      return
+    }
+    const nodes = parseNodesFromAssistant(lastAssistant.content).slice(0, 10)
+    awaitingNodesRef.current = false
+    if (!nodes.length) return
+    // Hold for user confirmation instead of auto-adding
+    setPendingNodes({ assistantId: lastAssistant.id, nodes })
+  }, [isStreaming, messages])
 
   return (
     <>
@@ -302,11 +390,37 @@ export default function ChatPanel2() {
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
-                <p className="text-sm whitespace-pre-wrap">{
-                  m.role === 'assistant'
-                    ? formatAssistantForDisplay(m.content, isStreaming && i === messages.length - 1)
-                    : getUserDisplayText(m.content)
-                }</p>
+                {m.role === 'assistant' && pendingNodes && pendingNodes.assistantId === m.id ? (
+                  <div className="text-sm space-y-2">
+                    <div>What about these options?</div>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {pendingNodes.nodes.map((n, idx) => (
+                        <li key={idx}><span className="font-medium">{n.title || '(untitled)'}</span></li>
+                      ))}
+                    </ul>
+                    <div className="pt-1 flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          try { window.dispatchEvent(new CustomEvent('nodal:add-nodes', { detail: { nodes: pendingNodes.nodes } })) } catch {}
+                          setPendingNodes(null)
+                          try { addSystemMessage(`Added ${pendingNodes.nodes.length} node${pendingNodes.nodes.length === 1 ? '' : 's'} to the board.`) } catch {}
+                        }}
+                      >Add these</Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setPendingNodes(null)}
+                      >Cancel</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{
+                    m.role === 'assistant'
+                      ? formatAssistantForDisplay(m.content, isStreaming && i === messages.length - 1)
+                      : getUserDisplayText(m.content)
+                  }</p>
+                )}
               </div>
             </div>
           ))}
