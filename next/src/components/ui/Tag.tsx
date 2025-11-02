@@ -20,7 +20,7 @@ export default function Tag({
   onClick
   , leftIcon, rightIcon, onRightIconClick
 }: TagProps) {
-  const baseClasses = 'inline-flex items-center font-medium rounded-sm transition-colors duration-150 px-2 py-0 text-xs h-5'
+  const baseClasses = 'inline-flex items-center font-normal rounded-sm transition-colors duration-150 px-2 py-0 text-sm h-5'
   
   const variantClasses = {
     default: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
@@ -53,12 +53,12 @@ export default function Tag({
       } : undefined}
     >
       {leftIcon && (
-        <span className="mr-1 inline-flex items-center">{leftIcon}</span>
+        <span className="mr-1 inline-flex items-center text-gray-400 dark:text-white">{leftIcon}</span>
       )}
       <span className="truncate">{children}</span>
       {rightIcon && (
         <span
-          className="ml-1 inline-flex items-center"
+          className="ml-1 inline-flex items-center text-gray-400 dark:text-white"
           onClick={(e) => { e.stopPropagation(); onRightIconClick?.(e) }}
           role={onRightIconClick ? 'button' : undefined}
           tabIndex={onRightIconClick ? 0 : undefined}

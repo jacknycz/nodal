@@ -7,7 +7,7 @@ import Button from './ui/Button'
 import Tag from './ui/Tag'
 import Select from './ui/Select'
 const DynamicModal = dynamic(() => import('./ui/Modal'), { ssr: false })
-import { ArrowRight, CaretCircleRight, PushPin, Share, ShareFat } from '@phosphor-icons/react/dist/ssr'
+import { ArrowRight, CaretCircleRight, Pencil, PushPin, Share, ShareFat, Tag as TagIcon } from '@phosphor-icons/react/dist/ssr'
 import ShareBoardModal from './ShareBoardModal'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Menu from './ui/Menu'
@@ -101,8 +101,8 @@ function BoardCard({
     <div
       className="group relative flex flex-col 
       shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
-      bg-white dark:bg-gray-950/60 dark:hover:bg-slate-700/98
-      border-transparent  dark:hover:border-primary-600/20 p-4 rounded-2xl border transition-all duration-200"
+      bg-white dark:bg-gray-950/60 dark:hover:bg-gray-950/70
+      border-transparent  dark:hover:border-primary-600/10 p-4 rounded-2xl border transition-all duration-200"
       // onClick={handleCardClick}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 160px' as any }}
     >
@@ -123,16 +123,16 @@ function BoardCard({
           {name}
         </h3>
         {typeof topic === 'string' && topic.trim().length > 0 && (
-          <div className="mt-1">
-            <Tag variant="secondary" className="max-w-full truncate">{topic}</Tag>
+          <div className="mt-2 gap-1 flex items-center">
+            <TagIcon weight="duotone" className="w-3 h-3" size={12} /><Tag variant="secondary" className="max-w-full truncate">{topic}</Tag>
           </div>
         )}
 
         <div className="flex items-center gap-2">
           {lastModified !== undefined && (
-            <span className="flex mt-1 gap-1 items-center text-xs text-gray-400 dark:text-gray-400">
-              {formatDate(lastModified)}
-            </span>
+            <span className="flex mt-1 gap-1 items-center justify-center text-sm text-gray-400 dark:text-gray-400">
+              <Pencil size={16} weight="duotone" className="w-3 h-3" /> {formatDate(lastModified)}
+            </span> 
           )}
           {published && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-[10px] font-medium mt-1">Published</span>
@@ -144,7 +144,7 @@ function BoardCard({
         )}
       </div>
 
-      <div className="flex my-4 space-x-6 items-center">
+      {/* <div className="flex my-4 space-x-6 items-center">
         <div className="flex flex-col flex-1 w-full items-start">
           {(typeof nodeCount !== 'undefined' || typeof edgeCount !== 'undefined') && (
             <div className="flex space-x-4 font-medium text-gray-500 dark:text-gray-200">
@@ -163,7 +163,7 @@ function BoardCard({
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       {(coverUrl || description) && (
         <div className="mt-3 space-y-2">
@@ -178,7 +178,7 @@ function BoardCard({
       )}
 
       {/* Footer actions */}
-      <div className="col-span-2 mt-auto pt-3 flex items-center justify-between gap-2">
+      <div className="col-span-2 mt-6 pt-3 flex items-center justify-between gap-2">
         {footerActions ? footerActions : (
           <>
             {/* Left: More menu */}

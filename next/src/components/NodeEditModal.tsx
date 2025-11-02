@@ -137,6 +137,32 @@ export default function NodeEditModal({
     }
   }
 
+  // Allow Delete key to delete selected nodes while modal is open
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      // Don't interfere with text editing inside inputs/editors
+      const active = document.activeElement as HTMLElement | null
+      if (active) {
+        const tag = active.tagName
+        if (active.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA') return
+      }
+      const store = useBoardStore.getState() as any
+      const selectedIds: string[] = Array.isArray(store?.selectedNodeIds) ? store.selectedNodeIds : []
+      if (selectedIds.length === 0) return
+      e.preventDefault()
+      e.stopPropagation()
+      try {
+        selectedIds.forEach((id) => {
+          window.dispatchEvent(new CustomEvent('nodal:delete-node', { detail: { id } }))
+        })
+      } catch {}
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [open])
+
   return (
     <Modal
       open={open}
@@ -251,7 +277,7 @@ export default function NodeEditModal({
                 onChange={(v) => onAssignChange?.((v as string))}
                 options={[{ value: '', label: 'Unassigned' }, ...assignOptions]}
                 size="sm"
-                className="min-w-[10rem]"
+                className="min-w-40"
               />
             </div>
           </div>
