@@ -194,13 +194,7 @@ export default function NodalNode(props: any) {
     <div
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `${baseWidthCls} ${expanded ? 'h-[80vh] overflow-hidden' : ''}` })}
       style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }), ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
-      onClick={(e) => {
-        if (e.shiftKey) {
-          e.preventDefault()
-          e.stopPropagation()
-          onNodeShiftClickConnect?.(id)
-        }
-      }}
+      
     >
       {typeof props.isNodeLockedNow === 'function' && props.isNodeLockedNow(id) && (
         <div className="absolute top-1 right-1 z-50 flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/90 text-white text-[10px] font-medium shadow">

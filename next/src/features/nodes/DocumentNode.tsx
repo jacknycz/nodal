@@ -44,6 +44,7 @@ interface DocumentNodeProps {
   selected?: boolean
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onNodeShiftClickConnect?: (targetId: string) => void
 }
 
 export default function DocumentNode({ 

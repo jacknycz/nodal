@@ -47,6 +47,7 @@ interface ImageNodeProps {
   onOrganizeSubtree?: (nodeId: string) => void
   onLiveResize?: (nodeId: string, width: number) => void
   readOnly?: boolean
+  onNodeShiftClickConnect?: (targetId: string) => void
 }
 
 export default function ImageNode({
@@ -59,6 +60,7 @@ export default function ImageNode({
   onOrganizeSubtree,
   onLiveResize,
   readOnly = false,
+  
 }: ImageNodeProps) {
   const SHOW_ADD_CONNECTED = false
   const [showEditModal, setShowEditModal] = useState(false)
@@ -262,8 +264,6 @@ export default function ImageNode({
     <div
       className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
       style={{ width: `${Math.round(displayWidth)}px`, ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
-      onClick={(e) => {
-      }}
     >
       {/* Colorgory ring overlay (shown in all states) */}
       {isDark && swatchColors.length > 0 && (

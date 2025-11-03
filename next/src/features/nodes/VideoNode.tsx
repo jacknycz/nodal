@@ -34,6 +34,7 @@ interface VideoNodeProps {
   onNodeUpdate?: (nodeId: string, updates: Partial<VideoNodeData>) => void
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onNodeShiftClickConnect?: (targetId: string) => void
 }
 
 export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, onQuickAddNodes, onOrganizeSubtree }: VideoNodeProps) {

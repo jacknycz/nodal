@@ -31,6 +31,7 @@ interface LinkNodeProps {
   onNodeDelete?: (nodeId: string) => void
   onNodeUpdate?: (nodeId: string, updates: Partial<LinkNodeData>) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onNodeShiftClickConnect?: (targetId: string) => void
 }
 
 export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, onOrganizeSubtree }: LinkNodeProps) {
@@ -119,7 +120,10 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
   }, [data.description])
 
   return (
-    <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
+    <div
+      className={getNodeContainerClasses({ selected, receiveMode: false, extra: `${containerWidthClass}` })}
+      style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
+    >
       {/* Colorgory ring overlay */}
       {isDark && swatchColors.length > 0 && (
         <div
@@ -135,7 +139,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
 
       <Handle type="target" position={Position.Top} className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`} />
 
-      <div className="cursor-default">
+      <div className="nodal-drag-handle cursor-move">
         <div className="relative w-full">
           {data.thumbnailUrl && (
             // eslint-disable-next-line @next/next/no-img-element

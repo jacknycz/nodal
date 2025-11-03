@@ -200,7 +200,7 @@ export default function TaskNode({
 
       <div className="nodal-drag-handle cursor-move">
         {/* Title row: checkbox + title inline */}
-        <div className={`flex ${alignStart ? 'items-start' : 'items-center'} gap-2`}>
+        <div className={`nodal-drag-handle cursor-move flex ${alignStart ? 'items-start' : 'items-center'} gap-2`}>
           <Checkbox
             checked={completed}
             onChange={(checked) => handleToggleCompleted(checked)}

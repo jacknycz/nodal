@@ -1115,7 +1115,7 @@ function BoardContent({
   // Shift + click + drag to connect two nodes by dropping on a node surface
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
-      if (!e.shiftKey) return
+      if (!e.metaKey) return
       const target = e.target as HTMLElement | null
       if (!target) return
       const nodeEl = target.closest?.('.react-flow__node') as HTMLElement | null
