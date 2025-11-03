@@ -2192,6 +2192,31 @@ function BoardContent({
     }
   }, [saveStatus, currentBoardName, nodes, edges, manualSave, undo, redo])
 
+  // Global Undo/Redo hotkeys: Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey
+      if (!isMod) return
+      const key = (e.key || '').toLowerCase()
+      if (key !== 'z') return
+      // Ignore when typing in inputs/contenteditable
+      const active = document.activeElement as HTMLElement | null
+      if (active) {
+        const tag = active.tagName
+        if (active.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.shiftKey) {
+        redo()
+      } else {
+        undo()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [undo, redo])
+
   // Update local name when renamed via settings modal
   useEffect(() => {
     const onName = (ev: any) => {
@@ -2922,6 +2947,8 @@ function BoardContent({
                 const ids: string[] = useBoardStore.getState().selectedNodeIds || []
                 setShowKeyboardDeleteModal(false)
                 if (ids.length === 0) return
+                // Capture history before deleting selection
+                pushHistory()
                 // Delete each selected node
                 setNodes((nds) => (Array.isArray(nds) ? nds.filter(n => !ids.includes(n.id)) : nds))
                 setEdges((eds) => (Array.isArray(eds) ? eds.filter(e => !ids.includes(e.source) && !ids.includes(e.target)) : eds))

@@ -147,6 +147,8 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
                 <ul className="list-disc pl-5 space-y-2">
                   <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
                   <li><strong>Cmd/Ctrl + drag</strong> from one node to another to connect them.</li>
+                  <li><strong>Undo</strong>: Cmd + Z (Mac) / Ctrl + Z (Windows)</li>
+                  <li><strong>Redo</strong>: Cmd + Shift + Z (Mac) / Ctrl + Shift + Z (Windows)</li>
                   <li><strong>Drag & drop</strong> files onto the board to create nodes.</li>
                   <li><strong>Double-click</strong> a node to open editing.</li>
                   <li>Use the bottom FAB to add nodes, upload, or generate.</li>
