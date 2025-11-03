@@ -215,7 +215,7 @@ export default function TaskNode({
         {(data as any)?.content ? (
           <div
             ref={descriptionRef}
-            className="mt-2 text-xs leading-relaxed tiptap-content text-gray-700 dark:text-gray-300"
+            className="mt-2 text-xs leading-relaxed tiptap-content text-gray-700 dark:text-gray-300 [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
             dangerouslySetInnerHTML={{ __html: (data as any)?.content || '' }}
           />
         ) : null}

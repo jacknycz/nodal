@@ -476,7 +476,7 @@ export default function ImageNode({
               </div>
               {data.content && (
                 <div
-                  className="mt-2 tiptap-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed"
+                  className="mt-2 tiptap-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
                   dangerouslySetInnerHTML={{ __html: data.content }}
                 />
               )}

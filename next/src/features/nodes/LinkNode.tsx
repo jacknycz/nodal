@@ -108,6 +108,16 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
 
   const containerWidthClass = 'w-[260px]'
 
+  const plainDescription = useMemo(() => {
+    const raw = data.description || ''
+    if (!raw) return ''
+    try {
+      const div = document.createElement('div')
+      div.innerHTML = raw
+      return (div.textContent || div.innerText || '').trim()
+    } catch { return raw }
+  }, [data.description])
+
   return (
     <div className={getNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {/* Colorgory ring overlay */}
@@ -152,9 +162,9 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
               {data.linkUrl}
             </a>
           )}
-          {data.description && (
+          {plainDescription && (
             <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-              {data.description.length > 200 ? `${data.description.slice(0, 200)}…` : data.description}
+              {plainDescription.length > 200 ? `${plainDescription.slice(0, 200)}…` : plainDescription}
             </div>
           )}
         </div>

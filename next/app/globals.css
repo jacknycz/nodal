@@ -453,3 +453,31 @@ body {
   -ms-user-select: none;
   user-select: none;
 }
+
+/* Global link colors: use Nodal primary instead of browser default */
+a {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+  text-underline-offset: 2px;
+}
+a:hover {
+  color: var(--color-primary-800);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+}
+a:visited {
+  color: var(--color-primary-600);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+}
+.dark a {
+  color: var(--color-primary-400);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+}
+.dark a:visited {
+  color: var(--color-primary-200);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+}

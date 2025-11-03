@@ -1447,6 +1447,25 @@ function BoardContent({
     useBoardStore.getState().setSelectedNodes(enforced)
   }, [])
 
+  // Allow external UI (e.g., context menu) to programmatically select nodes
+  useEffect(() => {
+    const onSelect = (e: Event) => {
+      try {
+        const idsIn: string[] = Array.isArray((e as CustomEvent<any>)?.detail?.ids) ? (e as CustomEvent<any>).detail.ids : []
+        const existingIds = (useBoardStore.getState().nodes || []).map((n: any) => n.id)
+        const filtered = idsIn.filter((id) => existingIds.includes(id))
+        setSelectedNodes(filtered)
+        useBoardStore.getState().setSelectedNodes(filtered)
+        // Update XYFlow visual selection
+        try {
+          reactFlowInstance.setNodes((cur) => cur.map((n) => ({ ...n, selected: filtered.includes(n.id) })))
+        } catch {}
+      } catch {}
+    }
+    window.addEventListener('nodal:select-nodes', onSelect as EventListener)
+    return () => window.removeEventListener('nodal:select-nodes', onSelect as EventListener)
+  }, [reactFlowInstance])
+
   // Global drag event listener to handle files dragged from outside
   useEffect(() => {
     let isFileBeingDragged = false

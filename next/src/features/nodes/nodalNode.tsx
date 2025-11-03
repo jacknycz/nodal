@@ -146,7 +146,7 @@ export default function NodalNode(props: any) {
   const renderRichContent = (htmlContent: string) => {
     return (
       <div
-        className="tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed"
+        className="tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     )

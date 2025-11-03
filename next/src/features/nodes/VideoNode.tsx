@@ -435,7 +435,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           )}
           {data.content && (
             <div
-              className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed tiptap-content"
+              className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed tiptap-content [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
               dangerouslySetInnerHTML={{ __html: data.content }}
             />
           )}

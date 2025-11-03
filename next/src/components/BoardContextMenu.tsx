@@ -56,6 +56,10 @@ export default function BoardContextMenu({
     if (!nodeId) return false
     return (edges || []).some((e: any) => e?.source === nodeId)
   }, [edges, nodeId])
+  const hasConnections = React.useMemo(() => {
+    if (!nodeId) return false
+    return (edges || []).some((e: any) => e?.source === nodeId || e?.target === nodeId)
+  }, [edges, nodeId])
   const colorgoriesAll = useBoardStore((s: any) => s.colorgories || [])
   const colorgoriesVisible = React.useMemo(() => (colorgoriesAll || []).filter((c: any) => c?.visible !== false), [colorgoriesAll])
   const nodeColorgoryIds: string[] = React.useMemo(() => {
@@ -197,7 +201,7 @@ export default function BoardContextMenu({
   return (
     <>
       <div
-        className="fixed z-[700] bg-white overflow-visible dark:bg-gray-800 rounded-2xl shadow-lg 
+        className="fixed z-700 bg-white overflow-visible dark:bg-gray-800 rounded-2xl shadow-lg 
         min-w-[200px] nodal-no-select"
         style={{ left: (menuPos?.x ?? position.x), top: (menuPos?.y ?? position.y) }}
         ref={menuRef}
@@ -214,6 +218,42 @@ export default function BoardContextMenu({
               >
                 <Pencil size={18} className="w-4 h-4" />
                 {isLockedByOther ? 'Locked (editing)' : 'Edit Node'}
+              </button>
+            )}
+
+            {!multiSelected && hasConnections && (
+              <button
+                onClick={() => handleAction(() => {
+                  try {
+                    const es: any[] = (useBoardStore.getState().edges || []) as any[]
+                    const adj = new Map<string, Set<string>>()
+                    for (const e of es) {
+                      if (!e || typeof e.source !== 'string' || typeof e.target !== 'string') continue
+                      if (!adj.has(e.source)) adj.set(e.source, new Set<string>())
+                      if (!adj.has(e.target)) adj.set(e.target, new Set<string>())
+                      adj.get(e.source)!.add(e.target)
+                      adj.get(e.target)!.add(e.source)
+                    }
+                    const visited = new Set<string>()
+                    const queue: string[] = []
+                    if (nodeId) { queue.push(nodeId); visited.add(nodeId) }
+                    while (queue.length) {
+                      const cur = queue.shift() as string
+                      const nbrs = adj.get(cur)
+                      if (!nbrs) continue
+                      for (const n of nbrs) {
+                        if (!visited.has(n)) { visited.add(n); queue.push(n) }
+                      }
+                    }
+                    const ids = Array.from(visited)
+                    useBoardStore.getState().setSelectedNodes(ids)
+                    try { window.dispatchEvent(new CustomEvent('nodal:select-nodes', { detail: { ids } })) } catch {}
+                  } catch {}
+                })}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+              >
+                <TreeStructure size={18} className="w-4 h-4" />
+                Select Cluster
               </button>
             )}
 
@@ -279,7 +319,7 @@ export default function BoardContextMenu({
                 <CaretRight size={16} weight="duotone" className="transition-transform duration-200 text-gray-400" /> 
               </div>
               {colorgoryHover && (
-                <div ref={colorgoryMenuRef} className={`absolute ${colorgoryFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-[710]`} style={{ transform: `translateY(${colorgoryYOffset}px)` }}>
+                <div ref={colorgoryMenuRef} className={`absolute ${colorgoryFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-2 z-710`} style={{ transform: `translateY(${colorgoryYOffset}px)` }}>
                   <div className="grid grid-cols-2 gap-1">
                     {(colorgoriesVisible || []).map((c: any) => {
                       const checked = nodeColorgoryIds.includes(c.id)
