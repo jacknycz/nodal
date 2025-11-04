@@ -3,24 +3,40 @@ import { getSupabaseServiceClient } from '../../../../src/features/storage/supab
 
 export async function POST(req: NextRequest) {
   try {
-    const { ids } = await req.json()
-    if (!Array.isArray(ids) || ids.length === 0) {
+    const body = await req.json().catch(() => ({}))
+    const userIds: string[] = Array.isArray(body?.userIds) ? body.userIds : []
+    if (!userIds || userIds.length === 0) {
       return NextResponse.json({ users: [] })
     }
     const supabase = getSupabaseServiceClient()
-    const unique = Array.from(new Set(ids.map((v: any) => String(v))))
-    const batches = await Promise.allSettled(unique.map(async (id: string) => {
-      const { data } = await supabase.auth.admin.getUserById(id)
-      const email = data?.user?.email || null
-      return { id, email }
+    // Fetch profiles usernames in batch
+    const [{ data: profiles }, adminResults] = await Promise.all([
+      supabase.from('profiles').select('id, username').in('id', userIds),
+      (async () => {
+        const out: Array<{ id: string; email: string | null }> = []
+        for (const id of userIds) {
+          try {
+            const { data } = await supabase.auth.admin.getUserById(id)
+            out.push({ id, email: data?.user?.email || null })
+          } catch {
+            out.push({ id, email: null })
+          }
+        }
+        return out
+      })(),
+    ])
+
+    const usernameMap = new Map<string, string | null>()
+    ;(profiles || []).forEach((p: any) => usernameMap.set(String(p.id), p?.username || null))
+
+    const users = (adminResults || []).map((u) => ({
+      id: u.id,
+      email: u.email,
+      username: usernameMap.get(u.id) || null,
     }))
-    const users = batches
-      .map((r) => (r.status === 'fulfilled' ? r.value : null))
-      .filter(Boolean)
     return NextResponse.json({ users })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed to fetch users' }, { status: 500 })
+    return NextResponse.json({ users: [], error: e?.message || 'failed' }, { status: 500 })
   }
 }
-
 

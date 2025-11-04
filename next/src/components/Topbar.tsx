@@ -136,22 +136,19 @@ export default function Topbar({
     window.addEventListener('nodal:board-settings-visual-hide', handler as any)
     return () => window.removeEventListener('nodal:board-settings-visual-hide', handler as any)
   }, [])
-  // Fetch current user's role on this board for UI gating
+  // Fetch current user's role on this board for UI gating (server route to avoid RLS issues)
   useEffect(() => {
     const loadRole = async () => {
       if (!currentBoardId || !user?.id) { setBoardMemberRole(null); return }
       try {
-        const { data, error } = await (supabase.from('board_members') as any)
-          .select('role')
-          .eq('board_id', currentBoardId)
-          .eq('user_id', user.id)
-          .maybeSingle()
-        const roleRow = data as any
-        if (!error && roleRow?.role) {
-          setBoardMemberRole(roleRow.role as any)
-          return
+        const res = await fetch(`/api/board/members?boardId=${encodeURIComponent(currentBoardId)}`)
+        if (res.ok) {
+          const json = await res.json()
+          const me = (Array.isArray(json.members) ? json.members : []).find((m: any) => m.user_id === user.id)
+          const role = me?.role as string | undefined
+          if (role) { setBoardMemberRole(role as any); return }
         }
-        // Fallback: if no membership row, check ownership directly on boards
+        // Fallback: check ownership directly on boards
         const { data: boardRow } = await (supabase.from('boards') as any)
           .select('user_id')
           .eq('id', currentBoardId)
@@ -166,7 +163,7 @@ export default function Topbar({
       }
     }
     loadRole()
-  }, [currentBoardId, user?.id, supabase])
+  }, [currentBoardId, user?.id])
 
   // Temporary share handler
   const handleShareBoard = async () => {

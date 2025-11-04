@@ -655,7 +655,7 @@ export default function AddNodesModal({
                 label="Description - tell us what nodes you want to generate..."
                 rows={4}
                 fullWidth
-                description="Ex. 'show me different types in indoor plants'"
+                description="Ex. 'show me different types of indoor plants'"
               />
               <div className="flex justify-end gap-2 pt-1">
                 <Button variant="secondary" onClick={onClose}>Cancel</Button>

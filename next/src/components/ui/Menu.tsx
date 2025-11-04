@@ -147,21 +147,14 @@ export default function Menu({
         onPointerDown={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          setIsOpen((v) => !v)
-          if (!isOpen) openMenu()
-        }}
-        onMouseDown={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setIsOpen((v) => !v)
-          if (!isOpen) openMenu()
+          setIsOpen((prev) => {
+            const next = !prev
+            if (!prev) openMenu()
+            return next
+          })
         }}
         onClick={(e) => {
           // Prevent parent click handlers (e.g., card onClick) from firing
-          e.preventDefault()
-          e.stopPropagation()
-        }}
-        onPointerUp={(e) => {
           e.preventDefault()
           e.stopPropagation()
         }}

@@ -113,6 +113,11 @@ export default function BoardsTab({
                 nodeCount={board.nodeCount}
                 edgeCount={board.edgeCount}
                 topic={(board as any)?.data?.topic || null}
+                // pass shared metadata if present
+                invitedBy={(board as any)?.invited_by || null}
+                // hint that this item is a shared board
+                // BoardCard will derive labels based on ownerId and current user
+                // (no extra prop needed beyond invitedBy/ownerId)
                 onLoad={() => onOpenBoard(board)}
                 onRename={newName => onRename(board.id, newName)}
                 onDelete={() => onDelete(board.id)}

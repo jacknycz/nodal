@@ -224,8 +224,11 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       const loadedBoards = await boardStorage.getAllBoards()
       setBoards(loadedBoards)
       // Fetch shared boards from API
-      if (user?.email) {
-        const res = await fetch(`/api/board/shared?email=${encodeURIComponent(user.email)}`)
+      if (user?.email || user?.id) {
+        const qs = new URLSearchParams()
+        if (user?.email) qs.set('email', user.email)
+        if (user?.id) qs.set('userId', user.id)
+        const res = await fetch(`/api/board/shared?${qs.toString()}`)
         const json = await res.json()
         setSharedBoards(Array.isArray(json.boards) ? json.boards : [])
       } else {
@@ -456,7 +459,19 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     setShowBoardSetup(true)
   }
 
-  const allBoards: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
+  // Deduplicate boards by id across personal + shared lists
+  const allBoards: Array<SavedBoard | SharedBoard> = (() => {
+    const seen = new Set<string>()
+    const merged = [...boards, ...sharedBoards]
+    const unique = merged.filter((b) => {
+      const id = (b as any)?.id
+      if (!id) return false
+      if (seen.has(id)) return false
+      seen.add(id)
+      return true
+    })
+    return unique
+  })()
   const deferredSearch = useDeferredValue(searchQuery)
   const filteredBoards = allBoards
     .filter(board =>

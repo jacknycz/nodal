@@ -2,34 +2,53 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const service = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Prefer service role (server-side) to bypass RLS for shared lookup, scoped by invite list
+const supabase = createClient(supabaseUrl, service || anon)
 
 // GET /api/board/shared?email=...
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const email = searchParams.get('email')
+  const userId = searchParams.get('userId')
   console.log('[shared API] email:', email)
-  if (!email) {
-    return NextResponse.json({ error: 'Missing email' }, { status: 400 })
+  if (!email && !userId) {
+    return NextResponse.json({ error: 'Missing email or userId' }, { status: 400 })
   }
-  // 1. Get accepted invitations for this email
-  const { data: invites, error: inviteError } = await supabase
-    .from('board_invitations')
-    .select('*')
-    .eq('email', email)
-    .eq('status', 'accepted')
-  console.log('[shared API] invites:', invites)
-  if (inviteError) {
-    console.log('[shared API] inviteError:', inviteError)
-    return NextResponse.json({ error: inviteError.message }, { status: 500 })
+  // 1. Collect board ids from accepted invitations (by email, case-insensitive) and from board_members (by userId)
+  let boardIds: string[] = []
+  try {
+    if (email) {
+      const { data: invites, error: inviteError } = await supabase
+        .from('board_invitations')
+        .select('*')
+        .ilike('email', email)
+        .eq('status', 'accepted')
+      console.log('[shared API] invites:', invites)
+      if (inviteError) throw inviteError
+      boardIds = [...boardIds, ...((invites || []).map((i: any) => i.board_id))]
+    }
+  } catch (err) {
+    console.log('[shared API] inviteError:', err)
   }
-  if (!invites || invites.length === 0) {
-    console.log('[shared API] No invites found')
+  try {
+    if (userId) {
+      const { data: memberRows, error: memberError } = await supabase
+        .from('board_members')
+        .select('board_id')
+        .eq('user_id', userId)
+      if (memberError) throw memberError
+      boardIds = [...boardIds, ...((memberRows || []).map((m: any) => m.board_id))]
+    }
+  } catch (err) {
+    console.log('[shared API] memberError:', err)
+  }
+  boardIds = Array.from(new Set(boardIds.filter(Boolean)))
+  if (boardIds.length === 0) {
     return NextResponse.json({ boards: [] })
   }
   // 2. Fetch boards for these board_ids
-  const boardIds = invites.map(invite => invite.board_id)
   console.log('[shared API] boardIds:', boardIds)
   const { data: boards, error: boardError } = await supabase
     .from('boards')
@@ -41,13 +60,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: boardError.message }, { status: 500 })
   }
   // 3. Attach inviter info to each board
-  const boardsWithInviter = boards.map(board => {
-    const invite = invites.find(i => i.board_id === board.id)
+  const boardsWithInviter = (boards || []).map(board => {
+    const isOwnedByUser = userId ? (board.user_id === userId) : false
     return {
-      ...board,
-      shared: true,
-      invited_by: invite?.invited_by || invite?.user_id, // fallback to user_id if needed
-      invitation_id: invite?.id
+      // Normalize to client SavedBoard shape where possible
+      id: board.id,
+      name: board.name,
+      userId: board.user_id,
+      createdAt: board.created_at,
+      lastModified: board.last_modified || board.created_at,
+      nodeCount: board.node_count ?? 0,
+      edgeCount: board.edge_count ?? 0,
+      data: board.data || {},
+      shared: !isOwnedByUser,
+      invited_by: null,
+      invitation_id: null,
     }
   })
   console.log('[shared API] boardsWithInviter:', boardsWithInviter)

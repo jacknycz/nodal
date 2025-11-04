@@ -80,29 +80,21 @@ export default function BoardPage() {
     const check = async () => {
       try {
         if (!boardId || !board) { setCanEdit(false); return }
-        // Unauthenticated or public viewers cannot edit
         if (!user?.id) { setCanEdit(false); return }
-        // Owner can edit
         if (board.userId && user.id === board.userId) { setCanEdit(true); return }
-        // Check membership role
-        const { data, error } = await supabase
-          .from('board_members')
-          .select('role')
-          .eq('board_id', boardId)
-          .eq('user_id', user.id)
-          .maybeSingle()
-        const role = (data as any)?.role as string | undefined
-        if (!error && (role === 'owner' || role === 'editor')) {
-          setCanEdit(true)
-        } else {
-          setCanEdit(false)
-        }
+        // Use server route to avoid RLS issues
+        const res = await fetch(`/api/board/members?boardId=${encodeURIComponent(boardId)}`)
+        if (!res.ok) { setCanEdit(false); return }
+        const json = await res.json()
+        const me = (Array.isArray(json.members) ? json.members : []).find((m: any) => m.user_id === user.id)
+        const role = me?.role as string | undefined
+        setCanEdit(role === 'owner' || role === 'editor')
       } catch {
         setCanEdit(false)
       }
     }
     check()
-  }, [boardId, board, user?.id, supabase])
+  }, [boardId, board, user?.id])
 
   // Reflect runtime board name changes (e.g., via BoardSettingsModal)
   useEffect(() => {

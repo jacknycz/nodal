@@ -1738,6 +1738,7 @@ function BoardContent({
   
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
+    if (isEditingRef.current) { console.log('[BoardComponent] ignore delete while editing'); return }
     console.log('[BoardComponent] handleNodeDelete called for', nodeId)
     pushHistory()
     setNodes((nds) => (Array.isArray(nds) ? nds.filter((node) => node.id !== nodeId) : nds))
@@ -1759,6 +1760,7 @@ function BoardContent({
   // Fallback: respond to global delete events
   useEffect(() => {
     const handler = (e: Event) => {
+      if (isEditingRef.current) { console.log('[BoardComponent] ignore global delete while editing'); return }
       const ce = e as CustomEvent<{ id: string }>
       const id = ce?.detail?.id
       if (typeof id === 'string' && id) {
@@ -1781,6 +1783,7 @@ function BoardContent({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (readOnly) return
+      if (isEditingRef.current) return
       if (e.key !== 'Delete') return
       // Ignore when editing inputs/editors
       const active = document.activeElement as HTMLElement | null
@@ -1977,6 +1980,8 @@ function BoardContent({
   const [pendingSourceNodeId, setPendingSourceNodeId] = useState<string | null>(null)
   const [editNodeId, setEditNodeId] = useState<string | null>(null)
   const editorMode = !!editNodeId
+  const isEditingRef = useRef<boolean>(false)
+  useEffect(() => { isEditingRef.current = editorMode }, [editorMode])
   const [showKeyboardDeleteModal, setShowKeyboardDeleteModal] = useState(false)
   // Task assignment UI state (to avoid calling hooks inside conditional renders)
   const [taskAssignOptions, setTaskAssignOptions] = useState<Array<{ value: string; label: string }> | null>(null)
