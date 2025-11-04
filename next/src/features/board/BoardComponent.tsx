@@ -631,6 +631,16 @@ function BoardContent({
     }
   }, [])
 
+  // Remove edges whose endpoints no longer exist
+  const pruneGhostEdges = useCallback((nds: Node[], eds: Edge[]): Edge[] => {
+    try {
+      const idSet = new Set((Array.isArray(nds) ? nds : []).map((n: any) => n.id))
+      return (Array.isArray(eds) ? eds : []).filter((e: any) => idSet.has(e?.source) && idSet.has(e?.target))
+    } catch {
+      return eds
+    }
+  }, [])
+
   // When edge type preference changes, update existing edges
   useEffect(() => {
     setEdges((eds) => (Array.isArray(eds) ? eds.map(e => ({ ...e, type: toVisualEdgeType(edgeTypePref) as any })) : eds))
@@ -645,7 +655,7 @@ function BoardContent({
     if (onBoardStateChangeRef.current) {
       onBoardStateChangeRef.current(currentBoardName, 'saving', true)
     }
-    triggerAutosaveRef.current(nodes, edges)
+    triggerAutosaveRef.current(nodes, pruneGhostEdges(nodes, edges))
   }, [edgeTypePref])
   
   // Simple effect to trigger autosave when nodes/edges change (excluding pure position/selection moves)
@@ -676,7 +686,7 @@ function BoardContent({
       if (onBoardStateChangeRef.current) {
         onBoardStateChangeRef.current(currentBoardName, 'saving', true)
       }
-      triggerAutosaveRef.current(nodes, edges)
+      triggerAutosaveRef.current(nodes, pruneGhostEdges(nodes, edges))
     }
     
     // Update previous values
@@ -695,7 +705,7 @@ function BoardContent({
         onBoardStateChangeRef.current(currentBoardName, 'saving', true)
       }
       // Always use manualSave so we persist even when nodes/edges are empty
-      manualSave(nodes, edges).catch(() => {})
+      manualSave(nodes, pruneGhostEdges(nodes, edges)).catch(() => {})
       prevColorgoriesRef.current = colorgoriesState
     }
   }, [colorgoriesState, nodes, edges, saveStatus, currentBoardName, manualSave])
@@ -1381,8 +1391,8 @@ function BoardContent({
   }, [readOnly, getViewportCenter, handleAddNodeToStore, showAddToast, pushHistory])
 
   const saveBoard = useCallback(async (name?: string) => {
-    await manualSave(nodes, edges, name)
-  }, [manualSave, nodes, edges])
+    await manualSave(nodes, pruneGhostEdges(nodes, edges), name)
+  }, [manualSave, nodes, edges, pruneGhostEdges])
 
   
 
@@ -1463,7 +1473,21 @@ function BoardContent({
       } catch {}
     }
     window.addEventListener('nodal:select-nodes', onSelect as EventListener)
-    return () => window.removeEventListener('nodal:select-nodes', onSelect as EventListener)
+    const onBulkDelete = (ev: Event) => {
+      try {
+        const ids: string[] = Array.isArray((ev as CustomEvent<any>)?.detail?.ids) ? (ev as CustomEvent<any>).detail.ids : []
+        if (!ids || ids.length === 0) return
+        pushHistory()
+        setNodes((nds) => (Array.isArray(nds) ? nds.filter((n: any) => !ids.includes(n.id)) : nds))
+        setEdges((eds) => (Array.isArray(eds) ? eds.filter((e: any) => !ids.includes(e.source) && !ids.includes(e.target)) : eds))
+        try { useBoardStore.getState().clearSelectedNodes() } catch {}
+      } catch {}
+    }
+    window.addEventListener('nodal:bulk-delete', onBulkDelete as EventListener)
+    return () => {
+      window.removeEventListener('nodal:select-nodes', onSelect as EventListener)
+      window.removeEventListener('nodal:bulk-delete', onBulkDelete as EventListener)
+    }
   }, [reactFlowInstance])
 
   // Global drag event listener to handle files dragged from outside
@@ -2803,7 +2827,7 @@ function BoardContent({
             // Persist immediately after reorg completes
             try {
               const st = useBoardStore.getState()
-              await manualSave(st.nodes || [], st.edges || [])
+              await manualSave(st.nodes || [], pruneGhostEdges(st.nodes || [], st.edges || []))
             } catch {}
           } catch {}
         }}

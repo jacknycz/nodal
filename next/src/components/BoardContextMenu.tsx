@@ -414,12 +414,15 @@ export default function BoardContextMenu({
               setShowDelete(false)
               onClose()
               const ids = multiSelected ? selectedIds : (nodeId ? [nodeId] : [])
-              ids.forEach((id) => {
+              if (ids.length > 1) {
+                try { window.dispatchEvent(new CustomEvent('nodal:bulk-delete', { detail: { ids: [...ids] } })) } catch {}
+              } else {
+                const id = ids[0]
                 if (!id) return
                 if (onDeleteNode) setTimeout(() => onDeleteNode(id), 0)
                 try { window.dispatchEvent(new CustomEvent('nodal:delete-node', { detail: { id } })) } catch {}
                 try { const fn = (window as any).__deleteNodeFromBoard; if (typeof fn === 'function') setTimeout(() => fn(id), 0) } catch {}
-              })
+              }
             }}>Delete</Button>
           </>
         }
