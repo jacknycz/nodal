@@ -595,6 +595,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
               sortedBoards={sortedBoards}
               pinnedBoardIds={pinnedBoardIds}
               onOpenBoard={(b: any) => onOpenBoard(b, undefined)}
+              onNewBoard={handleNewBoardClick}
               onRename={handleRename}
               onDelete={handleDelete}
               togglePin={togglePin}
