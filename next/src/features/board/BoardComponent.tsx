@@ -178,6 +178,32 @@ function BoardContent({
   // Basic state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+  // Grid snapping toggle (board-local)
+  const [gridEnabled, setGridEnabled] = useState<boolean>(false)
+  const SNAP_GRID: [number, number] = [20, 20]
+
+  // Load grid preference from localStorage and listen for updates from Settings modal
+  useEffect(() => {
+    if (!boardId) return
+    try {
+      const key = `nodal:board:${boardId}:gridEnabled`
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null
+      if (raw === null) {
+        // Default ON if not set
+        setGridEnabled(true)
+      } else {
+        setGridEnabled(raw === 'true')
+      }
+    } catch {}
+    const handler = (e: any) => {
+      try {
+        if (!e?.detail || e.detail.boardId !== boardId) return
+        setGridEnabled(!!e.detail.enabled)
+      } catch {}
+    }
+    try { window.addEventListener('nodal:grid-updated', handler as any) } catch {}
+    return () => { try { window.removeEventListener('nodal:grid-updated', handler as any) } catch {} }
+  }, [boardId])
   
   
   // Sync XYFlow nodes with Zustand board store for DocumentsMenu
@@ -2344,6 +2370,8 @@ function BoardContent({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        snapToGrid={gridEnabled}
+        snapGrid={SNAP_GRID}
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}
         onNodesChange={readOnly ? undefined : handleNodesChange}
@@ -2423,7 +2451,13 @@ function BoardContent({
         multiSelectionKeyCode="Meta"
         // Disable built-in Delete behavior; we show a confirm modal instead
       >
-        {/* Remove the Background component - BokehBackground will handle the background */}
+        {/* Grid overlay (when enabled) */}
+        {gridEnabled && (
+          <Background
+            gap={SNAP_GRID[0]}
+            color={theme === 'dark' ? 'rgba(148,163,184,0.3)' : 'rgba(148,163,184,0.6)'}
+          />
+        )}
         <div className="hidden sm:block">
           <Controls showInteractive={false} showFitView={true} showZoom={true} />
         </div>

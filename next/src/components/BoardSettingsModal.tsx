@@ -46,6 +46,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
   const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
+  const [gridEnabled, setGridEnabled] = useState<boolean>(true)
 
   // Inline share/invite state (mirrors ShareBoardModal)
   const [shareInput, setShareInput] = useState('')
@@ -68,6 +69,16 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
       } catch { setPendingIsPublic(false) }
     })()
   }, [open, boardId, supabase])
+
+  // Load grid setting from localStorage on open
+  useEffect(() => {
+    if (!open || !boardId) return
+    try {
+      const key = `nodal:board:${boardId}:gridEnabled`
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null
+      setGridEnabled(raw === null ? true : raw === 'true')
+    } catch { setGridEnabled(true) }
+  }, [open, boardId])
 
   useEffect(() => {
     if (!open) return
@@ -205,6 +216,21 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                   onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                   label="Dark mode"
                   description="Toggle between light and dark themes."
+                />
+              </div>
+              <div className="pt-1">
+                <Toggle
+                  checked={gridEnabled}
+                  onChange={(checked) => {
+                    setGridEnabled(checked)
+                    try {
+                      const key = `nodal:board:${boardId}:gridEnabled`
+                      if (typeof window !== 'undefined') window.localStorage.setItem(key, String(checked))
+                      try { window.dispatchEvent(new CustomEvent('nodal:grid-updated', { detail: { boardId, enabled: checked } })) } catch {}
+                    } catch {}
+                  }}
+                  label="Snap to grid"
+                  description="Snap nodes to a 10px grid and show the grid overlay."
                 />
               </div>
             </div>
