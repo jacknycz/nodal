@@ -399,9 +399,9 @@ export default function Topbar({
           <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3 justify-end">
             {!publicViewer && (
               <div className="flex md:flex-col lg:flex-row items-center justify-center gap-1 lg:gap-2">
-                <Tag variant="beta" className="ml-2">
+                {/* <Tag variant="beta" className="ml-2">
                   BETA
-                </Tag>
+                </Tag> */}
                 <LinkUI onClick={() => setShowFeedback(true)}>Feedback</LinkUI>
               </div>
             )}

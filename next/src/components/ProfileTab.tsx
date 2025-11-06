@@ -351,7 +351,7 @@ export default function ProfileTab() {
             {/* Email */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4">
               <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</div>
-              <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100 break-words">{user?.email || '—'}</div>
+              <div className="mt-1 text-sm md:text-base text-gray-900 dark:text-gray-100 wrap-break-word">{user?.email || '—'}</div>
             </div>
             {/* Password */}
             <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
@@ -416,7 +416,9 @@ export default function ProfileTab() {
                   <div>
                     <div className="text-sm font-semibold text-gray-900 dark:text-white">Need more?</div>
                     <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Go Pro to unlock 5GB storage and 100k AI tokens/month.</div>
+
                   </div>
+                  <Button variant="secondary" onClick={() => setShowUpgradeModal(true)}>Learn more</Button>
                   <Button onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>
                 </div>
               ) : (
@@ -436,7 +438,7 @@ export default function ProfileTab() {
                     } catch (e: any) {
                       setBillingToast({ open: true, msg: e?.message || 'Failed to open billing', variant: 'danger' })
                     }
-                  }}>Manage</Button>
+                  }}>Manage / Cancel</Button>
                 </div>
               )}
             </div>
@@ -496,7 +498,7 @@ export default function ProfileTab() {
                           <div className="text-sm text-gray-900 dark:text-white truncate">{title}</div>
                           {bodyNode && <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{bodyNode}</div>}
                         </div>
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           {!n.read_at && (
                             <button
                               onClick={() => markOneRead(n.id)}
