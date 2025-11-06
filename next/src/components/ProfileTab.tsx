@@ -38,6 +38,11 @@ export default function ProfileTab() {
     return role === 'Pro' || role === 'Admin' || capImpliesPro
   }, [role, ai.summary?.cap])
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false)
+  // Ensure AI usage recalculates immediately when role flips (e.g., after upgrade)
+  React.useEffect(() => {
+    try { ai.refresh() } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role])
   const [redirecting, setRedirecting] = React.useState(false)
   const [billingToast, setBillingToast] = React.useState<{ open: boolean; msg: string; variant?: 'success' | 'info' | 'warning' | 'danger' }>({ open: false, msg: '' })
   const [loading, setLoading] = React.useState(true)
