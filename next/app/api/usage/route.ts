@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServiceClient } from '../../../src/features/storage/supabaseService'
 import Stripe from 'stripe'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServiceClient()
     // Identify user
     let userId: string | null = null
+    let roleFromAuth: string | null = null
     let userCreatedAt: string | null = null
     try {
       const authHeader = req.headers.get('authorization')
@@ -15,6 +18,11 @@ export async function GET(req: NextRequest) {
         const { data } = await supabase.auth.getUser(token)
         userId = data.user?.id || null
         userCreatedAt = (data.user as any)?.created_at || null
+        try {
+          // Prefer app_metadata.role; fallback to user_metadata.role
+          // @ts-expect-error metadata may be any
+          roleFromAuth = (data.user?.app_metadata?.role as string) || (data.user?.user_metadata?.role as string) || null
+        } catch {}
       }
     } catch {}
     if (!userId) {
@@ -28,11 +36,13 @@ export async function GET(req: NextRequest) {
     let start = new Date(now.getFullYear(), now.getMonth(), 1) // fallback: calendar month
 
     // Fetch role and subscription item id
-    let role: string = 'User'
+    let role: string = roleFromAuth || 'User'
     let subItemId: string | null = null
     try {
       const prof = await supabase.from('profiles').select('role, stripe_subscription_item_id').eq('id', userId).maybeSingle()
-      role = String((prof.data as any)?.role || 'User')
+      const dbRole = (prof.data as any)?.role
+      // Use DB role only if auth role not present
+      role = String(roleFromAuth || dbRole || 'User')
       subItemId = ((prof.data as any)?.stripe_subscription_item_id as string | null) || null
     } catch {}
 
