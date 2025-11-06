@@ -38,9 +38,25 @@ export default function TasksSidebar({ incompleteTasks, tasksLoading, allBoards,
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">task nodes</h2>
-      {tasksLoading ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Loading tasks…</div>
-      ) : (
+      {tasksLoading && incompleteTasks.length === 0 && (
+        <div className="flex flex-col gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={`task-skel-${i}`}
+              className="rounded-lg px-3 py-2 bg-white/80 dark:bg-gray-900/70 border border-gray-200/80 dark:border-gray-700/80 animate-pulse"
+            >
+              <div className="flex items-center gap-3">
+                <span aria-hidden className="inline-flex w-5 h-5 rounded-full border-2 border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/70" />
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="h-3 w-40 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <div className="h-2 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {(incompleteTasks.length > 0 || !tasksLoading) && (
         <div className="flex flex-col gap-2">
           {incompleteTasks.length === 0 && (
             <div className="text-sm text-gray-500 dark:text-gray-400">No incomplete tasks. Nice work!</div>

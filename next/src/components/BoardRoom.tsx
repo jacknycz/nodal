@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useDeferredValue, useRef, startTransition } from 'react'
+import { useState, useEffect, useDeferredValue, useRef, startTransition, useMemo } from 'react'
 import type { SavedBoard } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardSetupModal from './BoardSetupModal'
@@ -71,7 +71,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   // Sidebar helper for per-tab widget visibility
   const SidebarSection: React.FC<{ showOn: TabKey[]; children: React.ReactNode }> = ({ showOn, children }) => {
-    return showOn.includes(activeTab) ? <>{children}</> : null
+    const visible = showOn.includes(activeTab)
+    // Keep mounted to prevent flicker; toggle visibility only
+    return <div className={visible ? '' : 'hidden'}>{children}</div>
   }
   const [templatesLoading, setTemplatesLoading] = useState<boolean>(false)
   const [templatesError, setTemplatesError] = useState<string | null>(null)
@@ -79,6 +81,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [tasksLoading, setTasksLoading] = useState<boolean>(false)
   const [incompleteTasks, setIncompleteTasks] = useState<Array<{ boardId: string; boardName: string; nodeId: string; title: string }>>([])
   const incompleteTasksRef = useRef<Array<{ boardId: string; boardName: string; nodeId: string; title: string }> | null>(null)
+  const prevBoardsRef = useRef<any[] | null>(null)
+  const prevSharedBoardsRef = useRef<any[] | null>(null)
+  const hasLoadedBoardsRef = useRef<boolean>(false)
+  const inFlightBoardsRef = useRef<boolean>(false)
+  const prevUserIdRef = useRef<string | null>(null)
+  const sharedSeededRef = useRef<boolean>(false)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -96,6 +104,9 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [newsSaving, setNewsSaving] = useState(false)
   const [newsDate, setNewsDate] = useState<string>('')
   const [showDeleteNews, setShowDeleteNews] = useState(false)
+  // Preloaded connections to prevent sidebar thrash
+  const [initialConnections, setInitialConnections] = useState<any[] | null>(null)
+  const [initialConnectionsLoaded, setInitialConnectionsLoaded] = useState(false)
 
   // Handle Stripe success return: verify and refresh session
   useEffect(() => {
@@ -219,20 +230,48 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     try {
       // mark start of board load for perf debugging
       try { performance.mark('loadBoards-start') } catch { }
-      setLoading(true)
+      let toggledLoading = false
+      if (!hasLoadedBoardsRef.current) {
+        setLoading(true)
+        toggledLoading = true
+      }
       const { boardStorage } = await import('../features/storage/storage')
       const loadedBoards = await boardStorage.getAllBoards()
-      setBoards(loadedBoards)
-      // Fetch shared boards from API
-      if (user?.email || user?.id) {
-        const qs = new URLSearchParams()
-        if (user?.email) qs.set('email', user.email)
-        if (user?.id) qs.set('userId', user.id)
-        const res = await fetch(`/api/board/shared?${qs.toString()}`)
-        const json = await res.json()
-        setSharedBoards(Array.isArray(json.boards) ? json.boards : [])
-      } else {
-        setSharedBoards([])
+      try {
+        const prev = prevBoardsRef.current
+        const same = prev && prev.length === loadedBoards.length && JSON.stringify(prev) === JSON.stringify(loadedBoards)
+        if (!same) {
+          setBoards(loadedBoards)
+          prevBoardsRef.current = loadedBoards
+        }
+      } catch {
+        setBoards(loadedBoards)
+        prevBoardsRef.current = loadedBoards
+      }
+      // Fetch shared boards from API only if not already seeded via bootstrap
+      if (!sharedSeededRef.current) {
+        if (user?.email || user?.id) {
+          const qs = new URLSearchParams()
+          if (user?.email) qs.set('email', user.email)
+          if (user?.id) qs.set('userId', user.id)
+          const res = await fetch(`/api/board/shared?${qs.toString()}`)
+          const json = await res.json()
+          const incoming = Array.isArray(json.boards) ? json.boards : []
+          try {
+            const prev = prevSharedBoardsRef.current
+            const same = prev && prev.length === incoming.length && JSON.stringify(prev) === JSON.stringify(incoming)
+            if (!same) {
+              setSharedBoards(incoming)
+              prevSharedBoardsRef.current = incoming
+            }
+          } catch {
+            setSharedBoards(incoming)
+            prevSharedBoardsRef.current = incoming
+          }
+        } else {
+          setSharedBoards([])
+          prevSharedBoardsRef.current = []
+        }
       }
       // Stats computed in a separate effect when state settles
       try { performance.mark('loadBoards-end') } catch { }
@@ -240,19 +279,25 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     } catch {
       setError('Failed to load boards')
     } finally {
+      hasLoadedBoardsRef.current = true
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    loadBoards()
+    const uid = user?.id || null
+    if (prevUserIdRef.current === uid && hasLoadedBoardsRef.current) return
+    prevUserIdRef.current = uid
+    if (inFlightBoardsRef.current) return
+    inFlightBoardsRef.current = true
+    ;(async () => { try { await loadBoards() } finally { inFlightBoardsRef.current = false } })()
     // Load pinned boards from localStorage
     try {
       const stored = localStorage.getItem('pinnedBoards')
       if (stored) setPinnedBoardIds(JSON.parse(stored))
     } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.email])
+  }, [user?.id])
 
   // Track selected tab via path to conditionally show sections
   useEffect(() => {
@@ -274,6 +319,44 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       }
     }
   }, [])
+
+  // Preload boardroom sidebar data (sharedBoards, connections, news) once after user is ready
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!user?.id || initialConnectionsLoaded) return
+      try {
+        setInitialConnectionsLoaded(true)
+        const { data } = await getSupabaseClient().auth.getSession()
+        const token = data?.session?.access_token
+        const res = await fetch('/api/boardroom/bootstrap', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json?.error || 'Failed to bootstrap')
+        if (cancelled) return
+        // Commit sidebar data; shared boards handled below with equality guard
+        setInitialConnections(Array.isArray(json.connections) ? json.connections : [])
+        try {
+          const incomingShared = Array.isArray(json.sharedBoards) ? json.sharedBoards : []
+          const prev = prevSharedBoardsRef.current
+          const same = prev && prev.length === incomingShared.length && JSON.stringify(prev) === JSON.stringify(incomingShared)
+          if (!same) { setSharedBoards(incomingShared); prevSharedBoardsRef.current = incomingShared }
+          sharedSeededRef.current = true
+        } catch {
+          const incomingShared = Array.isArray(json.sharedBoards) ? json.sharedBoards : []
+          setSharedBoards(incomingShared)
+          prevSharedBoardsRef.current = incomingShared
+          sharedSeededRef.current = true
+        }
+        setNews(Array.isArray(json.news) ? json.news : [])
+      } catch {
+        if (!cancelled) {
+          setInitialConnections([])
+        }
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [user?.id, initialConnectionsLoaded])
 
   // Load templates (public)
   useEffect(() => {
@@ -308,7 +391,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     loadTemplates()
   }, [])
 
-  // Compute incomplete task nodes across all boards (deferred and chunked to avoid blocking)
+  // Compute incomplete task nodes across all boards (deferred and chunked)
+  const boardsSignature = useMemo(() => {
+    try {
+      const items = [...boards, ...sharedBoards].map((b: any) => ({ id: b.id, lm: b.lastModified || 0 }))
+      return JSON.stringify(items)
+    } catch { return `${boards.length}:${sharedBoards.length}` }
+  }, [boards, sharedBoards])
+
   useEffect(() => {
     const computeTasks = async () => {
       let cancelled = false
@@ -383,7 +473,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       timeoutId = setTimeout(run, 0)
       return () => clearTimeout(timeoutId)
     }
-  }, [boards, sharedBoards, loading])
+  }, [boardsSignature, loading])
 
 
 
@@ -671,7 +761,28 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
                   <Button size="sm" variant="secondary" onClick={openCreateArticle}><Plus className="w-4 h-4 mr-1" />Add article</Button>
                 )}
               </div>
-              {newsLoading && <div className="text-xs text-gray-500 dark:text-gray-400">Loading…</div>}
+              {newsLoading && (
+                <div className="flex flex-col gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={`news-skel-${i}`} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/60 p-3 animate-pulse">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="h-3 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                          <div className="h-2 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
+                        </div>
+                        {isAdmin(user) && (
+                          <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+                        )}
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded" />
+                        <div className="h-2 w-5/6 bg-gray-200 dark:bg-gray-700 rounded" />
+                        <div className="h-2 w-2/3 bg-gray-200 dark:bg-gray-700 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               {newsError && <div className="text-xs text-red-600 dark:text-red-400">{newsError}</div>}
               {!newsLoading && news.length === 0 && (
                 <div className="text-xs text-gray-500 dark:text-gray-400">No articles yet.</div>
@@ -699,7 +810,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           </SidebarSection>
           
           <SidebarSection showOn={['profile']}>
-            <ConnectionsSidebar />
+            <ConnectionsSidebar initialConnections={initialConnections || undefined} disableAutoFetch={!!initialConnections} />
           </SidebarSection>
         </div>
       </div>

@@ -123,6 +123,38 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function DELETE(req: NextRequest) {
+  try {
+    const supabase = getSupabaseServiceClient()
+    const body = await req.json().catch(() => ({}))
+    const { requesterId, addresseeId } = body || {}
+    if (!requesterId || !addresseeId || requesterId === addresseeId) {
+      return NextResponse.json({ error: 'Invalid requester/addressee' }, { status: 400 })
+    }
+
+    // Delete pending connection between these two users (in any direction)
+    const { data: rows } = await supabase
+      .from('connections')
+      .select('id, status')
+      .or(`and(requester_id.eq.${requesterId},addressee_id.eq.${addresseeId}),and(requester_id.eq.${addresseeId},addressee_id.eq.${requesterId})`)
+
+    const pending = (rows || []).find((r: any) => r.status === 'pending')
+    if (!pending) {
+      return NextResponse.json({ ok: true })
+    }
+
+    const { error: delErr } = await supabase
+      .from('connections')
+      .delete()
+      .eq('id', pending.id)
+
+    if (delErr) throw delErr
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Failed to cancel connection' }, { status: 500 })
+  }
+}
+
 async function createNotification(supabase: any, userId: string, type: string, title: string, body: string, payload?: any) {
   try {
     await supabase.from('notifications').insert({ user_id: userId, type, title, body, payload: payload || null })
