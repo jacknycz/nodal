@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServiceClient } from '../../../src/features/storage/supabaseService'
+import Stripe from 'stripe'
 
 export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseServiceClient()
     // Identify user
     let userId: string | null = null
+    let userCreatedAt: string | null = null
     try {
       const authHeader = req.headers.get('authorization')
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.slice(7)
         const { data } = await supabase.auth.getUser(token)
         userId = data.user?.id || null
+        userCreatedAt = (data.user as any)?.created_at || null
       }
     } catch {}
     if (!userId) {
@@ -20,9 +23,61 @@ export async function GET(req: NextRequest) {
     }
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Current month range
+    // Determine billing window start
     const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    let start = new Date(now.getFullYear(), now.getMonth(), 1) // fallback: calendar month
+
+    // Fetch role and subscription item id
+    let role: string = 'User'
+    let subItemId: string | null = null
+    try {
+      const prof = await supabase.from('profiles').select('role, stripe_subscription_item_id').eq('id', userId).maybeSingle()
+      role = String((prof.data as any)?.role || 'User')
+      subItemId = ((prof.data as any)?.stripe_subscription_item_id as string | null) || null
+    } catch {}
+
+    const isPro = role.toLowerCase() === 'pro'
+
+    if (isPro) {
+      // Align with Stripe subscription current_period_start when available
+      try {
+        const stripeKey = process.env.STRIPE_SECRET_KEY
+        if (stripeKey && subItemId) {
+          const stripe = new Stripe(stripeKey, { apiVersion: '2024-06-20' })
+          const item = await stripe.subscriptionItems.retrieve(subItemId)
+          const subscriptionId = (item as any)?.subscription as string | undefined
+          if (subscriptionId) {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId)
+            const cps = (sub as any)?.current_period_start as number | undefined
+            if (cps && Number.isFinite(cps)) {
+              start = new Date(cps * 1000)
+            }
+          }
+        }
+      } catch {}
+    } else {
+      // Free users: use signup day-of-month as the window anchor
+      try {
+        const anchorDay = (() => {
+          if (userCreatedAt) return new Date(userCreatedAt).getDate()
+          return now.getDate() // fallback
+        })()
+        // Helper: clamp day to month length
+        const clampDay = (y: number, m: number, d: number) => {
+          const last = new Date(y, m + 1, 0).getDate()
+          return Math.min(d, last)
+        }
+        const dayThisMonth = clampDay(now.getFullYear(), now.getMonth(), anchorDay)
+        const candidate = new Date(now.getFullYear(), now.getMonth(), dayThisMonth)
+        if (now.getDate() >= dayThisMonth) {
+          start = candidate
+        } else {
+          const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+          const dayPrevMonth = clampDay(prevMonth.getFullYear(), prevMonth.getMonth(), anchorDay)
+          start = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), dayPrevMonth)
+        }
+      } catch {}
+    }
     const { data, error } = await supabase
       .from('ai_usage')
       .select('tokens_used, created_at, model')
@@ -42,10 +97,8 @@ export async function GET(req: NextRequest) {
     // Map role->token cap (Free 15k, Pro 100k, Admin unlimited)
     let cap = 15000
     try {
-      const prof = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
-      const role = (prof.data as any)?.role || 'User'
-      if (String(role).toLowerCase() === 'pro') cap = 100000
-      if (String(role).toLowerCase() === 'admin') cap = Number.MAX_SAFE_INTEGER
+      if (role.toLowerCase() === 'pro') cap = 100000
+      if (role.toLowerCase() === 'admin') cap = Number.MAX_SAFE_INTEGER
     } catch {}
 
     const remaining = Math.max(0, cap - total)
