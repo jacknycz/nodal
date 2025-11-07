@@ -98,7 +98,7 @@ function WelcomeContent() {
               </motion.div>
             ),
             ({ next,prev }) => (
-              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-lg mx-auto px-4">
+              <motion.div variants={slideContainerVariants} className="w-full text-center max-w-5xl mx-auto px-4">
                 <motion.h2 variants={itemVariants} className="text-4xl font-medium font-fredoka mb-4">meet the nodes</motion.h2>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
                   Nodes are everything. Content, docs, links, images - connect them, group them, leave them alone - they're good like that.
@@ -111,10 +111,16 @@ function WelcomeContent() {
                     <Image src="/welcome/nodal-node.svg" alt="Node" width={720} height={420} className="w-full h-auto object-contain" />
                   </div>
                   <div className="w-1/3 flex items-center justify-center">
+                    <Image src="/welcome/task-node.svg" alt="Task node" width={720} height={420} className="w-full h-auto object-contain" />
+                  </div>
+                  <div className="w-1/3 flex items-center justify-center">
                     <Image src="/welcome/image-node.svg" alt="Image node" width={720} height={420} className="w-full h-auto object-contain" />
                   </div>
                   <div className="w-1/3 flex items-center justify-center">
                     <Image src="/welcome/document-node.svg" alt="Document node" width={720} height={420} className="w-full h-auto object-contain" />
+                  </div>
+                  <div className="w-1/3 flex items-center justify-center">
+                    <Image src="/welcome/video-node.svg" alt="Video node" width={720} height={420} className="w-full h-auto object-contain" />
                   </div>
                 </motion.div>
                 <motion.div variants={itemVariants} className="flex gap-3 justify-center mt-12">

@@ -32,11 +32,13 @@ export default function ProfileTab() {
   const storage = useStorageUsage()
   const ai = useAIUsage()
   const { role } = useUserRole()
+  // Canonical paid check should rely on canonical role, not AI cap (which can drift)
+  const [dbRole, setDbRole] = React.useState<string | null>(null)
+  const canonicalRole = (dbRole || role) as string
   const isProLike = React.useMemo(() => {
-    const cap = ai.summary?.cap
-    const capImpliesPro = typeof cap === 'number' && (cap === Number.MAX_SAFE_INTEGER || cap === 100000)
-    return role === 'Pro' || role === 'Admin' || capImpliesPro
-  }, [role, ai.summary?.cap])
+    const r = String(canonicalRole || 'User')
+    return r === 'Pro' || r === 'Admin'
+  }, [canonicalRole])
   const [showUpgradeModal, setShowUpgradeModal] = React.useState(false)
   // Ensure AI usage recalculates immediately when role flips (e.g., after upgrade)
   React.useEffect(() => {
@@ -113,6 +115,33 @@ export default function ProfileTab() {
     }
     run()
   }, [user?.id])
+
+  // Load canonical profile via /api/me so admin changes reflect immediately
+  React.useEffect(() => {
+    let cancelled = false
+    const loadRole = async () => {
+      try {
+        if (!user?.id) { setDbRole(null); return }
+        const { data } = await getSupabaseClient().auth.getSession()
+        const token = data?.session?.access_token
+        const res = await fetch('/api/me', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+        const json = await res.json()
+        if (!cancelled) setDbRole(res.ok ? (json?.role || null) : null)
+      } catch {
+        if (!cancelled) setDbRole(null)
+      }
+    }
+    loadRole()
+    // Also react to admin updates via a custom event if emitted
+    const onRoleUpdated = (e: any) => { void loadRole() }
+    try { window.addEventListener('nodal:admin-role-updated', onRoleUpdated) } catch {}
+    return () => {
+      cancelled = true
+      try { window.removeEventListener('nodal:admin-role-updated', onRoleUpdated) } catch {}
+    }
+  }, [user?.id])
+
+  const displayRole = dbRole || role
 
   // Load notifications
   const refreshNotifications = React.useCallback(async () => {
@@ -320,7 +349,7 @@ export default function ProfileTab() {
 
             {/* Role tag (stabilized) */}
             <div>
-              <Tag variant="secondary" className="ml-1">{role}</Tag>
+            <Tag variant="secondary" className="ml-1">{displayRole}</Tag>
             </div>
           </div>
 
@@ -395,8 +424,9 @@ export default function ProfileTab() {
                     <div className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">Go Pro to unlock 5GB storage and 100k AI tokens/month.</div>
 
                   </div>
-                  <Button variant="secondary" onClick={() => setShowUpgradeModal(true)}>Learn more</Button>
-                  <Button onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => setShowUpgradeModal(true)}>Go Pro</Button>
+                  </div>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/50 p-4 flex items-center justify-between gap-3">
@@ -954,6 +984,7 @@ export default function ProfileTab() {
         actions={
           <>
             <Button variant="secondary" onClick={() => setShowUpgradeModal(false)} disabled={redirecting}>Cancel</Button>
+            <Button variant="secondary" onClick={() => { try { window.open('https://nodalapp.com#pro', '_blank', 'noopener,noreferrer') } catch {} }}>Learn more</Button>
             <Button onClick={async () => {
               setRedirecting(true)
               try {
@@ -968,7 +999,7 @@ export default function ProfileTab() {
                 setRedirecting(false)
               }
             }} loading={redirecting}>
-              Continue to Checkout
+              Checkout
             </Button>
           </>
         }
@@ -977,8 +1008,11 @@ export default function ProfileTab() {
           <div className="text-sm text-gray-700 dark:text-gray-200">Nodal Pro (monthly) includes:</div>
           <ul className="text-sm text-gray-700 dark:text-gray-200 list-disc pl-5">
             <li>5GB total storage</li>
+            <li>Collaboration (invite teammates, share boards, co-edit live)</li>
             <li>100k AI tokens per month</li>
-            <li>Priority token processing</li>
+            <li>Latest AI models and features</li>
+            <li>Custom API key integration</li>
+            <li>Token usage transparency and refill bundles</li>
           </ul>
           <div className="text-xs text-gray-500 dark:text-gray-400">You’ll be redirected to Stripe Checkout to complete your purchase.</div>
         </div>

@@ -87,6 +87,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const inFlightBoardsRef = useRef<boolean>(false)
   const prevUserIdRef = useRef<string | null>(null)
   const sharedSeededRef = useRef<boolean>(false)
+  const bootstrappedRef = useRef<boolean>(false)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -286,7 +287,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   useEffect(() => {
     const uid = user?.id || null
-    if (prevUserIdRef.current === uid && hasLoadedBoardsRef.current) return
+    if (prevUserIdRef.current === uid && (hasLoadedBoardsRef.current || bootstrappedRef.current)) return
     prevUserIdRef.current = uid
     if (inFlightBoardsRef.current) return
     inFlightBoardsRef.current = true
@@ -320,43 +321,63 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }, [])
 
-  // Preload boardroom sidebar data (sharedBoards, connections, news) once after user is ready
+  // Single bootstrap: load personal boards (client) + shared boards/connections/news (server) and commit atomically
   useEffect(() => {
     let cancelled = false
     const run = async () => {
-      if (!user?.id || initialConnectionsLoaded) return
+      if (!user?.id || bootstrappedRef.current) return
+      bootstrappedRef.current = true
+      setLoading(true)
       try {
-        setInitialConnectionsLoaded(true)
+        const [{ boardStorage }] = await Promise.all([import('../features/storage/storage')])
+        const personalPromise = boardStorage.getAllBoards()
         const { data } = await getSupabaseClient().auth.getSession()
         const token = data?.session?.access_token
-        const res = await fetch('/api/boardroom/bootstrap', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json?.error || 'Failed to bootstrap')
+        const bootstrapPromise = fetch('/api/boardroom/bootstrap', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
+          .then(async (res) => {
+            const json = await res.json()
+            if (!res.ok) throw new Error(json?.error || 'Failed to bootstrap')
+            return json
+          })
+          .catch(() => ({ sharedBoards: [], connections: [], news: [] }))
+
+        const [personal, bootstrap] = await Promise.all([personalPromise, bootstrapPromise])
         if (cancelled) return
-        // Commit sidebar data; shared boards handled below with equality guard
-        setInitialConnections(Array.isArray(json.connections) ? json.connections : [])
-        try {
-          const incomingShared = Array.isArray(json.sharedBoards) ? json.sharedBoards : []
-          const prev = prevSharedBoardsRef.current
-          const same = prev && prev.length === incomingShared.length && JSON.stringify(prev) === JSON.stringify(incomingShared)
-          if (!same) { setSharedBoards(incomingShared); prevSharedBoardsRef.current = incomingShared }
-          sharedSeededRef.current = true
-        } catch {
-          const incomingShared = Array.isArray(json.sharedBoards) ? json.sharedBoards : []
-          setSharedBoards(incomingShared)
-          prevSharedBoardsRef.current = incomingShared
-          sharedSeededRef.current = true
-        }
-        setNews(Array.isArray(json.news) ? json.news : [])
-      } catch {
-        if (!cancelled) {
-          setInitialConnections([])
-        }
+
+        startTransition(() => {
+          // Personal boards (guard)
+          try {
+            const prev = prevBoardsRef.current
+            const same = prev && prev.length === personal.length && JSON.stringify(prev) === JSON.stringify(personal)
+            if (!same) { setBoards(personal); prevBoardsRef.current = personal }
+          } catch { setBoards(personal); prevBoardsRef.current = personal }
+
+          // Shared boards (guard)
+          try {
+            const incomingShared = Array.isArray(bootstrap.sharedBoards) ? bootstrap.sharedBoards : []
+            const prev = prevSharedBoardsRef.current
+            const same = prev && prev.length === incomingShared.length && JSON.stringify(prev) === JSON.stringify(incomingShared)
+            if (!same) { setSharedBoards(incomingShared); prevSharedBoardsRef.current = incomingShared }
+            sharedSeededRef.current = true
+          } catch {
+            const incomingShared = Array.isArray(bootstrap.sharedBoards) ? bootstrap.sharedBoards : []
+            setSharedBoards(incomingShared)
+            prevSharedBoardsRef.current = incomingShared
+            sharedSeededRef.current = true
+          }
+
+          // Sidebar data
+          setInitialConnectionsLoaded(true)
+          setInitialConnections(Array.isArray(bootstrap.connections) ? bootstrap.connections : [])
+          setNews(Array.isArray(bootstrap.news) ? bootstrap.news : [])
+        })
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
     run()
     return () => { cancelled = true }
-  }, [user?.id, initialConnectionsLoaded])
+  }, [user?.id])
 
   // Load templates (public)
   useEffect(() => {

@@ -320,6 +320,7 @@ function BoardCard({
                           </IconButton>
                         }
                         align="left"
+                        placement="above"
                         portal
                         width="w-64"
                         customContent={

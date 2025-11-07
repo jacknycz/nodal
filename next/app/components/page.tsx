@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useSupabaseUser } from '../../src/features/auth/authUtils'
 import { isAdmin } from '../../src/features/auth/roles'
+import Avatar from '../../src/components/ui/Avatar'
 
 export default function ComponentsLibraryPage() {
   const user = useSupabaseUser()
@@ -160,12 +161,14 @@ export default function ComponentsLibraryPage() {
                       className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500"
                       placeholder="New task"
                     />
+                    {/* Assigned avatar */}
+                    <Avatar size="sm" name="Jane Doe" email="jane@example.com" />
                   </div>
                 </div>
               </div>
             </div>
             {(() => {
-            const code = `<div className=\"relative flex flex-col p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm w-[360px]\">\n  <div className=\"flex items-center gap-3\">\n    <span className=\"inline-flex w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900\"></span>\n    <input className=\"flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500\" placeholder=\"New task\" />\n  </div>\n</div>`
+            const code = `<div className=\"relative flex flex-col p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm w-[360px]\">\n  <div className=\"flex items-center gap-3\">\n    <span className=\"inline-flex w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900\"></span>\n    <input className=\"flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder:text-gray-500\" placeholder=\"New task\" />\n    <!-- Assigned avatar -->\n    <div className=\"w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold\">JD</div>\n  </div>\n</div>`
             const CodeTools = (globalThis as any)._CodeTools as React.FC<{ code: string; initialOpen?: boolean }>
             return <CodeTools code={code} />
             })()}
