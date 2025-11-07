@@ -58,7 +58,7 @@ function WelcomeContent() {
                   This intro is being forced on you. We apologize. It’ll be quick, painless, and yes — you get cool things out of it.
                 </motion.p>
                 <motion.p variants={itemVariants} className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-                  We're in <Tag variant="beta">beta</Tag> - if you find any issues, please let us know! <br/>(<span className="underline text-tertiary-700 dark:text-tertiary-200">feedback</span> button in the top right)
+                  If you find any issues, please let us know! <br/>(<span className="underline text-tertiary-700 dark:text-tertiary-200">feedback</span> button in the top right). Ideas too - we'll steal all of those!
                 </motion.p>
                 <motion.div variants={itemVariants} className="flex justify-center mt-12">
                   <Button variant="primary" size="lg" onClick={next}>Next</Button>

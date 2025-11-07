@@ -64,9 +64,6 @@ export default function LoginScreen() {
               className="h-8 w-auto"
               priority
             />
-            <Tag variant="beta" className="ml-3">
-              BETA
-            </Tag>
           </div>
         </div>
 

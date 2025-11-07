@@ -1014,7 +1014,7 @@ export default function ProfileTab() {
             <li>Custom API key integration</li>
             <li>Token usage transparency and refill bundles</li>
           </ul>
-          <div className="text-xs text-gray-500 dark:text-gray-400">You’ll be redirected to Stripe Checkout to complete your purchase.</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">You'll be redirected to Stripe Checkout to complete your purchase.</div>
         </div>
       </Modal>
 
