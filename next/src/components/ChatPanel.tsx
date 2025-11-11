@@ -7,7 +7,7 @@ import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import { useBoardStore } from '../features/board/boardSlice'
 import { X, Chat, Spinner, Key, Target, PaperPlaneTilt, Resize, XCircle, ArrowSquareIn, ArrowsInSimple } from '@phosphor-icons/react'
 import TextArea from './ui/TextArea'
-import Button from './ui/Button'
+import IconButton from './ui/IconButton'
 // Node generation UI and placement imports removed
 import { OpenAIModel } from '@/features/ai/aiTypes'
 import Select from './ui/Select'
@@ -333,7 +333,9 @@ NODE CONTENT: [Body 2]`
 
       {/* Panel */}
       <div
-        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 rounded-4xl z-700 md:z-300 max-h-[calc(100dvh-80px)] bg-white backdrop-blur-xs dark:bg-gray-900/80 shadow-xl shadow-orange-950/10 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+        className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 
+          rounded-3xl z-[700] md:z-[300] max-h-[calc(100dvh-80px)] 
+          bg-linear-to-b from-white/90 to-white/70 backdrop-blur-xs dark:from-gray-900/90 dark:to-gray-900/70 shadow-xl shadow-orange-950/5 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
         style={
           (isMdUp
@@ -342,7 +344,7 @@ NODE CONTENT: [Body 2]`
         }
       >
         {/* Header */}
-        <div className="flex items-center justify-between py-2 px-4 border-b border-gray-100 dark:border-gray-950/50">
+        <div className="flex items-center justify-between py-2 px-4">
           <div className="flex items-center space-x-1">
             <img src="/nobot.svg" alt="Nodal" width={32} height={32} />
 
@@ -386,41 +388,15 @@ NODE CONTENT: [Body 2]`
         )}
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 shadow-[inset_0_-4px_6px_-1px_rgba(156,163,175,0.1)] dark:shadow-none scrollbar-themed">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 dark:shadow-none scrollbar-themed">
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'}`}>
-                {m.role === 'assistant' && pendingNodes && pendingNodes.assistantId === m.id ? (
-                  <div className="text-sm space-y-2">
-                    <div>What about these options?</div>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {pendingNodes.nodes.map((n, idx) => (
-                        <li key={idx}><span className="font-medium">{n.title || '(untitled)'}</span></li>
-                      ))}
-                    </ul>
-                    <div className="pt-1 flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          try { window.dispatchEvent(new CustomEvent('nodal:add-nodes', { detail: { nodes: pendingNodes.nodes } })) } catch {}
-                          setPendingNodes(null)
-                          try { addSystemMessage(`Added ${pendingNodes.nodes.length} node${pendingNodes.nodes.length === 1 ? '' : 's'} to the board.`) } catch {}
-                        }}
-                      >Add these</Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setPendingNodes(null)}
-                      >Cancel</Button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap">{
-                    m.role === 'assistant'
-                      ? formatAssistantForDisplay(m.content, isStreaming && i === messages.length - 1)
-                      : getUserDisplayText(m.content)
-                  }</p>
-                )}
+              <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-gray-200 text-gray-900 dark:text-gray-100 dark:bg-gray-800 font-medium' : 'text-gray-900 bg-white dark:bg-gray-900 text-base font-medium dark:text-gray-100'}`}>
+                <p className="text-sm whitespace-pre-wrap">{
+                  m.role === 'assistant'
+                    ? formatAssistantForDisplay(m.content, isStreaming && i === messages.length - 1)
+                    : getUserDisplayText(m.content)
+                }</p>
               </div>
             </div>
           ))}
@@ -478,8 +454,8 @@ NODE CONTENT: [Body 2]`
         )}
 
         {/* Input */}
-        <div className="px-4 py-3">
-          <div className="flex space-x-2 items-end">
+        <div className="px-4 py-4">
+          <div className="flex relative">
             <TextArea
               ref={inputRef}
               value={inputValue}
@@ -495,15 +471,20 @@ NODE CONTENT: [Body 2]`
                 : 'Chat with Nobot...'}
               rows={1}
               fullWidth
-              className="resize-none scrollbar-none text-base! md:text-sm!"
+              className="resize-none scrollbar-none text-base! md:text-sm! pr-10 h-12"
+              bgClassName="rounded-full bg-white shadow-2xl! shadow-gray-400/20! dark:shadow-2xl! dark:shadow-gray-800/20!"
               // bgClassName="bg-[#F6F1EE]!"
             />
-            <Button 
-            onClick={() => handleSend()} 
-            disabled={!inputValue.trim() || isLoading || isStreaming} loading={isLoading || isStreaming} 
-            className="w-12! h-12! p-0! flex-none">
-              <PaperPlaneTilt weight="duotone" size={32} className="w-6! h-6!" />
-            </Button>
+            <IconButton
+              aria-label="Send"
+              onClick={() => handleSend()}
+              disabled={!inputValue.trim() || isLoading || isStreaming}
+              aria-busy={isLoading || isStreaming}
+              className="absolute right-3 top-3 flex-none"
+              size="sm"
+            >
+              <PaperPlaneTilt weight="duotone" size={32} className="w-4! h-4!" />
+            </IconButton>
           </div>
           {/* <div className="mt-2 flex items-center justify-between">
             <button className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" onClick={clearChat}>Clear</button>
