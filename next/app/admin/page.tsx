@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSupabaseUser } from '@/features/auth/authUtils'
+import { getSupabaseClient } from '@/features/auth/supabaseClient'
 import { isAdmin, getUserRoleFromMetadata } from '@/features/auth/roles'
 import Select from '@/components/ui/Select'
 import Modal from '@/components/ui/Modal'
@@ -127,13 +128,21 @@ export default function AdminUsersPage() {
                         value={(u.role || 'user').toLowerCase()}
                         onChange={async (val) => {
                           try {
-                            const res = await fetch('/api/admin/users', {
+                            const { data } = await getSupabaseClient().auth.getSession()
+                            const token = data?.session?.access_token
+                            const override =
+                              val === 'user' ? null :
+                              (val === 'pro' ? 'Pro' : val === 'admin' ? 'Admin' : null)
+                            const res = await fetch('/api/admin/role-override', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ userId: u.id, role: val })
+                              headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                              },
+                              body: JSON.stringify({ userId: u.id, override })
                             })
-                            if (!res.ok) throw new Error('Failed to update role')
-                            setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: val === 'user' ? null : val as any } : x))
+                            if (!res.ok) throw new Error('Failed to update override')
+                            setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: val === 'user' ? null : (val as any) } : x))
                           } catch (e) {
                             alert('Unable to set role')
                           }

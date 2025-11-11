@@ -13,21 +13,37 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser(token)
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Canonical profile read (single source of truth)
+    // Canonical profile read (single source of truth for subscription state and optional override)
     const { data: prof } = await supabase
       .from('profiles')
-      .select('id, username, display_name, role, stripe_customer_id, stripe_subscription_id, stripe_subscription_item_id, subscription_status, current_period_start, current_period_end')
+      .select('id, username, display_name, role_override, stripe_customer_id, stripe_subscription_id, stripe_subscription_item_id, subscription_status, current_period_start, current_period_end')
       .eq('id', user.id)
       .maybeSingle()
 
     const profile = (prof as any) || {}
-    const role = profile?.role || 'User'
+    // Compute effective role:
+    // - If override set, use it
+    // - Else Pro when subscription_status indicates an active/eligible sub
+    // - Else default User
+    const overrideRole: string | null = profile?.role_override || null
+    const subStatus: string | null = profile?.subscription_status || null
+    const isSubPro = ['active', 'trialing', 'past_due'].includes(String(subStatus || '').toLowerCase())
+    let effectiveRole: 'Admin' | 'Pro' | 'User' = 'User'
+    if (overrideRole && /^(admin|pro|user)$/i.test(String(overrideRole))) {
+      effectiveRole = (/^admin$/i.test(overrideRole) ? 'Admin' : /^pro$/i.test(overrideRole) ? 'Pro' : 'User')
+    } else {
+      effectiveRole = isSubPro ? 'Pro' : 'User'
+    }
 
-    // Drift reconciliation: mirror profiles.role into auth app_metadata if mismatched
+    // Promote-only reconciliation: mirror effectiveRole into auth app_metadata if it's a promotion
     try {
-      const metaRole = (user.app_metadata as any)?.role
-      if (metaRole !== role) {
-        await supabase.auth.admin.updateUserById(user.id, { app_metadata: { role } })
+      const metaRoleRaw = (user.app_metadata as any)?.role
+      const metaRole: 'Admin' | 'Pro' | 'User' =
+        /^admin$/i.test(metaRoleRaw) ? 'Admin' :
+        /^pro$/i.test(metaRoleRaw) ? 'Pro' : 'User'
+      const rank = (r: 'Admin' | 'Pro' | 'User') => (r === 'Admin' ? 3 : r === 'Pro' ? 2 : 1)
+      if (rank(effectiveRole) > rank(metaRole)) {
+        await supabase.auth.admin.updateUserById(user.id, { app_metadata: { role: effectiveRole } })
       }
     } catch {}
 
@@ -36,7 +52,7 @@ export async function GET(req: NextRequest) {
       email: user.email,
       username: profile?.username || null,
       displayName: profile?.display_name || null,
-      role,
+      role: effectiveRole,
       billing: {
         stripeCustomerId: profile?.stripe_customer_id || null,
         stripeSubscriptionId: profile?.stripe_subscription_id || null,

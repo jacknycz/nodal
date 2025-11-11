@@ -66,4 +66,14 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
 for each row execute function public.handle_new_user();
 
+-- Billing and role override columns used by app logic
+alter table if exists public.profiles
+  add column if not exists role_override text,
+  add column if not exists stripe_customer_id text,
+  add column if not exists stripe_subscription_id text,
+  add column if not exists stripe_subscription_item_id text,
+  add column if not exists subscription_status text,
+  add column if not exists current_period_start timestamptz,
+  add column if not exists current_period_end timestamptz;
+
 

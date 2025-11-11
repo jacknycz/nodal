@@ -5,13 +5,20 @@ import { getSupabaseServiceClient } from '../../../../src/features/storage/supab
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-async function setUserRole(userId: string, role: 'User' | 'Pro' | 'Admin', subscriptionItemId: string | null) {
+async function updateSubscriptionFields(userId: string, fields: {
+  stripe_customer_id?: string | null
+  stripe_subscription_id?: string | null
+  stripe_subscription_item_id?: string | null
+  subscription_status?: string | null
+  current_period_start?: string | null
+  current_period_end?: string | null
+}) {
   const supabase = getSupabaseServiceClient()
   try {
-    await supabase.from('profiles').upsert({ id: userId, role, stripe_subscription_item_id: subscriptionItemId }, { onConflict: 'id' })
-  } catch {}
-  try {
-    await supabase.auth.admin.updateUserById(userId, { app_metadata: { role } })
+    await supabase.from('profiles').upsert(
+      { id: userId, ...fields },
+      { onConflict: 'id' }
+    )
   } catch {}
 }
 
@@ -42,15 +49,34 @@ export async function POST(req: NextRequest) {
         const customerId = (session.customer as string) || null
         // Expand subscription to capture item id
         let subscriptionItemId: string | null = null
+        let subscriptionId: string | null = null
+        let periodStart: string | null = null
+        let periodEnd: string | null = null
+        let status: string | null = null
         if (session.subscription) {
           try {
             const sub = await stripe.subscriptions.retrieve(String(session.subscription), { expand: ['items'] })
             const items = sub?.items?.data || []
             if (items.length > 0) subscriptionItemId = items[0]?.id || null
+            subscriptionId = sub.id || null
+            status = sub.status || null
+            try {
+              const ps = (sub.current_period_start as number) || null
+              const pe = (sub.current_period_end as number) || null
+              if (ps) periodStart = new Date(ps * 1000).toISOString()
+              if (pe) periodEnd = new Date(pe * 1000).toISOString()
+            } catch {}
           } catch {}
         }
         if (userId) {
-          await setUserRole(userId, 'Pro', subscriptionItemId)
+          await updateSubscriptionFields(userId, {
+            stripe_customer_id: customerId || null,
+            stripe_subscription_id: subscriptionId,
+            stripe_subscription_item_id: subscriptionItemId,
+            subscription_status: status || 'active',
+            current_period_start: periodStart,
+            current_period_end: periodEnd,
+          })
         }
         // Attach user id to customer metadata for future events
         if (customerId && userId) {
@@ -73,11 +99,22 @@ export async function POST(req: NextRequest) {
         const status = sub.status
         const items = sub.items?.data || []
         const itemId = items.length > 0 ? (items[0]?.id || null) : null
-        if (status === 'active' || status === 'trialing' || status === 'past_due') {
-          await setUserRole(userId, 'Pro', itemId)
-        } else if (status === 'canceled' || status === 'unpaid' || status === 'incomplete_expired') {
-          await setUserRole(userId, 'User', null)
-        }
+        let periodStart: string | null = null
+        let periodEnd: string | null = null
+        try {
+          const ps = (sub.current_period_start as number) || null
+          const pe = (sub.current_period_end as number) || null
+          if (ps) periodStart = new Date(ps * 1000).toISOString()
+          if (pe) periodEnd = new Date(pe * 1000).toISOString()
+        } catch {}
+        await updateSubscriptionFields(userId, {
+          stripe_customer_id: customerId || null,
+          stripe_subscription_id: sub.id || null,
+          stripe_subscription_item_id: itemId,
+          subscription_status: status || null,
+          current_period_start: periodStart,
+          current_period_end: periodEnd,
+        })
         break
       }
       case 'customer.subscription.deleted': {
@@ -92,7 +129,14 @@ export async function POST(req: NextRequest) {
           }
         } catch {}
         if (userId) {
-          await setUserRole(userId, 'User', null)
+          await updateSubscriptionFields(userId, {
+            stripe_customer_id: customerId || null,
+            stripe_subscription_id: sub.id || null,
+            stripe_subscription_item_id: null,
+            subscription_status: 'canceled',
+            current_period_start: null,
+            current_period_end: null,
+          })
         }
         break
       }
