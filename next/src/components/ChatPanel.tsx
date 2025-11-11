@@ -12,7 +12,6 @@ import IconButton from './ui/IconButton'
 import { OpenAIModel } from '@/features/ai/aiTypes'
 import Select from './ui/Select'
 import { MODELS } from '../features/ai/models'
-import IconButton from './ui/IconButton'
 import Toast from './ui/Toast'
 
 export default function ChatPanel2() {
