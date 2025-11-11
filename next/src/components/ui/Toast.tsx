@@ -18,8 +18,8 @@ interface ToastProps {
 
 const variantClasses: Record<ToastVariant, string> = {
   // Use brand colors where possible
-  success: 'bg-primary-600 text-white',
-  info: 'bg-blue-600 text-white',
+  success: 'bg-emerald-600 text-white',
+  info: 'bg-primary-600 text-white',
   warning: 'bg-orange-500 text-white',
   danger: 'bg-red-600 text-white',
 }
