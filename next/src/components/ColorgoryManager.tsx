@@ -262,8 +262,12 @@ export default function ColorgoryManager({ open, onClose, dock = false, leftOffs
           ))}
         </div>
         {/* Footer with Add button */}
-        <div className={`${inline ? 'pt-2' : 'border-t border-gray-200 dark:border-gray-800 p-3'}`}>
-          <Button onClick={() => { try { window.dispatchEvent(new CustomEvent('nodal:board-settings-visual-hide', { detail: { hide: true } })) } catch { } ; setShowAdd(true) }} disabled={!canAdd}>
+        <div className={`${inline ? 'pt-4' : 'border-t border-gray-200 dark:border-gray-800 p-3'}`}>
+          <Button 
+          onClick={() => { try { window.dispatchEvent(new CustomEvent('nodal:board-settings-visual-hide', { detail: { hide: true } })) } catch { } ; setShowAdd(true) }} disabled={!canAdd}
+          size="sm"
+          variant="secondaryOutline"
+          >
             Add colorgory {!canAdd && <Tag variant="secondary" className="ml-2">Pro</Tag>}
           </Button>
         </div>

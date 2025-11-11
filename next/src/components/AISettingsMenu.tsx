@@ -44,7 +44,7 @@ export default function AISettingsMenu({
       }
       width="w-64"
       customContent={
-        <div className="p-4">
+        <div className="py-4">
           <div className="mb-3 font-semibold text-gray-800 dark:text-gray-100 text-sm">AI Settings</div>
 
           <div className="mb-3">

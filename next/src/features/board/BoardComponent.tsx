@@ -1360,30 +1360,24 @@ function BoardContent({
         const singleSelectedId = Array.isArray(selectedIds) && selectedIds.length === 1 ? selectedIds[0] : null
 
         if (singleSelectedId) {
-          // Place in a grid below the selected node and connect edges
+          // Deterministic single row under parent, centered
           const storeNodes = (useBoardStore.getState().nodes || []) as any[]
           const parent = storeNodes.find((n) => n.id === singleSelectedId)
+          const cellWidth = 300
+          const padding = 60
           const baseX = parent?.position?.x ?? getViewportCenter().x
-          const baseY = (parent?.position?.y ?? getViewportCenter().y) + 300
-          const spacingX = 260
-          const spacingY = 200
-          const columns = Math.min(items.length, 4)
-          const rows = Math.ceil(items.length / columns)
-          const startX = baseX - ((columns - 1) * spacingX) / 2
+          const baseY = (parent?.position?.y ?? getViewportCenter().y) + (cellWidth - 100)
+          const count = items.length
+          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+          const startX = baseX - groupWidth / 2 + cellWidth / 2
           const createdIds: string[] = []
-          let idx = 0
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < columns; c++) {
-              if (idx >= items.length) break
-              const pos = { x: startX + c * spacingX, y: baseY + r * spacingY }
-              const id = `node-${Date.now()}-${idx}`
-              const it = items[idx]
-              const newNode: Node = { id, type: 'default', position: pos, data: { title: String(it.title || ''), content: String(it.content || '') } as any }
-              handleAddNodeToStore(newNode)
-              createdIds.push(id)
-              idx++
-            }
-          }
+          items.forEach((it, index) => {
+            const position = { x: startX + index * (cellWidth + padding), y: baseY }
+            const id = `node-${Date.now()}-${index}`
+            const newNode: Node = { id, type: 'default', position, data: { title: String(it.title || ''), content: String(it.content || '') } as any }
+            handleAddNodeToStore(newNode)
+            createdIds.push(id)
+          })
           if (createdIds.length > 0) {
             const edgesToAdd = createdIds.map((cid) => ({ id: `edge-${Date.now()}-${cid}`, source: singleSelectedId, target: cid, type: 'floating' as any }))
             setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
@@ -1557,6 +1551,20 @@ function BoardContent({
       }
     }
 
+    // Hide overlay when pointer leaves the browser window during a drag
+    const handleWindowDragLeave = (e: DragEvent) => {
+      if (readOnly) return
+      // Only when leaving the viewport bounds (not when moving between children)
+      const x = e.clientX
+      const y = e.clientY
+      const leftWindow = x <= 0 || y <= 0 || x >= window.innerWidth || y >= window.innerHeight
+      if (leftWindow) {
+        isFileBeingDragged = false
+        setIsDragOver(false)
+        // console.log("↩️ Drag left window - overlay OFF")
+      }
+    }
+
     const handleWindowDragEnd = (_e: DragEvent) => {
       // Drag operation completely ended
       if (isFileBeingDragged) {
@@ -1640,12 +1648,14 @@ function BoardContent({
     // Window-level events - no React Flow interference!
     window.addEventListener("dragenter", handleWindowDragEnter)
     window.addEventListener("dragover", handleWindowDragOver)
+    window.addEventListener("dragleave", handleWindowDragLeave)
     window.addEventListener("dragend", handleWindowDragEnd)
     window.addEventListener("drop", handleWindowDrop)
 
     return () => {
       window.removeEventListener("dragenter", handleWindowDragEnter)
       window.removeEventListener("dragover", handleWindowDragOver)
+      window.removeEventListener("dragleave", handleWindowDragLeave)
       window.removeEventListener("dragend", handleWindowDragEnd)
       window.removeEventListener("drop", handleWindowDrop)
     }
@@ -2790,71 +2800,37 @@ function BoardContent({
             }
             console.log('[QuickAI] parsed items count:', items?.length || 0)
             if (!items || items.length === 0) { console.warn('[QuickAI] no items parsed from AI'); return }
-            const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
-            const result = await placeAINodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 })
-            console.log('[QuickAI] placement result:', result?.placements?.length || 0, 'placements')
-            if (result.success && result.placements.length > 0) {
-              const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
-              setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-              if (result.connections.length > 0) {
-                const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
-                setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-              }
-              showAddToast('generated', newNodes.length)
-            } else {
-              console.warn('[QuickAI] placement produced no placements — using simple fallback under parent')
-              const itemsCount = items.length
-              const created: Node[] = []
-              const edgesToAdd: Edge[] = []
-              if (attachParentId) {
-                const parent = (useBoardStore.getState().nodes || []).find(n => n.id === attachParentId)
-                const center = parent?.position || reactFlowInstance.getViewport()
-                const baseX = parent?.position?.x ?? 0
-                const baseY = (parent?.position?.y ?? 0) + 300
-                const spacingX = 260
-                const columns = Math.min(itemsCount, 4)
-                const rows = Math.ceil(itemsCount / columns)
-                const startX = baseX - ((columns - 1) * spacingX) / 2
-                let idx = 0
-                for (let r = 0; r < rows; r++) {
-                  for (let c = 0; c < columns; c++) {
-                    if (idx >= itemsCount) break
-                    const pos = { x: startX + c * spacingX, y: baseY + r * 220 }
-                    const id = `node-${Date.now()}-${idx}`
-                    const it = items[idx]
-                    created.push({ id, type: 'default', position: pos, data: { title: String(it.title || it.label || ''), content: String(it.content || '') } } as any)
-                    edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: attachParentId, target: id, type: toVisualEdgeType(edgeTypePref) as any } as any)
-                    idx++
-                  }
-                }
-              } else {
-                // No parent, place around viewport center in grid
-                const vp = reactFlowInstance.getViewport()
-                const center = getViewportCenter()
-                const spacingX = 260
-                const spacingY = 200
-                const columns = Math.min(itemsCount, 4)
-                const rows = Math.ceil(itemsCount / columns)
-                const startX = center.x - ((columns - 1) * spacingX) / 2
-                const startY = center.y - ((rows - 1) * spacingY) / 2
-                let idx = 0
-                for (let r = 0; r < rows; r++) {
-                  for (let c = 0; c < columns; c++) {
-                    if (idx >= itemsCount) break
-                    const pos = { x: startX + c * spacingX, y: startY + r * spacingY }
-                    const id = `node-${Date.now()}-${idx}`
-                    const it = items[idx]
-                    created.push({ id, type: 'default', position: pos, data: { title: String(it.title || it.label || ''), content: String(it.content || '') } } as any)
-                    idx++
-                  }
-                }
-              }
-              if (created.length > 0) {
-                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
-                if (edgesToAdd.length > 0) setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
-                showAddToast('generated', created.length)
-              }
+            // Deterministic single-row placement under selected parent, centered (match board creation)
+            const parentId = attachParentId
+            const parent = parentId ? (useBoardStore.getState().nodes || []).find(n => n.id === parentId) : undefined
+            const cellWidth = 300
+            const padding = 60
+            const baseX = parent?.position?.x ?? getViewportCenter().x
+            const baseY = (parent?.position?.y ?? getViewportCenter().y) + (cellWidth - 100)
+            const count = items.length
+            const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+            const startX = baseX - groupWidth / 2 + cellWidth / 2
+            const created: Node[] = items.map((it: any, index: number) => {
+              const position = { x: startX + index * (cellWidth + padding), y: baseY }
+              return {
+                id: `node-${Date.now()}-${index}`,
+                type: 'default',
+                position,
+                data: { title: String(it.title || it.label || ''), content: String(it.content || '') } as any,
+              } as any
+            })
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+            if (parentId) {
+              const newEdges: Edge[] = created.map((n) => ({
+                id: `edge-${Date.now()}-${n.id}`,
+                source: parentId!,
+                target: n.id,
+                type: toVisualEdgeType(edgeTypePref) as any,
+              }) as any)
+              setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
             }
+            showAddToast('generated', created.length)
+            centerOnNodeIds(created.map(n => n.id))
           } catch {}
           finally { try { setQuickAiGenerating?.(false) } catch {} }
         }}
@@ -3412,27 +3388,22 @@ function BoardContent({
                   showAddToast('added', newNodes.length)
                   centerOnNodeIds(newNodes.map(n => n.id))
                 } else {
-                  // Fallback deterministic placement directly under parent with edges
+                  // Fallback deterministic single row directly under parent with edges (match board creation)
                   const parent = (useBoardStore.getState().nodes || []).find(n => n.id === pendingSourceNodeId)
+                  const cellWidth = 300
+                  const padding = 60
                   const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
-                  const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + 360
-                  const spacingX = 300
+                  const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + (cellWidth - 100)
                   const created: Node[] = []
                   const edgesToAdd: Edge[] = []
                   const count = titles.length
-                  const columns = Math.min(count, 4)
-                  const rows = Math.ceil(count / columns)
-                  const startX = baseX - ((columns - 1) * spacingX) / 2
-                  let idx = 0
-                  for (let r = 0; r < rows; r++) {
-                    for (let c = 0; c < columns; c++) {
-                      if (idx >= count) break
-                      const pos = { x: startX + c * spacingX, y: baseY + r * 300 }
-                      const id = `node-${Date.now()}-${idx}`
-                      created.push({ id, type: 'default', position: pos, data: { title: titles[idx], content: descriptionsByTitle[titles[idx]] || '' } } as any)
-                      edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: pendingSourceNodeId, target: id, type: toVisualEdgeType(edgeTypePref) as any } as any)
-                      idx++
-                    }
+                  const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+                  const startX = baseX - groupWidth / 2 + cellWidth / 2
+                  for (let idx = 0; idx < count; idx++) {
+                    const pos = { x: startX + idx * (cellWidth + padding), y: baseY }
+                    const id = `node-${Date.now()}-${idx}`
+                    created.push({ id, type: 'default', position: pos, data: { title: titles[idx], content: descriptionsByTitle[titles[idx]] || '' } } as any)
+                    edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: pendingSourceNodeId, target: id, type: toVisualEdgeType(edgeTypePref) as any } as any)
                   }
                   setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
                   setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
@@ -3523,8 +3494,72 @@ function BoardContent({
                 }
                 showAddToast('generated', newNodes.length)
                 centerOnNodeIds(newNodes.map(n => n.id))
+              } else {
+                // Secondary fallback: exact same single-row-under-parent placement used in board creation
+                const parentId = aiParentNodeId || pendingSourceNodeId
+                const parent = parentId ? (useBoardStore.getState().nodes || []).find(n => n.id === parentId) : undefined
+                const cellWidth = 300
+                const padding = 60
+                const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
+                const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + (cellWidth - 100)
+                const count = items.length
+                const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+                const startX = baseX - groupWidth / 2 + cellWidth / 2
+                const newNodes: Node[] = items.map((p, index) => {
+                  const position = { x: startX + index * (cellWidth + padding), y: baseY }
+                  return {
+                    id: `ai-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+                    type: 'default',
+                    position,
+                    data: { title: p.title || '(untitled)', content: p.content || '' } as any
+                  }
+                })
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                if (parentId) {
+                  const newEdges: Edge[] = newNodes.map((n) => ({
+                    id: `e-${parentId}-${n.id}`,
+                    source: parentId,
+                    target: n.id,
+                    type: toVisualEdgeType(edgeTypePref) as any,
+                  }) as any)
+                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                }
+                showAddToast('generated', newNodes.length)
+                centerOnNodeIds(newNodes.map(n => n.id))
               }
-            } catch {}
+            } catch {
+              // Hard fallback on unexpected errors: same single-row-under-parent placement
+              const parentId = aiParentNodeId || pendingSourceNodeId
+              const parent = parentId ? (useBoardStore.getState().nodes || []).find(n => n.id === parentId) : undefined
+              const cellWidth = 300
+              const padding = 60
+              const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
+              const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + (cellWidth - 100)
+              const count = items.length
+              const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+              const startX = baseX - groupWidth / 2 + cellWidth / 2
+              const newNodes: Node[] = items.map((p, index) => {
+                const position = { x: startX + index * (cellWidth + padding), y: baseY }
+                return {
+                  id: `ai-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+                  type: 'default',
+                  position,
+                  data: { title: p.title || '(untitled)', content: p.content || '' } as any
+                }
+              })
+              setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+              if (parentId) {
+                const newEdges: Edge[] = newNodes.map((n) => ({
+                  id: `e-${parentId}-${n.id}`,
+                  source: parentId,
+                  target: n.id,
+                  type: toVisualEdgeType(edgeTypePref) as any,
+                }) as any)
+                setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+              }
+              showAddToast('generated', newNodes.length)
+              centerOnNodeIds(newNodes.map(n => n.id))
+            }
             setShowUnifiedAddModal(false)
           }}
           onVideoSubmit={(url) => {

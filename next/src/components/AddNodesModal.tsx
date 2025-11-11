@@ -235,22 +235,39 @@ export default function AddNodesModal({
         setQuickError('AI returned no items I could parse. Try again.')
         return
       }
-      const nodesToPlace = items.map((p: any) => ({ title: String(p.title || p.label || ''), content: String(p.content || ''), parentId: attachParentId }))
-      const result = await placeGeneratedNodes(nodesToPlace, attachParentId, { preferredDirection: 'down', minDistance: 40 } as any)
-      console.log('[QuickAI Modal] placement success:', !!result?.success, 'placements:', result?.placements?.length || 0)
-      if (result && result.success && result.placements.length > 0) {
-        const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: (p.node as any).type || 'default', position: p.position, data: { ...(p.node as any).data } }))
-        setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-        if (result.connections && result.connections.length > 0) {
-          const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: typeof c.edge.source === 'string' ? c.edge.source : (c.edge.source as any)?.id, target: typeof c.edge.target === 'string' ? c.edge.target : (c.edge.target as any)?.id, type: (c.edge as any).type || 'floating' }))
-          setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-        }
-        // Pan to the centroid of created nodes and pulse highlight
+      // Deterministic single row under parent, centered (match board creation)
+      const itemsCount = items.length
+      const parent = (nodes as any[]).find((n) => n.id === attachParentId)
+      const cellWidth = 300
+      const padding = 60
+      const baseX = parent?.position?.x ?? 0
+      const baseY = (parent?.position?.y ?? 0) + (cellWidth - 100)
+      const groupWidth = (itemsCount * cellWidth) + Math.max(0, itemsCount - 1) * padding
+      const startX = baseX - groupWidth / 2 + cellWidth / 2
+      const created: Node[] = items.map((it: any, index: number) => {
+        const position = { x: startX + index * (cellWidth + padding), y: baseY }
+        return {
+          id: `node-${Date.now()}-${index}`,
+          type: 'default' as any,
+          position,
+          data: { title: String(it.title || it.label || ''), content: String(it.content || '') } as any
+        } as any
+      })
+      const edgesToAdd: Edge[] = created.map((n) => ({
+        id: `edge-${Date.now()}-${n.id}`,
+        source: attachParentId!,
+        target: n.id,
+        type: 'floating' as any,
+      }) as any)
+      if (created.length > 0) {
+        setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
+        if (edgesToAdd.length > 0) setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
+        // Center on the created nodes and pulse highlight
         try {
-          const cx = newNodes.reduce((s, n) => s + n.position.x, 0) / newNodes.length
-          const cy = newNodes.reduce((s, n) => s + n.position.y, 0) / newNodes.length
+          const cx = created.reduce((s, n) => s + (n as any).position.x, 0) / created.length
+          const cy = created.reduce((s, n) => s + (n as any).position.y, 0) / created.length
           rf.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
-          const firstId = newNodes[0]?.id
+          const firstId = created[0]?.id
           if (firstId) {
             setTimeout(() => {
               const nodeOuter = document.querySelector(`.react-flow__node[data-id="${firstId}"]`) as HTMLElement | null
@@ -262,56 +279,7 @@ export default function AddNodesModal({
         } catch {}
         onClose()
       } else {
-        // Fallback: simple grid under parent
-        try {
-          const itemsCount = nodesToPlace.length
-          const created: Node[] = []
-          const edgesToAdd: Edge[] = []
-          const parent = (nodes as any[]).find((n) => n.id === attachParentId)
-          const baseX = parent?.position?.x ?? 0
-          const baseY = (parent?.position?.y ?? 0) + 300
-          const spacingX = 260
-          const spacingY = 200
-          const columns = Math.min(itemsCount, 4)
-          const rows = Math.ceil(itemsCount / columns)
-          const startX = baseX - ((columns - 1) * spacingX) / 2
-          let idx = 0
-          for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < columns; c++) {
-              if (idx >= itemsCount) break
-              const pos = { x: startX + c * spacingX, y: baseY + r * spacingY }
-              const id = `node-${Date.now()}-${idx}`
-              const it = nodesToPlace[idx]
-              created.push({ id, type: 'default' as any, position: pos, data: { title: String(it.title || ''), content: String(it.content || '') } } as any)
-              edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: attachParentId!, target: id, type: 'floating' as any } as any)
-              idx++
-            }
-          }
-          if (created.length > 0) {
-            setFlowNodes((nds: any) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
-            if (edgesToAdd.length > 0) setFlowEdges((eds: any) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
-            // Center on the created nodes
-            try {
-              const cx = created.reduce((s, n) => s + (n as any).position.x, 0) / created.length
-              const cy = created.reduce((s, n) => s + (n as any).position.y, 0) / created.length
-              rf.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, rf.getZoom())), duration: 600 })
-              const firstId = created[0]?.id
-              if (firstId) {
-                setTimeout(() => {
-                  const nodeOuter = document.querySelector(`.react-flow__node[data-id="${firstId}"]`) as HTMLElement | null
-                  const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
-                  const el = nodeInner || nodeOuter
-                  if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
-                }, 50)
-              }
-            } catch {}
-            onClose()
-          } else {
-            setQuickError('Couldn’t place nodes. Please try again.')
-          }
-        } catch {
-          setQuickError('Couldn’t place nodes. Please try again.')
-        }
+        setQuickError('Couldn’t place nodes. Please try again.')
       }
     } finally {
       setQuickGenerating(false)

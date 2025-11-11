@@ -236,7 +236,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
             </div>
           </Tab>
           <Tab label="aisettings" headerLabel="AI Settings">
-            <div className="space-y-3">
+            <div className="space-y-6 py-4">
               <Select
                 label="AI model"
                 value={model as any}
@@ -244,7 +244,6 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 options={MODELS}
                 fullWidth
               />
-              <div>
               <Range
                 label={`Creativity (Temperature: ${temperature})`}
                 min={0}
@@ -256,11 +255,10 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 startLabel="Focused"
                 endLabel="Creative"
               />
-              </div>
             </div>
           </Tab>
           <Tab label="members" headerLabel="Members">
-            <div className="pt-1 space-y-3">
+            <div className="pt-4 space-y-3">
               {/* Invite section */}
               <div>
                 <div className="flex flex-col sm:flex-row gap-2 items-end md:items-end space-y-2 md:space-y-0">
@@ -325,7 +323,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
             </div>
           </Tab>
           <Tab label="colorgories" headerLabel="Colorgories">
-            <div className="pt-1">
+            <div className="pt-4">
               <ColorgoryManager inline boardId={boardId} />
             </div>
           </Tab>
