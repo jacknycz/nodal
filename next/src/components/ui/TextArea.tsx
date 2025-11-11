@@ -45,7 +45,7 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
 
         {/* Textarea container (no label inside) */}
         <div className={clsx(
-          'relative rounded-2xl px-3 py-2 border border-transparent transition-all duration-200',
+          'relative rounded-2xl px-3 border border-transparent transition-all duration-200',
           'bg-gray-100 dark:bg-gray-950/80', bgClassName,
           'focus-within:bg-white dark:focus-within:bg-gray-900',
           'focus-within:border-primary-500/50 dark:focus-within:border-primary-400/50',
@@ -67,13 +67,13 @@ const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
               onChange={onChange}
               placeholder={props.placeholder}
               className={clsx(
-                'peer w-full bg-transparent border-none outline-none resize-none pl-1',
+                'peer w-full bg-transparent border-none outline-none pl-1',
                 'text-gray-900 dark:text-white text-base! md:text-sm! placeholder-gray-400 dark:placeholder-gray-500',
                 leftIcon && 'pl-9',
                 rightIcon && 'pr-9',
                 sizeClasses[size],
                 // Normalize padding to match TextInput spacing
-                'py-3 px-0',
+                'px-0',
                 className
               )}
               {...props}
