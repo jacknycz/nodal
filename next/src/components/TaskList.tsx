@@ -99,7 +99,7 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
 
       {/* Panel */}
       <div
-        className={`${anchored ? '' : 'fixed'} rounded-4xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
+        className={`${anchored ? '' : 'fixed'} rounded-3xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'}`}
         style={anchored ? undefined : { top: topOffsetPx, left: dock ? leftOffsetPx : 16 }}
         data-left-dock-panel
       >

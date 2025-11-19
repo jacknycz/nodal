@@ -334,7 +334,7 @@ NODE CONTENT: [Body 2]`
       <div
         className={`fixed top-12 md:top-16 right-4 left-4 md:left-auto w-auto md:w-96 
           rounded-3xl z-[700] md:z-[300] max-h-[calc(100dvh-80px)] 
-          bg-linear-to-b from-white/90 to-white/70 backdrop-blur-xs dark:from-gray-900/90 dark:to-gray-900/70 shadow-xl shadow-orange-950/5 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
+          bg-linear-to-b from-white/90 to-white/50 backdrop-blur-xs dark:from-gray-900/90 dark:to-gray-900/70 shadow-xl shadow-orange-950/5 flex flex-col transition-all duration-200 ease-out ${isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2 pointer-events-none'
           }`}
         style={
           (isMdUp
