@@ -354,6 +354,13 @@ function BoardContent({
           // If tap ended inside the menu container, do nothing
           const endTarget = (e.target as HTMLElement) || null
           if (endTarget && endTarget.closest('[data-board-context-menu]')) { cancel(); return }
+              // Also select the node that was tapped to open the menu
+              if (nodeId) {
+                try {
+                  useBoardStore.getState().setSelectedNodes([nodeId])
+                  try { reactFlowInstance.setNodes((cur) => cur.map((n) => ({ ...n, selected: n.id === nodeId }))) } catch {}
+                } catch {}
+              }
           setPendingSourceNodeId(nodeId)
           setContextMenu({ isOpen: true, position: { x: endX, y: endY } })
           suppressNextClickUntil = Date.now() + 350
@@ -2401,6 +2408,14 @@ function BoardContent({
             event.preventDefault()
             event.stopPropagation()
             if (readOnly) return
+            // Also select the node that was right-clicked
+            try {
+              const id = node?.id
+              if (id) {
+                useBoardStore.getState().setSelectedNodes([id])
+                try { reactFlowInstance.setNodes((cur) => cur.map((n) => ({ ...n, selected: n.id === id }))) } catch {}
+              }
+            } catch {}
             setPendingSourceNodeId(node?.id || null)
             setContextMenu({
               isOpen: true,
