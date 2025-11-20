@@ -1,12 +1,17 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react'
-import { ListChecks, Tag as TagIcon, Info, X, ArrowCounterClockwise, ArrowClockwise, Sidebar } from '@phosphor-icons/react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
+import { ListChecks, Tag as TagIcon, Info, X, ArrowCounterClockwise, ArrowClockwise, Sidebar, BookOpen, DotsThreeOutlineVertical, Play } from '@phosphor-icons/react'
 import TaskList from './TaskList'
 import ColorgoryManager from './ColorgoryManager'
 import IconButton from './ui/IconButton'
+import Tooltip from './ui/Tooltip'
+import { useBoardStore } from '../features/board/boardSlice'
+import Modal from './ui/Modal'
+import Button from './ui/Button'
+import TextInput from './ui/TextInput'
 
-type DockKey = 'tasks' | 'colorgories' | 'tips' | null
+type DockKey = 'tasks' | 'colorgories' | 'tips' | 'stories' | null
 
 interface LeftDockProps {
   active: DockKey
@@ -28,12 +33,31 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
   const [isMdUp, setIsMdUp] = useState<boolean>(() => (typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false))
   const [mobileOpen, setMobileOpen] = useState(false)
   const [panelEntered, setPanelEntered] = useState(false)
+  const [storyModal, setStoryModal] = useState<{ id: string | null; title: string }>({ id: null, title: '' })
+  const [pausedStories, setPausedStories] = useState<Array<{ id: string; title: string }>>([])
   useEffect(() => {
     const mq = typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)') : null
     const onChange = () => setIsMdUp(!!mq?.matches)
     onChange()
     mq?.addEventListener('change', onChange)
     return () => mq?.removeEventListener('change', onChange)
+  }, [])
+  // Listen for story paused events to show status buttons
+  useEffect(() => {
+    const onPaused = (e: Event) => {
+      try {
+        const d = (e as CustomEvent<any>)?.detail || {}
+        const id = String(d.id || '')
+        const title = String(d.title || 'Story')
+        if (!id) return
+        setPausedStories((prev) => {
+          const exists = prev.some((s) => s.id === id)
+          return exists ? prev.map((s) => (s.id === id ? { id, title } : s)) : [...prev, { id, title }]
+        })
+      } catch {}
+    }
+    window.addEventListener('nodal:story-paused', onPaused as EventListener)
+    return () => window.removeEventListener('nodal:story-paused', onPaused as EventListener)
   }, [])
   useEffect(() => {
     if (mobileOpen) {
@@ -119,6 +143,77 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
           </div>
         )}
       </div>
+      {/* Stories */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Stories"
+          aria-pressed={openKey === 'stories'}
+          onClick={() => { if (disabled) return; setOpenKey(prev => prev === 'stories' ? null : 'stories') }}
+          className={`${baseBtn} ${openKey === 'stories' ? activeCls : neutral} ${disabled ? disabledCls : ''}`}
+          disabled={disabled}
+        >
+          <BookOpen className="w-5 h-5" />
+        </button>
+        {openKey === 'stories' && (
+          <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
+            <div className="rounded-3xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
+              <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-xs text-gray-600 dark:text-gray-300">Stories</span>
+                </div>
+                <button onClick={() => setOpenKey(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                {(() => {
+                  const nodes = (useBoardStore.getState().nodes || []) as any[]
+                  const starters = nodes.filter((n: any) => !!((n.data || {}) as any).storyStarter)
+                  if (!starters.length) {
+                    return <div className="text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5">No stories yet. Right‑click a node and choose “Start Story”.</div>
+                  }
+                  return (
+                    <ul className="space-y-2">
+                      {starters.map((n: any) => {
+                        const d: any = n.data || {}
+                        const title = String(d.storyTitle || d.title || d.label || 'Story')
+                        return (
+                          <li key={n.id} className="flex items-center gap-2">
+                            <span className="inline-flex w-2 h-2 rounded-full bg-primary-500" />
+                            <span className="truncate flex-1">{title}</span>
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                              aria-label="Play story"
+                              onClick={() => {
+                                try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: n.id } })) } catch {}
+                                setOpenKey(null)
+                              }}
+                              title="Play story"
+                            >
+                              <Play className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                            </button>
+                            <button
+                              type="button"
+                              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                              aria-label="Story settings"
+                              onClick={() => setStoryModal({ id: n.id, title })}
+                            >
+                              <DotsThreeOutlineVertical className="w-4 h-4 text-gray-500" />
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       {/* Colorgories moved to Board Settings modal */}
       <div className="relative">
         <button
@@ -187,6 +282,58 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
           </div>
         )}
       </div>
+      {/* Story Statuses (paused/resumable) */}
+      {pausedStories.length > 0 && (
+        <div className="mt-3 ml-2 flex flex-col gap-2">
+          {pausedStories.map((s) => (
+            <Tooltip key={s.id} content={s.title} side="right">
+              <IconButton
+                aria-label={`Resume ${s.title}`}
+                variant="primaryOutline"
+                size="lg"
+                className="bg-white dark:bg-gray-900"
+                onClick={() => {
+                  try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: s.id } })) } catch {}
+                  setPausedStories((prev) => prev.filter((x) => x.id !== s.id))
+                }}
+              >
+                <Play className="w-5 h-5" />
+              </IconButton>
+            </Tooltip>
+          ))}
+        </div>
+      )}
+      {/* Story Settings Modal */}
+      {storyModal.id && (
+        <Modal
+          open={true}
+          onClose={() => setStoryModal({ id: null, title: '' })}
+          title="Story Settings"
+          description="Update title or delete this story."
+          actions={
+            <>
+              <Button variant="secondary" onClick={() => setStoryModal({ id: null, title: '' })}>Cancel</Button>
+              <Button variant="danger" onClick={() => {
+                try { window.dispatchEvent(new CustomEvent('nodal:story-delete', { detail: { id: storyModal.id } })) } catch {}
+                setStoryModal({ id: null, title: '' })
+              }}>Delete</Button>
+              <Button onClick={() => {
+                try { window.dispatchEvent(new CustomEvent('nodal:story-update', { detail: { id: storyModal.id, title: storyModal.title } })) } catch {}
+                setStoryModal({ id: null, title: '' })
+              }}>Save</Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <TextInput
+              label="Title"
+              value={storyModal.title}
+              onChange={(e: any) => setStoryModal({ id: storyModal.id, title: String(e?.target?.value || '') })}
+              placeholder="Story title"
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

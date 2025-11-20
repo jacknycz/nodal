@@ -126,6 +126,15 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               u.searchParams.set('playsinline', '1')
               html = html.replace(m[1], u.toString())
             }
+            // Normalize embed sizing to fill container
+            html = html
+              .replace(/width="[^"]*"/gi, 'width="100%"')
+              .replace(/height="[^"]*"/gi, 'height="100%"')
+              .replace(/style="[^"]*"/gi, (s) => {
+                // Ensure style includes width/height 100%
+                const without = s.replace(/width\s*:\s*[^;]+;?/gi, '').replace(/height\s*:\s*[^;]+;?/gi, '')
+                return `style="width:100%;height:100%;${without.replace(/^style="/,'')}"`
+              })
           } catch {}
           setEmbedHtml(html)
         } else {
@@ -232,7 +241,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   const effectiveVideoUrl = (signedVideoUrl || data.videoUrl || '') as string
   const videoId = extractYouTubeId(effectiveVideoUrl)
-  const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&playsinline=1` : ''
+  const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&playsinline=1&enablejsapi=1` : ''
   const isMp4 = !videoId && typeof effectiveVideoUrl === 'string' && /\.mp4($|\?)/i.test(effectiveVideoUrl)
 
   const containerWidthClass = expanded ? 'w-[800px]' : 'w-[260px]'
@@ -275,6 +284,48 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
       return () => { if (el) el.style.zIndex = '' }
     } catch {}
   }, [expanded, id])
+
+  // Story Mode: auto-expand and play when signaled
+  useEffect(() => {
+    const onPlay = (e: Event) => {
+      try {
+        const nodeId = (e as CustomEvent<any>)?.detail?.id
+        if (nodeId !== id) return
+        setExpanded(true)
+        setInView(true)
+        // Give React a tick to render the video/iframe, then try to play mp4
+        setTimeout(() => {
+          try { expandedVideoRef.current?.play?.() } catch {}
+        }, 150)
+      } catch {}
+    }
+    const onPause = (e: Event) => {
+      try {
+        const nodeId = (e as CustomEvent<any>)?.detail?.id
+        if (nodeId !== id) return
+        // Pause mp4 element if present
+        try { expandedVideoRef.current?.pause?.() } catch {}
+        // Try to pause YouTube iframe
+        try {
+          const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+          const iframe = nodeEl?.querySelector('iframe') as HTMLIFrameElement | null
+          iframe?.contentWindow?.postMessage?.(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*')
+        } catch {}
+        // Try to pause Vimeo iframe
+        try {
+          const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+          const iframe = nodeEl?.querySelector('iframe') as HTMLIFrameElement | null
+          iframe?.contentWindow?.postMessage?.(JSON.stringify({ method: 'pause' }), '*')
+        } catch {}
+      } catch {}
+    }
+    window.addEventListener('nodal:video-play', onPlay as EventListener)
+    window.addEventListener('nodal:video-pause', onPause as EventListener)
+    return () => {
+      window.removeEventListener('nodal:video-play', onPlay as EventListener)
+      window.removeEventListener('nodal:video-pause', onPause as EventListener)
+    }
+  }, [id])
 
   return (
     <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>

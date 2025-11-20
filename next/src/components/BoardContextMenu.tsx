@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil, Tag as TagIcon, Trash, CaretRight, TextHOne } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil, Tag as TagIcon, Trash, CaretRight, TextHOne, BookOpen } from '@phosphor-icons/react/dist/ssr'
 import { useBoardStore } from '../features/board/boardSlice'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
@@ -25,6 +25,7 @@ interface BoardContextMenuProps {
   onEditNode?: (nodeId: string) => void
   onUpdateNode?: (nodeId: string, updates: Record<string, any>) => void
   onDeleteNode?: (nodeId: string) => void
+  onStartStory?: (nodeId: string) => void
   // Lock state (optional)
   isLockedByOther?: boolean
 }
@@ -46,6 +47,7 @@ export default function BoardContextMenu({
   onEditNode,
   onUpdateNode,
   onDeleteNode,
+  onStartStory,
   isLockedByOther = false,
 }: BoardContextMenuProps) {
   const menuRef = React.useRef<HTMLDivElement | null>(null)
@@ -304,6 +306,19 @@ export default function BoardContextMenu({
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <TextHOne size={18} className="w-4 h-4" />
                 Add Headline
+              </button>
+            )}
+
+            {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
+
+            {/* Start Story */}
+            {!multiSelected && onStartStory && (
+              <button
+                onClick={() => handleAction(() => onStartStory(nodeId!))}
+                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+              >
+                <BookOpen size={18} className="w-4 h-4" />
+                Start Story
               </button>
             )}
 

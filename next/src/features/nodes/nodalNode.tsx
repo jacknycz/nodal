@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -37,6 +37,7 @@ interface NodalNodeProps {
   onNodeShiftClickConnect?: (targetId: string) => void
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onStartStoryMode?: (nodeId: string) => void
 }
 
 export default function NodalNode(props: any) {
@@ -50,6 +51,8 @@ export default function NodalNode(props: any) {
     onNodeShiftClickConnect,
     onQuickAddNodes,
     onOrganizeSubtree
+    ,
+    onStartStoryMode
   } = props
   const SHOW_ADD_CONNECTED = false
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -231,6 +234,20 @@ export default function NodalNode(props: any) {
             <BookOpenText size={20} weight="duotone" className="text-gray-400" />
           )}
         </div>
+        {!(pageMode) && (data as any)?.storyStarter && (
+          <div className="mt-1 px-0.5 flex items-center gap-2">
+            <Tag variant="primary">Story Starter Node</Tag>
+            <IconButton
+              variant="default"
+              size="xs"
+              aria-label="Play story"
+              onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+              title="Play story"
+            >
+              <Play size={14} weight="duotone" />
+            </IconButton>
+          </div>
+        )}
         {pageMode ? (
           <div className={`${expanded ? 'flex-1 min-h-0 nodrag nopan' : 'nodal-drag-handle cursor-move'} mb-3 px-2`}>
             {expanded ? (

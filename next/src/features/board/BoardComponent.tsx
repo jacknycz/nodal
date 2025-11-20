@@ -62,7 +62,7 @@ import { getSupabaseClient } from '../auth/supabaseClient'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
 import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
 import { placeNodes as enginePlaceNodes } from './placementEngine'
-import { Info, X } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, Info, X } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
@@ -244,7 +244,7 @@ function BoardContent({
   const [showNodeSetupModal, setShowNodeSetupModal] = useState(false)
   const [showReorganizeMenu, setShowReorganizeMenu] = useState(false)
   const [aiParentNodeId, setAiParentNodeId] = useState<string | null>(null)
-  const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | null>(null)
+  const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | 'stories' | null>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
   const [toastVariant, setToastVariant] = useState<'success' | 'info' | 'warning' | 'danger'>('success')
@@ -540,7 +540,7 @@ function BoardContent({
         // For setViewport, mapping is: screen = flow * zoom + translation
         const x = targetScreenX - cx * zoom
         const y = targetScreenY - cy * zoom
-        reactFlowInstance.setViewport({ x, y, zoom }, { duration: 600 })
+        reactFlowInstance.setViewport({ x, y, zoom }, { duration: 900, easing: 'easeInOutCubic' } as any)
         return
       }
       if (opts?.align === 'midLeft') {
@@ -553,10 +553,10 @@ function BoardContent({
         const targetScreenY = screenH * 0.5
         const x = targetScreenX - cx * zoom
         const y = targetScreenY - cy * zoom
-        reactFlowInstance.setViewport({ x, y, zoom }, { duration: 600 })
+        reactFlowInstance.setViewport({ x, y, zoom }, { duration: 900, easing: 'easeInOutCubic' } as any)
         return
       }
-      reactFlowInstance.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom())), duration: 600 })
+      reactFlowInstance.setCenter(cx, cy, { zoom: Math.max(0.8, Math.min(1.2, reactFlowInstance.getZoom())), duration: 900, easing: 'easeInOutCubic' } as any)
     } catch {}
   }
   const centerOnNodeIds = (ids: string[], opts?: { align?: 'center' | 'rightCenter' | 'midLeft' }) => {
@@ -1779,6 +1779,215 @@ function BoardContent({
   // Keyboard shortcuts via hook
   useBoardShortcuts(() => { if (!readOnly) { saveBoard() } })
   
+  // === Story Mode (MVP: linear flow) ===
+  const [storyActive, setStoryActive] = useState(false)
+  const [storyPath, setStoryPath] = useState<string[]>([])
+  const [storyIndex, setStoryIndex] = useState(0)
+  const computeStoryPath = useCallback((starterId: string): string[] => {
+    const idSet = new Set<string>()
+    const outMap = new Map<string, string[]>()
+    try {
+      const eds = (useBoardStore.getState().edges || edges || []) as any[]
+      for (const e of eds) {
+        if (!e || typeof e.source !== 'string' || typeof e.target !== 'string') continue
+        if (!outMap.has(e.source)) outMap.set(e.source, [])
+        outMap.get(e.source)!.push(e.target)
+      }
+    } catch {}
+    const path: string[] = []
+    let cur: string | null = starterId
+    while (cur && !idSet.has(cur)) {
+      path.push(cur)
+      idSet.add(cur)
+      const outs = outMap.get(cur) || []
+      if (outs.length === 0) break
+      // MVP: choose the first child deterministically
+      cur = outs[0]
+    }
+    return path
+  }, [edges])
+  const centerOnCurrentStoryNode = useCallback((idx: number) => {
+    try {
+      const id = storyPath[idx]
+      if (id) centerOnNodeIds([id])
+      // If current node is a video, signal it to expand and autoplay
+      try {
+        const rfNodes = reactFlowInstance.getNodes?.() || []
+        const n = rfNodes.find((nn: any) => nn.id === id)
+        if (n && n.type === 'video') {
+          setTimeout(() => {
+            try { window.dispatchEvent(new CustomEvent('nodal:video-play', { detail: { id } })) } catch {}
+          }, 120)
+        }
+      } catch {}
+    } catch {}
+  }, [storyPath])
+  // Recenter current story node while preserving user zoom
+  const recenterGuardRef = useRef(false)
+  const recenterCurrentStoryNodeAtZoom = useCallback(() => {
+    try {
+      const id = storyPath[storyIndex]
+      if (!id) return
+      const nodes = reactFlowInstance.getNodes?.() || []
+      const n: any = nodes.find((nn: any) => nn.id === id)
+      if (!n) return
+      const currentZoom = reactFlowInstance.getZoom ? reactFlowInstance.getZoom() : undefined
+      const cx = n.position.x + (((n as any).width || 240) / 2)
+      const cy = n.position.y + (((n as any).height || 140) / 2)
+      recenterGuardRef.current = true
+      reactFlowInstance.setCenter(cx, cy, { zoom: currentZoom, duration: 0 } as any)
+      setTimeout(() => { recenterGuardRef.current = false }, 0)
+    } catch {}
+  }, [storyPath, storyIndex, reactFlowInstance])
+  const startStoryMode = useCallback((starterId: string) => {
+    const path = computeStoryPath(starterId)
+    if (!path || path.length === 0) return
+    setStoryPath(path)
+    ;(async () => {
+      try {
+        // Load saved progress for this user/story if available
+        let resumeIdx = 0
+        try {
+          const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
+          if (effectiveBoardId && user?.id) {
+            const { data, error } = await getSupabaseClient()
+              .from('story_progress')
+              .select('current_index')
+              .eq('board_id', effectiveBoardId)
+              .eq('starter_node_id', starterId)
+              .eq('user_id', user.id)
+              .maybeSingle()
+            if (!error && data && typeof data.current_index === 'number') {
+              resumeIdx = Math.max(0, Math.min((data.current_index ?? 0), path.length - 1))
+            } else {
+              // Fallback to localStorage if RLS blocks or no row yet
+              try {
+                const key = `nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`
+                const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null
+                if (raw !== null) {
+                  const parsed = Number(raw)
+                  if (Number.isFinite(parsed)) resumeIdx = Math.max(0, Math.min(parsed, path.length - 1))
+                }
+              } catch {}
+            }
+          }
+        } catch {}
+        setStoryIndex(resumeIdx)
+        setStoryActive(true)
+      } catch {
+        setStoryIndex(0)
+        setStoryActive(true)
+      }
+    })()
+  }, [computeStoryPath, centerOnNodeIds, boardId, user?.id])
+  const exitStoryMode = useCallback(() => {
+    try {
+      const curId = storyPath[storyIndex]
+      if (curId) {
+        window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: curId } }))
+        // Also broadcast a paused story status with title for LeftDock
+        try {
+          const node = (useBoardStore.getState().nodes || []).find((n: any) => n.id === storyPath[0])
+          const d: any = node?.data || {}
+          const title = String(d.storyTitle || d.title || d.label || 'Story')
+          window.dispatchEvent(new CustomEvent('nodal:story-paused', { detail: { id: storyPath[0], title } }))
+        } catch {}
+        // Persist last chapter index
+        try {
+          const starterId = storyPath[0]
+          const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
+          if (starterId && effectiveBoardId && user?.id) {
+            getSupabaseClient().from('story_progress')
+              .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: storyIndex, updated_at: new Date().toISOString() } as any,
+                { onConflict: 'board_id,starter_node_id,user_id' } as any)
+              .then(() => {}).catch(() => {})
+            try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(storyIndex)) } catch {}
+          }
+        } catch {}
+      }
+    } catch {}
+    setStoryActive(false)
+    setStoryPath([])
+    setStoryIndex(0)
+  }, [storyPath, storyIndex])
+  const nextStory = useCallback(() => {
+    setStoryIndex((i) => {
+      try {
+        const prevId = storyPath[i]
+        if (prevId) { window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: prevId } })) }
+      } catch {}
+      const ni = Math.min(i + 1, Math.max(0, storyPath.length - 1))
+      setTimeout(() => centerOnCurrentStoryNode(ni), 10)
+      // Save progress
+      try {
+        const starterId = storyPath[0]
+        const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
+        if (starterId && effectiveBoardId && user?.id) {
+          getSupabaseClient().from('story_progress')
+            .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: ni, updated_at: new Date().toISOString() } as any,
+              { onConflict: 'board_id,starter_node_id,user_id' } as any)
+            .then(() => {}).catch(() => {})
+          try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(ni)) } catch {}
+        }
+      } catch {}
+      return ni
+    })
+  }, [storyPath, centerOnCurrentStoryNode, boardId, user?.id])
+  const prevStory = useCallback(() => {
+    setStoryIndex((i) => {
+      try {
+        const prevId = storyPath[i]
+        if (prevId) { window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: prevId } })) }
+      } catch {}
+      const ni = Math.max(i - 1, 0)
+      setTimeout(() => centerOnCurrentStoryNode(ni), 10)
+      // Save progress
+      try {
+        const starterId = storyPath[0]
+        const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
+        if (starterId && effectiveBoardId && user?.id) {
+          getSupabaseClient().from('story_progress')
+            .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: ni, updated_at: new Date().toISOString() } as any,
+              { onConflict: 'board_id,starter_node_id,user_id' } as any)
+            .then(() => {}).catch(() => {})
+          try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(ni)) } catch {}
+        }
+      } catch {}
+      return ni
+    })
+  }, [storyPath, centerOnCurrentStoryNode, boardId, user?.id])
+  useEffect(() => {
+    if (!storyActive) return
+    centerOnCurrentStoryNode(storyIndex)
+  }, [storyActive, storyIndex, centerOnCurrentStoryNode])
+  // Dim non-story nodes via node.className
+  useEffect(() => {
+    if (!storyActive) {
+      setNodes((nds) => (Array.isArray(nds) ? nds.map(n => ({ ...n, className: undefined })) : nds))
+      return
+    }
+    setNodes((nds) => {
+      const list = Array.isArray(nds) ? nds : []
+      const pathSet = new Set(storyPath)
+      return list.map((n: any) => ({
+        ...n,
+        className: pathSet.has(n.id) ? undefined : 'opacity-40 blur-[1px]'
+      }))
+    })
+  }, [storyActive, storyPath])
+  // Global: start story from LeftDock
+  useEffect(() => {
+    const onStartStory = (e: Event) => {
+      try {
+        const id = (e as CustomEvent<any>)?.detail?.id as string
+        if (!id) return
+        startStoryMode(id)
+      } catch {}
+    }
+    window.addEventListener('nodal:start-story', onStartStory as EventListener)
+    return () => window.removeEventListener('nodal:start-story', onStartStory as EventListener)
+  }, [startStoryMode])
+  
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
     if (isEditingRef.current) { console.log('[BoardComponent] ignore delete while editing'); return }
@@ -1962,6 +2171,9 @@ function BoardContent({
       onNodeUpdate: handleNodeUpdate,
       onEdgeDelete: handleEdgeDelete,
       readOnly,
+      onStartStoryMode: (nodeId: string) => {
+        try { startStoryMode(nodeId) } catch {}
+      },
       acquireNodeLock,
       releaseNodeLock,
       isNodeLocked,
@@ -2002,6 +2214,8 @@ function BoardContent({
     handleNodeDelete,
     handleNodeUpdate,
     handleEdgeDelete,
+    readOnly,
+    // startStoryMode will be defined below; include via dependency to avoid stale closure
     acquireNodeLock,
     releaseNodeLock,
     isNodeLocked,
@@ -2330,6 +2544,51 @@ function BoardContent({
     return () => window.removeEventListener('nodal:edit-node', onEditNode as EventListener)
   }, [boardId, user?.id, centerOnNodeIds])
 
+  // Story settings global events
+  useEffect(() => {
+    const onStoryUpdate = (ev: any) => {
+      try {
+        const nodeId: string = ev?.detail?.id
+        const title: string = ev?.detail?.title
+        if (!nodeId) return
+        pushHistory()
+        setNodes((nds) => {
+          const list = Array.isArray(nds) ? nds : []
+          return list.map((n: any) => {
+            if (n.id !== nodeId) return n
+            const d: any = n.data || {}
+            if (!d.storyStarter) return n
+            return { ...n, data: { ...d, storyTitle: String(title || '').trim() || (d.storyTitle || d.title || d.label || 'Story') } }
+          })
+        })
+      } catch {}
+    }
+    const onStoryDelete = (ev: any) => {
+      try {
+        const nodeId: string = ev?.detail?.id
+        if (!nodeId) return
+        pushHistory()
+        setNodes((nds) => {
+          const list = Array.isArray(nds) ? nds : []
+          return list.map((n: any) => {
+            if (n.id !== nodeId) return n
+            const d: any = n.data || {}
+            const next = { ...d }
+            delete (next as any).storyStarter
+            delete (next as any).storyTitle
+            return { ...n, data: next }
+          })
+        })
+      } catch {}
+    }
+    window.addEventListener('nodal:story-update', onStoryUpdate as EventListener)
+    window.addEventListener('nodal:story-delete', onStoryDelete as EventListener)
+    return () => {
+      window.removeEventListener('nodal:story-update', onStoryUpdate as EventListener)
+      window.removeEventListener('nodal:story-delete', onStoryDelete as EventListener)
+    }
+  }, [pushHistory, setNodes])
+
   // Broadcast editor mode and toggle a root class for global styling (e.g., hide headers)
   useEffect(() => {
     try {
@@ -2383,18 +2642,24 @@ function BoardContent({
           </div>
         </div>
       )}
-      <BokehBackground />
+      {/* Bokeh moved inside ReactFlow for guaranteed visibility */}
       <ReactFlow
         nodes={nodes}
         edges={edges}
         snapToGrid={gridEnabled}
         snapGrid={SNAP_GRID}
-        nodesDraggable={!readOnly}
-        nodesConnectable={!readOnly}
-        onNodesChange={readOnly ? undefined : handleNodesChange}
-        onEdgesChange={readOnly ? undefined : onEdgesChange}
-        onConnect={readOnly ? undefined : onConnect}
+        nodesDraggable={!readOnly && !storyActive}
+        nodesConnectable={!readOnly && !storyActive}
+        onNodesChange={(readOnly || storyActive) ? undefined : handleNodesChange}
+        onEdgesChange={(readOnly || storyActive) ? undefined : onEdgesChange}
+        onConnect={(readOnly || storyActive) ? undefined : onConnect}
+        elementsSelectable={!storyActive}
+        panOnDrag={!storyActive}
+        panOnScroll={false}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
         onNodeDoubleClick={(event: React.MouseEvent, node: any) => {
+          if (storyActive) { try { event.preventDefault(); event.stopPropagation() } catch {}; return }
           try { event.preventDefault(); event.stopPropagation() } catch {}
           if (readOnly) return
           try { window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id: node?.id } })) } catch {}
@@ -2404,7 +2669,7 @@ function BoardContent({
           // Keep to potentially extend in future; do not stop propagation
         }}
           onNodeContextMenu={(event: React.MouseEvent, node: any) => {
-            if (editorMode) { event.preventDefault(); return }
+            if (editorMode || storyActive) { event.preventDefault(); return }
             event.preventDefault()
             event.stopPropagation()
             if (readOnly) return
@@ -2425,7 +2690,13 @@ function BoardContent({
         onConnectStart={readOnly ? undefined : onConnectStart}
         onConnectEnd={readOnly ? undefined : onConnectEnd}
         onSelectionChange={handleSelectionChange}
+        onMoveEnd={() => {
+          if (!storyActive) return
+          if (recenterGuardRef.current) return
+          recenterCurrentStoryNodeAtZoom()
+        }}
         onPaneClick={(event) => {
+          if (storyActive) { return }
           // If we're awaiting a placement click (triggered by FAB), capture this click and open the modal
           if (awaitingNodePlacement) {
             if (readOnly) { setAwaitingNodePlacement(false); return }
@@ -2453,7 +2724,7 @@ function BoardContent({
           } catch {}
         }}
         onPaneContextMenu={(event) => {
-          if (editorMode) { event.preventDefault(); return }
+          if (editorMode || storyActive) { event.preventDefault(); return }
           if (readOnly) { event.preventDefault(); return }
           event.preventDefault();
           // Right-click on empty pane (not a node)
@@ -2471,7 +2742,7 @@ function BoardContent({
         minZoom={0.2}
         maxZoom={1.5}
         proOptions={{ hideAttribution: true }}
-        className={`${theme === 'dark' ? 'dark' : ''}`}
+        className={`${theme === 'dark' ? 'dark !bg-transparent' : '!bg-transparent'}`}
         style={{ background: 'transparent' }} // Make ReactFlow background transparent
         multiSelectionKeyCode="Meta"
         // Disable built-in Delete behavior; we show a confirm modal instead
@@ -2486,6 +2757,14 @@ function BoardContent({
         <div className="hidden sm:block">
           <Controls showInteractive={false} showFitView={true} showZoom={true} />
         </div>
+        {/* Bokeh background behind nodes (z-0), always visible */}
+        <div className="pointer-events-none absolute inset-0 z-0">
+          <BokehBackground />
+        </div>
+        {/* Story tint inside ReactFlow so it appears above pane but below nodes */}
+        {storyActive && (
+          <div className={`pointer-events-none absolute inset-0 z-[1] ${theme === 'dark' ? 'bg-black/90' : 'bg-primary-400/50'}`} />
+        )}
         {/* Place MiniMap bottom-left next to Controls */}
         <MiniMap
           className="hidden sm:block !bg-white/80 dark:!bg-gray-900/70 !rounded-md !shadow-lg"
@@ -2522,6 +2801,42 @@ function BoardContent({
           onToggle={(key) => setLeftDockActive(prev => (prev === key ? null : key))}
           disabled={readOnly}
         />
+      )}
+      {/* Story Mode HUD */}
+      {storyActive && (
+        <>
+          <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
+            <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <IconButton
+                className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                onClick={prevStory}
+                disabled={storyIndex <= 0}
+                aria-label="Previous"
+              >
+                <ArrowLeft size={24} weight="duotone" />
+              </IconButton>
+              <div className="text-xs text-gray-700 dark:text-gray-200">
+                {storyIndex + 1} / {storyPath.length}
+              </div>
+              <IconButton
+                className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                onClick={nextStory}
+                disabled={storyIndex >= storyPath.length - 1}
+                aria-label="Next"
+              >
+                <ArrowRight size={24} weight="duotone" />
+              </IconButton>
+              <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
+              <Button
+                className="px-2 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
+                onClick={exitStoryMode}
+                aria-label="Exit story mode"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </>
       )}
       {isBoardView && !editorMode && !readOnly && (
         <FloatingActionButton
@@ -2605,6 +2920,23 @@ function BoardContent({
         position={contextMenu.position}
         onClose={() => setContextMenu({ isOpen: false, position: null })}
         nodeId={pendingSourceNodeId}
+        onStartStory={(nodeId: string) => {
+          try {
+            pushHistory()
+            setNodes((nds) => {
+              const list = Array.isArray(nds) ? nds : []
+              return list.map((n: any) => {
+                if (n.id !== nodeId) return n
+                const d: any = n.data || {}
+                const title = String(d.title || d.label || 'Story')
+                return { ...n, data: { ...d, storyStarter: true, storyTitle: d.storyTitle || title } }
+              })
+            })
+            setToastVariant('success')
+            setToastMessage('Story created from this node')
+            setToastOpen(true)
+          } catch {}
+        }}
         isLockedByOther={(() => {
           try {
             if (!pendingSourceNodeId) return false
