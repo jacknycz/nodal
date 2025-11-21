@@ -1783,6 +1783,8 @@ function BoardContent({
   const [storyActive, setStoryActive] = useState(false)
   const [storyPath, setStoryPath] = useState<string[]>([])
   const [storyIndex, setStoryIndex] = useState(0)
+  // Adjust this to control the zoom level when landing on a chapter in Story Mode
+  const STORY_CHAPTER_ZOOM = 1.08
   const computeStoryPath = useCallback((starterId: string): string[] => {
     const idSet = new Set<string>()
     const outMap = new Map<string, string[]>()
@@ -1806,10 +1808,42 @@ function BoardContent({
     }
     return path
   }, [edges])
+  // Guard to avoid feedback loops while we programmatically adjust viewport
+  const recenterGuardRef = useRef(false)
+  // Center on a node using its actual DOM bounds so expanded sizes are respected
+  const centerOnNodeIdScreenAware = useCallback((nodeId: string, opts?: { zoom?: number; duration?: number }) => {
+    try {
+      const wrapperEl = reactFlowWrapper.current as HTMLElement | null
+      const nodeEl = document.querySelector(`.react-flow__node[data-id="${nodeId}"]`) as HTMLElement | null
+      if (!wrapperEl || !nodeEl) {
+        centerOnNodeIds([nodeId])
+        return
+      }
+      const rect = wrapperEl.getBoundingClientRect()
+      const nrect = nodeEl.getBoundingClientRect()
+      const targetX = rect.left + rect.width / 2
+      const targetY = rect.top + rect.height / 2
+      const cxScreen = nrect.left + nrect.width / 2
+      const cyScreen = nrect.top + nrect.height / 2
+      const dx = cxScreen - targetX
+      const dy = cyScreen - targetY
+      const viewport = (reactFlowInstance.getViewport?.() || reactFlowInstance.getTransform?.()) as any || { x: 0, y: 0, zoom: 1 }
+      const currentZoom = viewport.zoom || 1
+      const newTx = (viewport.x || 0) - dx
+      const newTy = (viewport.y || 0) - dy
+      recenterGuardRef.current = true
+      const duration = opts?.duration ?? 900
+      const zoom = opts?.zoom ?? currentZoom
+      reactFlowInstance.setViewport({ x: newTx, y: newTy, zoom }, { duration, easing: 'easeInOutCubic' } as any)
+      setTimeout(() => { recenterGuardRef.current = false }, Math.max(0, duration))
+    } catch {
+      centerOnNodeIds([nodeId])
+    }
+  }, [reactFlowInstance, centerOnNodeIds])
   const centerOnCurrentStoryNode = useCallback((idx: number) => {
     try {
       const id = storyPath[idx]
-      if (id) centerOnNodeIds([id])
+      if (id) centerOnNodeIdScreenAware(id, { zoom: STORY_CHAPTER_ZOOM, duration: 900 })
       // If current node is a video, signal it to expand and autoplay
       try {
         const rfNodes = reactFlowInstance.getNodes?.() || []
@@ -1823,27 +1857,31 @@ function BoardContent({
     } catch {}
   }, [storyPath])
   // Recenter current story node while preserving user zoom
-  const recenterGuardRef = useRef(false)
   const recenterCurrentStoryNodeAtZoom = useCallback(() => {
     try {
       const id = storyPath[storyIndex]
       if (!id) return
-      const nodes = reactFlowInstance.getNodes?.() || []
-      const n: any = nodes.find((nn: any) => nn.id === id)
-      if (!n) return
-      const currentZoom = reactFlowInstance.getZoom ? reactFlowInstance.getZoom() : undefined
-      const cx = n.position.x + (((n as any).width || 240) / 2)
-      const cy = n.position.y + (((n as any).height || 140) / 2)
+      const viewport = (reactFlowInstance.getViewport?.() || reactFlowInstance.getTransform?.()) as any || { x: 0, y: 0, zoom: 1 }
+      const currentZoom = viewport.zoom || 1
       recenterGuardRef.current = true
-      reactFlowInstance.setCenter(cx, cy, { zoom: currentZoom, duration: 0 } as any)
+      centerOnNodeIdScreenAware(id, { zoom: currentZoom, duration: 0 })
       setTimeout(() => { recenterGuardRef.current = false }, 0)
     } catch {}
-  }, [storyPath, storyIndex, reactFlowInstance])
+  }, [storyPath, storyIndex, centerOnNodeIdScreenAware, reactFlowInstance])
   const startStoryMode = useCallback((starterId: string) => {
     const path = computeStoryPath(starterId)
     if (!path || path.length === 0) return
     setStoryPath(path)
     ;(async () => {
+      // Pre-expand any video nodes in the story so sizing/centering uses expanded dimensions
+      try {
+        for (const nid of path) {
+          const node = (useBoardStore.getState().nodes || []).find((n: any) => n.id === nid)
+          if (node && node.type === 'video') {
+            try { window.dispatchEvent(new CustomEvent('nodal:video-expand', { detail: { id: nid } })) } catch {}
+          }
+        }
+      } catch {}
       try {
         // Load saved progress for this user/story if available
         let resumeIdx = 0
@@ -1874,9 +1912,12 @@ function BoardContent({
         } catch {}
         setStoryIndex(resumeIdx)
         setStoryActive(true)
+        // Allow layout a moment to settle after expansions
+        setTimeout(() => centerOnCurrentStoryNode(resumeIdx), 180)
       } catch {
         setStoryIndex(0)
         setStoryActive(true)
+        setTimeout(() => centerOnCurrentStoryNode(0), 180)
       }
     })()
   }, [computeStoryPath, centerOnNodeIds, boardId, user?.id])
@@ -1975,6 +2016,26 @@ function BoardContent({
       }))
     })
   }, [storyActive, storyPath])
+  // Maintain node center when a node resizes (e.g., Video expand/collapse)
+  useEffect(() => {
+    const onAdjust = (e: Event) => {
+      try {
+        const id: string = (e as CustomEvent<any>)?.detail?.id
+        const dxScreen: number = Number((e as CustomEvent<any>)?.detail?.dx) || 0
+        const dyScreen: number = Number((e as CustomEvent<any>)?.detail?.dy) || 0
+        if (!id) return
+        const zoom = reactFlowInstance.getZoom ? reactFlowInstance.getZoom() : 1
+        const dxFlow = dxScreen / (zoom || 1)
+        const dyFlow = dyScreen / (zoom || 1)
+        setNodes((nds) => {
+          const list = Array.isArray(nds) ? nds : []
+          return list.map((n: any) => n.id === id ? { ...n, position: { x: n.position.x - dxFlow, y: n.position.y - dyFlow } } : n)
+        })
+      } catch {}
+    }
+    window.addEventListener('nodal:adjust-node-center', onAdjust as EventListener)
+    return () => window.removeEventListener('nodal:adjust-node-center', onAdjust as EventListener)
+  }, [setNodes, reactFlowInstance])
   // Global: start story from LeftDock
   useEffect(() => {
     const onStartStory = (e: Event) => {
@@ -1985,8 +2046,23 @@ function BoardContent({
       } catch {}
     }
     window.addEventListener('nodal:start-story', onStartStory as EventListener)
-    return () => window.removeEventListener('nodal:start-story', onStartStory as EventListener)
-  }, [startStoryMode])
+    const onVideoExpanded = (e: Event) => {
+      try {
+        if (!storyActive) return
+        const nid = (e as CustomEvent<any>)?.detail?.id as string
+        const currentId = storyPath[storyIndex]
+        if (nid && currentId && nid === currentId) {
+          // Recenter on the now-expanded node using its screen bounds
+          setTimeout(() => centerOnNodeIdScreenAware(nid, { zoom: STORY_CHAPTER_ZOOM, duration: 200 }), 0)
+        }
+      } catch {}
+    }
+    window.addEventListener('nodal:video-expanded', onVideoExpanded as EventListener)
+    return () => {
+      window.removeEventListener('nodal:start-story', onStartStory as EventListener)
+      window.removeEventListener('nodal:video-expanded', onVideoExpanded as EventListener)
+    }
+  }, [startStoryMode, storyActive, storyIndex, storyPath, centerOnNodeIdScreenAware])
   
   // Handler functions
   const handleNodeDelete = useCallback((nodeId: string) => {
@@ -2655,9 +2731,9 @@ function BoardContent({
         onConnect={(readOnly || storyActive) ? undefined : onConnect}
         elementsSelectable={!storyActive}
         panOnDrag={!storyActive}
-        panOnScroll={false}
-        zoomOnScroll={true}
-        zoomOnPinch={true}
+        panOnScroll={!storyActive}
+        zoomOnScroll={!storyActive}
+        zoomOnPinch={!storyActive}
         onNodeDoubleClick={(event: React.MouseEvent, node: any) => {
           if (storyActive) { try { event.preventDefault(); event.stopPropagation() } catch {}; return }
           try { event.preventDefault(); event.stopPropagation() } catch {}
@@ -2691,7 +2767,8 @@ function BoardContent({
         onConnectEnd={readOnly ? undefined : onConnectEnd}
         onSelectionChange={handleSelectionChange}
         onMoveEnd={() => {
-          if (!storyActive) return
+          // Only auto-recenter after user zoom/pan when NOT in story mode
+          if (storyActive) return
           if (recenterGuardRef.current) return
           recenterCurrentStoryNodeAtZoom()
         }}

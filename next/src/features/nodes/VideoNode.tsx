@@ -52,6 +52,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   const [thumbLoaded, setThumbLoaded] = useState(false)
   const expandedVideoRef = useRef<HTMLVideoElement | null>(null)
   const [showStatus, setShowStatus] = useState<boolean>(!!data.status)
+  const [shouldAutoplay, setShouldAutoplay] = useState<boolean>(false)
 
   const isLocked = false
   const isLockedByMe = false
@@ -121,9 +122,10 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             const m = html.match(/src="([^"]+)"/i)
             if (m && m[1]) {
               const u = new URL(m[1])
-              // Add autoplay params; let sound play since user initiated expand
-              u.searchParams.set('autoplay', '1')
+              // Do not force autoplay via embed; we control it via events
+              u.searchParams.set('autoplay', '0')
               u.searchParams.set('playsinline', '1')
+              u.searchParams.set('enablejsapi', '1')
               html = html.replace(m[1], u.toString())
             }
             // Normalize embed sizing to fill container
@@ -222,6 +224,19 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
     return () => { v.removeEventListener('ended', onEnded); try { v.pause() } catch {} }
   }, [showMobilePlayer])
 
+  // Notify layout when this video toggles expanded so Story Mode can recenter on actual size
+  useEffect(() => {
+    try {
+      if (expanded) {
+        // Defer to next frame to ensure DOM has updated dimensions
+        const t = setTimeout(() => {
+          try { window.dispatchEvent(new CustomEvent('nodal:video-expanded', { detail: { id } })) } catch {}
+        }, 0)
+        return () => clearTimeout(t)
+      }
+    } catch {}
+  }, [expanded, id])
+
   const extractYouTubeId = (url?: string): string | null => {
     if (!url) return null
     try {
@@ -241,7 +256,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   const effectiveVideoUrl = (signedVideoUrl || data.videoUrl || '') as string
   const videoId = extractYouTubeId(effectiveVideoUrl)
-  const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&playsinline=1&enablejsapi=1` : ''
+  const embedSrc = videoId ? `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=${shouldAutoplay ? 1 : 0}&playsinline=1&enablejsapi=1` : ''
   const isMp4 = !videoId && typeof effectiveVideoUrl === 'string' && /\.mp4($|\?)/i.test(effectiveVideoUrl)
 
   const containerWidthClass = expanded ? 'w-[800px]' : 'w-[260px]'
@@ -293,10 +308,26 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         if (nodeId !== id) return
         setExpanded(true)
         setInView(true)
+        setShouldAutoplay(true)
         // Give React a tick to render the video/iframe, then try to play mp4
         setTimeout(() => {
           try { expandedVideoRef.current?.play?.() } catch {}
+          // Also trigger iframe providers to play
+          try {
+            const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+            const iframe = nodeEl?.querySelector('iframe') as HTMLIFrameElement | null
+            iframe?.contentWindow?.postMessage?.(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*')
+            iframe?.contentWindow?.postMessage?.(JSON.stringify({ method: 'play' }), '*')
+          } catch {}
         }, 150)
+      } catch {}
+    }
+    const onExpand = (e: Event) => {
+      try {
+        const nodeId = (e as CustomEvent<any>)?.detail?.id
+        if (nodeId !== id) return
+        setExpanded(true)
+        setInView(true)
       } catch {}
     }
     const onPause = (e: Event) => {
@@ -305,6 +336,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         if (nodeId !== id) return
         // Pause mp4 element if present
         try { expandedVideoRef.current?.pause?.() } catch {}
+        setShouldAutoplay(false)
         // Try to pause YouTube iframe
         try {
           const nodeEl = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
@@ -320,12 +352,32 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
       } catch {}
     }
     window.addEventListener('nodal:video-play', onPlay as EventListener)
+    window.addEventListener('nodal:video-expand', onExpand as EventListener)
     window.addEventListener('nodal:video-pause', onPause as EventListener)
     return () => {
       window.removeEventListener('nodal:video-play', onPlay as EventListener)
+      window.removeEventListener('nodal:video-expand', onExpand as EventListener)
       window.removeEventListener('nodal:video-pause', onPause as EventListener)
     }
   }, [id])
+
+  // Keep center when size changes: measure and emit half-delta to adjust node position at board level
+  React.useLayoutEffect(() => {
+    try {
+      const el = (viewRef.current as HTMLElement | null)
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const prev = prevRectRef.current
+      prevRectRef.current = rect
+      if (prev) {
+        const dx = rect.width - prev.width
+        const dy = rect.height - prev.height
+        if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+          try { window.dispatchEvent(new CustomEvent('nodal:adjust-node-center', { detail: { id, dx: dx / 2, dy: dy / 2 } })) } catch {}
+        }
+      }
+    } catch {}
+  }, [expanded, embedHtml, inView, id])
 
   return (
     <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
@@ -401,6 +453,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             {embedHtml ? (
               <div className="w-full h-[450px] bg-black rounded-md overflow-hidden">
                 {inView && (
+                  // We already forced autoplay=0 in embedHtml; rely on postMessage to play when needed
                   <div className="w-full h-[450px]" dangerouslySetInnerHTML={{ __html: embedHtml! }} />
                 )}
               </div>
@@ -425,7 +478,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
                     width={0}
                     height={450}
                     controls
-                    autoPlay
+                    autoPlay={shouldAutoplay}
                     playsInline
                     preload="metadata"
                     poster={signedThumbUrl || data.thumbnailUrl}
