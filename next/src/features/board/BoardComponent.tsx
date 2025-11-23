@@ -1783,6 +1783,9 @@ function BoardContent({
   const [storyActive, setStoryActive] = useState(false)
   const [storyPath, setStoryPath] = useState<string[]>([])
   const [storyIndex, setStoryIndex] = useState(0)
+  // Choice nodes: when a chapter has multiple children, user must choose
+  const [choiceOptions, setChoiceOptions] = useState<Array<{ id: string; title: string }>>([])
+  const isOnChoice = storyActive && choiceOptions.length > 0
   // Adjust this to control the zoom level when landing on a chapter in Story Mode
   const STORY_CHAPTER_ZOOM = 1.08
   const computeStoryPath = useCallback((starterId: string): string[] => {
@@ -1808,33 +1811,25 @@ function BoardContent({
     }
     return path
   }, [edges])
+  // Selection updates for story mode disabled to avoid render/update loops
   // Guard to avoid feedback loops while we programmatically adjust viewport
   const recenterGuardRef = useRef(false)
   // Center on a node using its actual DOM bounds so expanded sizes are respected
   const centerOnNodeIdScreenAware = useCallback((nodeId: string, opts?: { zoom?: number; duration?: number }) => {
     try {
-      const wrapperEl = reactFlowWrapper.current as HTMLElement | null
       const nodeEl = document.querySelector(`.react-flow__node[data-id="${nodeId}"]`) as HTMLElement | null
-      if (!wrapperEl || !nodeEl) {
+      if (!nodeEl) {
         centerOnNodeIds([nodeId])
         return
       }
-      const rect = wrapperEl.getBoundingClientRect()
       const nrect = nodeEl.getBoundingClientRect()
-      const targetX = rect.left + rect.width / 2
-      const targetY = rect.top + rect.height / 2
       const cxScreen = nrect.left + nrect.width / 2
       const cyScreen = nrect.top + nrect.height / 2
-      const dx = cxScreen - targetX
-      const dy = cyScreen - targetY
-      const viewport = (reactFlowInstance.getViewport?.() || reactFlowInstance.getTransform?.()) as any || { x: 0, y: 0, zoom: 1 }
-      const currentZoom = viewport.zoom || 1
-      const newTx = (viewport.x || 0) - dx
-      const newTy = (viewport.y || 0) - dy
-      recenterGuardRef.current = true
+      const flowPoint = reactFlowInstance.screenToFlowPosition({ x: cxScreen, y: cyScreen })
       const duration = opts?.duration ?? 900
-      const zoom = opts?.zoom ?? currentZoom
-      reactFlowInstance.setViewport({ x: newTx, y: newTy, zoom }, { duration, easing: 'easeInOutCubic' } as any)
+      const desiredZoom = opts?.zoom ?? (reactFlowInstance.getZoom?.() ?? 1)
+      recenterGuardRef.current = true
+      reactFlowInstance.setCenter(flowPoint.x, flowPoint.y, { zoom: desiredZoom, duration, easing: 'easeInOutCubic' } as any)
       setTimeout(() => { recenterGuardRef.current = false }, Math.max(0, duration))
     } catch {
       centerOnNodeIds([nodeId])
@@ -1843,7 +1838,10 @@ function BoardContent({
   const centerOnCurrentStoryNode = useCallback((idx: number) => {
     try {
       const id = storyPath[idx]
-      if (id) centerOnNodeIdScreenAware(id, { zoom: STORY_CHAPTER_ZOOM, duration: 900 })
+      if (id) {
+        // Screen-aware center with story zoom; selection handled in nav/start flows
+        centerOnNodeIdScreenAware(id, { zoom: STORY_CHAPTER_ZOOM, duration: 900 })
+      }
       // If current node is a video, signal it to expand and autoplay
       try {
         const rfNodes = reactFlowInstance.getNodes?.() || []
@@ -1855,20 +1853,20 @@ function BoardContent({
         }
       } catch {}
     } catch {}
-  }, [storyPath])
+  }, [storyPath, centerOnNodeIdScreenAware])
   // Recenter current story node while preserving user zoom
   const recenterCurrentStoryNodeAtZoom = useCallback(() => {
     try {
       const id = storyPath[storyIndex]
       if (!id) return
-      const viewport = (reactFlowInstance.getViewport?.() || reactFlowInstance.getTransform?.()) as any || { x: 0, y: 0, zoom: 1 }
+      const viewport = (reactFlowInstance.getViewport?.()) as any || { x: 0, y: 0, zoom: 1 }
       const currentZoom = viewport.zoom || 1
       recenterGuardRef.current = true
       centerOnNodeIdScreenAware(id, { zoom: currentZoom, duration: 0 })
       setTimeout(() => { recenterGuardRef.current = false }, 0)
     } catch {}
   }, [storyPath, storyIndex, centerOnNodeIdScreenAware, reactFlowInstance])
-  const startStoryMode = useCallback((starterId: string) => {
+  const startStoryMode = useCallback((starterId: string, startAtBeginning?: boolean) => {
     const path = computeStoryPath(starterId)
     if (!path || path.length === 0) return
     setStoryPath(path)
@@ -1883,6 +1881,15 @@ function BoardContent({
         }
       } catch {}
       try {
+        // If explicitly starting at the beginning (from node's Play), skip resume lookup
+        if (startAtBeginning) {
+          setStoryIndex(0)
+          setStoryActive(true)
+          setTimeout(() => {
+            centerOnCurrentStoryNode(0)
+          }, 250)
+          return
+        }
         // Load saved progress for this user/story if available
         let resumeIdx = 0
         try {
@@ -1894,9 +1901,10 @@ function BoardContent({
               .eq('board_id', effectiveBoardId)
               .eq('starter_node_id', starterId)
               .eq('user_id', user.id)
-              .maybeSingle()
-            if (!error && data && typeof data.current_index === 'number') {
-              resumeIdx = Math.max(0, Math.min((data.current_index ?? 0), path.length - 1))
+              .maybeSingle<any>()
+            if (!error && data && typeof (data as any).current_index === 'number') {
+              const ci = (data as any).current_index ?? 0
+              resumeIdx = Math.max(0, Math.min(ci, path.length - 1))
             } else {
               // Fallback to localStorage if RLS blocks or no row yet
               try {
@@ -1912,15 +1920,19 @@ function BoardContent({
         } catch {}
         setStoryIndex(resumeIdx)
         setStoryActive(true)
-        // Allow layout a moment to settle after expansions
-        setTimeout(() => centerOnCurrentStoryNode(resumeIdx), 180)
+        // Allow layout a moment to settle after expansions, then center
+        setTimeout(() => {
+          centerOnCurrentStoryNode(resumeIdx)
+        }, 250)
       } catch {
         setStoryIndex(0)
         setStoryActive(true)
-        setTimeout(() => centerOnCurrentStoryNode(0), 180)
+        setTimeout(() => {
+          centerOnCurrentStoryNode(0)
+        }, 250)
       }
     })()
-  }, [computeStoryPath, centerOnNodeIds, boardId, user?.id])
+  }, [computeStoryPath, centerOnNodeIds, boardId, user?.id, centerOnCurrentStoryNode])
   const exitStoryMode = useCallback(() => {
     try {
       const curId = storyPath[storyIndex]
@@ -1938,10 +1950,10 @@ function BoardContent({
           const starterId = storyPath[0]
           const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
           if (starterId && effectiveBoardId && user?.id) {
-            getSupabaseClient().from('story_progress')
+            void getSupabaseClient().from('story_progress')
               .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: storyIndex, updated_at: new Date().toISOString() } as any,
                 { onConflict: 'board_id,starter_node_id,user_id' } as any)
-              .then(() => {}).catch(() => {})
+              .then(() => undefined)
             try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(storyIndex)) } catch {}
           }
         } catch {}
@@ -1964,10 +1976,10 @@ function BoardContent({
         const starterId = storyPath[0]
         const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
         if (starterId && effectiveBoardId && user?.id) {
-          getSupabaseClient().from('story_progress')
+          void getSupabaseClient().from('story_progress')
             .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: ni, updated_at: new Date().toISOString() } as any,
               { onConflict: 'board_id,starter_node_id,user_id' } as any)
-            .then(() => {}).catch(() => {})
+            .then(() => undefined)
           try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(ni)) } catch {}
         }
       } catch {}
@@ -1987,10 +1999,10 @@ function BoardContent({
         const starterId = storyPath[0]
         const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
         if (starterId && effectiveBoardId && user?.id) {
-          getSupabaseClient().from('story_progress')
+          void getSupabaseClient().from('story_progress')
             .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: ni, updated_at: new Date().toISOString() } as any,
               { onConflict: 'board_id,starter_node_id,user_id' } as any)
-            .then(() => {}).catch(() => {})
+            .then(() => undefined)
           try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(ni)) } catch {}
         }
       } catch {}
@@ -2001,7 +2013,51 @@ function BoardContent({
     if (!storyActive) return
     centerOnCurrentStoryNode(storyIndex)
   }, [storyActive, storyIndex, centerOnCurrentStoryNode])
-  // Dim non-story nodes via node.className
+  // Detect choice nodes (multiple children) for the current chapter
+  useEffect(() => {
+    if (!storyActive) { setChoiceOptions([]); return }
+    const curId = storyPath[storyIndex]
+    if (!curId) { setChoiceOptions([]); return }
+    try {
+      const eds = (useBoardStore.getState().edges || edges || []) as any[]
+      const childIds = eds.filter((e: any) => e?.source === curId).map((e: any) => e?.target)
+      if (childIds.length > 1) {
+        const ns = (useBoardStore.getState().nodes || nodes || []) as any[]
+        const opts = childIds.map((cid: string) => {
+          const n = ns.find((nn: any) => nn.id === cid)
+          const d: any = n?.data || {}
+          return { id: cid, title: String(d.storyTitle || d.title || d.label || 'Choice') }
+        })
+        setChoiceOptions(opts)
+      } else {
+        setChoiceOptions([])
+      }
+    } catch {
+      setChoiceOptions([])
+    }
+  }, [storyActive, storyIndex, storyPath, edges, nodes])
+  const handleChooseBranch = useCallback((chosenId: string) => {
+    try {
+      const prefix = storyPath.slice(0, Math.max(0, Math.min(storyIndex + 1, storyPath.length)))
+      const branch = computeStoryPath(chosenId)
+      const newPath = [...prefix, ...branch]
+      setStoryPath(newPath)
+      setChoiceOptions([])
+      // Advance to the chosen child index
+      const nextIdx = prefix.length
+      setStoryIndex(nextIdx)
+      // If chosen is a video node, expand first so measurement uses expanded size
+      try {
+        const node = (useBoardStore.getState().nodes || []).find((n: any) => n.id === chosenId)
+        if (node && node.type === 'video') {
+          try { window.dispatchEvent(new CustomEvent('nodal:video-expand', { detail: { id: chosenId } })) } catch {}
+        }
+      } catch {}
+      // Center directly on chosen id
+      setTimeout(() => centerOnNodeIdScreenAware(chosenId, { zoom: STORY_CHAPTER_ZOOM, duration: 900 }), 30)
+    } catch {}
+  }, [storyPath, storyIndex, computeStoryPath, centerOnNodeIdScreenAware])
+  // Dim non-active nodes via node.className
   useEffect(() => {
     if (!storyActive) {
       setNodes((nds) => (Array.isArray(nds) ? nds.map(n => ({ ...n, className: undefined })) : nds))
@@ -2009,40 +2065,26 @@ function BoardContent({
     }
     setNodes((nds) => {
       const list = Array.isArray(nds) ? nds : []
-      const pathSet = new Set(storyPath)
-      return list.map((n: any) => ({
-        ...n,
-        className: pathSet.has(n.id) ? undefined : 'opacity-40 blur-[1px]'
-      }))
+      const activeId = storyPath[storyIndex]
+      return list.map((n: any) => {
+        const isActive = n.id === activeId
+        return {
+          ...n,
+          className: isActive ? undefined : 'opacity-80'
+        }
+      })
     })
-  }, [storyActive, storyPath])
-  // Maintain node center when a node resizes (e.g., Video expand/collapse)
-  useEffect(() => {
-    const onAdjust = (e: Event) => {
-      try {
-        const id: string = (e as CustomEvent<any>)?.detail?.id
-        const dxScreen: number = Number((e as CustomEvent<any>)?.detail?.dx) || 0
-        const dyScreen: number = Number((e as CustomEvent<any>)?.detail?.dy) || 0
-        if (!id) return
-        const zoom = reactFlowInstance.getZoom ? reactFlowInstance.getZoom() : 1
-        const dxFlow = dxScreen / (zoom || 1)
-        const dyFlow = dyScreen / (zoom || 1)
-        setNodes((nds) => {
-          const list = Array.isArray(nds) ? nds : []
-          return list.map((n: any) => n.id === id ? { ...n, position: { x: n.position.x - dxFlow, y: n.position.y - dyFlow } } : n)
-        })
-      } catch {}
-    }
-    window.addEventListener('nodal:adjust-node-center', onAdjust as EventListener)
-    return () => window.removeEventListener('nodal:adjust-node-center', onAdjust as EventListener)
-  }, [setNodes, reactFlowInstance])
+  }, [storyActive, storyPath, storyIndex])
+  // Removed position-shift loop; we recenter viewport instead of moving nodes
   // Global: start story from LeftDock
   useEffect(() => {
     const onStartStory = (e: Event) => {
       try {
-        const id = (e as CustomEvent<any>)?.detail?.id as string
+        const d = (e as CustomEvent<any>)?.detail as any
+        const id = d?.id as string
+        const startAtBeginning = !!d?.startAtBeginning
         if (!id) return
-        startStoryMode(id)
+        startStoryMode(id, startAtBeginning)
       } catch {}
     }
     window.addEventListener('nodal:start-story', onStartStory as EventListener)
@@ -2084,6 +2126,39 @@ function BoardContent({
     }, 0)
     if (onDeleteNode) onDeleteNode(nodeId)
   }, [onDeleteNode, setNodes, setEdges, pushHistory])
+
+  // Keyboard navigation in Story Mode: ArrowLeft/ArrowRight
+  useEffect(() => {
+    if (!storyActive) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      try {
+        if (e.defaultPrevented) return
+        if (e.metaKey || e.ctrlKey || e.altKey) return
+        const target = e.target as HTMLElement | null
+        const tag = target?.tagName?.toLowerCase()
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+        if (target?.isContentEditable) return
+        if (e.key === 'ArrowRight') {
+          e.preventDefault()
+          // Block advancing if a choice is required on this chapter
+          const eds = (useBoardStore.getState().edges || edges || []) as any[]
+          const curId = storyPath[storyIndex]
+          const childCount = eds.filter((ed: any) => ed?.source === curId).length
+          const isChoice = childCount > 1
+          if (!isChoice && storyIndex < Math.max(0, storyPath.length - 1)) {
+            nextStory()
+          }
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault()
+          if (storyIndex > 0) {
+            prevStory()
+          }
+        }
+      } catch {}
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [storyActive, storyIndex, storyPath, nextStory, prevStory, edges])
 
   // Fallback: respond to global delete events
   useEffect(() => {
@@ -2248,7 +2323,8 @@ function BoardContent({
       onEdgeDelete: handleEdgeDelete,
       readOnly,
       onStartStoryMode: (nodeId: string) => {
-        try { startStoryMode(nodeId) } catch {}
+        // Start from the beginning when launched from the Story Starter Node button
+        try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: nodeId, startAtBeginning: true } })) } catch {}
       },
       acquireNodeLock,
       releaseNodeLock,
@@ -2438,6 +2514,12 @@ function BoardContent({
   const lastPosSentRef = useRef<Record<string, number>>({})
   const draggingRef = useRef<Set<string>>(new Set())
   const handleNodesChange = useCallback((changes: any[]) => {
+    // Guard against programmatic viewport/selection adjustments causing feedback loops
+    if (recenterGuardRef.current) return
+    if (storyActive) {
+      // In story mode, nodes shouldn't move; ignore node changes
+      return
+    }
     onNodesChange(changes)
     const now = Date.now()
     for (const ch of changes) {
@@ -2456,7 +2538,7 @@ function BoardContent({
         }
       }
     }
-  }, [onNodesChange, boardId, user?.id])
+  }, [onNodesChange, boardId, user?.id, storyActive])
   
   // Release lock when modal closes or component unmounts
   useEffect(() => {
@@ -2882,6 +2964,27 @@ function BoardContent({
       {/* Story Mode HUD */}
       {storyActive && (
         <>
+          {isOnChoice && (
+            <div className="fixed left-1/2 -translate-x-1/2 bottom-28 z-95">
+              <div className="px-4 py-3 rounded-xl bg-white/95 dark:bg-gray-900/95 shadow-lg border border-gray-200 dark:border-gray-700 min-w-[280px]">
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Choose one of the following:</div>
+                <div className="mt-2 space-y-2">
+                  {choiceOptions.map((opt) => (
+                    <label key={opt.id} className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="story-choice"
+                        value={opt.id}
+                        onChange={() => handleChooseBranch(opt.id)}
+                        className="accent-primary-500"
+                      />
+                      <span className="truncate max-w-[360px]">{opt.title}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
             <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
               <IconButton
@@ -2898,7 +3001,7 @@ function BoardContent({
               <IconButton
                 className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                 onClick={nextStory}
-                disabled={storyIndex >= storyPath.length - 1}
+                disabled={isOnChoice || storyIndex >= storyPath.length - 1}
                 aria-label="Next"
               >
                 <ArrowRight size={24} weight="duotone" />

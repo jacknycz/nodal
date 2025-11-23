@@ -188,7 +188,7 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
                               className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                               aria-label="Play story"
                               onClick={() => {
-                                try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: n.id } })) } catch {}
+                                try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: n.id, startAtBeginning: true } })) } catch {}
                                 setOpenKey(null)
                               }}
                               title="Play story"
@@ -293,7 +293,7 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
                 size="lg"
                 className="bg-white dark:bg-gray-900"
                 onClick={() => {
-                  try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: s.id } })) } catch {}
+                  try { window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: s.id, startAtBeginning: false } })) } catch {}
                   setPausedStories((prev) => prev.filter((x) => x.id !== s.id))
                 }}
               >
