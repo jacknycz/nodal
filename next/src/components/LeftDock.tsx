@@ -160,8 +160,7 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
             <div className="rounded-3xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
               <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
                 <div className="flex items-center space-x-2">
-                  <BookOpen className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  <span className="text-xs text-gray-600 dark:text-gray-300">Stories</span>
+                  <span className="font-medium text-gray-600 dark:text-gray-300">Stories</span>
                 </div>
                 <button onClick={() => setOpenKey(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                   <X className="w-4 h-4" />
@@ -231,8 +230,7 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
             <div className="rounded-3xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
               <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
                 <div className="flex items-center space-x-2">
-                  <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
-                  <span className="text-xs text-gray-600 dark:text-gray-300">Tips & Info</span>
+                  <span className="font-medium text-gray-600 dark:text-gray-300">Tips & Info</span>
                 </div>
                 <button onClick={() => setOpenKey(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                   <X className="w-4 h-4" />

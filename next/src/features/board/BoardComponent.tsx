@@ -66,6 +66,7 @@ import { ArrowLeft, ArrowRight, Info, X } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
+import Range from '../../components/ui/Range'
 import Toast from '../../components/ui/Toast'
 import useBoardRealtime from './useBoardRealtime'
 import useBoardAutosave from './useBoardAutosave'
@@ -755,6 +756,71 @@ function BoardContent({
     // console.log('🚀 generateStarterNodes called with boardId:', boardId, 'for brief:', brief.boardName)
     try {
       const aiService = getOpenAIService()
+      // Ensure auth session is established so Authorization header is present for API routes
+      const ensureAuth = async () => {
+        try {
+          const supa = getSupabaseClient()
+          for (let i = 0; i < 5; i++) {
+            const { data } = await supa.auth.getSession()
+            const token = data?.session?.access_token
+            if (token) return token
+            await new Promise(res => setTimeout(res, 100 + i * 100))
+          }
+        } catch {}
+        return null
+      }
+      await ensureAuth()
+      // Helper: server-side availability check (falls back if aiService not initialized)
+      const checkAvailable = async () => {
+        try {
+          if (aiService?.isAvailable) {
+            const ok = await aiService.isAvailable()
+            return !!ok
+          }
+          // fallback: ping /api/usage
+          const supa = getSupabaseClient()
+          const { data } = await supa.auth.getSession()
+          const token = data?.session?.access_token
+          const res = await fetch('/api/usage', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+          return res.ok
+        } catch { return false }
+      }
+      // Helper: text generation that works even if aiService is not initialized
+      const generateText = async (prompt: string, systemPrompt?: string, maxTokens?: number) => {
+        if (aiService) {
+          const r = await aiService.generate({ prompt, systemPrompt, maxTokens })
+          return r.content || ''
+        }
+        // raw call to server route using server-held key
+        let authHeader: Record<string, string> = {}
+        try {
+          const supa = getSupabaseClient()
+          const { data } = await supa.auth.getSession()
+          const token = data?.session?.access_token
+          if (token) authHeader = { Authorization: `Bearer ${token}` }
+        } catch {}
+        const baseUrl = process.env.NEXT_PUBLIC_OPENAI_BASE_URL || '/api/ai'
+        const resp = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: maxTokens ?? 512,
+            stream: false
+          })
+        })
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}))
+          throw new Error(err?.error?.message || resp.statusText)
+        }
+        const json = await resp.json()
+        return json?.choices?.[0]?.message?.content || ''
+      }
       // Ensure a topic parent node exists
       const topicNodeId = `topic-${boardId}`
       const topicNode = {
@@ -783,15 +849,19 @@ function BoardContent({
         const descriptionsByTitle: Record<string, string> = {}
         if (brief.generateDescriptionsForStarter) {
           try {
-            if (aiService) {
+            const allowed = await checkAvailable()
+            if (allowed) {
               for (const t of brief.starterNodes) {
                 const prompt = brief.boardTopic
                   ? `Given the board topic "${brief.boardTopic}", write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}" in that context. Keep it clear and actionable. Return plain text only.`
                   : `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
-                const res = await aiService.generate({ prompt, maxTokens: 120 })
-                const d = (res.content || '').trim()
+                const txt = await generateText(prompt, undefined, 120)
+                const d = (txt || '').trim()
                 if (d) descriptionsByTitle[t] = d
               }
+            } else {
+              // Not allowed - skip description generation
+              try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'AI descriptions require a Pro plan.', variant: 'info' } })) } catch {}
             }
           } catch {}
         }
@@ -816,22 +886,84 @@ function BoardContent({
         router.push(`/board/${boardId}`)
         return
       }
-      if (!aiService) {
-        router.push(`/board/${boardId}`)
+      // Prefer server route that uses server-held key for reliability
+      let responseContent = ''
+      try {
+        const supa = getSupabaseClient()
+        const { data } = await supa.auth.getSession()
+        const token = data?.session?.access_token
+        const res = await fetch('/api/boards/generate-starters', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ type: 'generate', topic: brief.boardTopic, description: brief.description, max: 5 })
+        })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          throw new Error(j?.error || `Generate starters failed (${res.status})`)
+        }
+        const j = await res.json()
+        responseContent = JSON.stringify(j.nodes || [])
+      } catch (err: any) {
+        // Surface server-provided message for 402/other issues
+        const msg = err?.message || 'Failed to generate starter nodes'
+        console.warn('[generateStarterNodes] AI error:', err)
+        try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: msg, variant: 'warning' } })) } catch {}
+        // Heuristic fallback: generate 5 practical starter nodes based on the topic so it's never a no-op
+        try {
+          const titles = [
+            `Overview: ${brief.boardTopic}`,
+            `Key Ideas for ${brief.boardTopic}`,
+            `Plan & Steps`,
+            `Resources`,
+            `Next Actions`
+          ]
+          const desc = (hint: string) => {
+            const base = brief.description?.trim() ? `Context: ${brief.description.trim()}. ` : ''
+            return `${base}${hint}`
+          }
+          const cellWidth = 300
+          const padding = 60
+          const count = titles.length
+          const rowY = topicNode.position.y + (cellWidth - 100)
+          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+          const generatedNodes = titles.map((title, index) => {
+            const position = { x: startX + index * (cellWidth + padding), y: rowY }
+            const contentHints = [
+              desc('Summarize the goals and scope.'),
+              desc('List 3–6 bullet points that capture the theme.'),
+              desc('Write a short step-by-step outline.'),
+              desc('List tools, links, or references to consider.'),
+              desc('Propose 3 immediate, concrete next steps.')
+            ]
+            return {
+              id: `starter-node-${Date.now()}-${index}`,
+              type: 'default' as const,
+              position,
+              data: { title, content: contentHints[index] || '' }
+            }
+          })
+          const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
+          setNodes([topicNode, ...generatedNodes])
+          setEdges(generatedEdges as any)
+          const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          await boardStorage.updateBoard(boardId, boardData)
+          try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes (fallback).`, variant: 'success' } })) } catch {}
+          setHasUnsavedChanges(false)
+          if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+          router.push(`/board/${boardId}`)
+        } catch {
+          // As a final fallback, just continue to the board
+          router.push(`/board/${boardId}`)
+        }
         return
       }
 
-      const prompt = `Create 3-5 starter nodes for a board about "${brief.boardTopic}" with description: "${brief.description}". Return them as a JSON array of objects with this structure: [{ "label": "Node title", "content": "Brief description" }]. Make the nodes diverse and actionable. Return ONLY the JSON array, no markdown formatting.`
-
-      const response = await aiService.generate({
-        prompt,
-        systemPrompt: 'You are a helpful AI assistant that creates structured, actionable nodes for mind mapping and project planning. Always return clean JSON without markdown formatting.',
-        temperature: 0.7,
-        model: 'gpt-4o-mini'
-      })
-
       try {
-        let jsonContent = response.content.trim()
+        let jsonContent = (responseContent || '').trim()
         if (jsonContent.startsWith('```json')) {
           jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '')
         } else if (jsonContent.startsWith('```')) {
@@ -839,7 +971,7 @@ function BoardContent({
         }
         
         const nodeDataArray = JSON.parse(jsonContent)
-        if (Array.isArray(nodeDataArray)) {
+        if (Array.isArray(nodeDataArray) && nodeDataArray.length > 0) {
           // Use our intelligent placement system for board creation
           try {
             // Deterministic single-row placement under parent (match reorg fallback)
@@ -859,6 +991,7 @@ function BoardContent({
               setEdges(generatedEdges as any)
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
               await boardStorage.updateBoard(boardId, boardData)
+              try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes!`, variant: 'success' } })) } catch {}
             
           } catch (placementError) {
             // Fallback: fan around topic
@@ -876,6 +1009,7 @@ function BoardContent({
             setEdges(generatedEdges as any)
             const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
             await boardStorage.updateBoard(boardId, boardData)
+            try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes!`, variant: 'success' } })) } catch {}
           }
           
           // Update save status
@@ -888,11 +1022,22 @@ function BoardContent({
           
           // Navigate to the board URL after successful AI generation
           router.push(`/board/${boardId}`)
+        } else {
+          // Empty or non-array: fallback single node to avoid silent no-op
+          const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: response.content } }
+          const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: toVisualEdgeType(edgeTypePref) as any }
+          setNodes([topicNode, newNode])
+          setEdges([newEdge] as any)
+          const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          await boardStorage.updateBoard(boardId, boardData)
+          try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Generated 1 node!', variant: 'success' } })) } catch {}
+          setHasUnsavedChanges(false)
+          if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+          router.push(`/board/${boardId}`)
         }
       } catch (parseError) {
         // console.error('Failed to parse AI response:', parseError)
-        // console.log('Raw response content:', response.content)
-        const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: response.content } }
+        const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: responseContent } }
         const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: toVisualEdgeType(edgeTypePref) as any }
         setNodes([topicNode, newNode])
         setEdges([newEdge] as any)
@@ -1933,18 +2078,20 @@ function BoardContent({
       }
     })()
   }, [computeStoryPath, centerOnNodeIds, boardId, user?.id, centerOnCurrentStoryNode])
-  const exitStoryMode = useCallback(() => {
+  const exitStoryMode = useCallback((suppressPause?: boolean) => {
     try {
       const curId = storyPath[storyIndex]
       if (curId) {
         window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: curId } }))
         // Also broadcast a paused story status with title for LeftDock
-        try {
-          const node = (useBoardStore.getState().nodes || []).find((n: any) => n.id === storyPath[0])
-          const d: any = node?.data || {}
-          const title = String(d.storyTitle || d.title || d.label || 'Story')
-          window.dispatchEvent(new CustomEvent('nodal:story-paused', { detail: { id: storyPath[0], title } }))
-        } catch {}
+        if (!suppressPause) {
+          try {
+            const node = (useBoardStore.getState().nodes || []).find((n: any) => n.id === storyPath[0])
+            const d: any = node?.data || {}
+            const title = String(d.storyTitle || d.title || d.label || 'Story')
+            window.dispatchEvent(new CustomEvent('nodal:story-paused', { detail: { id: storyPath[0], title } }))
+          } catch {}
+        }
         // Persist last chapter index
         try {
           const starterId = storyPath[0]
@@ -1969,6 +2116,29 @@ function BoardContent({
         const prevId = storyPath[i]
         if (prevId) { window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: prevId } })) }
       } catch {}
+      // End of story behavior
+      if (i >= Math.max(0, storyPath.length - 1)) {
+        try {
+          const center = getViewportCenter()
+          const completeId = `story-complete-${Date.now()}`
+          const node = {
+            id: completeId,
+            type: 'default' as const,
+            position: { x: center.x, y: center.y },
+            data: { title: 'Story Complete!', content: 'You’ve reached the end of this story.' } as any,
+          }
+          // Exit without paused status
+          exitStoryMode(true)
+          setTimeout(() => {
+            setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+            try { showAddToast('added', 1) } catch {}
+            try { centerOnNodeIds([completeId]) } catch {}
+          }, 10)
+        } catch {
+          exitStoryMode(true)
+        }
+        return i
+      }
       const ni = Math.min(i + 1, Math.max(0, storyPath.length - 1))
       setTimeout(() => centerOnCurrentStoryNode(ni), 10)
       // Save progress
@@ -2995,13 +3165,24 @@ function BoardContent({
               >
                 <ArrowLeft size={24} weight="duotone" />
               </IconButton>
-              <div className="text-xs text-gray-700 dark:text-gray-200">
-                {storyIndex + 1} / {storyPath.length}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-700 dark:text-gray-200">Step {storyIndex + 1}</span>
+                <div className="w-28">
+                  <Range
+                    value={storyPath.length > 0 ? (storyIndex + 1) / storyPath.length : 0}
+                    onChange={() => {}}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    size="sm"
+                    aria-label="Story progress"
+                  />
+                </div>
               </div>
               <IconButton
                 className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                 onClick={nextStory}
-                disabled={isOnChoice || storyIndex >= storyPath.length - 1}
+                disabled={isOnChoice}
                 aria-label="Next"
               >
                 <ArrowRight size={24} weight="duotone" />
@@ -3009,7 +3190,7 @@ function BoardContent({
               <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
               <Button
                 className="px-2 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
-                onClick={exitStoryMode}
+                onClick={() => exitStoryMode(false)}
                 aria-label="Exit story mode"
               >
                 Close
@@ -3282,43 +3463,36 @@ function BoardContent({
             const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
             console.log('[QuickAI] selectedId:', selectedId, 'title:', contextTitle, 'content.len:', contextContent?.length || 0, 'topic:', topic)
 
-            const ai = getOpenAIService()
-            if (!ai) { console.warn('[QuickAI] ai service unavailable'); return }
-            const promptParts = [
+            // Use server endpoint for reliable AI generation and usage tracking
+            const supa = getSupabaseClient()
+            const { data } = await supa.auth.getSession()
+            const token = data?.session?.access_token
+            const serverDesc = [
               topic && `Board topic: ${topic}`,
               contextTitle && `Selected node: ${contextTitle}`,
               contextContent && `Context: ${contextContent}`,
-              'Generate 4-6 concise related nodes (JSON only): { "nodes": [ { "title": "...", "content": "..." } ] }'
-            ].filter(Boolean)
-            const prompt = promptParts.join('\n\n')
-            const sys = 'You generate contextually relevant child ideas. Return strict JSON only.'
-            const res = await ai.generate({ prompt, systemPrompt: sys, temperature: 0.8 })
-            const raw = (res.content || '').trim()
+              'Generate 4-6 concise related nodes.'
+            ].filter(Boolean).join('\n\n')
+            const resp = await fetch('/api/boards/generate-starters', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+              },
+              body: JSON.stringify({ type: 'generate', topic: topic || '', description: serverDesc, max: 6 })
+            })
+            if (!resp.ok) {
+              const j = await resp.json().catch(() => ({}))
+              console.warn('[QuickAI] server generate failed:', j?.error || resp.statusText)
+              return
+            }
+            const jr = await resp.json()
+            const raw = JSON.stringify(jr?.nodes || [])
             let items: any[] = []
             try {
-              const fenced = raw.match(/```json\s*([\s\S]*?)\s*```/i)
-              const text = fenced ? fenced[1] : raw
-              let parsed: any
-              try { parsed = JSON.parse(text) } catch {}
-              if (Array.isArray(parsed?.nodes)) {
-                items = parsed.nodes
-              } else if (Array.isArray(parsed)) {
-                items = parsed
-              } else {
-                const nodesArrayMatch = text.match(/"nodes"\s*:\s*(\[\s*[\s\S]*?\])/i)
-                if (nodesArrayMatch) {
-                  try { items = JSON.parse(nodesArrayMatch[1]) } catch {}
-                }
-                if (!items || items.length === 0) {
-                  const jsonMatch = text.match(/\{[\s\S]*\}/)
-                  if (jsonMatch) {
-                    try {
-                      const obj = JSON.parse(jsonMatch[0])
-                      if (Array.isArray(obj?.nodes)) items = obj.nodes
-                    } catch {}
-                  }
-                }
-              }
+              const parsed = JSON.parse(raw)
+              if (Array.isArray(parsed)) items = parsed
+              else if (Array.isArray(parsed?.nodes)) items = parsed.nodes
             } catch {}
             if (!items || items.length === 0) {
               const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l)
@@ -3870,15 +4044,23 @@ function BoardContent({
             if (titles.length === 1) {
               if (generateDescription && !desc) {
                 try {
-                  const service = getOpenAIService()
-                  if (service) {
-                    const titleForAI = titles[0]
-                    const topicForAI = (pendingBoardBrief?.boardTopic || useBoardStore.getState().topic || '').trim()
-                    const prompt = topicForAI
-                      ? `The board topic is "${topicForAI}". Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}" specifically in the context of "${topicForAI}". Return plain text only.`
-                      : `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${titleForAI}". Keep it clear and actionable. Return plain text only.`
-                    const res = await service.generate({ prompt, maxTokens: 120 })
-                    desc = (res.content || '').trim()
+                  const titleForAI = titles[0]
+                  const topicForAI = (pendingBoardBrief?.boardTopic || useBoardStore.getState().topic || '').trim()
+                  const supa = getSupabaseClient()
+                  const { data } = await supa.auth.getSession()
+                  const token = data?.session?.access_token
+                  const res = await fetch('/api/boards/generate-starters', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ type: 'describe', topic: topicForAI || undefined, titles: [titleForAI] })
+                  })
+                  if (res.ok) {
+                    const j = await res.json()
+                    const d = String((j?.descriptions?.[0] || '')).trim()
+                    if (d) desc = d
                   }
                 } catch {}
               }
@@ -3887,17 +4069,25 @@ function BoardContent({
               }
             } else if (generateDescription) {
               try {
-                const service = getOpenAIService()
-                if (service) {
-                  for (const t of titles) {
-                    const topicForAI = (pendingBoardBrief?.boardTopic || useBoardStore.getState().topic || '').trim()
-                    const prompt = topicForAI
-                      ? `The board topic is "${topicForAI}". Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}" specifically in the context of "${topicForAI}". Return plain text only.`
-                      : `Write a concise, helpful 1-2 sentence description for a mind-map node titled "${t}". Keep it clear and actionable. Return plain text only.`
-                    const res = await service.generate({ prompt, maxTokens: 120 })
-                    const d = (res.content || '').trim()
+                const topicForAI = (pendingBoardBrief?.boardTopic || useBoardStore.getState().topic || '').trim()
+                const supa = getSupabaseClient()
+                const { data } = await supa.auth.getSession()
+                const token = data?.session?.access_token
+                const res = await fetch('/api/boards/generate-starters', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                  },
+                  body: JSON.stringify({ type: 'describe', topic: topicForAI || undefined, titles })
+                })
+                if (res.ok) {
+                  const j = await res.json()
+                  const arr: string[] = Array.isArray(j?.descriptions) ? j.descriptions : []
+                  titles.forEach((t, idx) => {
+                    const d = String(arr[idx] || '').trim()
                     if (d) descriptionsByTitle[t] = d
-                  }
+                  })
                 }
               } catch {}
             }

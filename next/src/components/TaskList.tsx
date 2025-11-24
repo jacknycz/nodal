@@ -106,8 +106,7 @@ export default function TaskList({ open, onClose, dock = false, leftOffsetPx = 5
         {/* Header */}
         <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
           <div className="flex items-center space-x-2">
-            <img src="/nobot.svg" alt="Nodal" width={24} height={24} className="opacity-90" />
-            <span className="text-xs text-gray-600 dark:text-gray-300">Tasks ({tasks.length})</span>
+            <span className="font-medium text-gray-600 dark:text-gray-300">Tasks ({tasks.length})</span>
           </div>
           <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
             <X className="w-4 h-4" />
