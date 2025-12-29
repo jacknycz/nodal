@@ -15,8 +15,8 @@ interface LiteUser {
   email: string | null
   role: string | null
   createdAt: string
-  lastSignInAt: string | null
   confirmedAt: string | null
+  lastActiveAt?: string | null
 }
 
 export default function AdminUsersPage() {
@@ -29,6 +29,37 @@ export default function AdminUsersPage() {
   const [notesDraft, setNotesDraft] = useState<string>('')
   const [sortKey, setSortKey] = useState<'done' | 'idea' | 'broken' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [activityUpdating, setActivityUpdating] = useState(false)
+
+  // Ping a lightweight endpoint to mark the current user as active.
+  useEffect(() => {
+    const userId = user?.id
+    if (!userId) return
+    let cancelled = false
+
+    const ping = async () => {
+      try {
+        setActivityUpdating(true)
+        await fetch('/api/profile/active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        })
+      } catch {
+        // best-effort only
+      } finally {
+        if (!cancelled) setActivityUpdating(false)
+      }
+    }
+
+    // Mark active on first load, and then every 5 minutes while the admin is open
+    ping()
+    const interval = window.setInterval(ping, 5 * 60 * 1000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [user?.id])
 
   const sortedFeedback = useMemo(() => {
     const rows = Array.isArray(feedback) ? [...feedback] : []
@@ -105,7 +136,7 @@ export default function AdminUsersPage() {
                 <th className="px-3 py-2">Email</th>
                 <th className="px-3 py-2">Role</th>
                 <th className="px-3 py-2">Created</th>
-                <th className="px-3 py-2">Last sign-in</th>
+                <th className="px-3 py-2">Last active</th>
                 <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
@@ -115,7 +146,9 @@ export default function AdminUsersPage() {
                   <td className="px-3 py-2">{u.email || '—'}</td>
                   <td className="px-3 py-2 capitalize">{u.role || 'User'}</td>
                   <td className="px-3 py-2">{new Date(u.createdAt).toLocaleString()}</td>
-                  <td className="px-3 py-2">{u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleString() : '—'}</td>
+                  <td className="px-3 py-2">
+                    {u.lastActiveAt ? new Date(u.lastActiveAt).toLocaleString() : '—'}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <Select

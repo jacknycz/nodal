@@ -8,7 +8,9 @@ create table if not exists public.profiles (
   display_name text,
   avatar_url text,
   created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  -- Last active timestamp for app-level activity tracking (separate from auth.users.last_sign_in_at)
+  last_active_at timestamptz
 );
 
 -- Case-insensitive unique on username (redundant if citext unique is supported, kept for safety)

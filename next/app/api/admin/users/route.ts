@@ -22,14 +22,42 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const users = (data?.users || []).map((u: any) => ({
+    const baseUsers = (data?.users || []).map((u: any) => ({
       id: u.id as string,
       email: u.email as string | null,
       role: (u.app_metadata?.role || u.user_metadata?.role || null) as string | null,
       createdAt: u.created_at as string,
-      lastSignInAt: u.last_sign_in_at as string | null,
       confirmedAt: u.confirmed_at as string | null,
     }))
+
+    // Look up last_active_at from profiles (best-effort; if table/column missing, just return base data)
+    let users = baseUsers
+    try {
+      const service = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+        process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+        { auth: { persistSession: false } },
+      )
+      const ids = baseUsers.map(u => u.id)
+      if (ids.length > 0) {
+        const { data: profs, error: profErr } = await service
+          .from('profiles')
+          .select('id, last_active_at')
+          .in('id', ids)
+        if (!profErr && Array.isArray(profs)) {
+          const map = new Map<string, string | null>()
+          for (const p of profs as any[]) {
+            map.set(p.id, p.last_active_at || null)
+          }
+          users = baseUsers.map(u => ({
+            ...u,
+            lastActiveAt: map.get(u.id) ?? null,
+          }))
+        }
+      }
+    } catch {
+      // Ignore – treat lastActiveAt as optional
+    }
 
     // Some client versions don't return total; compute fallback
     const total = typeof (data as any)?.total === 'number' ? (data as any).total : users.length
