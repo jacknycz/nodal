@@ -213,7 +213,24 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
           </div>
         )}
       </div>
-      {/* Colorgories moved to Board Settings modal */}
+      {/* Colorgories */}
+      <div className="relative">
+        <button
+          type="button"
+          title="Colorgories"
+          aria-pressed={openKey === 'colorgories'}
+          onClick={() => { if (disabled) return; setOpenKey(prev => prev === 'colorgories' ? null : 'colorgories') }}
+          className={`${baseBtn} ${openKey === 'colorgories' ? activeCls : neutral} ${disabled ? disabledCls : ''}`}
+          disabled={disabled}
+        >
+          <TagIcon className="w-5 h-5" />
+        </button>
+        {openKey === 'colorgories' && (
+          <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
+            <ColorgoryManager dock anchored open onClose={() => setOpenKey(null)} />
+          </div>
+        )}
+      </div>
       <div className="relative">
         <button
           type="button"
