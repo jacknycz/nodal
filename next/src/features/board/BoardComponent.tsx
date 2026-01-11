@@ -2983,11 +2983,16 @@ function BoardContent({
         onConnect={(readOnly || storyActive) ? undefined : onConnect}
         elementsSelectable={!storyActive}
         panOnDrag={!storyActive}
-        panOnScroll={!storyActive}
-        zoomOnScroll={!storyActive}
-        zoomOnPinch={!storyActive}
+        // Use mouse wheel for zooming instead of vertical panning
+        panOnScroll={false}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
         onNodeDoubleClick={(event: React.MouseEvent, node: any) => {
-          if (storyActive) { try { event.preventDefault(); event.stopPropagation() } catch {}; return }
+          // Disable double-click editing while in Story Mode or when the edit modal is already open.
+          if (storyActive || editorMode) {
+            try { event.preventDefault(); event.stopPropagation() } catch {}
+            return
+          }
           try { event.preventDefault(); event.stopPropagation() } catch {}
           if (readOnly) return
           try { window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id: node?.id } })) } catch {}

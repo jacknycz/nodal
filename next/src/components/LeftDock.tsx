@@ -255,13 +255,16 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
                 <ul className="list-disc pl-5 space-y-2">
-                  <li><strong>Cmd/Ctrl + click</strong> on nodes to multi-select.</li>
-                  <li><strong>Cmd/Ctrl + drag</strong> from one node to another to connect them.</li>
-                  <li><strong>Undo</strong>: Cmd + Z (Mac) / Ctrl + Z (Windows)</li>
-                  <li><strong>Redo</strong>: Cmd + Shift + Z (Mac) / Ctrl + Shift + Z (Windows)</li>
+                  <li><strong>Mouse wheel</strong> zooms the board in and out.</li>
+                  <li><strong>Click & drag</strong> on empty space to pan the board.</li>
+                  <li><strong>Cmd/Ctrl + click</strong> nodes to multi-select.</li>
+                  <li><strong>Shift + click</strong> a second node (with one selected) to connect them.</li>
+                  <li><strong>Shift + drag</strong> to marquee-select multiple nodes.</li>
+                  <li><strong>Undo</strong>: Cmd + Z (Mac) / Ctrl + Z (Windows).</li>
+                  <li><strong>Redo</strong>: Cmd + Shift + Z (Mac) / Ctrl + Shift + Z (Windows).</li>
                   <li><strong>Drag & drop</strong> files onto the board to create nodes.</li>
-                  <li><strong>Double-click</strong> a node to open editing.</li>
-                  <li>Use the bottom FAB to add nodes, upload, or generate.</li>
+                  <li><strong>Double‑click</strong> a node to open editing.</li>
+                  <li>Use the bottom FAB to add nodes, upload, or generate with AI.</li>
                 </ul>
               </div>
             </div>
