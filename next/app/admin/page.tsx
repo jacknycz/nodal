@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSupabaseUser } from '@/features/auth/authUtils'
-import { getSupabaseClient } from '@/features/auth/supabaseClient'
 import { isAdmin, getUserRoleFromMetadata } from '@/features/auth/roles'
 import Select from '@/components/ui/Select'
 import Modal from '@/components/ui/Modal'
@@ -16,9 +15,8 @@ interface LiteUser {
   email: string | null
   role: string | null
   createdAt: string
-  lastSignInAt: string | null
   confirmedAt: string | null
-  paid?: boolean
+  lastActiveAt?: string | null
 }
 
 export default function AdminUsersPage() {
@@ -31,6 +29,37 @@ export default function AdminUsersPage() {
   const [notesDraft, setNotesDraft] = useState<string>('')
   const [sortKey, setSortKey] = useState<'done' | 'idea' | 'broken' | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [activityUpdating, setActivityUpdating] = useState(false)
+
+  // Ping a lightweight endpoint to mark the current user as active.
+  useEffect(() => {
+    const userId = user?.id
+    if (!userId) return
+    let cancelled = false
+
+    const ping = async () => {
+      try {
+        setActivityUpdating(true)
+        await fetch('/api/profile/active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId }),
+        })
+      } catch {
+        // best-effort only
+      } finally {
+        if (!cancelled) setActivityUpdating(false)
+      }
+    }
+
+    // Mark active on first load, and then every 5 minutes while the admin is open
+    ping()
+    const interval = window.setInterval(ping, 5 * 60 * 1000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [user?.id])
 
   const sortedFeedback = useMemo(() => {
     const rows = Array.isArray(feedback) ? [...feedback] : []
@@ -95,21 +124,19 @@ export default function AdminUsersPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto min-h-screen bg-gray-950 text-gray-100">
       <h1 className="text-2xl font-bold mb-4">Admin</h1>
-      {/* <h2 className="text-xl font-semibold mb-2">Users</h2> */}
+      <h2 className="text-xl font-semibold mb-2">Users</h2>
       {loading && <div>Loading…</div>}
       {error && <div className="text-red-600">{error}</div>}
 
-      {/* Users */}
-      {!loading && !error && ['jack.nycz@gmail.com','jack@nodalapp.com'].includes(String(user?.email || '').toLowerCase()) && (
+      {!loading && !error && (
         <div className="overflow-x-auto rounded-lg border border-gray-800 bg-gray-900">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-800 text-left">
               <tr>
                 <th className="px-3 py-2">Email</th>
                 <th className="px-3 py-2">Role</th>
-                <th className="px-3 py-2">Paid</th>
                 <th className="px-3 py-2">Created</th>
-                <th className="px-3 py-2">Last sign-in</th>
+                <th className="px-3 py-2">Last active</th>
                 <th className="px-3 py-2">Actions</th>
               </tr>
             </thead>
@@ -118,9 +145,10 @@ export default function AdminUsersPage() {
                 <tr key={u.id} className="border-t border-gray-800">
                   <td className="px-3 py-2">{u.email || '—'}</td>
                   <td className="px-3 py-2 capitalize">{u.role || 'User'}</td>
-                  <td className="px-3 py-2">{u.paid ? 'Yes' : '—'}</td>
                   <td className="px-3 py-2">{new Date(u.createdAt).toLocaleString()}</td>
-                  <td className="px-3 py-2">{u.lastSignInAt ? new Date(u.lastSignInAt).toLocaleString() : '—'}</td>
+                  <td className="px-3 py-2">
+                    {u.lastActiveAt ? new Date(u.lastActiveAt).toLocaleString() : '—'}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <Select
@@ -128,21 +156,13 @@ export default function AdminUsersPage() {
                         value={(u.role || 'user').toLowerCase()}
                         onChange={async (val) => {
                           try {
-                            const { data } = await getSupabaseClient().auth.getSession()
-                            const token = data?.session?.access_token
-                            const override =
-                              val === 'user' ? null :
-                              (val === 'pro' ? 'Pro' : val === 'admin' ? 'Admin' : null)
-                            const res = await fetch('/api/admin/role-override', {
+                            const res = await fetch('/api/admin/users', {
                               method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                              },
-                              body: JSON.stringify({ userId: u.id, override })
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: u.id, role: val })
                             })
-                            if (!res.ok) throw new Error('Failed to update override')
-                            setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: val === 'user' ? null : (val as any) } : x))
+                            if (!res.ok) throw new Error('Failed to update role')
+                            setUsers(prev => prev.map(x => x.id === u.id ? { ...x, role: val === 'user' ? null : val as any } : x))
                           } catch (e) {
                             alert('Unable to set role')
                           }
