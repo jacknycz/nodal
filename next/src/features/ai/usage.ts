@@ -31,8 +31,20 @@ export function useAIUsage() {
       const supabase = getSupabaseClient()
       const { data } = await supabase.auth.getSession()
       const token = data?.session?.access_token
+
+      // If there is no authenticated session, skip calling /api/usage to avoid
+      // spamming 401s in the console; just treat as "no usage yet".
+      if (!token) {
+        try {
+          console.info?.('[ai] Skipping /api/usage fetch (no Supabase session)')
+        } catch {}
+        setSummary(null)
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/usage', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        headers: { 'Authorization': `Bearer ${token}` }
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json?.error || 'Failed to load usage')

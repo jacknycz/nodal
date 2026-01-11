@@ -197,7 +197,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
             </div>
           )}
           {plainContent && (
-            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words">{plainContent}</div>
+            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-2">{plainContent}</div>
           )}
         </div>
       </div>

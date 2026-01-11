@@ -292,7 +292,14 @@ class SupabaseStorage {
         edgeCount: board.edge_count as number,
         userId: board.user_id as string,
       }))
-    } catch (error) {
+    } catch (error: any) {
+      const message: string = typeof error?.message === 'string' ? error.message : ''
+      const details: string = typeof error?.details === 'string' ? error.details : ''
+      // Supabase can surface aborted fetches as AbortError – these are benign (e.g. navigation, React tearing)
+      if (message.includes('AbortError') || details.includes('AbortError')) {
+        // Silently treat as "no result" to avoid noisy console errors in BoardRoom
+        return []
+      }
       console.error('Failed to get boards from Supabase:', error)
       return []
     }
@@ -545,6 +552,13 @@ class SupabaseStorage {
         .maybeSingle()
 
       if (dbError || !docData) {
+        const msg = String((dbError as any)?.message || '')
+        const details = String((dbError as any)?.details || '')
+        // Supabase can surface aborted fetches as AbortError – these are benign (navigation, unmount, etc.)
+        if (msg.includes('AbortError') || details.includes('AbortError')) {
+          // Silent no-op: treat as "no URL yet" without spamming the console
+          return null
+        }
         console.error('Document not found or access denied:', dbError)
         return null
       }
@@ -552,7 +566,13 @@ class SupabaseStorage {
       const url = await this.createSignedUrlWithRetry(String(docData.file_path), 86400)
       if (!url) return null
       return url
-    } catch (error) {
+    } catch (error: any) {
+      const msg = String(error?.message || '')
+      const details = String(error?.details || '')
+      if (msg.includes('AbortError') || details.includes('AbortError')) {
+        // Ignore benign aborted requests
+        return null
+      }
       console.error('Failed to get signed URL from Supabase:', error)
       return null
     }

@@ -613,12 +613,27 @@ export class OpenAIService {
     try {
       // Lightweight reachability/auth check that does NOT consume AI tokens
       let authHeader: Record<string, string> = {}
+      let hasToken = false
       try {
         const supabase = getSupabaseClient()
         const { data } = await supabase.auth.getSession()
         const token = data?.session?.access_token
-        if (token) authHeader = { 'Authorization': `Bearer ${token}` }
+        if (token) {
+          hasToken = true
+          authHeader = { 'Authorization': `Bearer ${token}` }
+        }
       } catch {}
+
+      // On clients without an authenticated user/session, skip the usage ping entirely.
+      // This avoids noisy 401s in the console on fresh installs or before login,
+      // while still treating the AI service as reachable.
+      if (!hasToken) {
+        try {
+          console.info?.('[ai] Skipping /api/usage health check (no Supabase session)')
+        } catch {}
+        return true
+      }
+
       const res = await fetch('/api/usage', { headers: { ...authHeader } })
       return res.ok
     } catch {

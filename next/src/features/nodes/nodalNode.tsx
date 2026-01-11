@@ -146,10 +146,14 @@ export default function NodalNode(props: any) {
   }
 
   // Function to render rich content safely
-  const renderRichContent = (htmlContent: string) => {
+  const renderRichContent = (htmlContent: string, options?: { clampLines?: number }) => {
+    const clampClass =
+      options?.clampLines === 2 ? 'line-clamp-2' :
+      options?.clampLines === 3 ? 'line-clamp-3' :
+      ''
     return (
       <div
-        className="tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
+        className={`tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed break-words [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline ${clampClass}`}
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     )
@@ -268,7 +272,7 @@ export default function NodalNode(props: any) {
         ) : (
           data.content && (
             <div className="mt-2">
-              {renderRichContent(data.content)}
+              {renderRichContent(data.content, { clampLines: 2 })}
             </div>
           )
         )}

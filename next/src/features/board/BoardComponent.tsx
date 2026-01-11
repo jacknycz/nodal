@@ -2993,8 +2993,40 @@ function BoardContent({
           try { window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id: node?.id } })) } catch {}
         }}
         onNodeClick={(event: React.MouseEvent, node: any) => {
-          // Desktop: ignore single clicks here; mobile handled via touch logic above
-          // Keep to potentially extend in future; do not stop propagation
+          if (storyActive) { return }
+          if (readOnly) return
+          const id = node?.id as string | undefined
+          if (!id) return
+
+          // Implement explicit multi-select: Cmd/Ctrl+click toggles, plain click singles.
+          const store = useBoardStore.getState() as any
+          const current: string[] = Array.isArray(store.selectedNodeIds) ? store.selectedNodeIds : []
+          let next: string[]
+          const isToggle = event.metaKey || event.ctrlKey
+
+          if (isToggle) {
+            const already = current.includes(id)
+            next = already ? current.filter((x) => x !== id) : [...current, id]
+          } else {
+            next = [id]
+          }
+
+          try {
+            store.setSelectedNodes(next)
+          } catch {}
+
+          // Sync XYFlow visual selection
+          try {
+            reactFlowInstance.setNodes((cur) => cur.map((n) => ({
+              ...n,
+              selected: next.includes(n.id),
+            })))
+          } catch {}
+
+          try {
+            event.preventDefault()
+            event.stopPropagation()
+          } catch {}
         }}
           onNodeContextMenu={(event: React.MouseEvent, node: any) => {
             if (editorMode || storyActive) { event.preventDefault(); return }
@@ -3812,9 +3844,6 @@ function BoardContent({
         if (n.type === 'task') {
           const initialTitle = (d.title ?? '')
           const initialContent = (d.content ?? '')
-          const toPlain = (html: string) => {
-            try { const tmp = document.createElement('div'); tmp.innerHTML = html; return (tmp.textContent || tmp.innerText || '').trim() } catch { return html }
-          }
           const assignee = (typeof taskAssignee !== 'undefined' && taskAssignee !== null) ? taskAssignee : (((d as any)?.assigneeId || '') as string)
           return (
             <NodeEditModal
@@ -3826,22 +3855,41 @@ function BoardContent({
               initialTitleSize={'sm'}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={async (title, content) => {
-                const plainContent = toPlain(content || '')
                 const safeTitle = (title || '').trim() || 'Untitled Task'
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title: safeTitle, content: plainContent, assigneeId: assignee || null } } : nn) : nds))
+                const nextContent = content || ''
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn =>
+                  nn.id === editNodeId
+                    ? { ...nn, data: { ...(nn.data as any), title: safeTitle, content: nextContent, assigneeId: assignee || null } }
+                    : nn
+                ) : nds))
                 // Persist assignment to DB (board_updates row; durable storage handled by autosave elsewhere)
                 try {
                   const bid = useBoardStore.getState().currentBoardId
                   if (bid) {
-                    await fetch('/api/board/updates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ boardId: bid, nodeId: editNodeId, updateType: 'content', data: { title: safeTitle, content: plainContent, assigneeId: assignee || null } }) })
+                    await fetch('/api/board/updates', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        boardId: bid,
+                        nodeId: editNodeId,
+                        updateType: 'content',
+                        data: { title: safeTitle, content: nextContent, assigneeId: assignee || null },
+                      }),
+                    })
                   }
                 } catch {}
                 centerOnNodeIds([editNodeId!])
               }}
               onLiveChange={(title, content) => {
-                const plainContent = toPlain(content || '')
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content: plainContent, assigneeId: assignee || null } } : nn) : nds))
-                if (editNodeId) sendLivePatch(editNodeId, { title, content: plainContent, assigneeId: assignee || null })
+                const nextContent = content || ''
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn =>
+                  nn.id === editNodeId
+                    ? { ...nn, data: { ...(nn.data as any), title, content: nextContent, assigneeId: assignee || null } }
+                    : nn
+                ) : nds))
+                if (editNodeId) {
+                  sendLivePatch(editNodeId, { title, content: nextContent, assigneeId: assignee || null })
+                }
               }}
               showContent={true}
               showPageMode={false}
