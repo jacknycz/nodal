@@ -509,7 +509,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           </div>
         )}
         <div className="pt-1 pb-6 px-3">
-          <div className="text-sm font-medium text-gray-900 dark:text-white">
+          <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
             {data.title || 'Video'}
           </div>
           {data.status && data.status !== 'ready' && (

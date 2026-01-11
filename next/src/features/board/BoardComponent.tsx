@@ -1303,7 +1303,7 @@ function BoardContent({
   // Shift + click + drag to connect two nodes by dropping on a node surface
   useEffect(() => {
     const onMouseDown = (e: MouseEvent) => {
-      if (!e.metaKey) return
+      if (!e.shiftKey) return
       const target = e.target as HTMLElement | null
       if (!target) return
       const nodeEl = target.closest?.('.react-flow__node') as HTMLElement | null
@@ -3003,7 +3003,19 @@ function BoardContent({
           const id = node?.id as string | undefined
           if (!id) return
 
-          // Implement explicit multi-select: Cmd/Ctrl+click toggles, plain click singles.
+          // Shift+click: connect from the single selected node to this node.
+          if (event.shiftKey) {
+            try {
+              handleShiftClickConnect(id)
+            } catch {}
+            try {
+              event.preventDefault()
+              event.stopPropagation()
+            } catch {}
+            return
+          }
+
+          // Cmd/Ctrl+click: toggle selection; plain click: single-select.
           const store = useBoardStore.getState() as any
           const current: string[] = Array.isArray(store.selectedNodeIds) ? store.selectedNodeIds : []
           let next: string[]
@@ -3786,15 +3798,21 @@ function BoardContent({
               initialTitle={d.title || safeHostname || ''}
               initialContent={d.description || ''}
               initialColorgoryIds={d.colorgoryIds || []}
-              initialTitleSize={'sm'}
+              initialTitleSize={(d.titleSize as any) || 'sm'}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
-              onSave={(title, content, colorgoryIds) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
+              onSave={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? {
+                  ...nn,
+                  data: { ...(nn.data as any), title, description: content, colorgoryIds, titleSize }
+                } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
               }}
-              onLiveChange={(title, content, colorgoryIds) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, description: content, colorgoryIds } } : nn) : nds))
-                if (editNodeId) sendLivePatch(editNodeId, { title, description: content, colorgoryIds })
+              onLiveChange={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? {
+                  ...nn,
+                  data: { ...(nn.data as any), title, description: content, colorgoryIds, titleSize }
+                } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, description: content, colorgoryIds, titleSize })
               }}
             />
           )
@@ -3809,15 +3827,21 @@ function BoardContent({
               initialTitle={initialTitle}
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
-              initialTitleSize={'sm'}
+              initialTitleSize={(d.titleSize as any) || 'sm'}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
-              onSave={(title, content, colorgoryIds) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+              onSave={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? {
+                  ...nn,
+                  data: { ...(nn.data as any), title, content, colorgoryIds, titleSize }
+                } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
               }}
-              onLiveChange={(title, content, colorgoryIds) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
-                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds })
+              onLiveChange={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? {
+                  ...nn,
+                  data: { ...(nn.data as any), title, content, colorgoryIds, titleSize }
+                } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds, titleSize })
               }}
             />
           )
@@ -3918,15 +3942,21 @@ function BoardContent({
               initialTitle={initialTitle}
               initialContent={initialContent}
               initialColorgoryIds={d.colorgoryIds || []}
-              initialTitleSize={'sm'}
+              initialTitleSize={(d.titleSize as any) || 'sm'}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
-              onSave={(title, content, colorgoryIds) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
+              onSave={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? {
+                  ...nn,
+                  data: { ...(nn.data as any), title, content, colorgoryIds, titleSize }
+                } : nn) : nds))
                 centerOnNodeIds([editNodeId!])
               }}
-              onLiveChange={(title, content, colorgoryIds) => {
-                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? { ...nn, data: { ...(nn.data as any), title, content, colorgoryIds } } : nn) : nds))
-                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds })
+              onLiveChange={(title, content, colorgoryIds, titleSize) => {
+                setNodes((nds) => (Array.isArray(nds) ? nds.map(nn => nn.id === editNodeId ? {
+                  ...nn,
+                  data: { ...(nn.data as any), title, content, colorgoryIds, titleSize }
+                } : nn) : nds))
+                if (editNodeId) sendLivePatch(editNodeId, { title, content, colorgoryIds, titleSize })
               }}
             />
           )

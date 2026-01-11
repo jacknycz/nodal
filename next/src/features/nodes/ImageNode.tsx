@@ -468,7 +468,7 @@ export default function ImageNode({
           {/* Accordion content */}
           <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
             <div className="pt-1 pb-6 px-3">
-              <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
                 {data.title || data.fileName || 'Image'}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">

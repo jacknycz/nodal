@@ -147,7 +147,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           )}
         </div>
         <div className="mt-2">
-          <div className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
+          <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white truncate flex items-center gap-2`}>
             {Boolean((data as any).faviconUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />

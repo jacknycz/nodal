@@ -164,14 +164,6 @@ export default function TaskNode({
     <div
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'relative min-w-[220px] max-w-[420px]' })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
-      onClick={(e) => {
-        if (e.shiftKey) {
-          e.preventDefault()
-          e.stopPropagation()
-          onNodeShiftClickConnect?.(id)
-        }
-        
-      }}
     >
       {/* Assignee avatar initials */}
       {(data as any)?.assigneeId && assigneeInitials && (
