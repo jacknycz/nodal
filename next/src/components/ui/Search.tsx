@@ -58,7 +58,9 @@ export default function FloatingSearch({
         aria-label={placeholder || label}
         className="
           peer w-full rounded-full border border-transparent dark:border-primary-500/20
-          shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-primary-500/40
+          shadow-2xl shadow-gray-400/20 dark:shadow-2xl dark:shadow-primary-500/20
+          dark:hover:shadow-primary-500/40 hover:shadow-primary-500/40
+          transition-all duration-200
           bg-white dark:bg-gray-900/80
           pl-10 pr-9 pt-5 pb-2
           text-sm! text-gray-900 dark:text-gray-100

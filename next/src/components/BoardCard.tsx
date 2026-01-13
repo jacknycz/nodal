@@ -164,9 +164,9 @@ function BoardCard({
     <div
       className={`group relative flex flex-col 
       shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
-      bg-white dark:bg-gray-950/60 dark:hover:bg-gray-950/70
-      ${isSharedBoard ? 'border-primary-200 dark:border-primary-700/40' : 'border-transparent'}  
-      dark:hover:border-primary-600/10 p-4 rounded-3xl border transition-all duration-200`}
+      bg-white dark:bg-gray-900/60 dark:hover:bg-gray-900/90
+      ${isSharedBoard ? 'border-primary-200 dark:border-primary-500/40' : 'border-primary-100 dark:border-primary-900/20'}  
+      dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200`}
       // onClick={handleCardClick}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 160px' as any }}
     >

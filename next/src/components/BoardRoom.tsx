@@ -622,7 +622,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         <div className="absolute left-0 right-0 top-0 h-[200dvh]">
           <div className="absolute inset-0 
           bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 
-          dark:from-gray-950 dark:via-primary-950 dark:to-gray-950" />
+          dark:from-gray-900 dark:via-gray-950 dark:to-gray-900" />
         </div>
       </div>
 
@@ -764,7 +764,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
         {/* SIDEBAR */}
         <div className="w-full lg:w-96 lg:min-w-[24rem] lg:max-w-[24rem] flex-none shrink-0 mt-8 lg:-mt-16 lg:min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 
-        p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/70 lg:sticky lg:top-12 self-start z-30" style={{ scrollbarGutter: 'stable' }}>
+        p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/50 lg:sticky lg:top-12 self-start z-30" style={{ scrollbarGutter: 'stable' }}>
           <SidebarSection showOn={['boards', 'profile']}>
             <TasksSidebar
               incompleteTasks={incompleteTasks}
