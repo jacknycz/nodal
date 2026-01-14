@@ -19,6 +19,7 @@ interface BoardContextMenuProps {
   onAddTaskNode?: () => void
   onAddHeadlineNode?: () => void
   onQuickAIGenerateNodes?: (nodeId?: string | null) => void
+  onQuickAIGenerateNodesWithMedia?: (nodeId?: string | null) => void
   onPasteNode?: (position: { x: number; y: number }) => void
   onPasteConnectedNode?: (nodeId: string, position: { x: number; y: number }) => void
   onOrganizeSubtree?: (nodeId: string) => void
@@ -41,6 +42,7 @@ export default function BoardContextMenu({
   onAddTaskNode,
   onAddHeadlineNode,
   onQuickAIGenerateNodes,
+  onQuickAIGenerateNodesWithMedia,
   onPasteNode,
   onPasteConnectedNode,
   onOrganizeSubtree,
@@ -75,6 +77,12 @@ export default function BoardContextMenu({
   const [showDelete, setShowDelete] = React.useState(false)
   const colorgoryMenuRef = React.useRef<HTMLDivElement | null>(null)
   const [colorgoryYOffset, setColorgoryYOffset] = React.useState(0)
+  const [addHover, setAddHover] = React.useState(false)
+  const [addFlipLeft, setAddFlipLeft] = React.useState(false)
+  const addMenuRef = React.useRef<HTMLDivElement | null>(null)
+  const [generateHover, setGenerateHover] = React.useState(false)
+  const [generateFlipLeft, setGenerateFlipLeft] = React.useState(false)
+  const generateMenuRef = React.useRef<HTMLDivElement | null>(null)
   const multiSelected = React.useMemo(() => {
     return Array.isArray(selectedIds) && selectedIds.length > 1 && !!nodeId && selectedIds.includes(nodeId)
   }, [selectedIds, nodeId])
@@ -173,6 +181,34 @@ export default function BoardContextMenu({
     }
   }, [colorgoryHover, isOpen])
 
+  // Flip Add submenu if it would overflow right edge
+  React.useEffect(() => {
+    if (!isOpen) return
+    if (!addHover) return setAddFlipLeft(false)
+    if (!menuRef.current) return
+    try {
+      const rect = menuRef.current.getBoundingClientRect()
+      const spaceRight = window.innerWidth - rect.right
+      setAddFlipLeft(spaceRight < 240)
+    } catch {
+      setAddFlipLeft(false)
+    }
+  }, [addHover, isOpen])
+
+  // Flip Generate submenu if it would overflow right edge
+  React.useEffect(() => {
+    if (!isOpen) return
+    if (!generateHover) return setGenerateFlipLeft(false)
+    if (!menuRef.current) return
+    try {
+      const rect = menuRef.current.getBoundingClientRect()
+      const spaceRight = window.innerWidth - rect.right
+      setGenerateFlipLeft(spaceRight < 260)
+    } catch {
+      setGenerateFlipLeft(false)
+    }
+  }, [generateHover, isOpen])
+
   // Clamp colorgory submenu vertically within viewport
   React.useEffect(() => {
     if (!isOpen) return
@@ -269,43 +305,104 @@ export default function BoardContextMenu({
 
             {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
 
-            {!multiSelected && onAddConnectedNodes && (
-              <button onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <TreeStructure size={18} className="w-4 h-4" />
-                Add Node(s)
-              </button>
+            {/* Add ▶ */}
+            {!multiSelected && (
+              <div
+                className="relative"
+                onMouseEnter={() => setAddHover(true)}
+                onMouseLeave={() => setAddHover(false)}
+              >
+                <div className="flex items-center justify-between w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                  <span className="flex items-center gap-3">
+                    <PlusCircle size={18} className="w-4 h-4" />
+                    Add
+                  </span>
+                  <CaretRight size={16} weight="duotone" className="text-gray-400" />
+                </div>
+                {addHover && (
+                  <div
+                    ref={addMenuRef}
+                    className={`absolute ${addFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[220px] p-1 z-710`}
+                  >
+                    {onAddConnectedNodes && (
+                      <button
+                        onClick={() => handleAction(() => onAddConnectedNodes(nodeId, position))}
+                        className="cursor-pointer w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      >
+                        Node(s)
+                      </button>
+                    )}
+                    {onAddTaskNode && (
+                      <button
+                        onClick={() => handleAction(() => onAddTaskNode())}
+                        className="cursor-pointer w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      >
+                        Task
+                      </button>
+                    )}
+                    {onAddHeadlineNode && (
+                      <button
+                        onClick={() => handleAction(() => onAddHeadlineNode())}
+                        className="cursor-pointer w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      >
+                        Headline
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
-            {!multiSelected && onQuickAIGenerateNodes && (
-              <button onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <PlusCircle size={18} className="w-4 h-4" />
-                Generate AI Node(s)
-              </button>
+            <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+
+            {/* Generate ▶ */}
+            {!multiSelected && (
+              <div
+                className="relative"
+                onMouseEnter={() => setGenerateHover(true)}
+                onMouseLeave={() => setGenerateHover(false)}
+              >
+                <div className="flex items-center justify-between w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                  <span className="flex items-center gap-3">
+                    <PlusCircle size={18} className="w-4 h-4" />
+                    Generate
+                  </span>
+                  <CaretRight size={16} weight="duotone" className="text-gray-400" />
+                </div>
+                {generateHover && (
+                  <div
+                    ref={generateMenuRef}
+                    className={`absolute ${generateFlipLeft ? 'right-full' : 'left-full'} top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 min-w-[240px] p-1 z-710`}
+                  >
+                    {onQuickAIGenerateNodes && (
+                      <button
+                        onClick={() => handleAction(() => onQuickAIGenerateNodes(nodeId))}
+                        className="cursor-pointer w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      >
+                        AI Nodes (Text)
+                      </button>
+                    )}
+                    {onQuickAIGenerateNodesWithMedia && (
+                      <button
+                        onClick={() => handleAction(() => onQuickAIGenerateNodesWithMedia(nodeId))}
+                        className="cursor-pointer w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      >
+                        AI Nodes (with Media)
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
+            <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+
+            {/* Paste Node */}
             {!multiSelected && onPasteConnectedNode && (
               <button onClick={() => handleAction(() => onPasteConnectedNode(nodeId, position))}
                 className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
                 <ClipboardText size={18} className="w-4 h-4" />
                 Paste Node
-              </button>
-            )}
-
-            {!multiSelected && onAddTaskNode && (
-              <button onClick={() => handleAction(onAddTaskNode)}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <CheckSquare size={18} className="w-4 h-4" />
-                Add Task
-              </button>
-            )}
-
-            {!multiSelected && onAddHeadlineNode && (
-              <button onClick={() => handleAction(onAddHeadlineNode)}
-                className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3">
-                <TextHOne size={18} className="w-4 h-4" />
-                Add Headline
               </button>
             )}
 
