@@ -1,14 +1,12 @@
 import type { BoardNode, BoardEdge } from '../board/boardTypes'
 
 // OpenAI Model Types
-export type OpenAIModel = 
-  | 'gpt-4' 
-  | 'gpt-4-turbo' 
-  | 'gpt-3.5-turbo' 
-  | 'gpt-4o' 
+// Model ids supported by the app's model picker
+export type OpenAIModel =
+  | 'gpt-4o'
   | 'gpt-4o-mini'
-  | 'gpt-5'
   | 'gpt-5-mini'
+  | 'gpt-5'
 
 export interface ModelInfo {
   id: OpenAIModel

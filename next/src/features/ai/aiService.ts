@@ -15,30 +15,6 @@ import { getSupabaseClient } from '../auth/supabaseClient'
 
 // Model Information Database
 export const MODEL_INFO: Record<OpenAIModel, ModelInfo> = {
-  'gpt-4': {
-    id: 'gpt-4',
-    name: 'GPT-4',
-    description: 'Most capable model, best for complex reasoning',
-    maxTokens: 8192,
-    costPer1k: 0.03,
-    capabilities: { streaming: true, functionCalling: true, vision: false }
-  },
-  'gpt-4-turbo': {
-    id: 'gpt-4-turbo',
-    name: 'GPT-4 Turbo',
-    description: 'Fast and capable, great balance of speed and quality',
-    maxTokens: 128000,
-    costPer1k: 0.01,
-    capabilities: { streaming: true, functionCalling: true, vision: true }
-  },
-  'gpt-3.5-turbo': {
-    id: 'gpt-3.5-turbo',
-    name: 'GPT-3.5 Turbo',
-    description: 'Fast and cost-effective for simple tasks',
-    maxTokens: 16384,
-    costPer1k: 0.0015,
-    capabilities: { streaming: true, functionCalling: true, vision: false }
-  },
   'gpt-4o': {
     id: 'gpt-4o',
     name: 'GPT-4o',

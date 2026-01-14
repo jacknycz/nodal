@@ -1,6 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Fix Turbopack root inference on Windows when multiple lockfiles exist at repo root + /next
+  turbopack: {
+    root: __dirname,
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.

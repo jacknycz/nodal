@@ -55,6 +55,7 @@ import type { BoardBrief } from './boardTypes'
 import BoardContextMenu from '../../components/BoardContextMenu'
 // import { supabase } from '../auth/supabaseClient'; // Using getSupabaseClient instead
 import type { BoardNode } from './boardTypes';
+import { boundsOverlap, checkCollision } from './spatialAnalysis'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
@@ -248,6 +249,7 @@ function BoardContent({
   const [leftDockActive, setLeftDockActive] = useState<'tasks' | 'colorgories' | 'tips' | 'stories' | null>(null)
   const [toastOpen, setToastOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState<string>('')
+  const [toastSubMessage, setToastSubMessage] = useState<string>('')
   const [toastVariant, setToastVariant] = useState<'success' | 'info' | 'warning' | 'danger'>('success')
   const [quickAiGenerating, setQuickAiGenerating] = useState(false)
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
@@ -392,16 +394,146 @@ function BoardContent({
     }
   }, [])
 
-  const showAddToast = useCallback((kind: 'added' | 'generated', count: number) => {
+  const showAddToast = useCallback((kind: 'added' | 'generated', count: number, subtext?: string) => {
     if (!count || count < 1) return
     const noun = count === 1 ? 'node' : 'nodes'
     const verb = kind === 'generated' ? (count === 1 ? 'Generated' : 'Generated') : (count === 1 ? 'Added' : 'Added')
     const article = count === 1 ? 'a ' : ''
     const msg = `${verb} ${article}${count === 1 ? noun : count + ' ' + noun}!`
     setToastMessage(msg)
+    setToastSubMessage(subtext || '')
     setToastVariant('success')
     setToastOpen(true)
   }, [])
+
+  const getSubtreeIds = useCallback((rootId: string, edges: any[]): Set<string> => {
+    const out = new Set<string>()
+    if (!rootId) return out
+    out.add(rootId)
+    const q: string[] = [rootId]
+    const es = Array.isArray(edges) ? edges : []
+    while (q.length) {
+      const cur = q.shift() as string
+      for (const e of es) {
+        const s = e?.source
+        const t = e?.target
+        if (typeof s !== 'string' || typeof t !== 'string') continue
+        if (s === cur && !out.has(t)) {
+          out.add(t)
+          q.push(t)
+        }
+      }
+    }
+    return out
+  }, [])
+
+  const getApproxDims = useCallback((node: any): { width: number; height: number } => {
+    try {
+      const w = Number(node?.width || 0)
+      const h = Number(node?.height || 0)
+      if (w > 0 && h > 0) return { width: w, height: h }
+      const t = String(node?.type || node?.data?.type || 'default').toLowerCase()
+      if (t.includes('image') || t.includes('video')) return { width: 320, height: 240 }
+      if (t.includes('document')) return { width: 320, height: 220 }
+      if (t.includes('task')) return { width: 320, height: 220 }
+      if (t.includes('headline')) return { width: 320, height: 140 }
+      return { width: 300, height: 180 }
+    } catch {
+      return { width: 300, height: 180 }
+    }
+  }, [])
+
+  const computeClusterShiftX = useCallback((
+    clusterIds: Set<string>,
+    existingNodes: any[],
+    newNodes: any[],
+  ): number => {
+    if (!clusterIds || clusterIds.size === 0) return 0
+    const nodesList = Array.isArray(existingNodes) ? existingNodes : []
+    const obstacles = nodesList.filter(n => !clusterIds.has(n.id))
+    if (obstacles.length === 0) return 0
+
+    const clusterExisting = nodesList.filter(n => clusterIds.has(n.id))
+    const clusterAll = [...clusterExisting, ...(Array.isArray(newNodes) ? newNodes : [])]
+
+    const STEP = 90
+    const MAX_STEPS = 40 // 0..3600px
+    const MIN_DISTANCE = 28
+
+    const collidesAt = (dx: number) => {
+      for (const n of clusterAll) {
+        const dims = getApproxDims(n)
+        const pos = { x: Number(n?.position?.x || 0) + dx, y: Number(n?.position?.y || 0) }
+        const col = checkCollision(pos as any, dims as any, obstacles as any, [], MIN_DISTANCE)
+        if (col?.hasCollision) return true
+      }
+      return false
+    }
+
+    for (let i = 0; i <= MAX_STEPS; i++) {
+      const dx = i * STEP
+      if (!collidesAt(dx)) return dx
+    }
+    // If still colliding after max shift, return last shift anyway (better than stacking)
+    return MAX_STEPS * STEP
+  }, [checkCollision, getApproxDims])
+
+  const ROW_GAP = 220
+
+  const computeNewGroupShiftX = useCallback((
+    existingNodes: any[],
+    newNodes: any[],
+    excludeIds: string[] = [],
+  ): number => {
+    const obstacles = (Array.isArray(existingNodes) ? existingNodes : []).filter(n => !excludeIds.includes(n.id))
+    const group = Array.isArray(newNodes) ? newNodes : []
+    if (obstacles.length === 0 || group.length === 0) return 0
+
+    const STEP = 90
+    const MAX_STEPS = 60
+    const PAD = 28
+
+    // XYFlow node.position is top-left. Use top-left bounds for collision checks.
+    const boundsTL = (pos: { x: number; y: number }, dims: { width: number; height: number }, pad: number) => ({
+      minX: pos.x - pad,
+      minY: pos.y - pad,
+      maxX: pos.x + dims.width + pad,
+      maxY: pos.y + dims.height + pad,
+    })
+
+    const collisionCountAt = (dx: number) => {
+      let hits = 0
+      for (const g of group) {
+        const gDims = getApproxDims(g)
+        const gPos = { x: Number(g?.position?.x || 0) + dx, y: Number(g?.position?.y || 0) }
+        const gB = boundsTL(gPos, gDims, PAD)
+
+        for (const o of obstacles) {
+          const oDims = getApproxDims(o)
+          const oPos = { x: Number(o?.position?.x || 0), y: Number(o?.position?.y || 0) }
+          const oB = boundsTL(oPos, oDims, 0)
+          if (boundsOverlap(gB as any, oB as any)) hits++
+        }
+      }
+      return hits
+    }
+
+    // Search 0, +STEP, -STEP, +2STEP, -2STEP... and return the first collision-free shift.
+    let bestDx = 0
+    let bestHits = collisionCountAt(0)
+    if (bestHits === 0) return 0
+
+    for (let i = 1; i <= MAX_STEPS; i++) {
+      for (const dx of [i * STEP, -i * STEP]) {
+        const hits = collisionCountAt(dx)
+        if (hits === 0) return dx
+        if (hits < bestHits) { bestHits = hits; bestDx = dx }
+      }
+    }
+
+    // If no collision-free slot exists without moving other nodes, shift to the least-colliding position.
+    return bestDx
+  }, [boundsOverlap, getApproxDims])
 
   // Global toast listener (used by uploads and other flows)
   useEffect(() => {
@@ -411,6 +543,7 @@ function BoardContent({
         const msg = String(d.message || d.text || '')
         if (!msg) return
         setToastMessage(msg)
+        setToastSubMessage(String(d.subtext || d.subtitle || ''))
         setToastVariant((d.variant as any) || 'info')
         setToastOpen(true)
       } catch {}
@@ -829,6 +962,82 @@ function BoardContent({
         position: { x: 500, y: 400 },
         data: { title: brief.boardTopic, content: '' },
       }
+
+      const maybeAppendMediaNodes = async (baseNodes: any[], baseEdges: any[]) => {
+        if (!brief.generateMediaNodes) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
+        try {
+          const supa = getSupabaseClient()
+          const { data } = await supa.auth.getSession()
+          const token = data?.session?.access_token
+          const res = await fetch('/api/boards/generate-media-nodes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ topic: brief.boardTopic, description: brief.description, maxImages: 2, maxVideos: 2 }),
+          })
+          if (!res.ok) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
+          const json = await res.json().catch(() => ({}))
+          const items: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(json?.nodes) ? json.nodes : []
+          if (!items.length) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
+
+          // Place media nodes on a second row under the starter nodes
+          const ys = (baseNodes || []).map((n: any) => Number(n?.position?.y || 0))
+          const maxY = ys.length ? Math.max(...ys) : topicNode.position.y
+          const rowY = maxY + 220
+          const cellWidth = 320
+          const padding = 60
+          const count = items.length
+          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+
+          const mediaNodes = items.map((it, index) => {
+            const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+            const position = { x: startX + index * (cellWidth + padding), y: rowY }
+            if (it.type === 'image') {
+              return {
+                id,
+                type: 'image' as const,
+                position,
+                data: {
+                  title: String(it.title || 'Image'),
+                  content: String(it.content || ''),
+                  previewUrl: String(it.url || ''),
+                  type: 'image',
+                  status: 'ready',
+                  titleSize: 'sm',
+                } as any
+              }
+            }
+            return {
+              id,
+              type: 'video' as const,
+              position,
+              data: {
+                title: String(it.title || 'Video'),
+                content: String(it.content || ''),
+                videoUrl: String(it.url || ''),
+                status: 'idle',
+                titleSize: 'sm',
+              } as any
+            }
+          })
+          const mediaEdges = mediaNodes.map((n: any) => ({
+            id: `edge-${Date.now()}-${n.id}`,
+            source: topicNode.id,
+            target: n.id,
+            type: toVisualEdgeType(edgeTypePref) as any,
+          }))
+
+          const nextNodes = [...(baseNodes || []), ...mediaNodes]
+          const nextEdges = [...(baseEdges || []), ...mediaEdges]
+          setNodes(nextNodes)
+          setEdges(nextEdges as any)
+          const boardData = { nodes: nextNodes, edges: nextEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          await boardStorage.updateBoard(boardId, boardData)
+          return { nodes: nextNodes, edges: nextEdges, mediaCount: mediaNodes.length }
+        } catch {
+          return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
+        }
+      }
       setNodes((prev) => {
         const list = Array.isArray(prev) ? prev : []
         const exists = list.some((n: any) => n.id === topicNodeId)
@@ -892,20 +1101,116 @@ function BoardContent({
         const supa = getSupabaseClient()
         const { data } = await supa.auth.getSession()
         const token = data?.session?.access_token
-        const res = await fetch('/api/boards/generate-starters', {
+        const res = await fetch('/api/boards/generate-nodes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
-          body: JSON.stringify({ type: 'generate', topic: brief.boardTopic, description: brief.description, max: 5 })
+          body: JSON.stringify({
+            mode: 'board_create',
+            topic: brief.boardTopic,
+            goal: brief.description,
+            density: 'medium',
+            constraints: {
+              totalMin: 4,
+              totalMax: 16,
+              minText: 5,
+              minMedia: brief.generateMediaNodes ? 1 : 0,
+              maxMedia: brief.generateMediaNodes ? 4 : 0,
+              maxImages: brief.generateMediaNodes ? 4 : 0,
+              maxVideos: brief.generateMediaNodes ? 4 : 0,
+            },
+            board: {
+              supportedNodeTypes: brief.generateMediaNodes ? ['text', 'image', 'video'] : ['text'],
+              existingNodes: [],
+            },
+          })
         })
         if (!res.ok) {
           const j = await res.json().catch(() => ({}))
           throw new Error(j?.error || `Generate starters failed (${res.status})`)
         }
-        const j = await res.json()
-        responseContent = JSON.stringify(j.nodes || [])
+        const j = await res.json().catch(() => ({}))
+        const planned: any[] = Array.isArray(j?.nodes) ? j.nodes : []
+        if (planned.length > 0) {
+          const textItems = planned.filter((n: any) => n?.type === 'text')
+          const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+
+          // Row 1: text nodes (directly under topic)
+          const cellWidth = 300
+          const padding = 60
+          const rowY = topicNode.position.y + ROW_GAP
+          const count = Math.max(1, textItems.length)
+          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+          const generatedNodes: any[] = textItems.map((it: any, index: number) => {
+            const position = { x: startX + index * (cellWidth + padding), y: rowY }
+            return {
+              id: `starter-node-${Date.now()}-${index}`,
+              type: 'default' as const,
+              position,
+              data: { title: String(it?.title || ''), content: String(it?.content || '') }
+            }
+          })
+
+          // Row 2: media nodes (supporting)
+          const mCellWidth = 320
+          const mPadding = 60
+          const mRowY = topicNode.position.y + (ROW_GAP * 2)
+          const mCount = mediaItems.length
+          const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
+          const mStartX = topicNode.position.x - mGroupWidth / 2 + mCellWidth / 2
+          const mediaNodes: any[] = mediaItems.map((it: any, index: number) => {
+            const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+            const position = { x: mStartX + index * (mCellWidth + mPadding), y: mRowY }
+            if (it?.type === 'image') {
+              return {
+                id,
+                type: 'image' as const,
+                position,
+                data: {
+                  title: String(it?.title || 'Image'),
+                  content: String(it?.content || ''),
+                  previewUrl: String(it?.imageUrl || ''),
+                  type: 'image',
+                  status: 'ready',
+                  titleSize: 'sm',
+                } as any
+              }
+            }
+            return {
+              id,
+              type: 'video' as const,
+              position,
+              data: {
+                title: String(it?.title || 'Video'),
+                content: String(it?.content || ''),
+                videoUrl: String(it?.videoUrl || ''),
+                status: 'idle',
+                titleSize: 'sm',
+              } as any
+            }
+          })
+
+          const allNew = [...generatedNodes, ...mediaNodes]
+          const generatedEdges = allNew.map((n: any) => ({
+            id: `edge-${Date.now()}-${n.id}`,
+            source: topicNode.id,
+            target: n.id,
+            type: toVisualEdgeType(edgeTypePref) as any
+          }))
+          setNodes([topicNode, ...allNew])
+          setEdges(generatedEdges as any)
+          const boardData = { nodes: [topicNode, ...allNew], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          await boardStorage.updateBoard(boardId, boardData)
+          showAddToast('added', allNew.length)
+          setHasUnsavedChanges(false)
+          if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+          router.push(`/board/${boardId}`)
+          return
+        }
+        responseContent = JSON.stringify([])
       } catch (err: any) {
         // Surface server-provided message for 402/other issues
         const msg = err?.message || 'Failed to generate starter nodes'
@@ -951,7 +1256,8 @@ function BoardContent({
           setEdges(generatedEdges as any)
           const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
           await boardStorage.updateBoard(boardId, boardData)
-          try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes (fallback).`, variant: 'success' } })) } catch {}
+          const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
+          showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
           setHasUnsavedChanges(false)
           if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
           router.push(`/board/${boardId}`)
@@ -991,7 +1297,8 @@ function BoardContent({
               setEdges(generatedEdges as any)
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
               await boardStorage.updateBoard(boardId, boardData)
-              try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes!`, variant: 'success' } })) } catch {}
+              const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
+              showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
             
           } catch (placementError) {
             // Fallback: fan around topic
@@ -1009,7 +1316,8 @@ function BoardContent({
             setEdges(generatedEdges as any)
             const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
             await boardStorage.updateBoard(boardId, boardData)
-            try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes!`, variant: 'success' } })) } catch {}
+            const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
+            showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
           }
           
           // Update save status
@@ -1030,7 +1338,8 @@ function BoardContent({
           setEdges([newEdge] as any)
           const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
           await boardStorage.updateBoard(boardId, boardData)
-          try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Generated 1 node!', variant: 'success' } })) } catch {}
+          const appended = await maybeAppendMediaNodes([topicNode, newNode], [newEdge] as any)
+          showAddToast('added', 1 + (appended?.mediaCount || 0))
           setHasUnsavedChanges(false)
           if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
           router.push(`/board/${boardId}`)
@@ -1047,6 +1356,8 @@ function BoardContent({
         
         // console.log('💾 Saving single generated node immediately...')
         await boardStorage.updateBoard(boardId, boardData)
+        const appended = await maybeAppendMediaNodes([topicNode, newNode], [newEdge] as any)
+        showAddToast('added', 1 + (appended?.mediaCount || 0))
         // console.log('✅ Single generated node saved successfully')
         
         // Update save status
@@ -3492,97 +3803,264 @@ function BoardContent({
           setContextMenu({ isOpen: false, position: null })
         }}
         onQuickAIGenerateNodes={async (nodeId?: string | null) => {
-          try {
-            setQuickAiGenerating?.(true)
-            console.log('[QuickAI] start, nodeId:', nodeId)
-            const store = useBoardStore.getState()
-            const nodesList = store.nodes || []
-            const edgesList = store.edges || []
-            const topic = store.topic || pendingBoardBrief?.boardTopic || ''
-            const parentOf: Record<string, string> = {}
-            edgesList.forEach((e: any) => {
-              const s = e?.source; const t = e?.target
-              if (typeof s === 'string' && typeof t === 'string' && !parentOf[t]) parentOf[t] = s
-            })
-            const selectedId = nodeId || (store.selectedNodeIds?.[0] ?? null)
-            const selectedNode = nodesList.find(n => n.id === selectedId)
-            // Attach generated nodes to the selected node itself (not its parent)
-            const attachParentId = selectedNode ? selectedNode.id : undefined
-            const contextTitle = selectedNode?.data?.title || ''
-            const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
-            console.log('[QuickAI] selectedId:', selectedId, 'title:', contextTitle, 'content.len:', contextContent?.length || 0, 'topic:', topic)
-
-            // Use server endpoint for reliable AI generation and usage tracking
-            const supa = getSupabaseClient()
-            const { data } = await supa.auth.getSession()
-            const token = data?.session?.access_token
-            const serverDesc = [
-              topic && `Board topic: ${topic}`,
-              contextTitle && `Selected node: ${contextTitle}`,
-              contextContent && `Context: ${contextContent}`,
-              'Generate 4-6 concise related nodes.'
-            ].filter(Boolean).join('\n\n')
-            const resp = await fetch('/api/boards/generate-starters', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {})
-              },
-              body: JSON.stringify({ type: 'generate', topic: topic || '', description: serverDesc, max: 6 })
-            })
-            if (!resp.ok) {
-              const j = await resp.json().catch(() => ({}))
-              console.warn('[QuickAI] server generate failed:', j?.error || resp.statusText)
-              return
-            }
-            const jr = await resp.json()
-            const raw = JSON.stringify(jr?.nodes || [])
-            let items: any[] = []
+          const run = async (withMedia: boolean) => {
             try {
-              const parsed = JSON.parse(raw)
-              if (Array.isArray(parsed)) items = parsed
-              else if (Array.isArray(parsed?.nodes)) items = parsed.nodes
-            } catch {}
-            if (!items || items.length === 0) {
-              const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l)
-              const candidates = lines.map(l => l.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(l => l.length > 0).slice(0, 6)
-              if (candidates.length > 0) items = candidates.map(t => ({ title: t, content: '' }))
-            }
-            console.log('[QuickAI] parsed items count:', items?.length || 0)
-            if (!items || items.length === 0) { console.warn('[QuickAI] no items parsed from AI'); return }
-            // Deterministic single-row placement under selected parent, centered (match board creation)
-            const parentId = attachParentId
-            const parent = parentId ? (useBoardStore.getState().nodes || []).find(n => n.id === parentId) : undefined
-            const cellWidth = 300
-            const padding = 60
-            const baseX = parent?.position?.x ?? getViewportCenter().x
-            const baseY = (parent?.position?.y ?? getViewportCenter().y) + (cellWidth - 100)
-            const count = items.length
-            const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-            const startX = baseX - groupWidth / 2 + cellWidth / 2
-            const created: Node[] = items.map((it: any, index: number) => {
-              const position = { x: startX + index * (cellWidth + padding), y: baseY }
-              return {
+              setQuickAiGenerating?.(true)
+              const store = useBoardStore.getState()
+              const nodesList = store.nodes || []
+              const edgesList = store.edges || []
+              const topic = store.topic || pendingBoardBrief?.boardTopic || ''
+              const selectedId = nodeId || (store.selectedNodeIds?.[0] ?? null)
+              const selectedNode = nodesList.find(n => n.id === selectedId)
+              const parentId = selectedNode ? selectedNode.id : undefined
+              const contextTitle = selectedNode?.data?.title || ''
+              const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
+
+              const supa = getSupabaseClient()
+              const { data } = await supa.auth.getSession()
+              const token = data?.session?.access_token
+
+              const plannedResp = await fetch('/api/boards/generate-nodes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({
+                  mode: 'quick_generate',
+                  topic: topic || contextTitle || '',
+                  goal: 'Generate related nodes for the selected node and board topic.',
+                  density: 'medium',
+                  constraints: {
+                    totalMin: 4,
+                    totalMax: 16,
+                    minText: 5,
+                    minMedia: withMedia ? 1 : 0,
+                    maxMedia: withMedia ? 4 : 0,
+                    maxImages: withMedia ? 4 : 0,
+                    maxVideos: withMedia ? 4 : 0,
+                  },
+                  board: {
+                    supportedNodeTypes: withMedia ? ['text', 'image', 'video'] : ['text'],
+                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                  },
+                  selected: { title: contextTitle, content: contextContent },
+                })
+              })
+              if (!plannedResp.ok) return
+              const plannedJson = await plannedResp.json().catch(() => ({}))
+              const planned: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
+              const textItems = planned.filter((n: any) => n?.type === 'text')
+              const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+              if (!textItems.length && !mediaItems.length) return
+
+              const parent = parentId ? nodesList.find(n => n.id === parentId) : undefined
+              const cellWidth = 300
+              const padding = 60
+              const baseX = parent?.position?.x ?? getViewportCenter().x
+              const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
+              const count = textItems.length
+              const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+              const startX = baseX - groupWidth / 2 + cellWidth / 2
+
+              const created: Node[] = textItems.map((it: any, index: number) => ({
                 id: `node-${Date.now()}-${index}`,
                 type: 'default',
-                position,
-                data: { title: String(it.title || it.label || ''), content: String(it.content || '') } as any,
-              } as any
-            })
-            setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
-            if (parentId) {
-              const newEdges: Edge[] = created.map((n) => ({
-                id: `edge-${Date.now()}-${n.id}`,
-                source: parentId!,
-                target: n.id,
-                type: toVisualEdgeType(edgeTypePref) as any,
-              }) as any)
-              setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-            }
-            showAddToast('generated', created.length)
-            centerOnNodeIds(created.map(n => n.id))
-          } catch {}
-          finally { try { setQuickAiGenerating?.(false) } catch {} }
+                position: { x: startX + index * (cellWidth + padding), y: baseY },
+                data: { title: String(it?.title || ''), content: String(it?.content || '') } as any,
+              } as any))
+
+              const createdEdges: Edge[] = parentId
+                ? created.map((n) => ({
+                    id: `edge-${Date.now()}-${n.id}`,
+                    source: parentId!,
+                    target: n.id,
+                    type: toVisualEdgeType(edgeTypePref) as any,
+                  }) as any)
+                : []
+
+              let mediaNodes: Node[] = []
+              let mediaEdges: Edge[] = []
+              if (withMedia && mediaItems.length) {
+                const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
+                const mCellWidth = 320
+                const mPadding = 60
+                const mCount = mediaItems.length
+                const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
+                const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
+                mediaNodes = mediaItems.map((it: any, index: number) => {
+                  const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+                  const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
+                  if (it?.type === 'image') {
+                    return { id, type: 'image' as any, position, data: { title: String(it?.title || 'Image'), content: String(it?.content || ''), previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
+                  }
+                  return { id, type: 'video' as any, position, data: { title: String(it?.title || 'Video'), content: String(it?.content || ''), videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any } as any
+                })
+                mediaEdges = parentId
+                  ? mediaNodes.map((n) => ({
+                      id: `edge-${Date.now()}-${n.id}`,
+                      source: parentId!,
+                      target: n.id,
+                      type: toVisualEdgeType(edgeTypePref) as any,
+                    }) as any)
+                  : []
+              }
+
+              // Keep rows consistent: never move existing nodes on the board during AI placement.
+              // If we need room, shift ONLY the new group in X until it fits (otherwise accept overlap).
+              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
+              const shifted = dx > 0
+              const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
+              const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
+              const mediaShifted = mediaNodes.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
+
+              setNodes((nds) => {
+                const cur = Array.isArray(nds) ? nds : []
+                const next = shifted && parentId
+                  ? cur.map((n: any) => (n.id === parentId ? { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } } : n))
+                  : cur
+                return [...next, ...createdShifted, ...mediaShifted]
+              })
+              if (createdEdges.length || mediaEdges.length) {
+                setEdges((eds) => {
+                  const cur = Array.isArray(eds) ? eds : []
+                  return [...cur, ...(createdEdges as any), ...(mediaEdges as any)]
+                })
+              }
+
+              const totalNew = created.length + mediaNodes.length
+              showAddToast('added', totalNew, shifted ? 'Shifted cluster to fit new nodes' : undefined)
+              centerOnNodeIds([...createdShifted, ...mediaShifted].map(n => n.id))
+            } catch {}
+            finally { try { setQuickAiGenerating?.(false) } catch {} }
+          }
+          await run(false)
+        }}
+        onQuickAIGenerateNodesWithMedia={async (nodeId?: string | null) => {
+          const run = async () => {
+            // Same as above, but withMedia=true
+            try {
+              setQuickAiGenerating?.(true)
+              const store = useBoardStore.getState()
+              const nodesList = store.nodes || []
+              const edgesList = store.edges || []
+              const topic = store.topic || pendingBoardBrief?.boardTopic || ''
+              const selectedId = nodeId || (store.selectedNodeIds?.[0] ?? null)
+              const selectedNode = nodesList.find(n => n.id === selectedId)
+              const parentId = selectedNode ? selectedNode.id : undefined
+              const contextTitle = selectedNode?.data?.title || ''
+              const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
+
+              const supa = getSupabaseClient()
+              const { data } = await supa.auth.getSession()
+              const token = data?.session?.access_token
+
+              const plannedResp = await fetch('/api/boards/generate-nodes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                body: JSON.stringify({
+                  mode: 'quick_generate',
+                  topic: topic || contextTitle || '',
+                  goal: 'Generate related nodes for the selected node and board topic.',
+                  density: 'medium',
+                  constraints: {
+                    totalMin: 4,
+                    totalMax: 16,
+                    minText: 5,
+                    minMedia: 1,
+                    maxMedia: 4,
+                    maxImages: 4,
+                    maxVideos: 4,
+                  },
+                  board: {
+                    supportedNodeTypes: ['text', 'image', 'video'],
+                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                  },
+                  selected: { title: contextTitle, content: contextContent },
+                })
+              })
+              if (!plannedResp.ok) return
+              const plannedJson = await plannedResp.json().catch(() => ({}))
+              const planned: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
+              const textItems = planned.filter((n: any) => n?.type === 'text')
+              const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+              if (!textItems.length && !mediaItems.length) return
+
+              const parent = parentId ? nodesList.find(n => n.id === parentId) : undefined
+              const cellWidth = 300
+              const padding = 60
+              const baseX = parent?.position?.x ?? getViewportCenter().x
+              const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
+              const count = textItems.length
+              const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+              const startX = baseX - groupWidth / 2 + cellWidth / 2
+              const created: Node[] = textItems.map((it: any, index: number) => ({
+                id: `node-${Date.now()}-${index}`,
+                type: 'default',
+                position: { x: startX + index * (cellWidth + padding), y: baseY },
+                data: { title: String(it?.title || ''), content: String(it?.content || '') } as any,
+              } as any))
+
+              const createdEdges: Edge[] = parentId
+                ? created.map((n) => ({
+                    id: `edge-${Date.now()}-${n.id}`,
+                    source: parentId!,
+                    target: n.id,
+                    type: toVisualEdgeType(edgeTypePref) as any,
+                  }) as any)
+                : []
+
+              let mediaNodes: Node[] = []
+              let mediaEdges: Edge[] = []
+              if (mediaItems.length) {
+                const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
+                const mCellWidth = 320
+                const mPadding = 60
+                const mCount = mediaItems.length
+                const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
+                const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
+                mediaNodes = mediaItems.map((it: any, index: number) => {
+                  const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+                  const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
+                  if (it?.type === 'image') {
+                    return { id, type: 'image' as any, position, data: { title: String(it?.title || 'Image'), content: String(it?.content || ''), previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
+                  }
+                  return { id, type: 'video' as any, position, data: { title: String(it?.title || 'Video'), content: String(it?.content || ''), videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any } as any
+                })
+                mediaEdges = parentId
+                  ? mediaNodes.map((n) => ({
+                      id: `edge-${Date.now()}-${n.id}`,
+                      source: parentId!,
+                      target: n.id,
+                      type: toVisualEdgeType(edgeTypePref) as any,
+                    }) as any)
+                  : []
+              }
+
+              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
+              const shifted = dx > 0
+              const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
+              const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
+              const mediaShifted = mediaNodes.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
+
+              setNodes((nds) => {
+                const cur = Array.isArray(nds) ? nds : []
+                const next = shifted && parentId
+                  ? cur.map((n: any) => (n.id === parentId ? { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } } : n))
+                  : cur
+                return [...next, ...createdShifted, ...mediaShifted]
+              })
+              if (createdEdges.length || mediaEdges.length) {
+                setEdges((eds) => {
+                  const cur = Array.isArray(eds) ? eds : []
+                  return [...cur, ...(createdEdges as any), ...(mediaEdges as any)]
+                })
+              }
+
+              const totalNew = created.length + mediaNodes.length
+              showAddToast('added', totalNew, shifted ? 'Shifted cluster to fit new nodes' : undefined)
+              centerOnNodeIds([...createdShifted, ...mediaShifted].map(n => n.id))
+            } catch {}
+            finally { try { setQuickAiGenerating?.(false) } catch {} }
+          }
+          await run()
         }}
         onOrganizeSubtree={async (nodeId: string) => {
           try {
@@ -4413,7 +4891,12 @@ function BoardContent({
         </div>
       )}
       <Toast open={toastOpen} onClose={() => setToastOpen(false)} variant={toastVariant} position="top-center">
-        {toastMessage}
+        <div className="flex flex-col">
+          <div className="leading-tight">{toastMessage}</div>
+          {toastSubMessage && (
+            <div className="mt-0.5 text-[11px] opacity-90 leading-tight">{toastSubMessage}</div>
+          )}
+        </div>
       </Toast>
     </div>
   )
