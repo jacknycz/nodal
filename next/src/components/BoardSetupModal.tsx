@@ -28,7 +28,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [starterNodes, setStarterNodes] = useState<string[]>([])
   const [generateDescriptionsForStarter, setGenerateDescriptionsForStarter] = useState(true)
   const [generateStarterNodes, setGenerateStarterNodes] = useState(false)
-  const [generateMediaNodes, setGenerateMediaNodes] = useState(false)
+  const [generateMediaNodes, setGenerateMediaNodes] = useState(true)
   const titleInputRef = useRef<HTMLInputElement | null>(null)
 
   // Generate a new board ID when modal opens
@@ -44,7 +44,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       setStarterNodes([])
       setGenerateDescriptionsForStarter(true)
       setGenerateStarterNodes(false)
-      setGenerateMediaNodes(false)
+      setGenerateMediaNodes(true)
     }
   }, [isOpen])
 
