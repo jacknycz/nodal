@@ -478,6 +478,37 @@ function BoardContent({
     return MAX_STEPS * STEP
   }, [checkCollision, getApproxDims])
 
+  const ROW_GAP = 220
+
+  const computeNewGroupShiftX = useCallback((
+    existingNodes: any[],
+    newNodes: any[],
+  ): number => {
+    const obstacles = Array.isArray(existingNodes) ? existingNodes : []
+    const group = Array.isArray(newNodes) ? newNodes : []
+    if (obstacles.length === 0 || group.length === 0) return 0
+
+    const STEP = 90
+    const MAX_STEPS = 40
+    const MIN_DISTANCE = 28
+
+    const collidesAt = (dx: number) => {
+      for (const n of group) {
+        const dims = getApproxDims(n)
+        const pos = { x: Number(n?.position?.x || 0) + dx, y: Number(n?.position?.y || 0) }
+        const col = checkCollision(pos as any, dims as any, obstacles as any, [], MIN_DISTANCE)
+        if (col?.hasCollision) return true
+      }
+      return false
+    }
+
+    for (let i = 0; i <= MAX_STEPS; i++) {
+      const dx = i * STEP
+      if (!collidesAt(dx)) return dx
+    }
+    return 0 // if we can't find a spot without moving existing nodes, accept overlap
+  }, [checkCollision, getApproxDims])
+
   // Global toast listener (used by uploads and other flows)
   useEffect(() => {
     const onToast = (ev: any) => {
@@ -3688,7 +3719,7 @@ function BoardContent({
               const cellWidth = 300
               const padding = 60
               const baseX = parent?.position?.x ?? getViewportCenter().x
-              const baseY = (parent?.position?.y ?? getViewportCenter().y) + (cellWidth - 100)
+              const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
               const count = items.length
               const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
               const startX = baseX - groupWidth / 2 + cellWidth / 2
@@ -3730,7 +3761,7 @@ function BoardContent({
                   const mediaJson = await mediaResp.json().catch(() => ({}))
                   const mediaItems: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(mediaJson?.nodes) ? mediaJson.nodes : []
                   if (mediaItems.length) {
-                    const rowY = baseY + 220
+                    const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
                     const mCellWidth = 320
                     const mPadding = 60
                     const mCount = mediaItems.length
@@ -3756,23 +3787,17 @@ function BoardContent({
                 }
               }
 
-              // Cluster shift: move parent + subtree (existing) together so new nodes don't land on top of other clusters
-              const clusterIds = parentId ? getSubtreeIds(parentId, edgesList as any) : new Set<string>()
-              const dx = computeClusterShiftX(clusterIds, nodesList as any, [...created, ...mediaNodes] as any)
+              // Keep rows consistent: never move existing nodes on the board during AI placement.
+              // If we need room, shift ONLY the new group in X until it fits (otherwise accept overlap).
+              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any)
               const shifted = dx > 0
-
               const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
               const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
               const mediaShifted = mediaNodes.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
 
               setNodes((nds) => {
                 const cur = Array.isArray(nds) ? nds : []
-                const next = cur.map((n: any) => {
-                  if (!shifted) return n
-                  if (!clusterIds.has(n.id)) return n
-                  return { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } }
-                })
-                return [...next, ...createdShifted, ...mediaShifted]
+                return [...cur, ...createdShifted, ...mediaShifted]
               })
               if (createdEdges.length || mediaEdges.length) {
                 setEdges((eds) => {
@@ -3829,7 +3854,7 @@ function BoardContent({
               const cellWidth = 300
               const padding = 60
               const baseX = parent?.position?.x ?? getViewportCenter().x
-              const baseY = (parent?.position?.y ?? getViewportCenter().y) + (cellWidth - 100)
+              const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
               const count = items.length
               const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
               const startX = baseX - groupWidth / 2 + cellWidth / 2
@@ -3870,7 +3895,7 @@ function BoardContent({
                 const mediaJson = await mediaResp.json().catch(() => ({}))
                 const mediaItems: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(mediaJson?.nodes) ? mediaJson.nodes : []
                 if (mediaItems.length) {
-                  const rowY = baseY + 220
+                  const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
                   const mCellWidth = 320
                   const mPadding = 60
                   const mCount = mediaItems.length
@@ -3895,8 +3920,7 @@ function BoardContent({
                 }
               }
 
-              const clusterIds = parentId ? getSubtreeIds(parentId, edgesList as any) : new Set<string>()
-              const dx = computeClusterShiftX(clusterIds, nodesList as any, [...created, ...mediaNodes] as any)
+              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any)
               const shifted = dx > 0
               const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
               const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
@@ -3904,12 +3928,7 @@ function BoardContent({
 
               setNodes((nds) => {
                 const cur = Array.isArray(nds) ? nds : []
-                const next = cur.map((n: any) => {
-                  if (!shifted) return n
-                  if (!clusterIds.has(n.id)) return n
-                  return { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } }
-                })
-                return [...next, ...createdShifted, ...mediaShifted]
+                return [...cur, ...createdShifted, ...mediaShifted]
               })
               if (createdEdges.length || mediaEdges.length) {
                 setEdges((eds) => {
