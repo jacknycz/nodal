@@ -1,13 +1,36 @@
 import type { AIConfig, OpenAIModel, UserPreferences } from './aiTypes'
 
+// Keep env override, but don’t let it break the app
+const ALLOWED_MODELS: ReadonlySet<string> = new Set([
+  'gpt-4o',
+  'gpt-4o-mini',
+  'gpt-5-mini',
+  'gpt-5',
+])
+
+const resolveDefaultModel = (fallback: OpenAIModel = 'gpt-4o'): OpenAIModel => {
+  const env = process.env.NEXT_PUBLIC_OPENAI_DEFAULT_MODEL
+  if (env && ALLOWED_MODELS.has(env)) return env as OpenAIModel
+  return fallback
+}
+
+const DEFAULT_MODEL = resolveDefaultModel('gpt-4o')
+
 // Default Configuration
 export const DEFAULT_AI_CONFIG: Omit<AIConfig, 'apiKey'> = {
-  defaultModel: (process.env.NEXT_PUBLIC_OPENAI_DEFAULT_MODEL as OpenAIModel) || 'gpt-4o-mini',
+  defaultModel: DEFAULT_MODEL,
   modelPreferences: {
+    // Chat should feel snappy + smart
     chat: 'gpt-4o',
-    nodeGeneration: (process.env.NEXT_PUBLIC_OPENAI_DEFAULT_MODEL as OpenAIModel) || 'gpt-4o-mini',
-    documentProcessing: 'gpt-4-turbo',
-    analysis: 'gpt-4'
+
+    // Node generation is your core UX: smart + fast by default
+    nodeGeneration: DEFAULT_MODEL,
+
+    // “Document processing” often means extraction/summarization.
+    documentProcessing: 'gpt-4o',
+
+    // “analysis” in your app should be consistent and reliable.
+    analysis: 'gpt-5-mini',
   },
   defaultSettings: {
     temperature: 0.7,
@@ -59,16 +82,7 @@ export function validateAPIKey(apiKey: string): boolean {
 }
 
 export function validateModel(model: string): model is OpenAIModel {
-  const validModels: OpenAIModel[] = [
-    'gpt-4',
-    'gpt-4-turbo',
-    'gpt-3.5-turbo',
-    'gpt-4o',
-    'gpt-4o-mini',
-    'gpt-5',
-    'gpt-5-mini'
-  ]
-  return validModels.includes(model as OpenAIModel)
+  return ALLOWED_MODELS.has(model)
 }
 
 export function validateTemperature(temperature: number): boolean {
@@ -364,11 +378,11 @@ export class AIConfigManager {
   getModelPresets(): Record<string, Partial<AIConfig>> {
     return {
       'cost-effective': {
-        defaultModel: 'gpt-3.5-turbo',
+        defaultModel: 'gpt-4o-mini',
         modelPreferences: {
-          chat: 'gpt-3.5-turbo',
-          nodeGeneration: 'gpt-3.5-turbo',
-          documentProcessing: 'gpt-3.5-turbo',
+          chat: 'gpt-4o-mini',
+          nodeGeneration: 'gpt-4o-mini',
+          documentProcessing: 'gpt-4o-mini',
           analysis: 'gpt-4o-mini'
         }
       },
@@ -377,17 +391,17 @@ export class AIConfigManager {
         modelPreferences: {
           chat: 'gpt-4o-mini',
           nodeGeneration: 'gpt-4o-mini',
-          documentProcessing: 'gpt-4-turbo',
-          analysis: 'gpt-4o'
+          documentProcessing: 'gpt-4o',
+          analysis: 'gpt-5-mini'
         }
       },
       'premium': {
-        defaultModel: 'gpt-4',
+        defaultModel: 'gpt-4o',
         modelPreferences: {
-          chat: 'gpt-4',
-          nodeGeneration: 'gpt-4',
-          documentProcessing: 'gpt-4-turbo',
-          analysis: 'gpt-4'
+          chat: 'gpt-4o',
+          nodeGeneration: 'gpt-4o',
+          documentProcessing: 'gpt-4o',
+          analysis: 'gpt-5'
         }
       }
     }
@@ -441,7 +455,7 @@ export class AIConfigManager {
     switch (usage) {
       case 'light':
         return {
-          defaultModel: 'gpt-3.5-turbo',
+          defaultModel: 'gpt-4o-mini',
           rateLimiting: {
             requestsPerMinute: 20,
             tokensPerMinute: 10000

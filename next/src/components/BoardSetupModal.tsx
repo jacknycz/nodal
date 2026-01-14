@@ -28,6 +28,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
   const [starterNodes, setStarterNodes] = useState<string[]>([])
   const [generateDescriptionsForStarter, setGenerateDescriptionsForStarter] = useState(true)
   const [generateStarterNodes, setGenerateStarterNodes] = useState(false)
+  const [generateMediaNodes, setGenerateMediaNodes] = useState(false)
   const titleInputRef = useRef<HTMLInputElement | null>(null)
 
   // Generate a new board ID when modal opens
@@ -43,6 +44,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
       setStarterNodes([])
       setGenerateDescriptionsForStarter(true)
       setGenerateStarterNodes(false)
+      setGenerateMediaNodes(false)
     }
   }, [isOpen])
 
@@ -96,6 +98,7 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
         startWithAI: !!generateStarterNodes || (starterNodes.length > 0),
         starterNodes: generateStarterNodes ? [] : starterNodes,
         generateDescriptionsForStarter,
+        generateMediaNodes: !!generateStarterNodes && !!generateMediaNodes,
       })
     }
   }
@@ -196,6 +199,18 @@ export default function BoardSetupModal({ isOpen, onComplete, onClose }: BoardSe
             aria-label="Generate AI Descriptions"
             description="Write short descriptions for starter nodes."
             label="Generate AI Descriptions"
+          />
+        </div>
+      )}
+
+      {generateStarterNodes && (
+        <div className="flex items-start">
+          <Checkbox
+            checked={generateMediaNodes}
+            onChange={(checked) => setGenerateMediaNodes(!!checked)}
+            aria-label="Generate Media Nodes"
+            description="Also add a few image/video nodes alongside the 5 starter nodes."
+            label="Generate Media Nodes"
           />
         </div>
       )}

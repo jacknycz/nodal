@@ -829,6 +829,83 @@ function BoardContent({
         position: { x: 500, y: 400 },
         data: { title: brief.boardTopic, content: '' },
       }
+
+      const maybeAppendMediaNodes = async (baseNodes: any[], baseEdges: any[]) => {
+        if (!brief.generateMediaNodes) return { nodes: baseNodes, edges: baseEdges }
+        try {
+          const supa = getSupabaseClient()
+          const { data } = await supa.auth.getSession()
+          const token = data?.session?.access_token
+          const res = await fetch('/api/boards/generate-media-nodes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ topic: brief.boardTopic, description: brief.description, maxImages: 2, maxVideos: 2 }),
+          })
+          if (!res.ok) return { nodes: baseNodes, edges: baseEdges }
+          const json = await res.json().catch(() => ({}))
+          const items: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(json?.nodes) ? json.nodes : []
+          if (!items.length) return { nodes: baseNodes, edges: baseEdges }
+
+          // Place media nodes on a second row under the starter nodes
+          const ys = (baseNodes || []).map((n: any) => Number(n?.position?.y || 0))
+          const maxY = ys.length ? Math.max(...ys) : topicNode.position.y
+          const rowY = maxY + 220
+          const cellWidth = 320
+          const padding = 60
+          const count = items.length
+          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+
+          const mediaNodes = items.map((it, index) => {
+            const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+            const position = { x: startX + index * (cellWidth + padding), y: rowY }
+            if (it.type === 'image') {
+              return {
+                id,
+                type: 'image' as const,
+                position,
+                data: {
+                  title: String(it.title || 'Image'),
+                  content: String(it.content || ''),
+                  previewUrl: String(it.url || ''),
+                  type: 'image',
+                  status: 'ready',
+                  titleSize: 'sm',
+                } as any
+              }
+            }
+            return {
+              id,
+              type: 'video' as const,
+              position,
+              data: {
+                title: String(it.title || 'Video'),
+                content: String(it.content || ''),
+                videoUrl: String(it.url || ''),
+                status: 'idle',
+                titleSize: 'sm',
+              } as any
+            }
+          })
+          const mediaEdges = mediaNodes.map((n: any) => ({
+            id: `edge-${Date.now()}-${n.id}`,
+            source: topicNode.id,
+            target: n.id,
+            type: toVisualEdgeType(edgeTypePref) as any,
+          }))
+
+          const nextNodes = [...(baseNodes || []), ...mediaNodes]
+          const nextEdges = [...(baseEdges || []), ...mediaEdges]
+          setNodes(nextNodes)
+          setEdges(nextEdges as any)
+          const boardData = { nodes: nextNodes, edges: nextEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          await boardStorage.updateBoard(boardId, boardData)
+          try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Added ${mediaNodes.length} media nodes.`, variant: 'success' } })) } catch {}
+          return { nodes: nextNodes, edges: nextEdges }
+        } catch {
+          return { nodes: baseNodes, edges: baseEdges }
+        }
+      }
       setNodes((prev) => {
         const list = Array.isArray(prev) ? prev : []
         const exists = list.some((n: any) => n.id === topicNodeId)
@@ -991,6 +1068,7 @@ function BoardContent({
               setEdges(generatedEdges as any)
               const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
               await boardStorage.updateBoard(boardId, boardData)
+              await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
               try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes!`, variant: 'success' } })) } catch {}
             
           } catch (placementError) {
@@ -1009,6 +1087,7 @@ function BoardContent({
             setEdges(generatedEdges as any)
             const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
             await boardStorage.updateBoard(boardId, boardData)
+            await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
             try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: `Generated ${generatedNodes.length} nodes!`, variant: 'success' } })) } catch {}
           }
           
@@ -1030,6 +1109,7 @@ function BoardContent({
           setEdges([newEdge] as any)
           const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
           await boardStorage.updateBoard(boardId, boardData)
+          await maybeAppendMediaNodes([topicNode, newNode], [newEdge] as any)
           try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Generated 1 node!', variant: 'success' } })) } catch {}
           setHasUnsavedChanges(false)
           if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
@@ -1047,6 +1127,7 @@ function BoardContent({
         
         // console.log('💾 Saving single generated node immediately...')
         await boardStorage.updateBoard(boardId, boardData)
+        await maybeAppendMediaNodes([topicNode, newNode], [newEdge] as any)
         // console.log('✅ Single generated node saved successfully')
         
         // Update save status
