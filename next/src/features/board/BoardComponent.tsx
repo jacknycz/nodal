@@ -55,7 +55,7 @@ import type { BoardBrief } from './boardTypes'
 import BoardContextMenu from '../../components/BoardContextMenu'
 // import { supabase } from '../auth/supabaseClient'; // Using getSupabaseClient instead
 import type { BoardNode } from './boardTypes';
-import { boundsOverlap, checkCollision, getNodeBounds } from './spatialAnalysis'
+import { boundsOverlap, checkCollision } from './spatialAnalysis'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
@@ -490,32 +490,50 @@ function BoardContent({
     if (obstacles.length === 0 || group.length === 0) return 0
 
     const STEP = 90
-    const MAX_STEPS = 40
-    const MIN_DISTANCE = 28
+    const MAX_STEPS = 60
+    const PAD = 28
 
-    const collidesAt = (dx: number) => {
+    // XYFlow node.position is top-left. Use top-left bounds for collision checks.
+    const boundsTL = (pos: { x: number; y: number }, dims: { width: number; height: number }, pad: number) => ({
+      minX: pos.x - pad,
+      minY: pos.y - pad,
+      maxX: pos.x + dims.width + pad,
+      maxY: pos.y + dims.height + pad,
+    })
+
+    const collisionCountAt = (dx: number) => {
+      let hits = 0
       for (const g of group) {
         const gDims = getApproxDims(g)
         const gPos = { x: Number(g?.position?.x || 0) + dx, y: Number(g?.position?.y || 0) }
-        const gBounds = getNodeBounds(gPos as any, gDims as any, MIN_DISTANCE)
+        const gB = boundsTL(gPos, gDims, PAD)
 
         for (const o of obstacles) {
           const oDims = getApproxDims(o)
           const oPos = { x: Number(o?.position?.x || 0), y: Number(o?.position?.y || 0) }
-          const oBounds = getNodeBounds(oPos as any, oDims as any, 0)
-          if (boundsOverlap(gBounds as any, oBounds as any)) return true
+          const oB = boundsTL(oPos, oDims, 0)
+          if (boundsOverlap(gB as any, oB as any)) hits++
         }
       }
-      return false
+      return hits
     }
 
-    for (let i = 0; i <= MAX_STEPS; i++) {
-      const dx = i * STEP
-      if (!collidesAt(dx)) return dx
+    // Search 0, +STEP, -STEP, +2STEP, -2STEP... and return the first collision-free shift.
+    let bestDx = 0
+    let bestHits = collisionCountAt(0)
+    if (bestHits === 0) return 0
+
+    for (let i = 1; i <= MAX_STEPS; i++) {
+      for (const dx of [i * STEP, -i * STEP]) {
+        const hits = collisionCountAt(dx)
+        if (hits === 0) return dx
+        if (hits < bestHits) { bestHits = hits; bestDx = dx }
+      }
     }
-    // If we can't find a spot without moving other existing nodes, don't move.
-    return 0
-  }, [checkCollision, getApproxDims])
+
+    // If no collision-free slot exists without moving other nodes, shift to the least-colliding position.
+    return bestDx
+  }, [boundsOverlap, getApproxDims])
 
   // Global toast listener (used by uploads and other flows)
   useEffect(() => {
@@ -1097,7 +1115,7 @@ function BoardContent({
             constraints: {
               totalMin: 4,
               totalMax: 16,
-              minText: 1,
+              minText: 5,
               minMedia: brief.generateMediaNodes ? 1 : 0,
               maxMedia: brief.generateMediaNodes ? 4 : 0,
               maxImages: brief.generateMediaNodes ? 4 : 0,
@@ -3809,11 +3827,11 @@ function BoardContent({
                   mode: 'quick_generate',
                   topic: topic || contextTitle || '',
                   goal: 'Generate related nodes for the selected node and board topic.',
-                  density: withMedia ? 'medium' : 'low',
+                  density: 'medium',
                   constraints: {
                     totalMin: 4,
                     totalMax: 16,
-                    minText: 1,
+                    minText: 5,
                     minMedia: withMedia ? 1 : 0,
                     maxMedia: withMedia ? 4 : 0,
                     maxImages: withMedia ? 4 : 0,
@@ -3945,7 +3963,7 @@ function BoardContent({
                   constraints: {
                     totalMin: 4,
                     totalMax: 16,
-                    minText: 1,
+                    minText: 5,
                     minMedia: 1,
                     maxMedia: 4,
                     maxImages: 4,

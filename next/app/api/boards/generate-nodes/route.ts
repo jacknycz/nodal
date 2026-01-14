@@ -6,6 +6,8 @@ type PlannedNode =
   | { type: 'image'; title: string; query: string; content?: string }
   | { type: 'video'; title: string; query: string; content?: string }
 
+type CountIntent = { n: number; reason: string } | null
+
 type GenerateRequest = {
   topic: string
   goal?: string
@@ -79,6 +81,22 @@ function stripJsonFences(text: string): string {
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n))
+}
+
+function extractRequestedCount(text: string): CountIntent {
+  const t = String(text || '').toLowerCase()
+  const patterns: Array<{ re: RegExp; reason: string }> = [
+    { re: /\btop\s+(\d{1,2})\b/i, reason: 'top_n' },
+    { re: /\b(\d{1,2})\s+(steps?|ways?|examples?|players?|items?|ideas?|tips?|things?)\b/i, reason: 'n_list' },
+  ]
+  for (const p of patterns) {
+    const m = t.match(p.re)
+    if (m && m[1]) {
+      const n = Number(m[1])
+      if (Number.isFinite(n) && n >= 1 && n <= 20) return { n, reason: p.reason }
+    }
+  }
+  return null
 }
 
 function toUnsplashSourceUrl(query: string): string {
@@ -202,6 +220,19 @@ export async function POST(req: Request) {
     const selectedContent = String(body?.selected?.content || '').trim()
     const mode = body?.mode || 'quick_generate'
 
+    // Honor explicit counts like "Top 10", "10 steps", etc. up to 20.
+    // When present, we clamp the total to N (within 1..20) so the model can fulfill the list cleanly.
+    const requestedCount = extractRequestedCount([topic, goal, selectedTitle, selectedContent].filter(Boolean).join('\n'))?.n ?? null
+    // If the request is "Top N" etc (N <= 20), we honor N by requiring at least N text nodes.
+    // Total nodes may exceed 20 slightly when media is enabled (since media is "supporting" and counted separately).
+    const effectiveTotalMax = requestedCount ? clamp(Math.max(totalMax, requestedCount + minMedia), 1, 50) : totalMax
+    const effectiveMinMedia = minMedia
+    const effectiveTotalMin = requestedCount
+      ? clamp(Math.max(totalMin, requestedCount + effectiveMinMedia), 1, effectiveTotalMax)
+      : totalMin
+    const effectiveMinText = clamp(Math.max(minText, requestedCount || 0), 0, effectiveTotalMax)
+    const effectiveMaxMedia = clamp(maxMedia, effectiveMinMedia, effectiveTotalMax)
+
     const systemPrompt = [
       'You are Nodal’s node generation planner.',
       'You must plan first, then output STRICT JSON (no markdown fences).',
@@ -210,9 +241,10 @@ export async function POST(req: Request) {
       'Supported node types: ' + JSON.stringify(supported),
       '',
       'Guardrails:',
-      `- Total nodes: ${totalMin}–${totalMax}`,
-      `- At least ${minText} text nodes.`,
-      `- Total media nodes (images+videos): ${minMedia}–${maxMedia}.`,
+      requestedCount ? `- Explicit count requested: ${requestedCount} (honor it up to 20 text items).` : '',
+      `- Total nodes: ${effectiveTotalMin}–${effectiveTotalMax}`,
+      `- At least ${effectiveMinText} text nodes.`,
+      `- Total media nodes (images+videos): ${effectiveMinMedia}–${effectiveMaxMedia}.`,
       `- Images: 0–${maxImages}.`,
       `- Videos: 0–${maxVideos}.`,
       '',
@@ -221,7 +253,7 @@ export async function POST(req: Request) {
       '',
       'Rules:',
       '- "query" is REQUIRED for image/video nodes and is a short search phrase (2–8 words). No URLs.',
-      '- Use the density to decide how close you are to the min or max totals.',
+      '- If no explicit count is requested, fewer nodes is OK. Do not pad; prefer clarity over quantity.',
       '- Keep titles concise (<= 60 chars).',
       '- Content: 1–2 sentences max (short, actionable).',
       '- Ensure counts match nodes length and obey guardrails.',
@@ -256,9 +288,9 @@ export async function POST(req: Request) {
     let videos = plannedNodes.filter(n => n.type === 'video').slice(0, maxVideos)
 
     let safeText = texts
-    if (safeText.length < minText) {
+    if (safeText.length < effectiveMinText) {
       // add simple filler text nodes (rare, but ensures backbone)
-      const need = minText - safeText.length
+      const need = effectiveMinText - safeText.length
       const fillers: PlannedNode[] = Array.from({ length: need }).map((_, i) => ({
         type: 'text',
         title: `Key Point ${safeText.length + i + 1}`,
@@ -271,8 +303,9 @@ export async function POST(req: Request) {
     const mediaSupported = supported.includes('image') || supported.includes('video')
     if (mediaSupported) {
       const mediaNow = images.length + videos.length
-      const targetMinMedia = clamp(minMedia, 0, totalMax)
-      const targetMaxMedia = clamp(maxMedia, targetMinMedia, totalMax)
+      const cap = effectiveTotalMax
+      const targetMinMedia = clamp(effectiveMinMedia, 0, cap)
+      const targetMaxMedia = clamp(effectiveMaxMedia, targetMinMedia, cap)
 
       // Add media if under minMedia (prefer images because they rarely fail to resolve)
       const canAddImages = supported.includes('image') && images.length < maxImages
@@ -305,15 +338,15 @@ export async function POST(req: Request) {
     }
 
     let combined: PlannedNode[] = [...safeText, ...images, ...videos]
-    combined = combined.slice(0, totalMax)
-    if (combined.length < totalMin) {
-      const need = totalMin - combined.length
+    combined = combined.slice(0, effectiveTotalMax)
+    if (combined.length < effectiveTotalMin) {
+      const need = effectiveTotalMin - combined.length
       const fillers: PlannedNode[] = Array.from({ length: need }).map((_, i) => ({
         type: 'text',
         title: `Starter ${combined.length + i + 1}`,
         content: 'Add a short helpful note.',
       }))
-      combined = [...combined, ...fillers].slice(0, totalMax)
+      combined = [...combined, ...fillers].slice(0, effectiveTotalMax)
     }
 
     // Resolve media
