@@ -1083,20 +1083,116 @@ function BoardContent({
         const supa = getSupabaseClient()
         const { data } = await supa.auth.getSession()
         const token = data?.session?.access_token
-        const res = await fetch('/api/boards/generate-starters', {
+        const res = await fetch('/api/boards/generate-nodes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
-          body: JSON.stringify({ type: 'generate', topic: brief.boardTopic, description: brief.description, max: 5 })
+          body: JSON.stringify({
+            mode: 'board_create',
+            topic: brief.boardTopic,
+            goal: brief.description,
+            density: 'medium',
+            constraints: {
+              totalMin: 4,
+              totalMax: 16,
+              minText: 1,
+              minMedia: brief.generateMediaNodes ? 1 : 0,
+              maxMedia: brief.generateMediaNodes ? 4 : 0,
+              maxImages: brief.generateMediaNodes ? 4 : 0,
+              maxVideos: brief.generateMediaNodes ? 4 : 0,
+            },
+            board: {
+              supportedNodeTypes: brief.generateMediaNodes ? ['text', 'image', 'video'] : ['text'],
+              existingNodes: [],
+            },
+          })
         })
         if (!res.ok) {
           const j = await res.json().catch(() => ({}))
           throw new Error(j?.error || `Generate starters failed (${res.status})`)
         }
-        const j = await res.json()
-        responseContent = JSON.stringify(j.nodes || [])
+        const j = await res.json().catch(() => ({}))
+        const planned: any[] = Array.isArray(j?.nodes) ? j.nodes : []
+        if (planned.length > 0) {
+          const textItems = planned.filter((n: any) => n?.type === 'text')
+          const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+
+          // Row 1: text nodes (directly under topic)
+          const cellWidth = 300
+          const padding = 60
+          const rowY = topicNode.position.y + ROW_GAP
+          const count = Math.max(1, textItems.length)
+          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
+          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
+          const generatedNodes: any[] = textItems.map((it: any, index: number) => {
+            const position = { x: startX + index * (cellWidth + padding), y: rowY }
+            return {
+              id: `starter-node-${Date.now()}-${index}`,
+              type: 'default' as const,
+              position,
+              data: { title: String(it?.title || ''), content: String(it?.content || '') }
+            }
+          })
+
+          // Row 2: media nodes (supporting)
+          const mCellWidth = 320
+          const mPadding = 60
+          const mRowY = topicNode.position.y + (ROW_GAP * 2)
+          const mCount = mediaItems.length
+          const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
+          const mStartX = topicNode.position.x - mGroupWidth / 2 + mCellWidth / 2
+          const mediaNodes: any[] = mediaItems.map((it: any, index: number) => {
+            const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+            const position = { x: mStartX + index * (mCellWidth + mPadding), y: mRowY }
+            if (it?.type === 'image') {
+              return {
+                id,
+                type: 'image' as const,
+                position,
+                data: {
+                  title: String(it?.title || 'Image'),
+                  content: String(it?.content || ''),
+                  previewUrl: String(it?.imageUrl || ''),
+                  type: 'image',
+                  status: 'ready',
+                  titleSize: 'sm',
+                } as any
+              }
+            }
+            return {
+              id,
+              type: 'video' as const,
+              position,
+              data: {
+                title: String(it?.title || 'Video'),
+                content: String(it?.content || ''),
+                videoUrl: String(it?.videoUrl || ''),
+                status: 'idle',
+                titleSize: 'sm',
+              } as any
+            }
+          })
+
+          const allNew = [...generatedNodes, ...mediaNodes]
+          const generatedEdges = allNew.map((n: any) => ({
+            id: `edge-${Date.now()}-${n.id}`,
+            source: topicNode.id,
+            target: n.id,
+            type: toVisualEdgeType(edgeTypePref) as any
+          }))
+          setNodes([topicNode, ...allNew])
+          setEdges(generatedEdges as any)
+          const boardData = { nodes: [topicNode, ...allNew], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          await boardStorage.updateBoard(boardId, boardData)
+          showAddToast('added', allNew.length)
+          setHasUnsavedChanges(false)
+          if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+          router.push(`/board/${boardId}`)
+          return
+        }
+        responseContent = JSON.stringify([])
       } catch (err: any) {
         // Surface server-provided message for 402/other issues
         const msg = err?.message || 'Failed to generate starter nodes'
@@ -3706,37 +3802,51 @@ function BoardContent({
               const { data } = await supa.auth.getSession()
               const token = data?.session?.access_token
 
-              const serverDesc = [
-                topic && `Board topic: ${topic}`,
-                contextTitle && `Selected node: ${contextTitle}`,
-                contextContent && `Context: ${contextContent}`,
-                'Generate 4-6 concise related nodes.'
-              ].filter(Boolean).join('\n\n')
-
-              const resp = await fetch('/api/boards/generate-starters', {
+              const plannedResp = await fetch('/api/boards/generate-nodes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                body: JSON.stringify({ type: 'generate', topic: topic || '', description: serverDesc, max: 6 })
+                body: JSON.stringify({
+                  mode: 'quick_generate',
+                  topic: topic || contextTitle || '',
+                  goal: 'Generate related nodes for the selected node and board topic.',
+                  density: withMedia ? 'medium' : 'low',
+                  constraints: {
+                    totalMin: 4,
+                    totalMax: 16,
+                    minText: 1,
+                    minMedia: withMedia ? 1 : 0,
+                    maxMedia: withMedia ? 4 : 0,
+                    maxImages: withMedia ? 4 : 0,
+                    maxVideos: withMedia ? 4 : 0,
+                  },
+                  board: {
+                    supportedNodeTypes: withMedia ? ['text', 'image', 'video'] : ['text'],
+                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                  },
+                  selected: { title: contextTitle, content: contextContent },
+                })
               })
-              if (!resp.ok) return
-              const jr = await resp.json()
-              const items: any[] = Array.isArray(jr?.nodes) ? jr.nodes : []
-              if (!items.length) return
+              if (!plannedResp.ok) return
+              const plannedJson = await plannedResp.json().catch(() => ({}))
+              const planned: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
+              const textItems = planned.filter((n: any) => n?.type === 'text')
+              const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+              if (!textItems.length && !mediaItems.length) return
 
               const parent = parentId ? nodesList.find(n => n.id === parentId) : undefined
               const cellWidth = 300
               const padding = 60
               const baseX = parent?.position?.x ?? getViewportCenter().x
               const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
-              const count = items.length
+              const count = textItems.length
               const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
               const startX = baseX - groupWidth / 2 + cellWidth / 2
 
-              const created: Node[] = items.map((it: any, index: number) => ({
+              const created: Node[] = textItems.map((it: any, index: number) => ({
                 id: `node-${Date.now()}-${index}`,
                 type: 'default',
                 position: { x: startX + index * (cellWidth + padding), y: baseY },
-                data: { title: String(it.title || it.label || ''), content: String(it.content || '') } as any,
+                data: { title: String(it?.title || ''), content: String(it?.content || '') } as any,
               } as any))
 
               const createdEdges: Edge[] = parentId
@@ -3750,49 +3860,29 @@ function BoardContent({
 
               let mediaNodes: Node[] = []
               let mediaEdges: Edge[] = []
-              if (withMedia) {
-                const mediaResp = await fetch('/api/boards/generate-media-nodes', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                  body: JSON.stringify({
-                    topic: topic || contextTitle || '',
-                    description: [
-                      topic && `Board topic: ${topic}`,
-                      contextTitle && `Selected node: ${contextTitle}`,
-                      contextContent && `Context: ${contextContent}`,
-                    ].filter(Boolean).join('\n\n'),
-                    maxImages: 2,
-                    maxVideos: 2
-                  })
-                })
-                if (mediaResp.ok) {
-                  const mediaJson = await mediaResp.json().catch(() => ({}))
-                  const mediaItems: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(mediaJson?.nodes) ? mediaJson.nodes : []
-                  if (mediaItems.length) {
-                    const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
-                    const mCellWidth = 320
-                    const mPadding = 60
-                    const mCount = mediaItems.length
-                    const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
-                    const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
-                    mediaNodes = mediaItems.map((it, index) => {
-                      const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
-                      const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
-                      if (it.type === 'image') {
-                        return { id, type: 'image' as any, position, data: { title: String(it.title || 'Image'), content: String(it.content || ''), previewUrl: String(it.url || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
-                      }
-                      return { id, type: 'video' as any, position, data: { title: String(it.title || 'Video'), content: String(it.content || ''), videoUrl: String(it.url || ''), status: 'idle', titleSize: 'sm' } as any } as any
-                    })
-                    mediaEdges = parentId
-                      ? mediaNodes.map((n) => ({
-                          id: `edge-${Date.now()}-${n.id}`,
-                          source: parentId!,
-                          target: n.id,
-                          type: toVisualEdgeType(edgeTypePref) as any,
-                        }) as any)
-                      : []
+              if (withMedia && mediaItems.length) {
+                const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
+                const mCellWidth = 320
+                const mPadding = 60
+                const mCount = mediaItems.length
+                const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
+                const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
+                mediaNodes = mediaItems.map((it: any, index: number) => {
+                  const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+                  const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
+                  if (it?.type === 'image') {
+                    return { id, type: 'image' as any, position, data: { title: String(it?.title || 'Image'), content: String(it?.content || ''), previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
                   }
-                }
+                  return { id, type: 'video' as any, position, data: { title: String(it?.title || 'Video'), content: String(it?.content || ''), videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any } as any
+                })
+                mediaEdges = parentId
+                  ? mediaNodes.map((n) => ({
+                      id: `edge-${Date.now()}-${n.id}`,
+                      source: parentId!,
+                      target: n.id,
+                      type: toVisualEdgeType(edgeTypePref) as any,
+                    }) as any)
+                  : []
               }
 
               // Keep rows consistent: never move existing nodes on the board during AI placement.
@@ -3844,36 +3934,50 @@ function BoardContent({
               const { data } = await supa.auth.getSession()
               const token = data?.session?.access_token
 
-              const serverDesc = [
-                topic && `Board topic: ${topic}`,
-                contextTitle && `Selected node: ${contextTitle}`,
-                contextContent && `Context: ${contextContent}`,
-                'Generate 4-6 concise related nodes.'
-              ].filter(Boolean).join('\n\n')
-
-              const resp = await fetch('/api/boards/generate-starters', {
+              const plannedResp = await fetch('/api/boards/generate-nodes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                body: JSON.stringify({ type: 'generate', topic: topic || '', description: serverDesc, max: 6 })
+                body: JSON.stringify({
+                  mode: 'quick_generate',
+                  topic: topic || contextTitle || '',
+                  goal: 'Generate related nodes for the selected node and board topic.',
+                  density: 'medium',
+                  constraints: {
+                    totalMin: 4,
+                    totalMax: 16,
+                    minText: 1,
+                    minMedia: 1,
+                    maxMedia: 4,
+                    maxImages: 4,
+                    maxVideos: 4,
+                  },
+                  board: {
+                    supportedNodeTypes: ['text', 'image', 'video'],
+                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                  },
+                  selected: { title: contextTitle, content: contextContent },
+                })
               })
-              if (!resp.ok) return
-              const jr = await resp.json()
-              const items: any[] = Array.isArray(jr?.nodes) ? jr.nodes : []
-              if (!items.length) return
+              if (!plannedResp.ok) return
+              const plannedJson = await plannedResp.json().catch(() => ({}))
+              const planned: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
+              const textItems = planned.filter((n: any) => n?.type === 'text')
+              const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+              if (!textItems.length && !mediaItems.length) return
 
               const parent = parentId ? nodesList.find(n => n.id === parentId) : undefined
               const cellWidth = 300
               const padding = 60
               const baseX = parent?.position?.x ?? getViewportCenter().x
               const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
-              const count = items.length
+              const count = textItems.length
               const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
               const startX = baseX - groupWidth / 2 + cellWidth / 2
-              const created: Node[] = items.map((it: any, index: number) => ({
+              const created: Node[] = textItems.map((it: any, index: number) => ({
                 id: `node-${Date.now()}-${index}`,
                 type: 'default',
                 position: { x: startX + index * (cellWidth + padding), y: baseY },
-                data: { title: String(it.title || it.label || ''), content: String(it.content || '') } as any,
+                data: { title: String(it?.title || ''), content: String(it?.content || '') } as any,
               } as any))
 
               const createdEdges: Edge[] = parentId
@@ -3885,50 +3989,31 @@ function BoardContent({
                   }) as any)
                 : []
 
-              // Media
               let mediaNodes: Node[] = []
               let mediaEdges: Edge[] = []
-              const mediaResp = await fetch('/api/boards/generate-media-nodes', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                body: JSON.stringify({
-                  topic: topic || contextTitle || '',
-                  description: [
-                    topic && `Board topic: ${topic}`,
-                    contextTitle && `Selected node: ${contextTitle}`,
-                    contextContent && `Context: ${contextContent}`,
-                  ].filter(Boolean).join('\n\n'),
-                  maxImages: 2,
-                  maxVideos: 2
+              if (mediaItems.length) {
+                const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
+                const mCellWidth = 320
+                const mPadding = 60
+                const mCount = mediaItems.length
+                const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
+                const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
+                mediaNodes = mediaItems.map((it: any, index: number) => {
+                  const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
+                  const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
+                  if (it?.type === 'image') {
+                    return { id, type: 'image' as any, position, data: { title: String(it?.title || 'Image'), content: String(it?.content || ''), previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
+                  }
+                  return { id, type: 'video' as any, position, data: { title: String(it?.title || 'Video'), content: String(it?.content || ''), videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any } as any
                 })
-              })
-              if (mediaResp.ok) {
-                const mediaJson = await mediaResp.json().catch(() => ({}))
-                const mediaItems: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(mediaJson?.nodes) ? mediaJson.nodes : []
-                if (mediaItems.length) {
-                  const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
-                  const mCellWidth = 320
-                  const mPadding = 60
-                  const mCount = mediaItems.length
-                  const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
-                  const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
-                  mediaNodes = mediaItems.map((it, index) => {
-                    const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
-                    const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
-                    if (it.type === 'image') {
-                      return { id, type: 'image' as any, position, data: { title: String(it.title || 'Image'), content: String(it.content || ''), previewUrl: String(it.url || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
-                    }
-                    return { id, type: 'video' as any, position, data: { title: String(it.title || 'Video'), content: String(it.content || ''), videoUrl: String(it.url || ''), status: 'idle', titleSize: 'sm' } as any } as any
-                  })
-                  mediaEdges = parentId
-                    ? mediaNodes.map((n) => ({
-                        id: `edge-${Date.now()}-${n.id}`,
-                        source: parentId!,
-                        target: n.id,
-                        type: toVisualEdgeType(edgeTypePref) as any,
-                      }) as any)
-                    : []
-                }
+                mediaEdges = parentId
+                  ? mediaNodes.map((n) => ({
+                      id: `edge-${Date.now()}-${n.id}`,
+                      source: parentId!,
+                      target: n.id,
+                      type: toVisualEdgeType(edgeTypePref) as any,
+                    }) as any)
+                  : []
               }
 
               const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
