@@ -3797,7 +3797,10 @@ function BoardContent({
 
               setNodes((nds) => {
                 const cur = Array.isArray(nds) ? nds : []
-                return [...cur, ...createdShifted, ...mediaShifted]
+                const next = shifted && parentId
+                  ? cur.map((n: any) => (n.id === parentId ? { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } } : n))
+                  : cur
+                return [...next, ...createdShifted, ...mediaShifted]
               })
               if (createdEdges.length || mediaEdges.length) {
                 setEdges((eds) => {
@@ -3928,7 +3931,10 @@ function BoardContent({
 
               setNodes((nds) => {
                 const cur = Array.isArray(nds) ? nds : []
-                return [...cur, ...createdShifted, ...mediaShifted]
+                const next = shifted && parentId
+                  ? cur.map((n: any) => (n.id === parentId ? { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } } : n))
+                  : cur
+                return [...next, ...createdShifted, ...mediaShifted]
               })
               if (createdEdges.length || mediaEdges.length) {
                 setEdges((eds) => {
