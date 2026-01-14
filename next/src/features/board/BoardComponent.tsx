@@ -55,7 +55,7 @@ import type { BoardBrief } from './boardTypes'
 import BoardContextMenu from '../../components/BoardContextMenu'
 // import { supabase } from '../auth/supabaseClient'; // Using getSupabaseClient instead
 import type { BoardNode } from './boardTypes';
-import { checkCollision } from './spatialAnalysis'
+import { boundsOverlap, checkCollision, getNodeBounds } from './spatialAnalysis'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
@@ -483,8 +483,9 @@ function BoardContent({
   const computeNewGroupShiftX = useCallback((
     existingNodes: any[],
     newNodes: any[],
+    excludeIds: string[] = [],
   ): number => {
-    const obstacles = Array.isArray(existingNodes) ? existingNodes : []
+    const obstacles = (Array.isArray(existingNodes) ? existingNodes : []).filter(n => !excludeIds.includes(n.id))
     const group = Array.isArray(newNodes) ? newNodes : []
     if (obstacles.length === 0 || group.length === 0) return 0
 
@@ -493,11 +494,17 @@ function BoardContent({
     const MIN_DISTANCE = 28
 
     const collidesAt = (dx: number) => {
-      for (const n of group) {
-        const dims = getApproxDims(n)
-        const pos = { x: Number(n?.position?.x || 0) + dx, y: Number(n?.position?.y || 0) }
-        const col = checkCollision(pos as any, dims as any, obstacles as any, [], MIN_DISTANCE)
-        if (col?.hasCollision) return true
+      for (const g of group) {
+        const gDims = getApproxDims(g)
+        const gPos = { x: Number(g?.position?.x || 0) + dx, y: Number(g?.position?.y || 0) }
+        const gBounds = getNodeBounds(gPos as any, gDims as any, MIN_DISTANCE)
+
+        for (const o of obstacles) {
+          const oDims = getApproxDims(o)
+          const oPos = { x: Number(o?.position?.x || 0), y: Number(o?.position?.y || 0) }
+          const oBounds = getNodeBounds(oPos as any, oDims as any, 0)
+          if (boundsOverlap(gBounds as any, oBounds as any)) return true
+        }
       }
       return false
     }
@@ -506,7 +513,8 @@ function BoardContent({
       const dx = i * STEP
       if (!collidesAt(dx)) return dx
     }
-    return 0 // if we can't find a spot without moving existing nodes, accept overlap
+    // If we can't find a spot without moving other existing nodes, don't move.
+    return 0
   }, [checkCollision, getApproxDims])
 
   // Global toast listener (used by uploads and other flows)
@@ -3789,7 +3797,7 @@ function BoardContent({
 
               // Keep rows consistent: never move existing nodes on the board during AI placement.
               // If we need room, shift ONLY the new group in X until it fits (otherwise accept overlap).
-              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any)
+              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
               const shifted = dx > 0
               const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
               const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
@@ -3923,7 +3931,7 @@ function BoardContent({
                 }
               }
 
-              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any)
+              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
               const shifted = dx > 0
               const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
               const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
