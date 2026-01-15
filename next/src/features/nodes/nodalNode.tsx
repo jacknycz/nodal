@@ -25,6 +25,8 @@ interface NodalNodeProps {
     type?: string
     expanded?: boolean
     aiGenerated?: boolean
+    summaryDerived?: boolean
+    summarySourceIds?: string[]
     colorgoryIds?: string[]
     titleSize?: 'sm' | 'md' | 'lg'
     pageMode?: boolean
@@ -199,7 +201,17 @@ export default function NodalNode(props: any) {
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `${baseWidthCls} ${expanded ? 'h-[80vh] overflow-hidden' : ''}` })}
+      className={getNodeContainerClasses({
+        selected,
+        receiveMode: isReceiveMode,
+        extra: [
+          baseWidthCls,
+          expanded ? 'h-[80vh] overflow-hidden' : '',
+          // Use a ring so the “derived” highlight stays visible even when selected
+          // (selected state applies a primary border with !important).
+          data?.summaryDerived ? 'ring-2 ring-emerald-400/70 border-emerald-500/80 bg-emerald-50/40 dark:bg-emerald-900/10' : '',
+        ].filter(Boolean).join(' ')
+      })}
       style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }), ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
       
     >
