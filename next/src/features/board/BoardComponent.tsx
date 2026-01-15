@@ -4034,6 +4034,48 @@ function BoardContent({
               const { data } = await supa.auth.getSession()
               const token = data?.session?.access_token
 
+              const sanitizeSnippet = (input: any, maxLen: number) => {
+                const s = String(input || '')
+                  .replace(/https?:\/\/\S+/gi, '')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                if (!s) return ''
+                return s.length > maxLen ? s.slice(0, maxLen).trim() : s
+              }
+
+              const getNodeSnippet = (n: any) => {
+                try {
+                  const t = String(n?.type || '').trim()
+                  const d: any = n?.data || {}
+                  // Prefer human-written / extracted text, but keep it short.
+                  let raw = ''
+                  if (t === 'document') {
+                    raw = d?.content || d?.extractedText || d?.extracted_text || ''
+                  } else {
+                    raw = d?.content || ''
+                  }
+                  if (!raw) {
+                    // Non-text nodes: include a short mention only (no URLs).
+                    if (t === 'link') {
+                      try { raw = d?.linkUrl ? `Link (${new URL(String(d.linkUrl)).hostname})` : '' } catch { raw = d?.linkUrl ? 'Link' : '' }
+                    } else if (t === 'video') {
+                      raw = d?.title ? `Video: ${String(d.title)}` : 'Video'
+                    } else if (t === 'image') {
+                      raw = d?.title ? `Image: ${String(d.title)}` : (d?.fileName ? `Image: ${String(d.fileName)}` : 'Image')
+                    }
+                  }
+                  return sanitizeSnippet(raw, 300)
+                } catch {
+                  return ''
+                }
+              }
+
+              const existingNodesPayload = (nodesList || []).slice(0, 30).map((n: any) => ({
+                title: n?.data?.title,
+                type: n?.type,
+                contentSnippet: getNodeSnippet(n),
+              }))
+
               const plannedResp = await fetch('/api/boards/generate-nodes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -4053,7 +4095,7 @@ function BoardContent({
                   },
                   board: {
                     supportedNodeTypes: withMedia ? ['text', 'image', 'video'] : ['text'],
-                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                    existingNodes: existingNodesPayload,
                   },
                   selected: { title: contextTitle, content: contextContent },
                 })
@@ -4166,6 +4208,46 @@ function BoardContent({
               const { data } = await supa.auth.getSession()
               const token = data?.session?.access_token
 
+              const sanitizeSnippet = (input: any, maxLen: number) => {
+                const s = String(input || '')
+                  .replace(/https?:\/\/\S+/gi, '')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                if (!s) return ''
+                return s.length > maxLen ? s.slice(0, maxLen).trim() : s
+              }
+
+              const getNodeSnippet = (n: any) => {
+                try {
+                  const t = String(n?.type || '').trim()
+                  const d: any = n?.data || {}
+                  let raw = ''
+                  if (t === 'document') {
+                    raw = d?.content || d?.extractedText || d?.extracted_text || ''
+                  } else {
+                    raw = d?.content || ''
+                  }
+                  if (!raw) {
+                    if (t === 'link') {
+                      try { raw = d?.linkUrl ? `Link (${new URL(String(d.linkUrl)).hostname})` : '' } catch { raw = d?.linkUrl ? 'Link' : '' }
+                    } else if (t === 'video') {
+                      raw = d?.title ? `Video: ${String(d.title)}` : 'Video'
+                    } else if (t === 'image') {
+                      raw = d?.title ? `Image: ${String(d.title)}` : (d?.fileName ? `Image: ${String(d.fileName)}` : 'Image')
+                    }
+                  }
+                  return sanitizeSnippet(raw, 300)
+                } catch {
+                  return ''
+                }
+              }
+
+              const existingNodesPayload = (nodesList || []).slice(0, 30).map((n: any) => ({
+                title: n?.data?.title,
+                type: n?.type,
+                contentSnippet: getNodeSnippet(n),
+              }))
+
               const plannedResp = await fetch('/api/boards/generate-nodes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -4185,7 +4267,7 @@ function BoardContent({
                   },
                   board: {
                     supportedNodeTypes: ['text', 'image', 'video'],
-                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                    existingNodes: existingNodesPayload,
                   },
                   selected: { title: contextTitle, content: contextContent },
                 })

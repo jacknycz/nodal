@@ -266,11 +266,6 @@ NODE CONTENT: [Body 2]`
     const wantsNodes = isNodeCreationIntent(userText)
     awaitingNodesRef.current = wantsNodes
 
-    // Board context (title/topic and primer about nodes/edges)
-    const boardTitle = boardBrief?.boardName || 'Untitled Board'
-    const boardTopicLine = boardBrief?.boardTopic || boardTopic || ''
-    const boardInfo = `Context - Board:\nTitle: ${boardTitle}${boardTopicLine ? `\nTopic: ${boardTopicLine}` : ''}\nInfo: Nodal is a visual mind map where nodes represent ideas/documents/tasks and edges represent relationships. Interpret pronouns like "this" or "it" relative to the selected nodes.`
-
     if (selectedNodes.length > 0) {
       const nodeContext = selectedNodes.map((n: any) => {
         const title = n?.data?.title || 'Untitled Node'
@@ -284,10 +279,10 @@ NODE CONTENT: [Body 2]`
       }).join('\n\n')
 
       const label = `Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}`
-      const base = `${boardInfo}\n\nContext - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
+      const base = `Context - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
       contextualMessage = wantsNodes ? `${NODE_FORMAT_DIRECTIVE}\n\n${base}` : base
     } else {
-      const base = `${boardInfo}\n\nUser message: ${userText}`
+      const base = `User message: ${userText}`
       contextualMessage = wantsNodes ? `${NODE_FORMAT_DIRECTIVE}\n\n${base}` : base
     }
 
@@ -355,7 +350,7 @@ NODE CONTENT: [Body 2]`
                   size="xs"
                   aria-label="AI Model"
                   value={model}
-                  options={MODELS}
+                  options={MODELS as any}
                   onChange={(v) => setModel(v as OpenAIModel)}
                   fullWidth
                 />

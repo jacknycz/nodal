@@ -28,17 +28,16 @@ interface UseUnifiedAI2Result {
 export function useUnifiedAI2(): UseUnifiedAI2Result {
   const aiContext = useAIContext()
   const CHAT_SYSTEM_PROMPT = `You are Nobot, an AI assistant for a visual mind mapping app. 
+You are an expert research assistant and teacher for the board’s topic.
 The app represents ideas as nodes and relationships as edges. Always ground answers in the 
 provided board and node context.
 
 Personality:
 - Quiet, observant, and knowledgeable. 
-- Rarely over-explain; when you do speak, make it sharp and useful. 
 - Occasionally drop in a dry, witty, or sarcastic remark — subtle, never mean-spirited. 
 - Think of yourself as the calm, clever teammate who stays quiet until it really matters.
 
 Guidelines:
-- Be concise unless the user explicitly asks for detail. 
 - Use wit sparingly, as a surprising flourish. 
 - Avoid over-cheerful “assistant” talk and corporate jargon. 
 - When the user says “this” or “it,” interpret it relative to the selected nodes included in their message.`;
@@ -49,8 +48,18 @@ Guidelines:
   const [error, setError] = useState<string | null>(null)
   const [currentContext, setCurrentContext] = useState<AIContextType>({})
 
+  const messagesRef = useRef<ChatMessage2[]>([])
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
   const currentBoardId = useBoardStore((s) => s.currentBoardId)
   const storageKey = currentBoardId ? `nodal.chat.${currentBoardId}` : 'nodal.chat.global'
+
+  // Board snapshot (for grounding). This stays capped in the service layer.
+  const boardNodes = useBoardStore((s) => s.nodes)
+  const boardEdges = useBoardStore((s) => s.edges)
+  const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
+  const boardTopic = useBoardStore((s) => s.topic)
+  const boardBrief = useBoardStore((s) => s.boardBrief)
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -84,11 +93,21 @@ Guidelines:
       if (abortControllerRef.current) abortControllerRef.current.abort()
       abortControllerRef.current = new AbortController()
 
+      const topic = (boardBrief as any)?.boardTopic || boardTopic || ''
+      const summary = (boardBrief as any)?.description || ''
       const aiContextData: AIContextType = {
         ...currentContext,
         ...context,
+        topic,
+        board: {
+          nodes: Array.isArray(boardNodes) ? (boardNodes as any) : [],
+          edges: Array.isArray(boardEdges) ? (boardEdges as any) : [],
+          selectedNodeId: Array.isArray(selectedNodeIds) && selectedNodeIds.length ? String(selectedNodeIds[0]) : null,
+          boardSummary: summary || undefined,
+        } as any,
         conversation: {
-          messages: [...messages, userMessage],
+          // NOTE: OpenAIService will append the current prompt separately; do not include it here.
+          messages: (messagesRef.current || []).filter(Boolean) as any,
           sessionId: 'current-session',
           startedAt: new Date(),
         },
@@ -141,11 +160,20 @@ Guidelines:
       if (abortControllerRef.current) abortControllerRef.current.abort()
       abortControllerRef.current = new AbortController()
 
+      const topic = (boardBrief as any)?.boardTopic || boardTopic || ''
+      const summary = (boardBrief as any)?.description || ''
       const aiContextData: AIContextType = {
         ...currentContext,
         ...context,
+        topic,
+        board: {
+          nodes: Array.isArray(boardNodes) ? (boardNodes as any) : [],
+          edges: Array.isArray(boardEdges) ? (boardEdges as any) : [],
+          selectedNodeId: Array.isArray(selectedNodeIds) && selectedNodeIds.length ? String(selectedNodeIds[0]) : null,
+          boardSummary: summary || undefined,
+        } as any,
         conversation: {
-          messages: [...messages, userMessage],
+          messages: (messagesRef.current || []).filter(Boolean) as any,
           sessionId: 'current-session',
           startedAt: new Date(),
         },
@@ -158,10 +186,6 @@ Guidelines:
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
         stream: true,
-      }
-
-      if (abortControllerRef.current) {
-        ;(streamOptions as any).signal = abortControllerRef.current.signal as any
       }
 
       for await (const chunk of aiContext.generateStream(streamOptions)) {
@@ -186,7 +210,6 @@ Guidelines:
 
   const cancelStreaming = useCallback(() => {
     try {
-      if (abortControllerRef.current) abortControllerRef.current.abort()
       aiContext.cancel?.()
     } catch { /* noop */ }
   }, [aiContext])
