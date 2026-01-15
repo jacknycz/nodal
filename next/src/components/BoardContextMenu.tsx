@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { PlusCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil, Tag as TagIcon, Trash, CaretRight, TextHOne, BookOpen } from '@phosphor-icons/react/dist/ssr'
+import { PlusCircle, TreeStructure, CheckSquare, ClipboardText, TreeView, Pencil, Tag as TagIcon, Trash, CaretRight, TextHOne, BookOpen, Sparkle } from '@phosphor-icons/react/dist/ssr'
 import { useBoardStore } from '../features/board/boardSlice'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
@@ -420,6 +420,26 @@ export default function BoardContextMenu({
             )}
 
             {!multiSelected && (<div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />)}
+
+            {/* Multi-select actions */}
+            {multiSelected && (
+              <>
+                <button
+                  onClick={() => handleAction(() => {
+                    try {
+                      const ids: string[] = Array.isArray(selectedIds) ? selectedIds : []
+                      if (ids.length < 2) return
+                      window.dispatchEvent(new CustomEvent('nodal:summarize-selection', { detail: { ids: [...ids] } }))
+                    } catch {}
+                  })}
+                  className="cursor-pointer w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-3"
+                >
+                  <Sparkle size={18} className="w-4 h-4" />
+                  Summarize Selection
+                </button>
+                <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+              </>
+            )}
 
             {/* Bottom section: Colorgory, then Delete */}
             <div className="relative"

@@ -6,6 +6,10 @@ type PlannedNode =
   | { type: 'image'; title: string; query: string; content?: string }
   | { type: 'video'; title: string; query: string; content?: string }
 
+type TextPlannedNode = Extract<PlannedNode, { type: 'text' }>
+type ImagePlannedNode = Extract<PlannedNode, { type: 'image' }>
+type VideoPlannedNode = Extract<PlannedNode, { type: 'video' }>
+
 type CountIntent = { n: number; reason: string } | null
 
 type GenerateRequest = {
@@ -24,7 +28,7 @@ type GenerateRequest = {
   }
   board?: {
     supportedNodeTypes?: Array<'text' | 'image' | 'video'>
-    existingNodes?: Array<{ title?: string; type?: string }>
+    existingNodes?: Array<{ title?: string; type?: string; contentSnippet?: string }>
   }
   selected?: {
     title?: string
@@ -81,6 +85,53 @@ function stripJsonFences(text: string): string {
 
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n))
+}
+
+function sanitizeSnippet(input: string, maxLen: number): string {
+  const s = String(input || '')
+    // strip URLs to reduce noise / avoid leaking link spam into the prompt
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!s) return ''
+  return s.length > maxLen ? s.slice(0, maxLen).trim() : s
+}
+
+function buildExistingNodesContext(existingNodes: Array<{ title?: string; type?: string; contentSnippet?: string }>): string {
+  // Keep a predictable prompt budget: include short snippets for up to 20 nodes,
+  // with a total cap across all snippets.
+  const MAX_NODES_WITH_SNIPPETS = 20
+  const SNIPPET_MAX_LEN = 300
+  const TOTAL_SNIPPET_BUDGET = 8000
+
+  const list = Array.isArray(existingNodes) ? existingNodes : []
+  const lines: string[] = []
+  let used = 0
+
+  const take = list.slice(0, Math.max(0, MAX_NODES_WITH_SNIPPETS))
+  for (const n of take) {
+    const title = sanitizeSnippet(String(n?.title || ''), 80)
+    const type = sanitizeSnippet(String(n?.type || ''), 24)
+    const snippet = sanitizeSnippet(String(n?.contentSnippet || ''), SNIPPET_MAX_LEN)
+
+    if (!title && !snippet) continue
+
+    const head = `- [${type || 'node'}] ${title || 'Untitled'}`
+    const tail = snippet ? ` — ${snippet}` : ''
+    const line = `${head}${tail}`.trim()
+
+    const addCost = line.length + 1
+    if (used + addCost > TOTAL_SNIPPET_BUDGET) break
+    used += addCost
+    lines.push(line)
+  }
+
+  const omitted = Math.max(0, list.length - take.length)
+  if (omitted > 0) {
+    lines.push(`- … (+${omitted} more)`)
+  }
+
+  return lines.length ? lines.join('\n') : ''
 }
 
 function extractRequestedCount(text: string): CountIntent {
@@ -253,17 +304,19 @@ export async function POST(req: Request) {
       '',
       'Rules:',
       '- "query" is REQUIRED for image/video nodes and is a short search phrase (2–8 words). No URLs.',
+      '- Avoid duplicating what is already on the board. Prefer filling gaps, adding complements, or going deeper.',
       '- If no explicit count is requested, fewer nodes is OK. Do not pad; prefer clarity over quantity.',
       '- Keep titles concise (<= 60 chars).',
       '- Content: 1–2 sentences max (short, actionable).',
       '- Ensure counts match nodes length and obey guardrails.',
     ].join('\n')
 
+    const existingContext = buildExistingNodesContext(existingNodes as any)
     const userPrompt = [
       `Mode: ${mode}`,
       `Board topic: ${topic}`,
       goal ? `Board goal: ${goal}` : '',
-      existingNodes.length ? `Existing nodes (title + type): ${JSON.stringify(existingNodes)}` : 'Existing nodes: []',
+      existingContext ? `Existing nodes (do not duplicate; titles + snippets):\n${existingContext}` : 'Existing nodes: []',
       selectedTitle ? `Selected node title: ${selectedTitle}` : '',
       selectedContent ? `Selected node context (may be long): ${selectedContent.slice(0, 1400)}` : '',
       '',
@@ -283,15 +336,15 @@ export async function POST(req: Request) {
     const plannedNodes: PlannedNode[] = plannedNodesRaw.map(normalizePlannedNode).filter(Boolean) as any
 
     // Enforce guardrails in code (clamp + trim)
-    const texts = plannedNodes.filter(n => n.type === 'text')
-    let images = plannedNodes.filter(n => n.type === 'image').slice(0, maxImages)
-    let videos = plannedNodes.filter(n => n.type === 'video').slice(0, maxVideos)
+    const texts: TextPlannedNode[] = plannedNodes.filter((n): n is TextPlannedNode => n.type === 'text')
+    let images: ImagePlannedNode[] = plannedNodes.filter((n): n is ImagePlannedNode => n.type === 'image').slice(0, maxImages)
+    let videos: VideoPlannedNode[] = plannedNodes.filter((n): n is VideoPlannedNode => n.type === 'video').slice(0, maxVideos)
 
     let safeText = texts
     if (safeText.length < effectiveMinText) {
       // add simple filler text nodes (rare, but ensures backbone)
       const need = effectiveMinText - safeText.length
-      const fillers: PlannedNode[] = Array.from({ length: need }).map((_, i) => ({
+      const fillers: TextPlannedNode[] = Array.from({ length: need }).map((_, i) => ({
         type: 'text',
         title: `Key Point ${safeText.length + i + 1}`,
         content: 'Add a concise, actionable detail here.',

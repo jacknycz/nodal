@@ -252,6 +252,7 @@ function BoardContent({
   const [toastSubMessage, setToastSubMessage] = useState<string>('')
   const [toastVariant, setToastVariant] = useState<'success' | 'info' | 'warning' | 'danger'>('success')
   const [quickAiGenerating, setQuickAiGenerating] = useState(false)
+  const [summarizingSelection, setSummarizingSelection] = useState(false)
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
   const toVisualEdgeType = useCallback((pref: string) => {
     switch (pref) {
@@ -1967,11 +1968,218 @@ function BoardContent({
       } catch {}
     }
     window.addEventListener('nodal:bulk-delete', onBulkDelete as EventListener)
+
+    const stripJsonFencesLocal = (text: string) => {
+      let t = (text || '').trim()
+      if (t.startsWith('```json')) t = t.replace(/^```json\s*/i, '').replace(/\s*```$/i, '')
+      else if (t.startsWith('```')) t = t.replace(/^```\s*/i, '').replace(/\s*```$/i, '')
+      return t.trim()
+    }
+    const escapeHtml = (s: string) =>
+      String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+
+    const onSummarizeSelection = (ev: Event) => {
+      ;(async () => {
+        try {
+          if (readOnly) return
+          if (summarizingSelection) return
+          setSummarizingSelection(true)
+          const idsIn: string[] = Array.isArray((ev as CustomEvent<any>)?.detail?.ids) ? (ev as CustomEvent<any>).detail.ids : []
+          const ids = Array.from(new Set(idsIn)).filter(Boolean)
+          if (ids.length < 2) return
+
+          const store = useBoardStore.getState() as any
+          const nodesList: any[] = Array.isArray(store.nodes) ? store.nodes : []
+          const selected = nodesList.filter((n: any) => ids.includes(n.id))
+          if (selected.length < 2) return
+
+          // Place near centroid of selected cluster, offset to avoid covering.
+          let minX = Number.POSITIVE_INFINITY
+          let minY = Number.POSITIVE_INFINITY
+          let maxX = Number.NEGATIVE_INFINITY
+          let maxY = Number.NEGATIVE_INFINITY
+          for (const n of selected) {
+            const dims = getApproxDims(n)
+            const x = Number(n?.position?.x || 0)
+            const y = Number(n?.position?.y || 0)
+            minX = Math.min(minX, x)
+            minY = Math.min(minY, y)
+            maxX = Math.max(maxX, x + dims.width)
+            maxY = Math.max(maxY, y + dims.height)
+          }
+          const cx = (minX + maxX) / 2
+          const cy = (minY + maxY) / 2
+
+          const topic = String(store.topic || '').trim()
+
+          // Build compact input for the model (include non-text nodes only as brief mentions).
+          const normalizeNodeForAI = (n: any) => {
+            const type = String(n?.type || n?.data?.type || 'default')
+            const title = String(n?.data?.title || n?.data?.label || n?.data?.name || '').trim()
+            const contentRaw =
+              String(
+                n?.data?.content ||
+                n?.data?.description ||
+                (n?.data as any)?.extractedText ||
+                (n?.data as any)?.extracted_text ||
+                ''
+              )
+            const urlHint =
+              String(
+                n?.data?.linkUrl ||
+                n?.data?.videoUrl ||
+                n?.data?.previewUrl ||
+                n?.data?.imageUrl ||
+                ''
+              ).trim()
+
+            // Keep non-text nodes short: title + (optional) 1-liner + optional hostname hint.
+            const isNonText = /image|video|link|document/i.test(type)
+            const content = (contentRaw || '').trim().slice(0, isNonText ? 220 : 700)
+            const url = isNonText ? (urlHint ? urlHint.slice(0, 180) : '') : ''
+            return { id: String(n?.id || ''), type, title: title || '(Untitled)', content, url }
+          }
+
+          const inputNodes = selected.map(normalizeNodeForAI)
+          const titles = inputNodes.map(n => n.title).filter(Boolean)
+          const basedOnShort = (() => {
+            const uniq = Array.from(new Set(titles))
+            const shown = uniq.slice(0, 4)
+            const rest = uniq.length - shown.length
+            return rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.join(', ')
+          })()
+
+          const sys = [
+            'You are a summarizer for a visual thinking board app.',
+            'You MUST produce a succinct, structured summary that is clearly DERIVED from the provided nodes.',
+            'Do NOT invent new facts; do NOT add new original content.',
+            '',
+            'Return STRICT JSON only (no markdown fences) with this exact shape:',
+            '{ "theme": string, "keyTakeaways": string[], "openQuestions": string[], "nextSteps": string[] }',
+            '',
+            'Rules:',
+            '- Keep it concise: keyTakeaways 3-6, openQuestions 1-3, nextSteps 2-5.',
+            '- Use plain sentences or fragments (no emojis).',
+            '- Treat non-text nodes (image/video/link/document) as references; mention them only briefly.',
+          ].join('\n')
+
+          const userPrompt = [
+            topic ? `Board topic: ${topic}` : '',
+            `Selected nodes (${inputNodes.length}):`,
+            JSON.stringify(inputNodes),
+          ].filter(Boolean).join('\n\n')
+
+          // Call server proxy (uses server key and logs usage). Include auth token if available.
+          let token: string | null = null
+          try {
+            const supa = getSupabaseClient()
+            const { data } = await supa.auth.getSession()
+            token = data?.session?.access_token || null
+          } catch {}
+
+          const resp = await fetch('/api/ai/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...(boardId ? { 'x-board-id': String(boardId) } : {}),
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                { role: 'system', content: sys },
+                { role: 'user', content: userPrompt },
+              ],
+              temperature: 0.2,
+              max_tokens: 700,
+              stream: false,
+            }),
+          })
+          if (!resp.ok) {
+            const j = await resp.json().catch(() => ({}))
+            throw new Error(j?.error || `Summarize failed (${resp.status})`)
+          }
+          const j = await resp.json().catch(() => ({}))
+          const content = String(j?.choices?.[0]?.message?.content || '').trim()
+          let parsed: any = null
+          try { parsed = JSON.parse(stripJsonFencesLocal(content)) } catch {}
+
+          const themeRaw = String(parsed?.theme || '').trim()
+          const keyTakeaways: string[] = Array.isArray(parsed?.keyTakeaways) ? parsed.keyTakeaways.map((x: any) => String(x || '').trim()).filter(Boolean) : []
+          const openQuestions: string[] = Array.isArray(parsed?.openQuestions) ? parsed.openQuestions.map((x: any) => String(x || '').trim()).filter(Boolean) : []
+          const nextSteps: string[] = Array.isArray(parsed?.nextSteps) ? parsed.nextSteps.map((x: any) => String(x || '').trim()).filter(Boolean) : []
+
+          const fallbackTheme = `Summary (${inputNodes.length} nodes)`
+          const theme = themeRaw ? themeRaw.slice(0, 60) : fallbackTheme
+          const title = themeRaw ? `Summary: ${theme}` : fallbackTheme
+
+          const section = (label: string, items: string[]) => {
+            if (!items.length) return ''
+            const lis = items.slice(0, 8).map((it) => `<li>${escapeHtml(it)}</li>`).join('')
+            return `<p><strong>${escapeHtml(label)}</strong></p><ul>${lis}</ul>`
+          }
+
+          const html = [
+            section('Key takeaways', keyTakeaways),
+            section('Open questions', openQuestions),
+            section('Next steps', nextSteps),
+            `<p class="text-xs text-gray-500 dark:text-gray-400"><em>Based on: ${escapeHtml(basedOnShort || `${inputNodes.length} selected nodes`)}</em></p>`,
+          ].filter(Boolean).join('')
+
+          const newId = `summary-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+          const basePos = { x: cx + 60, y: cy + 40 }
+          const newNode: any = {
+            id: newId,
+            type: 'default',
+            position: basePos,
+            data: {
+              title,
+              content: html,
+              summaryDerived: true,
+              summarySourceIds: ids,
+              titleSize: 'md',
+              // Summary nodes are intentionally wider to fit structured content.
+              width: 480,
+            } as any,
+          }
+
+          const dx = computeNewGroupShiftX(nodesList as any, [newNode] as any, [])
+          const placed = dx ? { ...newNode, position: { x: basePos.x + dx, y: basePos.y } } : newNode
+
+          pushHistory()
+          setNodes((nds) => {
+            const cur = Array.isArray(nds) ? nds : []
+            return [...cur, placed]
+          })
+
+          // Auto-select the new node
+          try { store.setSelectedNodes([newId]) } catch {}
+          try {
+            reactFlowInstance.setNodes((cur) => cur.map((n) => ({ ...n, selected: n.id === newId })))
+          } catch {}
+          try { showAddToast('generated' as any, 1) } catch {}
+          try { centerOnNodeIds([newId], { align: 'midLeft' }) } catch {}
+        } catch (err: any) {
+          try {
+            window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: String(err?.message || 'Failed to summarize selection'), variant: 'warning' } }))
+          } catch {}
+        } finally {
+          try { setSummarizingSelection(false) } catch {}
+        }
+      })()
+    }
+    window.addEventListener('nodal:summarize-selection', onSummarizeSelection as EventListener)
     return () => {
       window.removeEventListener('nodal:select-nodes', onSelect as EventListener)
       window.removeEventListener('nodal:bulk-delete', onBulkDelete as EventListener)
+      window.removeEventListener('nodal:summarize-selection', onSummarizeSelection as EventListener)
     }
-  }, [reactFlowInstance])
+  }, [reactFlowInstance, readOnly, boardId, getApproxDims, computeNewGroupShiftX, pushHistory, setNodes, showAddToast, centerOnNodeIds, summarizingSelection])
 
   // Global drag event listener to handle files dragged from outside
   useEffect(() => {
@@ -3361,12 +3569,18 @@ function BoardContent({
             event.preventDefault()
             event.stopPropagation()
             if (readOnly) return
-            // Also select the node that was right-clicked
+            // Preserve multi-selection when right-clicking within the current selection.
             try {
               const id = node?.id
               if (id) {
-                useBoardStore.getState().setSelectedNodes([id])
-                try { reactFlowInstance.setNodes((cur) => cur.map((n) => ({ ...n, selected: n.id === id }))) } catch {}
+                const store = useBoardStore.getState() as any
+                const current: string[] = Array.isArray(store.selectedNodeIds) ? store.selectedNodeIds : []
+                const keepSelection = current.length > 1 && current.includes(id)
+                const next = keepSelection ? current : [id]
+                store.setSelectedNodes(next)
+                try {
+                  reactFlowInstance.setNodes((cur) => cur.map((n) => ({ ...n, selected: next.includes(n.id) })))
+                } catch {}
               }
             } catch {}
             setPendingSourceNodeId(node?.id || null)
@@ -3820,6 +4034,48 @@ function BoardContent({
               const { data } = await supa.auth.getSession()
               const token = data?.session?.access_token
 
+              const sanitizeSnippet = (input: any, maxLen: number) => {
+                const s = String(input || '')
+                  .replace(/https?:\/\/\S+/gi, '')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                if (!s) return ''
+                return s.length > maxLen ? s.slice(0, maxLen).trim() : s
+              }
+
+              const getNodeSnippet = (n: any) => {
+                try {
+                  const t = String(n?.type || '').trim()
+                  const d: any = n?.data || {}
+                  // Prefer human-written / extracted text, but keep it short.
+                  let raw = ''
+                  if (t === 'document') {
+                    raw = d?.content || d?.extractedText || d?.extracted_text || ''
+                  } else {
+                    raw = d?.content || ''
+                  }
+                  if (!raw) {
+                    // Non-text nodes: include a short mention only (no URLs).
+                    if (t === 'link') {
+                      try { raw = d?.linkUrl ? `Link (${new URL(String(d.linkUrl)).hostname})` : '' } catch { raw = d?.linkUrl ? 'Link' : '' }
+                    } else if (t === 'video') {
+                      raw = d?.title ? `Video: ${String(d.title)}` : 'Video'
+                    } else if (t === 'image') {
+                      raw = d?.title ? `Image: ${String(d.title)}` : (d?.fileName ? `Image: ${String(d.fileName)}` : 'Image')
+                    }
+                  }
+                  return sanitizeSnippet(raw, 300)
+                } catch {
+                  return ''
+                }
+              }
+
+              const existingNodesPayload = (nodesList || []).slice(0, 30).map((n: any) => ({
+                title: n?.data?.title,
+                type: n?.type,
+                contentSnippet: getNodeSnippet(n),
+              }))
+
               const plannedResp = await fetch('/api/boards/generate-nodes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -3839,7 +4095,7 @@ function BoardContent({
                   },
                   board: {
                     supportedNodeTypes: withMedia ? ['text', 'image', 'video'] : ['text'],
-                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                    existingNodes: existingNodesPayload,
                   },
                   selected: { title: contextTitle, content: contextContent },
                 })
@@ -3952,6 +4208,46 @@ function BoardContent({
               const { data } = await supa.auth.getSession()
               const token = data?.session?.access_token
 
+              const sanitizeSnippet = (input: any, maxLen: number) => {
+                const s = String(input || '')
+                  .replace(/https?:\/\/\S+/gi, '')
+                  .replace(/\s+/g, ' ')
+                  .trim()
+                if (!s) return ''
+                return s.length > maxLen ? s.slice(0, maxLen).trim() : s
+              }
+
+              const getNodeSnippet = (n: any) => {
+                try {
+                  const t = String(n?.type || '').trim()
+                  const d: any = n?.data || {}
+                  let raw = ''
+                  if (t === 'document') {
+                    raw = d?.content || d?.extractedText || d?.extracted_text || ''
+                  } else {
+                    raw = d?.content || ''
+                  }
+                  if (!raw) {
+                    if (t === 'link') {
+                      try { raw = d?.linkUrl ? `Link (${new URL(String(d.linkUrl)).hostname})` : '' } catch { raw = d?.linkUrl ? 'Link' : '' }
+                    } else if (t === 'video') {
+                      raw = d?.title ? `Video: ${String(d.title)}` : 'Video'
+                    } else if (t === 'image') {
+                      raw = d?.title ? `Image: ${String(d.title)}` : (d?.fileName ? `Image: ${String(d.fileName)}` : 'Image')
+                    }
+                  }
+                  return sanitizeSnippet(raw, 300)
+                } catch {
+                  return ''
+                }
+              }
+
+              const existingNodesPayload = (nodesList || []).slice(0, 30).map((n: any) => ({
+                title: n?.data?.title,
+                type: n?.type,
+                contentSnippet: getNodeSnippet(n),
+              }))
+
               const plannedResp = await fetch('/api/boards/generate-nodes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -3971,7 +4267,7 @@ function BoardContent({
                   },
                   board: {
                     supportedNodeTypes: ['text', 'image', 'video'],
-                    existingNodes: (nodesList || []).slice(0, 30).map((n: any) => ({ title: n?.data?.title, type: n?.type })),
+                    existingNodes: existingNodesPayload,
                   },
                   selected: { title: contextTitle, content: contextContent },
                 })
@@ -4882,11 +5178,11 @@ function BoardContent({
         onClose={() => setShowReorganizeMenu(false)}
         nodeCount={nodes.length}
       />
-      {(quickAiGenerating || creatingBoard) && (
+      {(quickAiGenerating || creatingBoard || summarizingSelection) && (
         <div className="fixed inset-0 z-[900] flex items-center justify-center pointer-events-none">
           <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
           <SpinnerGap className="animate-spin" size={16} />
-          <span>{creatingBoard ? 'Creating board…' : 'Generating nodes…'}</span>
+          <span>{creatingBoard ? 'Creating board…' : (summarizingSelection ? 'Summarizing selection…' : 'Generating nodes…')}</span>
           </div>
         </div>
       )}
