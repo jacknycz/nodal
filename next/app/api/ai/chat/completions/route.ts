@@ -9,12 +9,20 @@ export async function POST(req: NextRequest) {
     // Identify user (prefer Supabase auth header; fallback x-user-id for dev/testing)
     const supabase = getSupabaseServiceClient()
     let userId: string | null = null
+    let roleFromAuth: string | null = null
+    let userCreatedAt: string | null = null
     try {
       const authHeader = req.headers.get('authorization')
       if (authHeader?.startsWith('Bearer ')) {
         const token = authHeader.slice(7)
         const { data } = await supabase.auth.getUser(token)
         userId = data.user?.id || null
+        userCreatedAt = (data.user as any)?.created_at || null
+        try {
+          // Prefer app_metadata.role; fallback to user_metadata.role
+          // @ts-expect-error metadata may be any
+          roleFromAuth = (data.user?.app_metadata?.role as string) || (data.user?.user_metadata?.role as string) || null
+        } catch {}
       }
     } catch {}
     if (!userId) {
@@ -26,18 +34,84 @@ export async function POST(req: NextRequest) {
     try {
       const boardIdHeader = req.headers.get('x-board-id') || null
       if (userId) {
-        // Determine monthly cap from role
-        let cap = 15000
+        const normalizeRole = (r: any): 'Admin' | 'Pro' | 'User' => {
+          const s = String(r || '').trim().toLowerCase()
+          if (s === 'admin') return 'Admin'
+          if (s === 'pro') return 'Pro'
+          return 'User'
+        }
+        const rank = (r: 'Admin' | 'Pro' | 'User') => (r === 'Admin' ? 3 : r === 'Pro' ? 2 : 1)
+
+        // Determine effective role using canonical profile fields (role_override/subscription_status),
+        // while also honoring auth metadata promotions.
+        let dbRole: string | null = null
+        let roleOverride: string | null = null
+        let subscriptionStatus: string | null = null
+        let currentPeriodStart: string | null = null
         try {
-          const prof = await supabase.from('profiles').select('role').eq('id', userId).maybeSingle()
-          const role = (prof.data as any)?.role || 'User'
-          const rl = String(role).toLowerCase()
-          if (rl === 'pro') cap = 100000
-          if (rl === 'admin') cap = Number.MAX_SAFE_INTEGER
+          const prof = await supabase
+            .from('profiles')
+            .select('role, role_override, subscription_status, current_period_start')
+            .eq('id', userId)
+            .maybeSingle()
+          dbRole = (prof.data as any)?.role || null
+          roleOverride = (prof.data as any)?.role_override || null
+          subscriptionStatus = (prof.data as any)?.subscription_status || null
+          currentPeriodStart = (prof.data as any)?.current_period_start || null
         } catch {}
+
+        let effectiveRole: 'Admin' | 'Pro' | 'User' = 'User'
+        const overrideNorm = normalizeRole(roleOverride)
+        if (roleOverride && /^(admin|pro|user)$/i.test(String(roleOverride))) {
+          effectiveRole = overrideNorm
+        } else {
+          const isSubPro = ['active', 'trialing', 'past_due'].includes(String(subscriptionStatus || '').toLowerCase())
+          effectiveRole = isSubPro ? 'Pro' : 'User'
+        }
+
+        // Promote-only: auth metadata and dbRole can only increase privileges
+        const authNorm = normalizeRole(roleFromAuth)
+        if (rank(authNorm) > rank(effectiveRole)) effectiveRole = authNorm
+        const dbNorm = normalizeRole(dbRole)
+        if (rank(dbNorm) > rank(effectiveRole)) effectiveRole = dbNorm
+
+        // Map role -> cap (Free 15k, Pro 100k, Admin unlimited)
+        let cap = 15000
+        if (effectiveRole === 'Pro') cap = 100000
+        if (effectiveRole === 'Admin') cap = Number.MAX_SAFE_INTEGER
+
         if (cap !== Number.MAX_SAFE_INTEGER) {
           const now = new Date()
-          const start = new Date(now.getFullYear(), now.getMonth(), 1)
+          let start = new Date(now.getFullYear(), now.getMonth(), 1)
+
+          // Align Pro users to the Stripe period start when available on the profile
+          if (effectiveRole === 'Pro' && currentPeriodStart) {
+            try {
+              const cps = new Date(currentPeriodStart)
+              if (!Number.isNaN(cps.getTime())) start = cps
+            } catch {}
+          } else if (effectiveRole === 'User') {
+            // Free users: use signup day-of-month as the window anchor (matches /api/usage)
+            try {
+              const anchorDay = (() => {
+                if (userCreatedAt) return new Date(userCreatedAt).getDate()
+                return now.getDate() // fallback
+              })()
+              const clampDay = (y: number, m: number, d: number) => {
+                const last = new Date(y, m + 1, 0).getDate()
+                return Math.min(d, last)
+              }
+              const dayThisMonth = clampDay(now.getFullYear(), now.getMonth(), anchorDay)
+              const candidate = new Date(now.getFullYear(), now.getMonth(), dayThisMonth)
+              if (now.getDate() >= dayThisMonth) {
+                start = candidate
+              } else {
+                const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+                const dayPrevMonth = clampDay(prevMonth.getFullYear(), prevMonth.getMonth(), anchorDay)
+                start = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), dayPrevMonth)
+              }
+            } catch {}
+          }
           const { data: usageRows } = await supabase
             .from('ai_usage')
             .select('tokens_used')
