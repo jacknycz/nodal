@@ -114,7 +114,7 @@ export default function BoardsTab({
                 lastModified={board.lastModified}
                 nodeCount={board.nodeCount}
                 edgeCount={board.edgeCount}
-                topic={(board as any)?.data?.topic || null}
+                topic={(board as any)?.topic || (board as any)?.data?.topic || null}
                 // pass shared metadata if present
                 invitedBy={(board as any)?.invited_by || null}
                 // hint that this item is a shared board

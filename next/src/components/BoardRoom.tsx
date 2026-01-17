@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useDeferredValue, useRef, startTransition, useMemo } from 'react'
-import type { SavedBoard } from '../features/storage/storage'
+import type { SavedBoard, BoardSummary } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
@@ -32,7 +32,7 @@ interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
 }
 
-type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
+type SharedBoard = BoardSummary & { shared?: boolean; invited_by?: string }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const SHOW_COMMUNITY = false
@@ -48,7 +48,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   })
   const CommunityTab = dynamic(() => import('./CommunityTab'), { ssr: false })
   const user = useSupabaseUser()
-  const [boards, setBoards] = useState<SavedBoard[]>([])
+  const [boards, setBoards] = useState<BoardSummary[]>([])
   const [sharedBoards, setSharedBoards] = useState<SharedBoard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -227,77 +227,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }
 
-  const loadBoards = async () => {
-    try {
-      // mark start of board load for perf debugging
-      try { performance.mark('loadBoards-start') } catch { }
-      let toggledLoading = false
-      if (!hasLoadedBoardsRef.current) {
-        setLoading(true)
-        toggledLoading = true
-      }
-      const { boardStorage } = await import('../features/storage/storage')
-      const loadedBoards = await boardStorage.getAllBoards()
-      try {
-        const prev = prevBoardsRef.current
-        const same = prev && prev.length === loadedBoards.length && JSON.stringify(prev) === JSON.stringify(loadedBoards)
-        if (!same) {
-          setBoards(loadedBoards)
-          prevBoardsRef.current = loadedBoards
-        }
-      } catch {
-        setBoards(loadedBoards)
-        prevBoardsRef.current = loadedBoards
-      }
-      // Fetch shared boards from API only if not already seeded via bootstrap
-      if (!sharedSeededRef.current) {
-        if (user?.email || user?.id) {
-          const qs = new URLSearchParams()
-          if (user?.email) qs.set('email', user.email)
-          if (user?.id) qs.set('userId', user.id)
-          const res = await fetch(`/api/board/shared?${qs.toString()}`)
-          const json = await res.json()
-          const incoming = Array.isArray(json.boards) ? json.boards : []
-          try {
-            const prev = prevSharedBoardsRef.current
-            const same = prev && prev.length === incoming.length && JSON.stringify(prev) === JSON.stringify(incoming)
-            if (!same) {
-              setSharedBoards(incoming)
-              prevSharedBoardsRef.current = incoming
-            }
-          } catch {
-            setSharedBoards(incoming)
-            prevSharedBoardsRef.current = incoming
-          }
-        } else {
-          setSharedBoards([])
-          prevSharedBoardsRef.current = []
-        }
-      }
-      // Stats computed in a separate effect when state settles
-      try { performance.mark('loadBoards-end') } catch { }
-      try { performance.measure('loadBoards', 'loadBoards-start', 'loadBoards-end'); console.log('perf: loadBoards', performance.getEntriesByName('loadBoards')[0]?.duration) } catch { }
-    } catch {
-      setError('Failed to load boards')
-    } finally {
-      hasLoadedBoardsRef.current = true
-      setLoading(false)
-    }
-  }
-
+  // Load pinned boards from localStorage
   useEffect(() => {
-    const uid = user?.id || null
-    if (prevUserIdRef.current === uid && (hasLoadedBoardsRef.current || bootstrappedRef.current)) return
-    prevUserIdRef.current = uid
-    if (inFlightBoardsRef.current) return
-    inFlightBoardsRef.current = true
-    ;(async () => { try { await loadBoards() } finally { inFlightBoardsRef.current = false } })()
-    // Load pinned boards from localStorage
     try {
       const stored = localStorage.getItem('pinnedBoards')
       if (stored) setPinnedBoardIds(JSON.parse(stored))
     } catch { }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   // Track selected tab via path to conditionally show sections
@@ -330,7 +265,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       setLoading(true)
       try {
         const [{ boardStorage }] = await Promise.all([import('../features/storage/storage')])
-        const personalPromise = boardStorage.getAllBoards()
+        const personalPromise = boardStorage.getAllBoardsSummary()
         const { data } = await getSupabaseClient().auth.getSession()
         const token = data?.session?.access_token
         const bootstrapPromise = fetch('/api/boardroom/bootstrap', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
@@ -434,14 +369,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       try {
         try { performance.mark('computeTasks-start') } catch { }
         setTasksLoading(true)
-        // Use precomputed task summary from board.data.meta if available
-        const all: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
+        // Use precomputed task summary from board.meta if available
+        const all: Array<BoardSummary | SharedBoard> = [...boards, ...sharedBoards]
         const results: Array<{ boardId: string; boardName: string; nodeId: string; title: string } | null> = []
 
         for (const b of all) {
           if (cancelled) break
           await waitForIdle()
-          const summary = (b as any)?.data?.meta?.taskSummary as Array<{ id: string; title: string; completed?: boolean }> | undefined
+          const summary = (b as any)?.meta?.taskSummary as Array<{ id: string; title: string; completed?: boolean }> | undefined
           if (Array.isArray(summary)) {
             for (let i = 0; i < summary.length; i++) {
               const t = summary[i]

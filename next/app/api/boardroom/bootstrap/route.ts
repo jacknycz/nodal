@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     if (allSharedIds.length > 0) {
       const { data: sboards } = await supabase
         .from('boards')
-        .select('*')
+        .select('id, name, user_id, created_at, last_modified, node_count, edge_count, is_public, topic:data->>topic, meta:data->meta')
         .in('id', allSharedIds)
       sharedBoards = (sboards || []).map((b: any) => ({
         id: b.id,
@@ -54,7 +54,12 @@ export async function GET(req: NextRequest) {
         userId: b.user_id,
         createdAt: b.created_at ? new Date(b.created_at).getTime() : undefined,
         lastModified: b.last_modified ? Number(b.last_modified) : undefined,
-        data: b.data || null,
+        nodeCount: typeof b.node_count === 'number' ? b.node_count : undefined,
+        edgeCount: typeof b.edge_count === 'number' ? b.edge_count : undefined,
+        isPublic: typeof b.is_public === 'boolean' ? b.is_public : undefined,
+        topic: typeof b.topic === 'string' ? b.topic : null,
+        meta: (b.meta || null),
+        shared: true,
       }))
     }
 
