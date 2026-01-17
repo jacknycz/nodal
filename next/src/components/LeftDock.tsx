@@ -10,6 +10,7 @@ import { useBoardStore } from '../features/board/boardSlice'
 import Modal from './ui/Modal'
 import Button from './ui/Button'
 import TextInput from './ui/TextInput'
+import TipsAndInfoPanel from './TipsAndInfoPanel'
 
 type DockKey = 'tasks' | 'colorgories' | 'tips' | 'stories' | null
 
@@ -231,6 +232,8 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
           </div>
         )}
       </div>
+
+      {/* Tips & Info */}
       <div className="relative">
         <button
           type="button"
@@ -244,30 +247,7 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
         </button>
         {openKey === 'tips' && (
           <div className="absolute left-[52px] top-0 origin-left transition-all duration-150 ease-out opacity-100 scale-100">
-            <div className="rounded-3xl z-60 w-64 max-h-[calc(100dvh-80px)] bg-white dark:bg-gray-900 shadow-xl flex flex-col transition-all duration-200 ease-out opacity-100 scale-100 translate-y-0">
-              <div className="flex items-center justify-between py-2 px-4 shadow-lg shadow-gray-400/10 dark:shadow-none">
-                <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-600 dark:text-gray-300">Tips & Info</span>
-                </div>
-                <button onClick={() => setOpenKey(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                <ul className="list-disc pl-5 space-y-2">
-                  <li><strong>Mouse wheel</strong> zooms the board in and out.</li>
-                  <li><strong>Click & drag</strong> on empty space to pan the board.</li>
-                  <li><strong>Cmd/Ctrl + click</strong> nodes to multi-select.</li>
-                  <li><strong>Shift + click</strong> a second node (with one selected) to connect them.</li>
-                  <li><strong>Shift + drag</strong> to marquee-select multiple nodes.</li>
-                  <li><strong>Undo</strong>: Cmd + Z (Mac) / Ctrl + Z (Windows).</li>
-                  <li><strong>Redo</strong>: Cmd + Shift + Z (Mac) / Ctrl + Shift + Z (Windows).</li>
-                  <li><strong>Drag & drop</strong> files onto the board to create nodes.</li>
-                  <li><strong>Double‑click</strong> a node to open editing.</li>
-                  <li>Use the bottom FAB to add nodes, upload, or generate with AI.</li>
-                </ul>
-              </div>
-            </div>
+            <TipsAndInfoPanel onClose={() => setOpenKey(null)} />
           </div>
         )}
       </div>
