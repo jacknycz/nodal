@@ -23,6 +23,7 @@ export default function BoardPage() {
   const searchParams = useSearchParams();
   const boardId = params.boardId as string;
   const [board, setBoard] = useState<SavedBoard | null>(null);
+  const [loadedBoardId, setLoadedBoardId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
@@ -38,11 +39,13 @@ export default function BoardPage() {
   useEffect(() => {
     const loadBoard = async () => {
       try {
+        setLoadedBoardId(null)
         // If board already loaded, avoid flashing the screen again
         setLoading(prev => (board ? prev : true));
         const loadedBoard = await boardStorage.loadBoard(boardId);
         if (loadedBoard) {
           setBoard(loadedBoard);
+          setLoadedBoardId(boardId)
           // eslint-disable-next-line no-console
           console.log('Loaded board from storage:', loadedBoard)
           // Hydrate local chat state from board meta if present
@@ -136,10 +139,11 @@ export default function BoardPage() {
 
   const isAccessBlocked = !loading && !board
   const isPublicViewer = !!board?.isPublic && !user?.id
+  const ready = !!board && loadedBoardId === boardId
   return (
     <ThemeProvider>
       <AIProvider>
-        <div className="h-screen relative">
+        <div className="h-screen relative bg-white dark:bg-black">
           {/* Hide topbar in editor mode or when access is blocked (private board) */}
           <div className={(editorMode || isAccessBlocked) ? 'hidden' : ''}>
             <Topbar
@@ -151,10 +155,12 @@ export default function BoardPage() {
               publicViewer={isPublicViewer}
             />
           </div>
-          {board ? (
+          {ready ? (
             <BoardComponent
               key={`${boardId}-ready`}
               initialBoard={{ nodes: board.data.nodes, edges: board.data.edges }}
+              initialColorgories={(board.data as any)?.colorgories || []}
+              initialEdgeType={(board.data as any)?.meta?.edgeType || null}
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}
