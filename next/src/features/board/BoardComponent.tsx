@@ -78,6 +78,8 @@ import NodeEditModal from '../../components/NodeEditModal'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
+  initialColorgories?: any[]
+  initialEdgeType?: string | null
   pendingBoardBrief?: BoardBrief // Now includes id
   onBoardStateChange?: (name: string, status: string, hasChanges: boolean) => void
   clearPendingBoardBrief?: () => void
@@ -143,6 +145,8 @@ export const edgeTypes = {
 
 function BoardContent({
   initialBoard,
+  initialColorgories,
+  initialEdgeType,
   pendingBoardBrief,
   onBoardStateChange,
   clearPendingBoardBrief,
@@ -221,22 +225,20 @@ function BoardContent({
   useEffect(() => {
     if (boardId) {
       useBoardStore.getState().setCurrentBoardId(boardId)
-      // Load saved colorgories for this board if available
-      ;(async () => {
-        try {
-          const saved = await boardStorage.loadBoard(boardId)
-          const savedColorgories = saved?.data?.colorgories
-          if (Array.isArray(savedColorgories) && savedColorgories.length > 0) {
-            useBoardStore.getState().setColorgories(savedColorgories as any)
-          }
-          const savedEdgeType = (saved?.data as any)?.meta?.edgeType as any
-          if (savedEdgeType) {
-            useBoardStore.getState().setEdgeType?.(savedEdgeType)
-          }
-        } catch {}
-      })()
     }
   }, [boardId])
+
+  // Hydrate board-local settings from the already-loaded board payload (avoid a second loadBoard fetch)
+  useEffect(() => {
+    try {
+      if (Array.isArray(initialColorgories)) {
+        useBoardStore.getState().setColorgories(initialColorgories as any)
+      }
+      if (initialEdgeType) {
+        useBoardStore.getState().setEdgeType?.(initialEdgeType as any)
+      }
+    } catch {}
+  }, [boardId, initialColorgories, initialEdgeType])
   
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
