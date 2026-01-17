@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { XCircle } from '@phosphor-icons/react'
 import ReactDOM from 'react-dom'
+import { Z_INDEX } from './zIndex'
 
 interface ModalProps {
   open: boolean
@@ -134,7 +135,11 @@ const Modal: React.FC<ModalProps> = ({
   if (typeof window === 'undefined') return null;
 
   return ReactDOM.createPortal(
-    <div className={`fixed inset-0 z-[1500] flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''} ${backdropInteractive ? '' : 'pointer-events-none'}`} data-modal-root>
+    <div
+      className={`fixed inset-0 flex items-center justify-center ${alignLeftLg ? 'lg:justify-start' : ''} ${backdropInteractive ? '' : 'pointer-events-none'}`}
+      style={{ zIndex: Z_INDEX.modal }}
+      data-modal-root
+    >
       {/* Backdrop */}
       <div
         className={`absolute inset-0 ${backdropClassName || 'bg-black'} transition-all duration-200 ease-out ${

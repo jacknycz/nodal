@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import ReactDOM from 'react-dom'
+import React, { useMemo, useState } from 'react'
 import { X } from '@phosphor-icons/react'
+import Button from './ui/Button'
+import Modal from './ui/Modal'
 import Tabs, { Tab } from './ui/Tabs'
 import TextInput from './ui/TextInput'
 
@@ -32,64 +33,54 @@ function FullscreenVideoModal({
   youtubeId: string
   title?: string
 }) {
-  const prevOverflowRef = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    try {
-      prevOverflowRef.current = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-    } catch {}
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      try {
-        document.body.style.overflow = prevOverflowRef.current || ''
-      } catch {}
-    }
-  }, [open, onClose])
-
-  if (!open) return null
-  if (typeof window === 'undefined') return null
-
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-[3000] bg-black/90">
-      <button
-        type="button"
-        className="absolute top-4 right-4 z-[3001] rounded-full bg-white/10 hover:bg-white/20 text-white p-2"
-        aria-label="Close video"
-        onClick={onClose}
-      >
-        <X className="w-6 h-6" />
-      </button>
-
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      scrollBody={false}
+      backdropClassName="bg-black/90"
+      backdropInteractive={true}
+      // Our modal content is fullscreen, so there is no "outside content" backdrop area to click.
+      // Instead we implement "click outside the video player closes" inside the content layer.
+      closeOnBackdropClick={false}
+      showCloseButton={false}
+      className="!max-w-[100vw] !w-[100vw] !h-[100dvh] !max-h-[100dvh] !p-0 !mx-0 !rounded-none !bg-black !dark:bg-black"
+    >
       <div
-        className="absolute inset-0"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onClose()
-        }}
-        aria-label="Backdrop"
-      />
-
-      <div
-        className="relative z-[3001] w-full h-full flex flex-col"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-        }}
+        className="relative w-full h-full bg-black"
+        onClick={() => onClose()}
+        onPointerDown={() => onClose()}
       >
-        <div className="px-4 pt-4 pb-2 text-white/90 font-fredoka text-lg truncate">
-          {title || 'Video'}
+        {/* Top controls (do NOT close when interacting with these) */}
+        <div
+          className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="text-white/90 font-fredoka text-lg truncate pr-4">
+            {title || 'Video'}
+          </div>
+          <Button
+            variant="icon"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onClose()
+            }}
+            aria-label="Close video"
+            className="bg-white/10 hover:bg-white/20 text-white"
+          >
+            <X className="w-6 h-6" />
+          </Button>
         </div>
 
-        <div className="flex-1 min-h-0 p-4 flex items-center justify-center">
-          <div className="w-full max-w-[1400px] aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl">
+        {/* Player area (stop propagation so clicks inside the player don't close) */}
+        <div className="w-full h-full flex items-center justify-center p-4">
+          <div
+            className="w-full max-w-[1400px] aspect-video rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
             <iframe
               key={youtubeId}
               className="w-full h-full"
@@ -102,8 +93,7 @@ function FullscreenVideoModal({
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </Modal>
   )
 }
 

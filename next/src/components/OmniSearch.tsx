@@ -5,6 +5,7 @@ import { useBoardStore } from '../features/board/boardSlice'
 import FloatingSearch from './ui/Search'
 import { useReactFlow } from '@xyflow/react'
 import { CrosshairSimple } from '@phosphor-icons/react'
+import { Z_INDEX } from './ui/zIndex'
 
 export default function OmniSearch() {
   const [query, setQuery] = useState('')
@@ -55,7 +56,10 @@ export default function OmniSearch() {
   const showResults = !!query && (isFocused || isHoveringResults)
 
   return (
-    <div className="fixed bottom-3 md:bottom-auto md:top-2 left-1/2 -translate-x-1/2 z-2000 w-64 nodal-no-select">
+    <div
+      className="fixed bottom-3 md:bottom-auto md:top-2 left-1/2 -translate-x-1/2 w-64 nodal-no-select"
+      style={{ zIndex: Z_INDEX.omniSearch }}
+    >
       <div className="relative">
         <FloatingSearch
           label="Search nodes"
