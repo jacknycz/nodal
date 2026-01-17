@@ -81,6 +81,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [tasksLoading, setTasksLoading] = useState<boolean>(false)
   const [incompleteTasks, setIncompleteTasks] = useState<Array<{ boardId: string; boardName: string; nodeId: string; title: string }>>([])
   const incompleteTasksRef = useRef<Array<{ boardId: string; boardName: string; nodeId: string; title: string }> | null>(null)
+  const tasksComputeRunIdRef = useRef<number>(0)
   const prevBoardsRef = useRef<any[] | null>(null)
   const prevSharedBoardsRef = useRef<any[] | null>(null)
   const hasLoadedBoardsRef = useRef<boolean>(false)
@@ -356,78 +357,56 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }, [boards, sharedBoards])
 
   useEffect(() => {
-    const computeTasks = async () => {
-      let cancelled = false
-      const waitForIdle = () => new Promise<void>(resolve => {
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          ; (window as any).requestIdleCallback(() => resolve(), { timeout: 1000 })
-        } else {
-          setTimeout(() => resolve(), 50)
-        }
-      })
+    if (loading) return
 
+    // Debounced + cancellable compute to avoid overlapping runs (which caused "double load" flicker)
+    const runId = ++tasksComputeRunIdRef.current
+    setTasksLoading(true)
+
+    const timer = setTimeout(() => {
       try {
-        try { performance.mark('computeTasks-start') } catch { }
-        setTasksLoading(true)
         // Use precomputed task summary from board.meta if available
         const all: Array<BoardSummary | SharedBoard> = [...boards, ...sharedBoards]
-        const results: Array<{ boardId: string; boardName: string; nodeId: string; title: string } | null> = []
+        const compact: Array<{ boardId: string; boardName: string; nodeId: string; title: string }> = []
 
         for (const b of all) {
-          if (cancelled) break
-          await waitForIdle()
           const summary = (b as any)?.meta?.taskSummary as Array<{ id: string; title: string; completed?: boolean }> | undefined
-          if (Array.isArray(summary)) {
-            for (let i = 0; i < summary.length; i++) {
-              const t = summary[i]
-              if (!t?.completed) {
-                results.push({ boardId: b.id, boardName: b.name, nodeId: t.id, title: t.title || 'Untitled' })
-              }
-              if (i % 100 === 0) await waitForIdle()
+          if (!Array.isArray(summary)) continue
+          for (const t of summary) {
+            if (!t?.completed) {
+              compact.push({ boardId: b.id, boardName: b.name, nodeId: t.id, title: t.title || 'Untitled' })
             }
-          } else {
-            // Fallback: if no meta present, skip heavy fetch (leave for later refresh)
           }
         }
 
-        if (!cancelled) {
-          startTransition(() => {
-            try {
-              const compact = results.filter(Boolean) as Array<{ boardId: string; boardName: string; nodeId: string; title: string }>
-              const prev = incompleteTasksRef.current
-              const same = prev && prev.length === compact.length && JSON.stringify(prev) === JSON.stringify(compact)
-              if (!same) {
-                setIncompleteTasks(compact)
-                incompleteTasksRef.current = compact
-              }
-            } catch {
-              const compact = results.filter(Boolean) as Array<{ boardId: string; boardName: string; nodeId: string; title: string }>
+        if (tasksComputeRunIdRef.current !== runId) return
+
+        startTransition(() => {
+          try {
+            const prev = incompleteTasksRef.current
+            const same = prev && prev.length === compact.length && JSON.stringify(prev) === JSON.stringify(compact)
+            if (!same) {
               setIncompleteTasks(compact)
               incompleteTasksRef.current = compact
             }
-          })
-        }
-
-        try { performance.mark('computeTasks-end') } catch { }
-        try { performance.measure('computeTasks', 'computeTasks-start', 'computeTasks-end'); console.log('perf: computeTasks', performance.getEntriesByName('computeTasks')[0]?.duration) } catch { }
+          } catch {
+            setIncompleteTasks(compact)
+            incompleteTasksRef.current = compact
+          }
+        })
       } catch {
-        if (!cancelled) setIncompleteTasks([])
+        if (tasksComputeRunIdRef.current !== runId) return
+        setIncompleteTasks([])
+        incompleteTasksRef.current = []
       } finally {
-        if (!cancelled) setTasksLoading(false)
+        if (tasksComputeRunIdRef.current === runId) {
+          setTasksLoading(false)
+        }
       }
-      return () => { cancelled = true }
-    }
+    }, 120)
 
-    if (loading) return
-    let idleId: any
-    let timeoutId: any
-    const run = () => { void computeTasks() }
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = (window as any).requestIdleCallback(run, { timeout: 2000 })
-      return () => (window as any).cancelIdleCallback?.(idleId)
-    } else {
-      timeoutId = setTimeout(run, 0)
-      return () => clearTimeout(timeoutId)
+    return () => {
+      clearTimeout(timer)
     }
   }, [boardsSignature, loading])
 
@@ -506,7 +485,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   // Deduplicate boards by id across personal + shared lists
-  const allBoards: Array<SavedBoard | SharedBoard> = (() => {
+  const allBoards: Array<BoardSummary | SharedBoard> = (() => {
     const seen = new Set<string>()
     const merged = [...boards, ...sharedBoards]
     const unique = merged.filter((b) => {
