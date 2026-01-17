@@ -13,6 +13,20 @@ interface SavedBoard {
   isPublic?: boolean
 }
 
+export type BoardSummary = {
+  id: string
+  name: string
+  createdAt: number
+  lastModified: number
+  nodeCount: number
+  edgeCount: number
+  userId: string
+  isPublic?: boolean
+  // Derived fields for boardroom list UI (avoid pulling full boards.data)
+  topic?: string | null
+  meta?: BoardData['meta']
+}
+
 interface DocumentFile {
   id: string
   fileName: string
@@ -301,6 +315,45 @@ class SupabaseStorage {
         return []
       }
       console.error('Failed to get boards from Supabase:', error)
+      return []
+    }
+  }
+
+  // Get lightweight board summaries for the current user (NO full boards.data payload)
+  async getAllBoardsSummary(): Promise<BoardSummary[]> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('User not authenticated')
+
+      // Note: PostgREST supports JSON path extraction + aliasing. We only need a few fields for the boardroom list.
+      const { data, error } = await supabase
+        .from('boards')
+        .select('id, name, created_at, last_modified, node_count, edge_count, user_id, is_public, topic:data->>topic, meta:data->meta')
+        .eq('user_id', user.id)
+        .order('last_modified', { ascending: false })
+        .limit(25)
+
+      if (error) throw error
+
+      return (data || []).map((row: any) => ({
+        id: row.id as string,
+        name: row.name as string,
+        createdAt: row.created_at as number,
+        lastModified: row.last_modified as number,
+        nodeCount: row.node_count as number,
+        edgeCount: row.edge_count as number,
+        userId: row.user_id as string,
+        isPublic: typeof row.is_public === 'boolean' ? row.is_public : undefined,
+        topic: (typeof row.topic === 'string' ? row.topic : null),
+        meta: (row.meta || null) as any,
+      }))
+    } catch (error: any) {
+      const message: string = typeof error?.message === 'string' ? error.message : ''
+      const details: string = typeof error?.details === 'string' ? error.details : ''
+      if (message.includes('AbortError') || details.includes('AbortError')) {
+        return []
+      }
+      console.error('Failed to get board summaries from Supabase:', error)
       return []
     }
   }

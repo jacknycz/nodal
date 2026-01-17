@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import dynamic from 'next/dynamic'
 import IconButton from './ui/IconButton'
 import Button from './ui/Button'
@@ -67,26 +67,7 @@ function BoardCard({
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const user = useSupabaseUser()
   const canDelete = !!user?.id && (!!ownerId && user.id === ownerId)
-  const [ownerLabel, setOwnerLabel] = useState<string>('')
-  const [otherMembers, setOtherMembers] = useState<Array<{ user_id: string; role: string; label: string }>>([])
   const router = useRouter()
-
-  // Load members for board (include owner and self)
-  useEffect(() => {
-    const loadMembers = async () => {
-      try {
-        if (!id || !ownerId || !user?.id) { setOtherMembers([]); return }
-        const res = await fetch(`/api/board/members?boardId=${encodeURIComponent(id)}`)
-        const json = await res.json().catch(() => ({ members: [] }))
-        const members: Array<{ user_id: string; role: string; email?: string | null; username?: string | null }> = Array.isArray(json?.members) ? json.members : []
-        const mapped = members.map(m => ({ user_id: m.user_id, role: String(m.role || ''), label: String(m.username || m.email || m.user_id) }))
-        setOtherMembers(mapped)
-      } catch {
-        setOtherMembers([])
-      }
-    }
-    loadMembers()
-  }, [id, ownerId, invitedBy, user?.id])
 
   useEffect(() => { setNewName(name) }, [name])
   // All share logic moved into shared ShareBoardModal
@@ -114,27 +95,7 @@ function BoardCard({
     return date.toLocaleDateString()
   }
 
-  const getRoleRank = (role?: string) => {
-    const r = String(role || '').toLowerCase()
-    if (r === 'owner') return 0
-    if (r === 'editor') return 1
-    if (r === 'viewer' || r === 'reader') return 2
-    return 3
-  }
-
-  // Resolve owner display (username/email) for shared boards
-  useEffect(() => {
-    const load = async () => {
-      try {
-        if (!ownerId || !user?.id || ownerId === user.id) { setOwnerLabel(''); return }
-        const res = await fetch('/api/users/by-ids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userIds: [ownerId] }) })
-        const json = await res.json()
-        const u = Array.isArray(json.users) ? json.users[0] : null
-        setOwnerLabel(String(u?.username || u?.email || ''))
-      } catch { setOwnerLabel('') }
-    }
-    load()
-  }, [ownerId, user?.id])
+  // Member role ranking removed from card view to avoid per-card member fetches
 
   const handleCardClick = () => {
     if (showShareModal || showDeleteModal || isEditingTitle) return
@@ -143,10 +104,10 @@ function BoardCard({
 
   const isSharedForUser = !!ownerId && !!user?.id && ownerId !== user.id
 
-  // Board is shared if current user is not the owner OR (owner and there are other members)
-  const isSharedBoard = !!ownerId && !!user?.id && (
-    ownerId !== user.id || otherMembers.some(m => m.user_id !== ownerId)
-  )
+  // Lightweight "shared" indicator without per-card network calls.
+  // - If you're not the owner, it's shared to you.
+  // - If invitedBy is present, treat as shared.
+  const isSharedBoard = isSharedForUser || !!invitedBy
 
   const handleLeaveBoard = async () => {
     try {
@@ -261,96 +222,16 @@ function BoardCard({
                   ...(canDelete ? [{ label: 'Delete', icon: Trash, danger: true, onClick: () => { setShowDeleteModal(true) } }] : []),
                 ]}
               />
-              {/* Shared board: show members menu only */}
-              {ownerId && user?.id && (
-                ownerId !== user.id
-                  ? (
-                    <Menu
-                      trigger={
-                        <IconButton
-                          variant="secondaryGhost"
-                          size="small"
-                          aria-label="Show members"
-                        >
-                          <Users size={16} weight="duotone" className="w-4 h-4" />
-                        </IconButton>
-                      }
-                      align="left"
-                      placement="above"
-                      portal
-                      width="w-64"
-                      customContent={
-                        <div className="py-2">
-                          {otherMembers.length > 0 ? (
-                            <ul className="flex flex-col gap-1">
-                              {[...otherMembers]
-                                .sort((a, b) => getRoleRank(a.role) - getRoleRank(b.role))
-                                .map(m => {
-                                  const isSelf = m.user_id === user.id
-                                  const nameCls = isSelf ? 'text-primary-700 dark:text-primary-300 font-medium' : 'text-gray-800 dark:text-gray-100'
-                                  const pillCls = isSelf ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                                  return (
-                                    <li key={`${id}-menu-${m.user_id}`} className="px-3 py-0.5">
-                                      <div className="flex items-center gap-2">
-                                        <span className={`text-sm truncate max-w-[160px] ${nameCls}`}>{m.label}</span>
-                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wide ${pillCls}`}>{m.role}</span>
-                                      </div>
-                                    </li>
-                                  )
-                                })}
-                            </ul>
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No other members</div>
-                          )}
-                        </div>
-                      }
-                    />
-                  )
-                  : (
-                    // Show only if there is at least one member besides the owner (shared)
-                    (otherMembers.some(m => m.user_id !== ownerId)) ? (
-                      <Menu
-                        trigger={
-                          <IconButton
-                            variant="primaryGhost"
-                            size="small"
-                            aria-label="Show members"
-                          >
-                            <Users size={16} weight="duotone" className="w-4 h-4" />
-                          </IconButton>
-                        }
-                        align="left"
-                        placement="above"
-                        portal
-                        width="w-64"
-                        customContent={
-                          <div className="py-2">
-                            {otherMembers.length > 0 ? (
-                              <ul className="flex flex-col gap-1">
-                                {[...otherMembers]
-                                  .sort((a, b) => getRoleRank(a.role) - getRoleRank(b.role))
-                                  .map(m => {
-                                    const isSelf = m.user_id === user.id
-                                    const nameCls = isSelf ? 'text-primary-700 dark:text-primary-300 font-medium' : 'text-gray-800 dark:text-gray-100'
-                                    const pillCls = isSelf ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                                    return (
-                                      <li key={`${id}-menu-${m.user_id}`} className="px-3 py-0.5">
-                                        <div className="flex items-center gap-2">
-                                          <span className={`text-sm truncate max-w-[160px] ${nameCls}`}>{m.label}</span>
-                                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full uppercase tracking-wide ${pillCls}`}>{m.role}</span>
-                                        </div>
-                                      </li>
-                                    )
-                                  })}
-                              </ul>
-                            ) : (
-                              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">No other members</div>
-                            )}
-                          </div>
-                        }
-                      />
-                    ) : null
-                  )
+              {isSharedBoard && (
+                <IconButton
+                  variant="secondaryGhost"
+                  size="small"
+                  aria-label="Shared board"
+                  title="Shared board"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                >
+                  <Users size={16} weight="duotone" className="w-4 h-4" />
+                </IconButton>
               )}
 
               {enableSharing && (

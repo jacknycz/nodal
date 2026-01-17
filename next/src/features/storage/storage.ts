@@ -1,6 +1,7 @@
 import { supabaseStorage } from './supabaseStorage'
 import { templateStorage } from './templateStorage'
 import type { BoardNode, BoardEdge, Colorgory } from '../board/boardTypes'
+import type { BoardSummary } from './supabaseStorage'
 
 interface BoardData {
   nodes: BoardNode[]
@@ -160,6 +161,11 @@ class BoardStorage {
     return supabaseStorage.getAllBoards()
   }
 
+  // Get lightweight board summaries for boardroom list UI
+  async getAllBoardsSummary(): Promise<BoardSummary[]> {
+    return supabaseStorage.getAllBoardsSummary()
+  }
+
   // Get board names (for duplicate checking)
   async getBoardNames(): Promise<string[]> {
     const boards = await this.getAllBoards()
@@ -227,4 +233,4 @@ class BoardStorage {
 }
 
 export const boardStorage = new BoardStorage()
-export type { SavedBoard, BoardData } 
+export type { SavedBoard, BoardData, BoardSummary } 

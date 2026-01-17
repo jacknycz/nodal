@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useDeferredValue, useRef, startTransition, useMemo } from 'react'
-import type { SavedBoard } from '../features/storage/storage'
+import type { SavedBoard, BoardSummary } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardSetupModal from './BoardSetupModal'
 import Loader from './ui/Loader'
@@ -32,7 +32,7 @@ interface BoardRoomProps {
   onOpenBoard: (board: SavedBoard | null, brief?: BoardBrief | null) => void;
 }
 
-type SharedBoard = SavedBoard & { shared?: boolean; invited_by?: string }
+type SharedBoard = BoardSummary & { shared?: boolean; invited_by?: string }
 
 const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const SHOW_COMMUNITY = false
@@ -48,7 +48,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   })
   const CommunityTab = dynamic(() => import('./CommunityTab'), { ssr: false })
   const user = useSupabaseUser()
-  const [boards, setBoards] = useState<SavedBoard[]>([])
+  const [boards, setBoards] = useState<BoardSummary[]>([])
   const [sharedBoards, setSharedBoards] = useState<SharedBoard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -81,6 +81,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [tasksLoading, setTasksLoading] = useState<boolean>(false)
   const [incompleteTasks, setIncompleteTasks] = useState<Array<{ boardId: string; boardName: string; nodeId: string; title: string }>>([])
   const incompleteTasksRef = useRef<Array<{ boardId: string; boardName: string; nodeId: string; title: string }> | null>(null)
+  const tasksComputeRunIdRef = useRef<number>(0)
   const prevBoardsRef = useRef<any[] | null>(null)
   const prevSharedBoardsRef = useRef<any[] | null>(null)
   const hasLoadedBoardsRef = useRef<boolean>(false)
@@ -227,77 +228,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     }
   }
 
-  const loadBoards = async () => {
-    try {
-      // mark start of board load for perf debugging
-      try { performance.mark('loadBoards-start') } catch { }
-      let toggledLoading = false
-      if (!hasLoadedBoardsRef.current) {
-        setLoading(true)
-        toggledLoading = true
-      }
-      const { boardStorage } = await import('../features/storage/storage')
-      const loadedBoards = await boardStorage.getAllBoards()
-      try {
-        const prev = prevBoardsRef.current
-        const same = prev && prev.length === loadedBoards.length && JSON.stringify(prev) === JSON.stringify(loadedBoards)
-        if (!same) {
-          setBoards(loadedBoards)
-          prevBoardsRef.current = loadedBoards
-        }
-      } catch {
-        setBoards(loadedBoards)
-        prevBoardsRef.current = loadedBoards
-      }
-      // Fetch shared boards from API only if not already seeded via bootstrap
-      if (!sharedSeededRef.current) {
-        if (user?.email || user?.id) {
-          const qs = new URLSearchParams()
-          if (user?.email) qs.set('email', user.email)
-          if (user?.id) qs.set('userId', user.id)
-          const res = await fetch(`/api/board/shared?${qs.toString()}`)
-          const json = await res.json()
-          const incoming = Array.isArray(json.boards) ? json.boards : []
-          try {
-            const prev = prevSharedBoardsRef.current
-            const same = prev && prev.length === incoming.length && JSON.stringify(prev) === JSON.stringify(incoming)
-            if (!same) {
-              setSharedBoards(incoming)
-              prevSharedBoardsRef.current = incoming
-            }
-          } catch {
-            setSharedBoards(incoming)
-            prevSharedBoardsRef.current = incoming
-          }
-        } else {
-          setSharedBoards([])
-          prevSharedBoardsRef.current = []
-        }
-      }
-      // Stats computed in a separate effect when state settles
-      try { performance.mark('loadBoards-end') } catch { }
-      try { performance.measure('loadBoards', 'loadBoards-start', 'loadBoards-end'); console.log('perf: loadBoards', performance.getEntriesByName('loadBoards')[0]?.duration) } catch { }
-    } catch {
-      setError('Failed to load boards')
-    } finally {
-      hasLoadedBoardsRef.current = true
-      setLoading(false)
-    }
-  }
-
+  // Load pinned boards from localStorage
   useEffect(() => {
-    const uid = user?.id || null
-    if (prevUserIdRef.current === uid && (hasLoadedBoardsRef.current || bootstrappedRef.current)) return
-    prevUserIdRef.current = uid
-    if (inFlightBoardsRef.current) return
-    inFlightBoardsRef.current = true
-    ;(async () => { try { await loadBoards() } finally { inFlightBoardsRef.current = false } })()
-    // Load pinned boards from localStorage
     try {
       const stored = localStorage.getItem('pinnedBoards')
       if (stored) setPinnedBoardIds(JSON.parse(stored))
     } catch { }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
 
   // Track selected tab via path to conditionally show sections
@@ -330,7 +266,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       setLoading(true)
       try {
         const [{ boardStorage }] = await Promise.all([import('../features/storage/storage')])
-        const personalPromise = boardStorage.getAllBoards()
+        const personalPromise = boardStorage.getAllBoardsSummary()
         const { data } = await getSupabaseClient().auth.getSession()
         const token = data?.session?.access_token
         const bootstrapPromise = fetch('/api/boardroom/bootstrap', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
@@ -421,78 +357,56 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }, [boards, sharedBoards])
 
   useEffect(() => {
-    const computeTasks = async () => {
-      let cancelled = false
-      const waitForIdle = () => new Promise<void>(resolve => {
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          ; (window as any).requestIdleCallback(() => resolve(), { timeout: 1000 })
-        } else {
-          setTimeout(() => resolve(), 50)
-        }
-      })
+    if (loading) return
 
+    // Debounced + cancellable compute to avoid overlapping runs (which caused "double load" flicker)
+    const runId = ++tasksComputeRunIdRef.current
+    setTasksLoading(true)
+
+    const timer = setTimeout(() => {
       try {
-        try { performance.mark('computeTasks-start') } catch { }
-        setTasksLoading(true)
-        // Use precomputed task summary from board.data.meta if available
-        const all: Array<SavedBoard | SharedBoard> = [...boards, ...sharedBoards]
-        const results: Array<{ boardId: string; boardName: string; nodeId: string; title: string } | null> = []
+        // Use precomputed task summary from board.meta if available
+        const all: Array<BoardSummary | SharedBoard> = [...boards, ...sharedBoards]
+        const compact: Array<{ boardId: string; boardName: string; nodeId: string; title: string }> = []
 
         for (const b of all) {
-          if (cancelled) break
-          await waitForIdle()
-          const summary = (b as any)?.data?.meta?.taskSummary as Array<{ id: string; title: string; completed?: boolean }> | undefined
-          if (Array.isArray(summary)) {
-            for (let i = 0; i < summary.length; i++) {
-              const t = summary[i]
-              if (!t?.completed) {
-                results.push({ boardId: b.id, boardName: b.name, nodeId: t.id, title: t.title || 'Untitled' })
-              }
-              if (i % 100 === 0) await waitForIdle()
+          const summary = (b as any)?.meta?.taskSummary as Array<{ id: string; title: string; completed?: boolean }> | undefined
+          if (!Array.isArray(summary)) continue
+          for (const t of summary) {
+            if (!t?.completed) {
+              compact.push({ boardId: b.id, boardName: b.name, nodeId: t.id, title: t.title || 'Untitled' })
             }
-          } else {
-            // Fallback: if no meta present, skip heavy fetch (leave for later refresh)
           }
         }
 
-        if (!cancelled) {
-          startTransition(() => {
-            try {
-              const compact = results.filter(Boolean) as Array<{ boardId: string; boardName: string; nodeId: string; title: string }>
-              const prev = incompleteTasksRef.current
-              const same = prev && prev.length === compact.length && JSON.stringify(prev) === JSON.stringify(compact)
-              if (!same) {
-                setIncompleteTasks(compact)
-                incompleteTasksRef.current = compact
-              }
-            } catch {
-              const compact = results.filter(Boolean) as Array<{ boardId: string; boardName: string; nodeId: string; title: string }>
+        if (tasksComputeRunIdRef.current !== runId) return
+
+        startTransition(() => {
+          try {
+            const prev = incompleteTasksRef.current
+            const same = prev && prev.length === compact.length && JSON.stringify(prev) === JSON.stringify(compact)
+            if (!same) {
               setIncompleteTasks(compact)
               incompleteTasksRef.current = compact
             }
-          })
-        }
-
-        try { performance.mark('computeTasks-end') } catch { }
-        try { performance.measure('computeTasks', 'computeTasks-start', 'computeTasks-end'); console.log('perf: computeTasks', performance.getEntriesByName('computeTasks')[0]?.duration) } catch { }
+          } catch {
+            setIncompleteTasks(compact)
+            incompleteTasksRef.current = compact
+          }
+        })
       } catch {
-        if (!cancelled) setIncompleteTasks([])
+        if (tasksComputeRunIdRef.current !== runId) return
+        setIncompleteTasks([])
+        incompleteTasksRef.current = []
       } finally {
-        if (!cancelled) setTasksLoading(false)
+        if (tasksComputeRunIdRef.current === runId) {
+          setTasksLoading(false)
+        }
       }
-      return () => { cancelled = true }
-    }
+    }, 120)
 
-    if (loading) return
-    let idleId: any
-    let timeoutId: any
-    const run = () => { void computeTasks() }
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = (window as any).requestIdleCallback(run, { timeout: 2000 })
-      return () => (window as any).cancelIdleCallback?.(idleId)
-    } else {
-      timeoutId = setTimeout(run, 0)
-      return () => clearTimeout(timeoutId)
+    return () => {
+      clearTimeout(timer)
     }
   }, [boardsSignature, loading])
 
@@ -571,7 +485,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   }
 
   // Deduplicate boards by id across personal + shared lists
-  const allBoards: Array<SavedBoard | SharedBoard> = (() => {
+  const allBoards: Array<BoardSummary | SharedBoard> = (() => {
     const seen = new Set<string>()
     const merged = [...boards, ...sharedBoards]
     const unique = merged.filter((b) => {
