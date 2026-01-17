@@ -54,6 +54,46 @@ interface DocumentMetadata {
 }
 
 class SupabaseStorage {
+  private stripBoardDataForPersistence(input: any): BoardData {
+    const boardData: any = { ...(input || {}) }
+
+    // Remove chat persistence (Phase A)
+    try {
+      if (boardData?.meta?.chat) {
+        boardData.meta = { ...(boardData.meta || {}) }
+        delete boardData.meta.chat
+      }
+    } catch {}
+
+    // Remove extracted text from node data (Phase A) - keep it in documents.extracted_text only
+    const nodes: any[] = Array.isArray(boardData?.nodes) ? boardData.nodes : []
+    if (nodes.length) {
+      const MAX_DOC_CONTENT = 12000 // cap persisted node content to keep boards.data small
+      boardData.nodes = nodes.map((n: any) => {
+        try {
+          const next: any = { ...(n || {}) }
+          const data: any = next?.data && typeof next.data === 'object' ? { ...(next.data || {}) } : next.data
+          if (data && typeof data === 'object') {
+            if (Object.prototype.hasOwnProperty.call(data, 'extractedText')) delete data.extractedText
+            if (Object.prototype.hasOwnProperty.call(data, 'extracted_text')) delete data.extracted_text
+
+            // Cap extremely large node content (especially documents) to prevent JSONB bloat
+            if (typeof data.content === 'string' && data.content.length > MAX_DOC_CONTENT) {
+              data.content = data.content.slice(0, MAX_DOC_CONTENT)
+            }
+
+            next.data = data
+          }
+          return next
+        } catch {
+          return n
+        }
+      })
+    }
+
+    return boardData as BoardData
+  }
+
   private async sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
@@ -136,10 +176,11 @@ class SupabaseStorage {
         ...(data as any),
         meta: { ...(data as any).meta, taskSummary, tasksIncompleteCount },
       }
+      const boardDataStripped = this.stripBoardDataForPersistence(boardData as any)
 
       const savedBoard = {
         name,
-        data: boardData,
+        data: boardDataStripped,
         created_at: Date.now(),
         last_modified: Date.now(),
         node_count: ((data as any).nodes?.length) || 0,
@@ -181,11 +222,12 @@ class SupabaseStorage {
         ...(data as any),
         meta: { ...(data as any).meta, taskSummary, tasksIncompleteCount },
       }
+      const boardDataStripped = this.stripBoardDataForPersistence(boardData as any)
 
       const savedBoard = {
         id,
         name,
-        data: boardData,
+        data: boardDataStripped,
         created_at: Date.now(),
         last_modified: Date.now(),
         node_count: ((data as any).nodes?.length) || 0,
@@ -210,7 +252,28 @@ class SupabaseStorage {
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
     try {
-      // Fetch existing board data to avoid accidentally wiping fields (like topic)
+      const incoming: any = data as any
+
+      // Prefer DB-side JSON patch for ALL updates (full saves + partial saves).
+      // This avoids fetching existing boards.data (which can be huge) just to preserve fields like topic.
+      // If the RPC isn't deployed yet, we fall back to the legacy merge path below.
+      const patch = this.stripBoardDataForPersistence(incoming)
+      const nodeCount = Array.isArray((patch as any)?.nodes) ? (patch as any).nodes.length : null
+      const edgeCount = Array.isArray((patch as any)?.edges) ? (patch as any).edges.length : null
+      try {
+        const { error } = await supabase.rpc('patch_board_data', {
+          p_board_id: boardId,
+          p_patch: patch as any,
+          p_node_count: nodeCount,
+          p_edge_count: edgeCount,
+        })
+        if (error) throw error
+        return
+      } catch {
+        // Fallback to legacy merge path below if RPC is not deployed yet.
+      }
+
+      // Legacy merge path (and/or full saves): fetch existing board data to avoid wiping fields (like topic)
       const { data: existingRow } = await supabase
         .from('boards')
         .select('data')
@@ -233,14 +296,15 @@ class SupabaseStorage {
         ...mergedDataObj,
         meta: { ...(mergedDataObj.meta || {}), taskSummary, tasksIncompleteCount },
       }
+      const boardDataStripped = this.stripBoardDataForPersistence(boardData as any)
 
       const { error } = await supabase
         .from('boards')
         .update({
-          data: boardData,
+          data: boardDataStripped,
           last_modified: Date.now(),
-          node_count: (boardData.nodes?.length) || 0,
-          edge_count: (boardData.edges?.length) || 0,
+          node_count: (boardDataStripped.nodes?.length) || 0,
+          edge_count: (boardDataStripped.edges?.length) || 0,
         })
         .eq('id', boardId)
 
@@ -255,19 +319,49 @@ class SupabaseStorage {
   // Load a specific board
   async loadBoard(boardId: string): Promise<SavedBoard | null> {
     try {
-      // Remove user check for shared boards
+      // Remove user check for shared boards.
+      // IMPORTANT: avoid returning persisted chat history (meta.chat) which can balloon payloads.
       const { data, error } = await supabase
         .from('boards')
-        .select('*')
+        .select('id, name, data, created_at, last_modified, node_count, edge_count, user_id, is_public, edgeType:data->meta->>edgeType')
         .eq('id', boardId)
         .single()
 
       if (error) throw error
+
+      // Strip chat messages from payload on load (test) to reduce memory / downstream work.
+      // We keep edgeType available to hydrate settings even if meta is stripped.
+      let boardData = (data as any)?.data as BoardData
+      try {
+        if (boardData && (boardData as any).meta && (boardData as any).meta.chat) {
+          boardData = { ...(boardData as any), meta: { ...((boardData as any).meta || {}) } }
+          delete (boardData as any).meta.chat
+        }
+        // Defensive: strip any persisted extractedText fields from nodes (does not reduce payload size, but prevents downstream bloat)
+        if (boardData && Array.isArray((boardData as any).nodes)) {
+          const nextNodes = (boardData as any).nodes.map((n: any) => {
+            try {
+              const nn: any = { ...(n || {}) }
+              const d: any = nn?.data && typeof nn.data === 'object' ? { ...(nn.data || {}) } : nn.data
+              if (d && typeof d === 'object') {
+                if (Object.prototype.hasOwnProperty.call(d, 'extractedText')) delete d.extractedText
+                if (Object.prototype.hasOwnProperty.call(d, 'extracted_text')) delete d.extracted_text
+                nn.data = d
+              }
+              return nn
+            } catch { return n }
+          })
+          boardData = { ...(boardData as any), nodes: nextNodes }
+        }
+        if (boardData && (boardData as any).meta && !(boardData as any).meta.edgeType && (data as any)?.edgeType) {
+          ;(boardData as any).meta.edgeType = (data as any).edgeType
+        }
+      } catch {}
       // Convert snake_case to camelCase
       return data ? {
         id: data.id as string,
         name: data.name as string,
-        data: data.data as BoardData,
+        data: boardData,
         createdAt: data.created_at as number,
         lastModified: data.last_modified as number,
         nodeCount: data.node_count as number,
@@ -548,6 +642,21 @@ class SupabaseStorage {
     } catch (error) {
       console.error('Failed to get document from Supabase:', error)
       return null
+    }
+  }
+
+  // Get extracted text only (avoid downloading the file blob)
+  async getDocumentExtractedText(documentId: string): Promise<string> {
+    try {
+      const { data: docData, error } = await supabase
+        .from('documents')
+        .select('extracted_text')
+        .eq('id', documentId)
+        .maybeSingle()
+      if (error || !docData) return ''
+      return String((docData as any).extracted_text || '')
+    } catch {
+      return ''
     }
   }
 

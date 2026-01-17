@@ -23,12 +23,34 @@ export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeCon
   useEffect(() => {
     if (!boardId) return
 
-    const fetchCursors = async () => {
-      const { data } = await supabase
-        .from('board_cursors')
-        .select('*')
-        .eq('board_id', boardId)
-      setRemoteCursors(data || [])
+    let cancelled = false
+
+    const fetchInitial = async () => {
+      try {
+        const { data } = await supabase
+          .from('board_cursors')
+          .select('*')
+          .eq('board_id', boardId)
+        if (!cancelled) setRemoteCursors(data || [])
+      } catch {
+        if (!cancelled) setRemoteCursors([])
+      }
+    }
+
+    const upsertCursor = (list: any[], row: any) => {
+      const id = row?.id
+      if (!id) return list
+      const idx = list.findIndex((c) => c?.id === id)
+      if (idx === -1) return [...list, row]
+      const next = list.slice()
+      next[idx] = row
+      return next
+    }
+
+    const removeCursor = (list: any[], row: any) => {
+      const id = row?.id
+      if (!id) return list
+      return list.filter((c) => c?.id !== id)
     }
 
     const channel = supabase
@@ -36,68 +58,69 @@ export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeCon
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'board_cursors', filter: `board_id=eq.${boardId}` },
-        () => fetchCursors()
+        (payload: any) => {
+          const ev = payload?.eventType || payload?.event
+          const row = payload?.new || payload?.old
+          if (!row) return
+          setRemoteCursors((prev) => {
+            if (ev === 'DELETE') return removeCursor(prev, row)
+            return upsertCursor(prev, row)
+          })
+        }
       )
       .subscribe()
 
-    fetchCursors()
-    return () => { supabase.removeChannel(channel) }
+    fetchInitial()
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
   }, [boardId, supabase])
 
-  // Subscribe to node locks (disabled when only one user is present on the board)
+  // Subscribe to node locks (disabled when only one user is present on the board).
+  // IMPORTANT: derive active users from in-memory cursor state to avoid re-querying board_cursors on every cursor event.
   useEffect(() => {
     if (!boardId) return
 
-    let cursorsChannel: any = null
     let locksChannel: any = null
-    let disposed = false
 
-    const setup = async () => {
-      // Count distinct active users from cursors; if <= 1, disable lock mechanics
-      const { data: cursors } = await supabase
-        .from('board_cursors')
-        .select('user_id')
-        .eq('board_id', boardId)
-      const activeUsers = Array.from(new Set((cursors || []).map((c: any) => c.user_id).filter(Boolean)))
-      const locksDisabled = activeUsers.length <= 1
-      if (locksDisabled) {
-        setNodeLocks([])
-        // Still subscribe to cursors to re-enable if someone joins
-        cursorsChannel = supabase
-          .channel('node-locks-cursors-' + boardId)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'board_cursors', filter: `board_id=eq.${boardId}` }, () => setup())
-          .subscribe()
-        return
-      }
+    const activeUsers = Array.from(
+      new Set((remoteCursors || []).map((c: any) => c?.user_id).filter(Boolean))
+    )
+    const locksDisabled = activeUsers.length <= 1
 
-      const fetchLocks = async () => {
+    const fetchLocks = async () => {
+      try {
         const { data } = await supabase
           .from('node_locks')
           .select('*')
           .eq('board_id', boardId)
           .gt('expires_at', new Date().toISOString())
         setNodeLocks(data || [])
+      } catch {
+        setNodeLocks([])
       }
-
-      locksChannel = supabase
-        .channel('node-locks-' + boardId)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'node_locks', filter: `board_id=eq.${boardId}` },
-          () => fetchLocks()
-        )
-        .subscribe()
-
-      await fetchLocks()
     }
 
-    setup()
+    if (locksDisabled) {
+      setNodeLocks([])
+      return () => { if (locksChannel) supabase.removeChannel(locksChannel) }
+    }
+
+    locksChannel = supabase
+      .channel('node-locks-' + boardId)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'node_locks', filter: `board_id=eq.${boardId}` },
+        () => fetchLocks()
+      )
+      .subscribe()
+
+    fetchLocks()
     return () => {
       if (locksChannel) supabase.removeChannel(locksChannel)
-      if (cursorsChannel) supabase.removeChannel(cursorsChannel)
-      disposed = true
     }
-  }, [boardId, supabase])
+  }, [boardId, supabase, remoteCursors])
 
   // Subscribe to board updates for real-time content sync
   useEffect(() => {

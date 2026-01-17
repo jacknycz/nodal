@@ -267,16 +267,30 @@ NODE CONTENT: [Body 2]`
     awaitingNodesRef.current = wantsNodes
 
     if (selectedNodes.length > 0) {
-      const nodeContext = selectedNodes.map((n: any) => {
+      const nodeContext = (await Promise.all(selectedNodes.map(async (n: any) => {
         const title = n?.data?.title || 'Untitled Node'
-        // Prefer extractedText for documents (PDFs), then fallback to content
-        const extractedRaw = n?.data?.extractedText || (n?.data as any)?.extracted_text || ''
-        const raw = extractedRaw || n?.data?.content || ''
+        let raw = n?.data?.content || ''
+
+        // Phase A: if this is a document node and it has a documentId, pull extracted text from documents table (on-demand).
+        try {
+          const type = String(n?.type || n?.data?.type || '').toLowerCase()
+          const docId = String(n?.data?.documentId || '')
+          if (type === 'document' && docId) {
+            const getText = async () => {
+              const mod = await import('../features/storage/supabaseStorage')
+              return await mod.supabaseStorage.getDocumentExtractedText(docId)
+            }
+            const timeout = new Promise<string>((res) => setTimeout(() => res(''), 900))
+            const extracted = await Promise.race([getText(), timeout])
+            if (extracted) raw = extracted
+          }
+        } catch {}
+
         let content = getPlainText(String(raw || ''))
         const MAX = 4000 // trim long docs to keep prompts efficient
         if (content.length > MAX) content = content.slice(0, MAX)
         return `Node: "${title}"${content ? `\nContent: ${content}` : ''}`
-      }).join('\n\n')
+      }))).join('\n\n')
 
       const label = `Selected ${selectedNodes.length === 1 ? 'node' : 'nodes'}`
       const base = `Context - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
@@ -426,7 +440,7 @@ NODE CONTENT: [Body 2]`
                     {(() => {
                       const n: any = selectedNodes[0]
                       const t = n?.data?.title || 'Untitled Node'
-                      const raw = n?.data?.content || n?.data?.extractedText || n?.data?.extracted_text || ''
+                      const raw = n?.data?.content || ''
                       const plain = getPlainText(String(raw))
                       return plain ? `Selected: "${t}" — ${plain}` : `Selected: "${t}"`
                     })()}

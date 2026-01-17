@@ -12,6 +12,7 @@ import type {
 } from './aiTypes'
 import { AIErrorCode } from './aiTypes'
 import { getSupabaseClient } from '../auth/supabaseClient'
+import { fetchUsageCached } from './usageClient'
 
 // Model Information Database
 export const MODEL_INFO: Record<OpenAIModel, ModelInfo> = {
@@ -113,7 +114,8 @@ function buildBoardSnapshot(context?: AIContext): string {
   for (const n of take) {
     const title = sanitizeForPrompt(String(n?.data?.title || n?.data?.label || ''), 80) || 'Untitled'
     const type = sanitizeForPrompt(String(n?.type || 'node'), 20) || 'node'
-    const raw = n?.data?.content || (n?.data as any)?.extractedText || (n?.data as any)?.extracted_text || ''
+    // Phase A: never rely on extractedText persisted in boards.data (keep full text in documents table)
+    const raw = n?.data?.content || ''
     const snippet = sanitizeForPrompt(String(raw || ''), PER_NODE_SNIPPET)
     const line = snippet ? `- [${type}] ${title} — ${snippet}` : `- [${type}] ${title}`
     if (!pushLine(line)) break
@@ -718,30 +720,9 @@ export class OpenAIService {
   async healthCheck(): Promise<boolean> {
     try {
       // Lightweight reachability/auth check that does NOT consume AI tokens
-      let authHeader: Record<string, string> = {}
-      let hasToken = false
-      try {
-        const supabase = getSupabaseClient()
-        const { data } = await supabase.auth.getSession()
-        const token = data?.session?.access_token
-        if (token) {
-          hasToken = true
-          authHeader = { 'Authorization': `Bearer ${token}` }
-        }
-      } catch {}
-
-      // On clients without an authenticated user/session, skip the usage ping entirely.
-      // This avoids noisy 401s in the console on fresh installs or before login,
-      // while still treating the AI service as reachable.
-      if (!hasToken) {
-        try {
-          console.info?.('[ai] Skipping /api/usage health check (no Supabase session)')
-        } catch {}
-        return true
-      }
-
-      const res = await fetch('/api/usage', { headers: { ...authHeader } })
-      return res.ok
+      const result = await fetchUsageCached({ maxAgeMs: 30_000 })
+      // No session returns ok=true with status=204 in the helper; treat as reachable.
+      return !!result.ok
     } catch {
       return false
     }

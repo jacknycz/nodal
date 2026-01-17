@@ -148,16 +148,8 @@ export default function Topbar({
           const role = me?.role as string | undefined
           if (role) { setBoardMemberRole(role as any); return }
         }
-        // Fallback: check ownership directly on boards
-        const { data: boardRow } = await (supabase.from('boards') as any)
-          .select('user_id')
-          .eq('id', currentBoardId)
-          .maybeSingle()
-        if (boardRow && (boardRow as any).user_id === user.id) {
-          setBoardMemberRole('owner')
-        } else {
-          setBoardMemberRole(null)
-        }
+        // No fallback query here: /api/board/members injects owner from boards.user_id already.
+        setBoardMemberRole(null)
       } catch {
         setBoardMemberRole(null)
       }
@@ -201,7 +193,11 @@ export default function Topbar({
   useEffect(() => {
     if (!currentBoardId || !user?.id) return
     let interval: NodeJS.Timeout | null = null
+    let cancelled = false
+    const INTERVAL_MS = 45000
     const upsertPresence = async () => {
+      if (cancelled) return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       await (supabase.from('board_presence') as any).upsert({
         board_id: currentBoardId,
         user_id: user.id,
@@ -209,9 +205,29 @@ export default function Topbar({
         last_seen: new Date().toISOString(),
       }, { onConflict: 'board_id,user_id' })
     }
-    upsertPresence()
-    interval = setInterval(upsertPresence, 15000)
-    return () => { if (interval) clearInterval(interval) }
+    const start = () => {
+      if (interval) clearInterval(interval)
+      upsertPresence()
+      interval = setInterval(upsertPresence, INTERVAL_MS)
+    }
+    const stop = () => {
+      if (interval) clearInterval(interval)
+      interval = null
+    }
+    const onVis = () => {
+      try {
+        if (document.visibilityState === 'visible') start()
+        else stop()
+      } catch {}
+    }
+
+    start()
+    try { document.addEventListener('visibilitychange', onVis) } catch {}
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+      try { document.removeEventListener('visibilitychange', onVis) } catch {}
+    }
   }, [currentBoardId, user?.id, supabase])
 
   // Fade out Saved status text after 2s
@@ -229,6 +245,8 @@ export default function Topbar({
   // Presence: subscribe to changes
   useEffect(() => {
     if (!currentBoardId) return
+    let cancelled = false
+    let debounceTimer: any = null
     const channel = supabase
       .channel('board-presence-' + currentBoardId)
       .on(
@@ -241,7 +259,14 @@ export default function Topbar({
         },
         payload => {
           // Refetch presence list on any change
-          fetchPresence()
+          try {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+              if (!cancelled) fetchPresence()
+            }, 350)
+          } catch {
+            fetchPresence()
+          }
         }
       )
       .subscribe()
@@ -259,7 +284,11 @@ export default function Topbar({
       setPresentUsers(typed)
     }
     fetchPresence()
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      cancelled = true
+      try { if (debounceTimer) clearTimeout(debounceTimer) } catch {}
+      supabase.removeChannel(channel)
+    }
   }, [currentBoardId, supabase])
 
   // Helper to get avatar for a user_id (others only: small circle)

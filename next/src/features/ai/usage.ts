@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { getSupabaseClient } from '../auth/supabaseClient'
+import { fetchUsageCached } from './usageClient'
 
 export type Plan = 'Free' | 'Pro' | 'Admin'
 
@@ -28,27 +28,9 @@ export function useAIUsage() {
     setLoading(true)
     setError(null)
     try {
-      const supabase = getSupabaseClient()
-      const { data } = await supabase.auth.getSession()
-      const token = data?.session?.access_token
-
-      // If there is no authenticated session, skip calling /api/usage to avoid
-      // spamming 401s in the console; just treat as "no usage yet".
-      if (!token) {
-        try {
-          console.info?.('[ai] Skipping /api/usage fetch (no Supabase session)')
-        } catch {}
-        setSummary(null)
-        setLoading(false)
-        return
-      }
-
-      const res = await fetch('/api/usage', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.error || 'Failed to load usage')
-      setSummary({ total: json.total, cap: json.cap, remaining: json.remaining, pct: json.pct })
+      const result = await fetchUsageCached({ maxAgeMs: 30_000 })
+      if (!result.ok) throw new Error(result.error || 'Failed to load usage')
+      setSummary(result.summary)
     } catch (e: any) {
       setError(e?.message || 'Failed to load usage')
       setSummary(null)
