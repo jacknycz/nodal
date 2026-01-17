@@ -17,13 +17,13 @@ import Topbar from '../../../src/components/Topbar';
 import { useEffect as useEffect2 } from 'react';
 import { useBoardStore } from '../../../src/features/board/boardSlice';
 import Toast from '../../../src/components/ui/Toast'
+import BokehBackground from '../../../src/components/BokehBackground'
 
 export default function BoardPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const boardId = params.boardId as string;
   const [board, setBoard] = useState<SavedBoard | null>(null);
-  const [loadedBoardId, setLoadedBoardId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
@@ -37,32 +37,20 @@ export default function BoardPage() {
   // Do not redirect unauthenticated users; allow viewing public boards
 
   useEffect(() => {
-    const loadBoard = async () => {
+        const loadBoard = async () => {
       try {
-        setLoadedBoardId(null)
+        // Clear previous board immediately to avoid rendering stale content during navigation
+        setBoard(null)
+        setError(null)
         // If board already loaded, avoid flashing the screen again
         setLoading(prev => (board ? prev : true));
         const loadedBoard = await boardStorage.loadBoard(boardId);
         if (loadedBoard) {
           setBoard(loadedBoard);
-          setLoadedBoardId(boardId)
           // eslint-disable-next-line no-console
           console.log('Loaded board from storage:', loadedBoard)
-          // Hydrate local chat state from board meta if present
-          try {
-            const chatMeta = loadedBoard.data?.meta?.chat
-            if (chatMeta && typeof window !== 'undefined') {
-              if (Array.isArray(chatMeta.messages)) {
-                localStorage.setItem(`nodal.chat.${boardId}`, JSON.stringify(chatMeta.messages))
-              }
-              if (typeof chatMeta.panelOpen === 'boolean') {
-                localStorage.setItem(`nodal.chatpanel.${boardId}.open`, chatMeta.panelOpen ? 'true' : 'false')
-              }
-              if (typeof chatMeta.model === 'string' && chatMeta.model) {
-                localStorage.setItem(`nodal.chatpanel.${boardId}.model`, chatMeta.model)
-              }
-            }
-          } catch {}
+          // TEST: Do NOT hydrate chat history from board payload into localStorage.
+          // This keeps board loads lightweight even if boards.data.meta.chat.messages is large.
         } else {
           setError('Board not found');
         }
@@ -139,22 +127,26 @@ export default function BoardPage() {
 
   const isAccessBlocked = !loading && !board
   const isPublicViewer = !!board?.isPublic && !user?.id
-  const ready = !!board && loadedBoardId === boardId
+  const ready = !!board && String((board as any)?.id || '') === String(boardId || '')
   return (
     <ThemeProvider>
       <AIProvider>
         <div className="h-screen relative bg-white dark:bg-black">
-          {/* Hide topbar in editor mode or when access is blocked (private board) */}
-          <div className={(editorMode || isAccessBlocked) ? 'hidden' : ''}>
-            <Topbar
-              currentBoardName={board?.name}
-              saveStatus={saveStatus}
-              hasUnsavedChanges={hasUnsavedChanges}
-              isBoardView={true}
-              onOpenBoardRoom={handleOpenBoardRoom}
-              publicViewer={isPublicViewer}
-            />
-          </div>
+          {/* Background should render immediately (even before board content mounts) */}
+          <BokehBackground />
+          {/* Mount Topbar ONLY once board is ready to avoid cold-start request/preflight storms */}
+          {ready && (
+            <div className={(editorMode || isAccessBlocked) ? 'hidden' : ''}>
+              <Topbar
+                currentBoardName={board?.name}
+                saveStatus={saveStatus}
+                hasUnsavedChanges={hasUnsavedChanges}
+                isBoardView={true}
+                onOpenBoardRoom={handleOpenBoardRoom}
+                publicViewer={isPublicViewer}
+              />
+            </div>
+          )}
           {ready ? (
             <BoardComponent
               key={`${boardId}-ready`}
@@ -171,7 +163,7 @@ export default function BoardPage() {
           )}
 
           {/* Loading toast */}
-          <Toast open={loading} variant="info" position="top-center">
+          <Toast open={loading || !ready} variant="info" position="top-center">
             <div className="flex items-center gap-2">
               <Loader size="sm" />
               <span className="text-sm leading-none">Loading your board…</span>

@@ -39,7 +39,7 @@ export default function DocumentsMenu({
       doc.data.title?.toLowerCase().includes(q) ||
       doc.data.fileName?.toLowerCase().includes(q) ||
       doc.data.fileType?.toLowerCase().includes(q) ||
-      doc.data.extractedText?.toLowerCase().includes(q)
+      doc.data.content?.toLowerCase().includes(q)
     )
   })
 
@@ -114,7 +114,7 @@ export default function DocumentsMenu({
                     </div>
                     {previewDocId === doc.id && (
                       <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 text-xs max-h-32 overflow-y-auto">
-                        <pre className="whitespace-pre-wrap font-sans">{doc.data.extractedText?.slice(0, 1000) || 'No preview available.'}</pre>
+                        <pre className="whitespace-pre-wrap font-sans">{doc.data.content?.slice(0, 1000) || 'No preview available.'}</pre>
                       </div>
                     )}
                   </div>

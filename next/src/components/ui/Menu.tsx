@@ -26,6 +26,7 @@ interface MenuProps {
   openOnHover?: boolean
   portal?: boolean
   placement?: 'below' | 'above'
+  onOpenChange?: (open: boolean) => void
 }
 
 export default function Menu({
@@ -41,6 +42,7 @@ export default function Menu({
   openOnHover = false,
   portal = false,
   placement = 'below'
+  , onOpenChange
 }: MenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -70,6 +72,10 @@ export default function Menu({
     })
     return () => cancelAnimationFrame(raf)
   }, [isOpen, portal, align, placement, portalPos])
+
+  useEffect(() => {
+    try { onOpenChange?.(isOpen) } catch {}
+  }, [isOpen, onOpenChange])
 
   useEffect(() => {
     const handlePointerDownOutside = (event: Event) => {

@@ -120,13 +120,17 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
                   : `Summarize the following document in 2-3 concise sentences. Focus on what it is and why it matters.\n\n---\n${extractedText.slice(0, 8000)}`
                 const res = await ai.generate({ prompt, maxTokens: 160, model: 'gpt-4o-mini' })
                 const summary = (res.content || '').trim()
-                setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: summary || extractedText, status: 'ready' } } : n))
+                // Phase A: persist ONLY summary/snippet on the node; keep full extracted text in documents.extracted_text
+                const snippet = extractedText.slice(0, 8000)
+                setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, content: summary || snippet, status: 'ready' } } : n))
                 console.log('[Upload] extraction + summary complete', { nodeId })
               } else {
-                setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
+                const snippet = extractedText.slice(0, 8000)
+                setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, content: snippet, status: 'ready' } } : n))
               }
             } catch {
-              setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, extractedText, content: extractedText, status: 'ready' } } : n))
+              const snippet = extractedText.slice(0, 8000)
+              setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, content: snippet, status: 'ready' } } : n))
             }
           } else {
             // Fallback: provide a brief summary so the node shows content even without extraction
@@ -144,7 +148,7 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
             console.log('[Upload] no extractable text, showing fallback summary', { nodeId })
           }
         } catch (error: any) {
-          setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, extractedText: `Text extraction failed: ${error?.message || 'Unknown error'}`, status: 'error' } } : n))
+          setNodes((current: any[]) => current.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, content: `Text extraction failed: ${error?.message || 'Unknown error'}`, status: 'error' } } : n))
           console.warn('[Upload] extraction failed', error)
         }
       } else if (isImage) {
@@ -320,7 +324,7 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       return true
     } catch (error) {
       // Update optimistic node to error state
-      setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'error', extractedText: 'File upload failed' } } : n))
+      setNodes((current: any[]) => current.map(n => n.id === nodeId ? { ...n, data: { ...n.data, status: 'error', content: 'File upload failed' } } : n))
       console.error('[Upload] failed; error node added', error)
       return false
     }

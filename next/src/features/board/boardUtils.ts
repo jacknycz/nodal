@@ -201,7 +201,8 @@ export function getDocumentContext(nodes: BoardNode[]) {
       fileSize: node.data.fileSize,
       uploadedAt: node.data.uploadedAt,
       status: node.data.status || 'processing',
-      snippet: node.data.extractedText ? node.data.extractedText.slice(0, 200) : '',
+      // Phase A: extracted text should live in documents.extracted_text; nodes only keep short summaries/snippets in content
+      snippet: typeof (node as any)?.data?.content === 'string' ? String((node as any).data.content).slice(0, 200) : '',
     }))
 } 
 

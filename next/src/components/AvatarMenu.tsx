@@ -52,6 +52,7 @@ export default function AvatarMenu({
   const supabase = getSupabaseClient()
   const [unreadCount, setUnreadCount] = useState<number>(0)
   const notifTimerRef = useRef<any>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Load recent boards when menu opens
   const loadRecentBoards = async () => {
@@ -67,20 +68,28 @@ export default function AvatarMenu({
     }
   }
 
-  // Fetch pending invitations for the current user
+  // Fetch pending invitations lazily (avoids board-load request storms on cold navigation)
   useEffect(() => {
     const fetchInvites = async () => {
+      if (!menuOpen) return
       if (!user?.email) return
       try {
         const res = await fetch(`/api/board/invitations?email=${encodeURIComponent(user.email)}`)
         const json = await res.json()
         setPendingInvites(Array.isArray(json.invitations) ? json.invitations : [])
-      } catch (e) {
+      } catch {
         setPendingInvites([])
       }
     }
     fetchInvites()
-  }, [user?.email])
+  }, [menuOpen, user?.email])
+
+  // Load recent boards lazily as well
+  useEffect(() => {
+    if (!menuOpen) return
+    loadRecentBoards()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuOpen])
 
   // Load user profile (avatar_url, username)
   useEffect(() => {
@@ -192,6 +201,7 @@ export default function AvatarMenu({
     <Menu
       className="z-[500]"
       portal
+      onOpenChange={setMenuOpen}
       trigger={
         <div className="relative gap-1 flex items-center">
           <IconButton aria-label="User menu" className="p-0!" variant="secondaryGhost" size="small">

@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js'
 import { useSupabaseUser } from './authUtils'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSupabaseClient } from './supabaseClient'
+import { fetchUsageCached } from '../ai/usageClient'
 
 export type UserRole = 'Admin' | 'Pro' | 'User'
 
@@ -82,13 +83,9 @@ export function useUserRole(): { role: UserRole; isAdmin: boolean; isPro: boolea
     // Fetch server-derived cap to infer effective role and promote if higher
     const run = async () => {
       try {
-        const supa = getSupabaseClient()
-        const { data } = await supa.auth.getSession()
-        const token = data?.session?.access_token
-        const res = await fetch('/api/usage', { headers: token ? { 'Authorization': `Bearer ${token}` } : {} })
-        if (!res.ok) return
-        const json = await res.json()
-        const cap: number = json?.cap
+        const result = await fetchUsageCached({ maxAgeMs: 60_000 })
+        if (!result.ok || !result.summary) return
+        const cap: number = result.summary.cap
         let inferred: UserRole = 'User'
         if (typeof cap === 'number') {
           if (cap === Number.MAX_SAFE_INTEGER) inferred = 'Admin'

@@ -77,7 +77,7 @@ export default function AINodeGenerator({
       const sel = parentNode || selectedNodes[0]
       if (sel) {
         const selTitle = sel?.data?.title || 'topic'
-        const rawSel = sel?.data?.content || sel?.data?.extractedText || (sel?.data as any)?.extracted_text || ''
+        const rawSel = sel?.data?.content || ''
         const selContent = rawSel ? String(rawSel) : ''
         topicForAI = baseTopic || selTitle
         if (selContent) {

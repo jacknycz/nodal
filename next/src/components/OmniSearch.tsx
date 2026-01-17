@@ -21,10 +21,7 @@ export default function OmniSearch() {
       .map((n) => {
         const d = (n?.data || {}) as any
         const title = d.title || d.fileName || 'Untitled'
-        const content =
-          (typeof d.content === 'string' ? d.content : '') +
-          ' ' +
-          (typeof d.extractedText === 'string' ? d.extractedText : '')
+        const content = (typeof d.content === 'string' ? d.content : '')
         const haystack = `${title} ${content}`.toLowerCase()
         return { id: n.id as string, title, haystack }
       })

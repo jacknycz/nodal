@@ -42,6 +42,7 @@ import AINodeGenerator from '../../components/AINodeGenerator'
 import AddNodesModal from '../../components/AddNodesModal'
 import { useAIContext } from '../ai/aiContext'
 import { getOpenAIService } from '../ai/aiService'
+import { fetchUsageCached } from '../ai/usageClient'
 import BokehBackground from '../../components/BokehBackground'
 import { SpinnerGap } from '@phosphor-icons/react/ssr'
 import ChatPanel from '../../components/ChatPanel'
@@ -914,11 +915,8 @@ function BoardContent({
             return !!ok
           }
           // fallback: ping /api/usage
-          const supa = getSupabaseClient()
-          const { data } = await supa.auth.getSession()
-          const token = data?.session?.access_token
-          const res = await fetch('/api/usage', { headers: token ? { Authorization: `Bearer ${token}` } : {} })
-          return res.ok
+          const result = await fetchUsageCached({ maxAgeMs: 30_000 })
+          return !!result.ok
         } catch { return false }
       }
       // Helper: text generation that works even if aiService is not initialized
@@ -2027,8 +2025,6 @@ function BoardContent({
               String(
                 n?.data?.content ||
                 n?.data?.description ||
-                (n?.data as any)?.extractedText ||
-                (n?.data as any)?.extracted_text ||
                 ''
               )
             const urlHint =
@@ -4030,7 +4026,7 @@ function BoardContent({
               const selectedNode = nodesList.find(n => n.id === selectedId)
               const parentId = selectedNode ? selectedNode.id : undefined
               const contextTitle = selectedNode?.data?.title || ''
-              const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
+              const contextContent = (selectedNode?.data?.content || '') as string
 
               const supa = getSupabaseClient()
               const { data } = await supa.auth.getSession()
@@ -4051,11 +4047,7 @@ function BoardContent({
                   const d: any = n?.data || {}
                   // Prefer human-written / extracted text, but keep it short.
                   let raw = ''
-                  if (t === 'document') {
-                    raw = d?.content || d?.extractedText || d?.extracted_text || ''
-                  } else {
-                    raw = d?.content || ''
-                  }
+                  raw = d?.content || ''
                   if (!raw) {
                     // Non-text nodes: include a short mention only (no URLs).
                     if (t === 'link') {
@@ -4204,7 +4196,7 @@ function BoardContent({
               const selectedNode = nodesList.find(n => n.id === selectedId)
               const parentId = selectedNode ? selectedNode.id : undefined
               const contextTitle = selectedNode?.data?.title || ''
-              const contextContent = (selectedNode?.data?.content || (selectedNode?.data as any)?.extractedText || (selectedNode?.data as any)?.extracted_text || '') as string
+              const contextContent = (selectedNode?.data?.content || '') as string
 
               const supa = getSupabaseClient()
               const { data } = await supa.auth.getSession()
@@ -4224,11 +4216,7 @@ function BoardContent({
                   const t = String(n?.type || '').trim()
                   const d: any = n?.data || {}
                   let raw = ''
-                  if (t === 'document') {
-                    raw = d?.content || d?.extractedText || d?.extracted_text || ''
-                  } else {
-                    raw = d?.content || ''
-                  }
+                  raw = d?.content || ''
                   if (!raw) {
                     if (t === 'link') {
                       try { raw = d?.linkUrl ? `Link (${new URL(String(d.linkUrl)).hostname})` : '' } catch { raw = d?.linkUrl ? 'Link' : '' }
@@ -4892,7 +4880,7 @@ function BoardContent({
           parentNodeContent={(aiParentNodeId || pendingSourceNodeId) ? (() => {
             const n = nodes.find(n => n.id === (aiParentNodeId || pendingSourceNodeId))
             const d: any = n?.data || {}
-            return (d.content || d.extractedText || d.extracted_text || '') as string
+            return (d.content || '') as string
           })() : undefined}
           initialAIContext={pendingBoardBrief ? { topic: pendingBoardBrief.boardTopic, description: pendingBoardBrief.description } : undefined}
           onManualSubmit={async ({ titles, description, generateDescription }) => {

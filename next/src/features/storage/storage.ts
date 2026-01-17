@@ -108,41 +108,14 @@ class BoardStorage {
 
   // Update an existing board
   async updateBoard(boardId: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
-    // Merge chat meta from localStorage (client) so chats persist with the board
-    let augmented = data as BoardData
-    try {
-      if (typeof window !== 'undefined') {
-        const messagesRaw = localStorage.getItem(`nodal.chat.${boardId}`)
-        const panelRaw = localStorage.getItem(`nodal.chatpanel.${boardId}.open`)
-        const modelRaw = localStorage.getItem(`nodal.chatpanel.${boardId}.model`)
-        let messagesParsed: any[] | undefined = undefined
-        if (messagesRaw) {
-          try {
-            messagesParsed = JSON.parse(messagesRaw)
-          } catch {}
-        }
-        const chatMeta = {
-          messages: messagesParsed,
-          panelOpen: panelRaw === 'true',
-          model: modelRaw || undefined,
-        }
-        augmented = {
-          ...augmented,
-          meta: {
-            ...(augmented.meta || {}),
-            chat: chatMeta,
-          },
-        }
-      }
-    } catch {}
-
-    const res = await supabaseStorage.updateBoard(boardId, augmented)
+    // TEST MODE: do NOT persist chat history into boards.data (keeps payloads small)
+    const res = await supabaseStorage.updateBoard(boardId, data as BoardData)
     // Also propagate updates to a mapped template if present in localStorage
     try {
       if (typeof window !== 'undefined') {
         const tplId = localStorage.getItem(`templateMapping:${boardId}`)
         if (tplId) {
-          await templateStorage.updateTemplate(tplId, { data: augmented })
+          await templateStorage.updateTemplate(tplId, { data })
         }
       }
     } catch (err) {
