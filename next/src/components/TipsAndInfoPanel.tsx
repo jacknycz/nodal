@@ -122,6 +122,36 @@ export default function TipsAndInfoPanel({ onClose }: { onClose: () => void }) {
         title: 'How to Add Nodes',
         description: 'We go over the several different ways to add new nodes to the board.',
       },
+      {
+        id: 'right-click-actions',
+        youtubeId: 'eTgQqKCvcSs',
+        title: 'Right-click Actions',
+        description: "Nodal has a really useful right-click, so here's a little bit about it.",
+      },
+      {
+        id: 'intro-colorgories',
+        youtubeId: 'wXvaUKJAqKc',
+        title: 'Intro to Colorgories',
+        description: 'Colorgories are visual categories inside of Nodal - learn a bit about how they can help your board.',
+      },
+      {
+        id: 'generate-ai-nodes',
+        youtubeId: '40N_aHbWJ3I',
+        title: 'Generate AI Nodes',
+        description: 'A quick lesson on how to use AI to add nodes to the board for you.',
+      },
+      {
+        id: 'search-your-board',
+        youtubeId: 'DWmOrBzBWPY',
+        title: 'Search your board',
+        description: 'Quickly going over a simple but kinda fun zooming search feature with your Nodal board.',
+      },
+      {
+        id: 'summarize-nodes',
+        youtubeId: 'xdXuOIzshZA',
+        title: 'How to summarize nodes',
+        description: `In this quick tutorial we'll cover how the "Summarize nodes" feature works on your Nodal board.`,
+      },
     ]
   }, [])
 
