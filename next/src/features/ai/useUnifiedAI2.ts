@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAIContext } from './aiContext'
 import type { AIContext as AIContextType } from './aiTypes'
 import { useBoardStore } from '../board/boardSlice'
+import { getAIStyleSystemDirective } from './aiStyle'
 
 interface ChatMessage2 {
   id: string
@@ -60,6 +61,7 @@ Guidelines:
   const selectedNodeIds = useBoardStore((s) => s.selectedNodeIds)
   const boardTopic = useBoardStore((s) => s.topic)
   const boardBrief = useBoardStore((s) => s.boardBrief)
+  const aiStyle = useBoardStore((s: any) => (s as any).aiStyle || 'balanced')
 
   const abortControllerRef = useRef<AbortController | null>(null)
 
@@ -115,7 +117,7 @@ Guidelines:
 
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: CHAT_SYSTEM_PROMPT,
+        systemPrompt: `${CHAT_SYSTEM_PROMPT}\n\n${getAIStyleSystemDirective(aiStyle)}`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -181,7 +183,7 @@ Guidelines:
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: CHAT_SYSTEM_PROMPT,
+        systemPrompt: `${CHAT_SYSTEM_PROMPT}\n\n${getAIStyleSystemDirective(aiStyle)}`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -206,7 +208,7 @@ Guidelines:
       setIsStreaming(false)
       abortControllerRef.current = null
     }
-  }, [aiContext, messages, currentContext])
+  }, [aiContext, messages, currentContext, aiStyle])
 
   const cancelStreaming = useCallback(() => {
     try {

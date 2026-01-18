@@ -296,7 +296,7 @@ NODE CONTENT: [Body 2]`
       const base = `Context - ${label}:\n${nodeContext}\n\nUser message: ${userText}`
       contextualMessage = wantsNodes ? `${NODE_FORMAT_DIRECTIVE}\n\n${base}` : base
     } else {
-      const base = `User message: ${userText}`
+      const base = `${userText}`
       contextualMessage = wantsNodes ? `${NODE_FORMAT_DIRECTIVE}\n\n${base}` : base
     }
 

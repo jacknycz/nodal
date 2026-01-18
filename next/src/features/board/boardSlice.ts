@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { v4 as uuidv4 } from 'uuid'
 import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, DocumentEmbedding, Colorgory } from './boardTypes'
 import { COLORGORY_DEFS, registerColorgoriesGetter } from './colorgoryColors'
+import type { AIStyleKey } from '../ai/aiStyle'
 
 const initialState: BoardState = {
   nodes: [],
@@ -22,6 +23,7 @@ const initialState: BoardState = {
   connectingSourceId: null,
   colorgories: COLORGORY_DEFS.map((d, idx) => ({ id: d.id, color: d.id, name: d.name, order: idx, visible: true })),
   edgeType: 'floating',
+  aiStyle: 'balanced' as AIStyleKey,
   hoveredEdgeId: null,
 }
 
@@ -50,6 +52,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   assignNodeColorgory: (nodeId: string, colorgoryId: string) => void
   unassignNodeColorgory: (nodeId: string, colorgoryId: string) => void
   setHoveredEdgeId: (id: string | null) => void
+  setAIStyle: (style: AIStyleKey) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -189,6 +192,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setConnectingSource: (id) => set({ connectingSourceId: id }),
   setEdgeType: (t) => set({ edgeType: t || 'floating' }),
   setHoveredEdgeId: (id) => set({ hoveredEdgeId: id }),
+  setAIStyle: (style) => set({ aiStyle: (style || 'balanced') as AIStyleKey }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),

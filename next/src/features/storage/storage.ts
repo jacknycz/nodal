@@ -35,6 +35,7 @@ interface SavedBoard {
   edgeCount: number
   userId: string
   isPublic?: boolean
+  aiStyle?: string
 }
 
 // Document storage interfaces

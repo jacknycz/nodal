@@ -12,6 +12,7 @@ import BoardMembersRoleEditor from './BoardMembersRoleEditor'
 import { useAISettingsStore } from '../features/ai/aiSettingsSlice'
 import type { OpenAIModel } from '../features/ai/aiTypes'
 import { MODELS } from '../features/ai/models'
+import { AI_STYLE_OPTIONS, type AIStyleKey } from '../features/ai/aiStyle'
 import Toggle from './ui/Toggle'
 import { useTheme } from '../contexts/ThemeContext'
 import ColorgoryManager from './ColorgoryManager'
@@ -41,12 +42,15 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const setEdgeType = useBoardStore((s: any) => s.setEdgeType)
   const topic = useBoardStore((s: any) => s.topic || '')
   const setTopic = useBoardStore((s: any) => s.setTopic)
+  const aiStyle = useBoardStore((s: any) => (s as any).aiStyle || 'balanced')
+  const setAIStyle = useBoardStore((s: any) => (s as any).setAIStyle)
   const { model, setModel, temperature, setTemperature } = useAISettingsStore()
   const { isDark, setTheme } = useTheme()
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
   const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
   const [gridEnabled, setGridEnabled] = useState<boolean>(true)
+  const [pendingAIStyle, setPendingAIStyle] = useState<AIStyleKey>('balanced')
 
   // Inline share/invite state (mirrors ShareBoardModal)
   const [shareInput, setShareInput] = useState('')
@@ -64,8 +68,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     if (!open || !boardId) return
     ;(async () => {
       try {
-        const { data } = await supabase.from('boards').select('is_public').eq('id', boardId).maybeSingle()
+        const { data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle()
         setPendingIsPublic(!!(data as any)?.is_public)
+        const style = String((data as any)?.ai_style || 'balanced') as AIStyleKey
+        setPendingAIStyle(style)
+        try { setAIStyle?.(style) } catch {}
       } catch { setPendingIsPublic(false) }
     })()
   }, [open, boardId, supabase])
@@ -237,6 +244,24 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
           </Tab>
           <Tab label="aisettings" headerLabel="AI Settings">
             <div className="space-y-6 py-4">
+              <Select
+                label="AI behavior (Style)"
+                value={pendingAIStyle as any}
+                onChange={async (v: any) => {
+                  const next = String(v || 'balanced') as AIStyleKey
+                  setPendingAIStyle(next)
+                  try { setAIStyle?.(next) } catch {}
+                  try {
+                    if (boardId) {
+                      await supabase.from('boards').update({ ai_style: next }).eq('id', boardId)
+                      try { window.dispatchEvent(new CustomEvent('nodal:board-ai-style-updated', { detail: { boardId, aiStyle: next } })) } catch {}
+                    }
+                  } catch {}
+                }}
+                options={AI_STYLE_OPTIONS as any}
+                fullWidth
+                description="This affects how the AI responds on this board, not what features are available."
+              />
               <Select
                 label="AI model"
                 value={model as any}

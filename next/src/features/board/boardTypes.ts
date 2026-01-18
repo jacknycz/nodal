@@ -1,4 +1,5 @@
 import type { Node, Edge } from '@xyflow/react'
+import type { AIStyleKey } from '../ai/aiStyle'
 
 export interface BoardNode extends Node {
   dragHandle?: string
@@ -87,6 +88,8 @@ export interface BoardState {
   colorgories?: Colorgory[]
   // Board-wide edge type preference
   edgeType?: 'floating' | 'bezier' | 'straight' | 'step' | 'smoothstep'
+  // Board-wide AI behavior style (persisted as boards.ai_style in DB)
+  aiStyle?: AIStyleKey
   // UI hovered edge id (optional UI-only state)
   hoveredEdgeId?: string | null
 }
@@ -112,4 +115,5 @@ export interface BoardActions {
   clearSelectedNodes: () => void
   setConnectingSource: (id: string | null) => void
   setEdgeType?: (t: BoardState['edgeType']) => void
+  setAIStyle?: (style: BoardState['aiStyle']) => void
 } 

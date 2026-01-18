@@ -153,6 +153,7 @@ export default function BoardPage() {
               initialBoard={{ nodes: board.data.nodes, edges: board.data.edges }}
               initialColorgories={(board.data as any)?.colorgories || []}
               initialEdgeType={(board.data as any)?.meta?.edgeType || null}
+              initialAIStyle={(board as any)?.aiStyle || null}
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}

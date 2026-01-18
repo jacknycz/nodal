@@ -81,6 +81,7 @@ interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
   initialColorgories?: any[]
   initialEdgeType?: string | null
+  initialAIStyle?: any
   pendingBoardBrief?: BoardBrief // Now includes id
   onBoardStateChange?: (name: string, status: string, hasChanges: boolean) => void
   clearPendingBoardBrief?: () => void
@@ -148,6 +149,7 @@ function BoardContent({
   initialBoard,
   initialColorgories,
   initialEdgeType,
+  initialAIStyle,
   pendingBoardBrief,
   onBoardStateChange,
   clearPendingBoardBrief,
@@ -238,8 +240,11 @@ function BoardContent({
       if (initialEdgeType) {
         useBoardStore.getState().setEdgeType?.(initialEdgeType as any)
       }
+      if (initialAIStyle) {
+        useBoardStore.getState().setAIStyle?.(initialAIStyle as any)
+      }
     } catch {}
-  }, [boardId, initialColorgories, initialEdgeType])
+  }, [boardId, initialColorgories, initialEdgeType, initialAIStyle])
   
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
