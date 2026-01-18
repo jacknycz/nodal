@@ -142,7 +142,8 @@ class SupabaseStorage {
   // Save a board to Supabase
   async saveBoard(name: string, data: Omit<BoardData, 'lastModified'>): Promise<string> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       // Enforce unique board name per user
@@ -209,7 +210,8 @@ class SupabaseStorage {
   // Save a board to Supabase with a specific ID (upsert)
   async saveBoardWithId(id: string, name: string, data: Omit<BoardData, 'lastModified'>): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       const taskSummary = Array.isArray((data as any).nodes)
@@ -378,7 +380,8 @@ class SupabaseStorage {
   // Get all boards for the current user
   async getAllBoards(): Promise<SavedBoard[]> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       const { data, error } = await supabase
@@ -416,7 +419,8 @@ class SupabaseStorage {
   // Get lightweight board summaries for the current user (NO full boards.data payload)
   async getAllBoardsSummary(): Promise<BoardSummary[]> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       // Note: PostgREST supports JSON path extraction + aliasing. We only need a few fields for the boardroom list.
@@ -455,7 +459,8 @@ class SupabaseStorage {
   // Delete a board
   async deleteBoard(boardId: string): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       const { data, error } = await supabase
@@ -480,7 +485,8 @@ class SupabaseStorage {
   // Rename a board
   async renameBoard(boardId: string, newName: string): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       // Enforce unique name per user on rename
@@ -526,7 +532,8 @@ class SupabaseStorage {
     nodeId?: string
   ): Promise<string> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       // Upload file to Supabase Storage
@@ -663,7 +670,8 @@ class SupabaseStorage {
   // Delete a document
   async deleteDocument(documentId: string): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       // First, get the document metadata to find the file path
@@ -742,7 +750,8 @@ class SupabaseStorage {
 
   async updateDocumentExtractedText(documentId: string, extractedText: string): Promise<void> {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
       if (!user) throw new Error('User not authenticated')
 
       const { error } = await supabase
@@ -766,7 +775,8 @@ class SupabaseStorage {
 
   // Upload an image variant for a given documentId under a stable path
   async uploadImageVariant(documentId: string, blob: Blob, sizeLabel: '800' | '1920'): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: sessionData } = await supabase.auth.getSession()
+    const user = sessionData?.session?.user
     if (!user) throw new Error('User not authenticated')
     const path = `${user.id}/variants/${documentId}-${sizeLabel}.webp`
     const { error } = await supabase.storage

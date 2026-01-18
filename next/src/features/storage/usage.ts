@@ -27,7 +27,8 @@ export function getPlanLimits(plan: Plan): { totalBytes: number; uploadLimitByte
 export async function getUserStorageUsageBytes(): Promise<number> {
   try {
     const client = getSupabaseClient()
-    const { data: { user } } = await client.auth.getUser()
+    const { data } = await client.auth.getSession()
+    const user = data?.session?.user
     if (!user) return 0
     // Sum file_size for documents owned by the user
     // Use range pagination if large; for now one shot select
