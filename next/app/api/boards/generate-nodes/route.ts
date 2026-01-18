@@ -51,14 +51,22 @@ type GenerateResponse = {
 
 async function callOpenAI(messages: any[], maxTokens = 900): Promise<{ ok: boolean; status: number; content?: string; error?: string }> {
   try {
+    const gatewayKey = process.env.AI_GATEWAY_API_KEY || ''
+    const useGateway = !!gatewayKey
     const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_SERVER
-    if (!apiKey) return { ok: false, status: 500, error: 'Server AI key not configured' }
+    if (!useGateway && !apiKey) return { ok: false, status: 500, error: 'Server AI key not configured' }
 
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const upstreamUrl = useGateway
+      ? 'https://ai-gateway.vercel.sh/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions'
+    const upstreamAuth = useGateway ? gatewayKey : apiKey
+    const upstreamModel = useGateway ? 'openai/gpt-4o-mini' : 'gpt-4o-mini'
+
+    const resp = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${upstreamAuth}` },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: upstreamModel,
         messages,
         temperature: 0.4,
         max_tokens: maxTokens,

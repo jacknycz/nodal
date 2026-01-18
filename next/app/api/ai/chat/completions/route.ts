@@ -125,11 +125,20 @@ export async function POST(req: NextRequest) {
       }
     } catch {}
 
+    const gatewayKey = process.env.AI_GATEWAY_API_KEY || ''
+    const useGateway = !!gatewayKey
     const apiKey = process.env.OPENAI_API_KEY || req.headers.get('x-openai-api-key') || ''
-    if (!apiKey) return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 })
+    if (!useGateway && !apiKey) return NextResponse.json({ error: 'Missing OpenAI API key' }, { status: 401 })
+
+    // Vercel AI Gateway is OpenAI-compatible. For gateway calls, model ids should be `provider/model`.
+    // Keep backwards compatibility with legacy model ids like `gpt-4o-mini` by defaulting to `openai/...`.
+    const upstreamModel =
+      typeof model === 'string' && model.includes('/')
+        ? model
+        : (typeof model === 'string' && model.trim() ? `openai/${model.trim()}` : model)
 
     const payload: any = {
-      model,
+      model: upstreamModel,
       messages,
       temperature,
       max_tokens,
@@ -139,12 +148,17 @@ export async function POST(req: NextRequest) {
       stream: !!stream,
     }
 
-    // Proxy to OpenAI
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const upstreamUrl = useGateway
+      ? 'https://ai-gateway.vercel.sh/v1/chat/completions'
+      : 'https://api.openai.com/v1/chat/completions'
+    const upstreamAuth = useGateway ? gatewayKey : apiKey
+
+    // Proxy to upstream (AI Gateway or OpenAI)
+    const resp = await fetch(upstreamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${upstreamAuth}`,
       },
       body: JSON.stringify(payload),
     })

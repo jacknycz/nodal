@@ -7,6 +7,11 @@ export type OpenAIModel =
   | 'gpt-4o-mini'
   | 'gpt-5-mini'
   | 'gpt-5'
+  // Vercel AI Gateway provider-prefixed ids (OpenAI-compatible)
+  | 'anthropic/claude-3-5-sonnet-20241022'
+  | 'anthropic/claude-3-5-haiku-20241022'
+  | 'xai/grok-2'
+  | 'xai/grok-2-mini'
 
 export interface ModelInfo {
   id: OpenAIModel

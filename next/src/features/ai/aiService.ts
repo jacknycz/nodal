@@ -47,6 +47,38 @@ export const MODEL_INFO: Record<OpenAIModel, ModelInfo> = {
     maxTokens: 200000,
     costPer1k: 0.002,
     capabilities: { streaming: true, functionCalling: true, vision: true }
+  },
+  'anthropic/claude-3-5-sonnet-20241022': {
+    id: 'anthropic/claude-3-5-sonnet-20241022',
+    name: 'Claude 3.5 Sonnet',
+    description: 'Anthropic Claude (via AI Gateway)',
+    maxTokens: 200000,
+    costPer1k: 0.005,
+    capabilities: { streaming: true, functionCalling: true, vision: true }
+  },
+  'anthropic/claude-3-5-haiku-20241022': {
+    id: 'anthropic/claude-3-5-haiku-20241022',
+    name: 'Claude 3.5 Haiku',
+    description: 'Anthropic Claude (fast) (via AI Gateway)',
+    maxTokens: 200000,
+    costPer1k: 0.002,
+    capabilities: { streaming: true, functionCalling: true, vision: false }
+  },
+  'xai/grok-2': {
+    id: 'xai/grok-2',
+    name: 'Grok 2',
+    description: 'xAI Grok (via AI Gateway)',
+    maxTokens: 128000,
+    costPer1k: 0.005,
+    capabilities: { streaming: true, functionCalling: true, vision: false }
+  },
+  'xai/grok-2-mini': {
+    id: 'xai/grok-2-mini',
+    name: 'Grok 2 Mini',
+    description: 'xAI Grok (smaller/faster) (via AI Gateway)',
+    maxTokens: 128000,
+    costPer1k: 0.002,
+    capabilities: { streaming: true, functionCalling: true, vision: false }
   }
 }
 
