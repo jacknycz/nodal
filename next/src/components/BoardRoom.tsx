@@ -88,7 +88,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const inFlightBoardsRef = useRef<boolean>(false)
   const prevUserIdRef = useRef<string | null>(null)
   const sharedSeededRef = useRef<boolean>(false)
-  const bootstrappedRef = useRef<boolean>(false)
+  const bootstrapRunIdRef = useRef<number>(0)
 
   // New board flow states
   const [showBoardSetup, setShowBoardSetup] = useState(false)
@@ -259,10 +259,12 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
 
   // Single bootstrap: load personal boards (client) + shared boards/connections/news (server) and commit atomically
   useEffect(() => {
-    let cancelled = false
     const run = async () => {
-      if (!user?.id || bootstrappedRef.current) return
-      bootstrappedRef.current = true
+      const userId = user?.id
+      if (!userId) return
+
+      // StrictMode-safe: dev runs effects twice (mount/cleanup/mount). Use a run id to ignore stale work.
+      const runId = ++bootstrapRunIdRef.current
       setLoading(true)
       try {
         const [{ boardStorage }] = await Promise.all([import('../features/storage/storage')])
@@ -278,7 +280,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           .catch(() => ({ sharedBoards: [], connections: [], news: [] }))
 
         const [personal, bootstrap] = await Promise.all([personalPromise, bootstrapPromise])
-        if (cancelled) return
+        if (runId !== bootstrapRunIdRef.current) return
 
         startTransition(() => {
           // Personal boards (guard)
@@ -308,11 +310,14 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           setNews(Array.isArray(bootstrap.news) ? bootstrap.news : [])
         })
       } finally {
-        if (!cancelled) setLoading(false)
+        if (runId === bootstrapRunIdRef.current) setLoading(false)
       }
     }
     run()
-    return () => { cancelled = true }
+    return () => {
+      // Invalidate any in-flight async work so it can't keep loading stuck in dev StrictMode.
+      bootstrapRunIdRef.current += 1
+    }
   }, [user?.id])
 
   // Load templates (public)
