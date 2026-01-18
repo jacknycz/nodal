@@ -132,10 +132,24 @@ export async function POST(req: NextRequest) {
 
     // Vercel AI Gateway is OpenAI-compatible. For gateway calls, model ids should be `provider/model`.
     // Keep backwards compatibility with legacy model ids like `gpt-4o-mini` by defaulting to `openai/...`.
-    const upstreamModel =
-      typeof model === 'string' && model.includes('/')
-        ? model
-        : (typeof model === 'string' && model.trim() ? `openai/${model.trim()}` : model)
+    // IMPORTANT: When *not* using the gateway, OpenAI expects raw model ids (e.g. `gpt-4o-mini`),
+    // so we strip `openai/` if the UI passes a provider-prefixed id.
+    const upstreamModel = (() => {
+      if (typeof model !== 'string') return model
+      const m = model.trim()
+      if (!m) return model
+
+      if (useGateway) {
+        return m.includes('/') ? m : `openai/${m}`
+      }
+
+      // Direct OpenAI: accept `openai/<id>` by stripping prefix; reject non-openai provider ids.
+      if (m.startsWith('openai/')) return m.slice('openai/'.length)
+      if (m.includes('/')) {
+        throw new Error('Model requires AI Gateway (provider-prefixed model id)')
+      }
+      return m
+    })()
 
     const payload: any = {
       model: upstreamModel,
