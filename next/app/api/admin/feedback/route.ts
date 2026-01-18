@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const perPage = Math.min(200, Math.max(1, parseInt(perPageParam || '50', 10) || 50))
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !serviceKey) {
       return NextResponse.json({ error: 'Missing Supabase configuration' }, { status: 500 })
     }
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !serviceKey) {
       return NextResponse.json({ error: 'Missing Supabase configuration' }, { status: 500 })
     }
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const serviceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!supabaseUrl || !serviceKey) {
       return NextResponse.json({ error: 'Missing Supabase configuration' }, { status: 500 })
     }

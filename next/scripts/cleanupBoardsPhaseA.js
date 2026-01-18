@@ -11,7 +11,7 @@
  *
  * Env required:
  *   NEXT_PUBLIC_SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
+ *   SUPABASE_SECRET_KEY
  */
 const { createClient } = require('@supabase/supabase-js')
 
@@ -73,9 +73,9 @@ function stripBoardData(data) {
 async function main() {
   const { dryRun, limit, pageSize } = parseArgs(process.argv)
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const key = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
-    console.error('Missing env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
+    console.error('Missing env: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SECRET_KEY')
     process.exit(1)
   }
 

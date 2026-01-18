@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js'
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY as string
-  if (!url || !key) throw new Error('Supabase service role not configured')
+  const key =
+    (process.env.SUPABASE_SECRET_KEY as string) ||
+    (process.env.SUPABASE_SERVICE_ROLE_KEY as string) // legacy fallback
+  if (!url || !key) throw new Error('Supabase secret key not configured')
   return createClient(url, key)
 }
 
