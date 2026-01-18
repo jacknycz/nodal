@@ -27,19 +27,19 @@ export function getPlanLimits(plan: Plan): { totalBytes: number; uploadLimitByte
 export async function getUserStorageUsageBytes(): Promise<number> {
   try {
     const client = getSupabaseClient()
-    const { data } = await client.auth.getSession()
-    const user = data?.session?.user
+    const { data: sessionData } = await client.auth.getSession()
+    const user = sessionData?.session?.user
     if (!user) return 0
     // Sum file_size for documents owned by the user
     // Use range pagination if large; for now one shot select
-    const { data, error } = await client
+    const { data: rows, error } = await client
       .from('documents')
       .select('file_size')
       .eq('user_id', user.id)
 
     if (error) return 0
     let sum = 0
-    for (const row of (data || []) as Array<{ file_size: number }>) {
+    for (const row of (rows || []) as Array<{ file_size: number }>) {
       const n = Number(row.file_size || 0)
       if (!Number.isNaN(n)) sum += n
     }
