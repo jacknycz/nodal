@@ -252,14 +252,23 @@ NODE CONTENT: [Body 2]`
   const awaitingNodesRef = useRef<boolean>(false)
   const [pendingNodes, setPendingNodes] = useState<{ assistantId: string; nodes: Array<{ title: string; content: string }> } | null>(null)
   const [isGeneratingNodes, setIsGeneratingNodes] = useState(false)
+  const [nodeGenAssistantId, setNodeGenAssistantId] = useState<string | null>(null)
+  const [nodeGenParseFailed, setNodeGenParseFailed] = useState(false)
 
   const parseNodesFromAssistant = (text: string): Array<{ title: string; content: string }> => {
     const results: Array<{ title: string; content: string }> = []
     if (!text) return results
     try {
-      const pattern = /NODE TITLE:\s*(.+?)\s*\n+NODE CONTENT:\s*([\s\S]*?)(?=\n+NODE TITLE:|$)/g
+      const normalized = String(text)
+        .replace(/\u2028|\u2029/g, '\n') // Unicode line separators
+        .replace(/\r\n/g, '\n')
+        // If the model returns TITLE/CONTENT on the same line, force markers onto their own lines.
+        .replace(/(NODE\s*TITLE\s*:)/gi, '\n$1')
+        .replace(/(NODE\s*CONTENT\s*:)/gi, '\n$1')
+
+      const pattern = /(?:^|\n)\s*NODE\s*TITLE\s*:?\s*(.+?)\s*\n\s*NODE\s*CONTENT\s*:?\s*([\s\S]*?)(?=(?:\n\s*NODE\s*TITLE\s*:?)|$)/gi
       let match: RegExpExecArray | null
-      while ((match = pattern.exec(text)) !== null) {
+      while ((match = pattern.exec(normalized)) !== null) {
         const title = (match[1] || '').trim()
         const content = (match[2] || '').trim()
         if (title) results.push({ title, content })
@@ -283,7 +292,11 @@ NODE CONTENT: [Body 2]`
     const wantsNodes = isNodeCreationIntent(userText, { hasSelection: selectedNodes.length > 0 })
     awaitingNodesRef.current = wantsNodes
     setIsGeneratingNodes(wantsNodes)
-    if (wantsNodes) setPendingNodes(null)
+    if (wantsNodes) {
+      setPendingNodes(null)
+      setNodeGenAssistantId(null)
+      setNodeGenParseFailed(false)
+    }
 
     if (selectedNodes.length > 0) {
       const nodeContext = (await Promise.all(selectedNodes.map(async (n: any) => {
@@ -336,7 +349,11 @@ NODE CONTENT: [Body 2]`
     const nodes = parseNodesFromAssistant(lastAssistant.content).slice(0, MAX_NOBOT_ADD_NODES)
     awaitingNodesRef.current = false
     setIsGeneratingNodes(false)
-    if (!nodes.length) return
+    setNodeGenAssistantId(lastAssistant.id)
+    if (!nodes.length) {
+      setNodeGenParseFailed(true)
+      return
+    }
     // Hold for user confirmation instead of auto-adding
     setPendingNodes({ assistantId: lastAssistant.id, nodes })
   }, [isStreaming, messages])
@@ -470,8 +487,8 @@ NODE CONTENT: [Body 2]`
             const isLast = i === messages.length - 1
             // While generating nodes, suppress streaming node blocks and show a loader bubble instead.
             const showNodeGenLoader = isAssistant && isLast && isStreaming && isGeneratingNodes
-            // When nodes are ready (modal open), suppress the raw node-block message and show a short summary instead.
-            const isNodeGenResultMsg = isAssistant && !!pendingNodes && pendingNodes.assistantId === m.id
+            // Suppress the raw node-block message and show a short summary instead (even if parsing failed).
+            const isNodeGenResultMsg = isAssistant && !!nodeGenAssistantId && nodeGenAssistantId === m.id
 
             return (
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -482,7 +499,11 @@ NODE CONTENT: [Body 2]`
                       <span className="text-sm text-gray-700 dark:text-gray-200">Generating nodes…</span>
                     </div>
                   ) : isNodeGenResultMsg ? (
-                    <p className="text-sm whitespace-pre-wrap">{`Generated ${pendingNodes?.nodes?.length || 0} nodes — review them in the modal.`}</p>
+                    <p className="text-sm whitespace-pre-wrap">
+                      {nodeGenParseFailed
+                        ? "I generated nodes, but the formatting was off so I couldn't open the picker. Please try again."
+                        : `Generated ${pendingNodes?.nodes?.length || 0} nodes — review them in the modal.`}
+                    </p>
                   ) : (
                     <p className="text-sm whitespace-pre-wrap">{
                       isAssistant
