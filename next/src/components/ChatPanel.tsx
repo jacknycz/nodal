@@ -251,6 +251,7 @@ NODE CONTENT: [Body 2]`
 
   const awaitingNodesRef = useRef<boolean>(false)
   const [pendingNodes, setPendingNodes] = useState<{ assistantId: string; nodes: Array<{ title: string; content: string }> } | null>(null)
+  const [isGeneratingNodes, setIsGeneratingNodes] = useState(false)
 
   const parseNodesFromAssistant = (text: string): Array<{ title: string; content: string }> => {
     const results: Array<{ title: string; content: string }> = []
@@ -281,6 +282,8 @@ NODE CONTENT: [Body 2]`
     let contextualMessage = userText
     const wantsNodes = isNodeCreationIntent(userText, { hasSelection: selectedNodes.length > 0 })
     awaitingNodesRef.current = wantsNodes
+    setIsGeneratingNodes(wantsNodes)
+    if (wantsNodes) setPendingNodes(null)
 
     if (selectedNodes.length > 0) {
       const nodeContext = (await Promise.all(selectedNodes.map(async (n: any) => {
@@ -327,10 +330,12 @@ NODE CONTENT: [Body 2]`
     const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant')
     if (!lastAssistant || !lastAssistant.content) {
       awaitingNodesRef.current = false
+      setIsGeneratingNodes(false)
       return
     }
     const nodes = parseNodesFromAssistant(lastAssistant.content).slice(0, MAX_NOBOT_ADD_NODES)
     awaitingNodesRef.current = false
+    setIsGeneratingNodes(false)
     if (!nodes.length) return
     // Hold for user confirmation instead of auto-adding
     setPendingNodes({ assistantId: lastAssistant.id, nodes })
@@ -460,17 +465,35 @@ NODE CONTENT: [Body 2]`
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6 dark:shadow-none scrollbar-themed">
-          {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-gray-200 text-gray-900 dark:text-gray-100 dark:bg-gray-800 font-medium' : 'text-gray-900 bg-white dark:bg-gray-900 text-base font-medium dark:text-gray-100'}`}>
-                <p className="text-sm whitespace-pre-wrap">{
-                  m.role === 'assistant'
-                    ? formatAssistantForDisplay(m.content, isStreaming && i === messages.length - 1)
-                    : getUserDisplayText(m.content)
-                }</p>
+          {messages.map((m, i) => {
+            const isAssistant = m.role === 'assistant'
+            const isLast = i === messages.length - 1
+            // While generating nodes, suppress streaming node blocks and show a loader bubble instead.
+            const showNodeGenLoader = isAssistant && isLast && isStreaming && isGeneratingNodes
+            // When nodes are ready (modal open), suppress the raw node-block message and show a short summary instead.
+            const isNodeGenResultMsg = isAssistant && !!pendingNodes && pendingNodes.assistantId === m.id
+
+            return (
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${m.role === 'user' ? 'bg-gray-200 text-gray-900 dark:text-gray-100 dark:bg-gray-800 font-medium' : 'text-gray-900 bg-white dark:bg-gray-900 text-base font-medium dark:text-gray-100'}`}>
+                  {showNodeGenLoader ? (
+                    <div className="flex items-center gap-2">
+                      <Spinner className="w-4 h-4 animate-spin text-gray-500" />
+                      <span className="text-sm text-gray-700 dark:text-gray-200">Generating nodes…</span>
+                    </div>
+                  ) : isNodeGenResultMsg ? (
+                    <p className="text-sm whitespace-pre-wrap">{`Generated ${pendingNodes?.nodes?.length || 0} nodes — review them in the modal.`}</p>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{
+                      isAssistant
+                        ? formatAssistantForDisplay(m.content, isStreaming && isLast)
+                        : getUserDisplayText(m.content)
+                    }</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-2">
