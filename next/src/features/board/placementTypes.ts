@@ -29,7 +29,9 @@ export interface NodeToPlace {
   id?: string
   title: string
   content?: string
-  type?: 'default' | 'document' | 'input' | 'output'
+  // Must match XYFlow node "type" values used in the board.
+  // Keep this union broad so the placement engine can place any node kind.
+  type?: 'default' | 'document' | 'input' | 'output' | 'image' | 'video' | 'link' | 'spotify' | 'task' | 'headline'
   data?: Partial<BoardNode['data']>
   preferredPosition?: Position
   parentId?: string
