@@ -263,7 +263,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 description="This affects how the AI responds on this board, not what features are available."
               />
               <Select
-                label="AI model"
+                label="AI mode"
                 value={model as any}
                 onChange={(v) => setModel(v as OpenAIModel)}
                 options={MODELS}

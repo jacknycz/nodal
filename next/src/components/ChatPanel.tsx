@@ -362,7 +362,7 @@ NODE CONTENT: [Body 2]`
 
                 <Select
                   size="xs"
-                  aria-label="AI Model"
+                  aria-label="AI Mode"
                   value={model}
                   options={MODELS as any}
                   onChange={(v) => setModel(v as OpenAIModel)}
