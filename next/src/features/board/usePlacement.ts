@@ -233,7 +233,11 @@ export function usePlacement() {
     constraints?: Partial<PlacementConstraints>
   ): Promise<PlacementResult> => {
     const context = createPlacementContext(parentNodeId, constraints)
-    return placeAIGeneratedNodes(nodes, context, parentNodeId)
+    const withFlags = (nodes || []).map((n) => ({
+      ...n,
+      data: { ...(n.data || {}), aiGenerated: (n.data as any)?.aiGenerated ?? true } as any,
+    }))
+    return placeAIGeneratedNodes(withFlags as any, context, parentNodeId)
   }, [createPlacementContext])
 
   /**
@@ -244,7 +248,11 @@ export function usePlacement() {
     constraints?: Partial<PlacementConstraints>
   ): Promise<PlacementResult> => {
     const context = createPlacementContext(undefined, constraints)
-    return placeBoardCreationNodes(nodes, context)
+    const withFlags = (nodes || []).map((n) => ({
+      ...n,
+      data: { ...(n.data || {}), aiGenerated: (n.data as any)?.aiGenerated ?? true } as any,
+    }))
+    return placeBoardCreationNodes(withFlags as any, context)
   }, [createPlacementContext])
 
   /**
@@ -268,8 +276,13 @@ export function usePlacement() {
       ? { ...context, existingNodes: existingNodesOverride }
       : context
 
+    const withFlags = {
+      ...node,
+      data: { ...(node.data || {}), aiGenerated: (node.data as any)?.aiGenerated ?? false } as any,
+    }
+
     return placeNodes({
-      nodes: [node],
+      nodes: [withFlags as any],
       context: effectiveContext,
       strategy: PlacementStrategy.SMART_AUTO
     })
@@ -290,8 +303,13 @@ export function usePlacement() {
       nodes[0].preferredPosition = dropPosition
     }
 
+    const withFlags = (nodes || []).map((n) => ({
+      ...n,
+      data: { ...(n.data || {}), aiGenerated: (n.data as any)?.aiGenerated ?? false } as any,
+    }))
+
     return placeNodes({
-      nodes,
+      nodes: withFlags as any,
       context,
       strategy: PlacementStrategy.DOCUMENT_UPLOAD,
       algorithm: LayoutAlgorithm.GRID

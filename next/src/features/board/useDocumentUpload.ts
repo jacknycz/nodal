@@ -3,6 +3,8 @@ import { useUserRole } from '../auth/roles'
 import { getUserStorageUsageBytes, getPlanForRole, getPlanLimits } from '../storage/usage'
 import { getOpenAIService } from '../ai/aiService'
 import { useBoardStore } from './boardSlice'
+import { placeNodes } from './placementEngine'
+import { LayoutAlgorithm, PlacementStrategy } from './placementTypes'
 
 interface BoardStorageLike {
   saveDocument: (name: string, file: File, extracted: string, boardId: string, nodeId: string) => Promise<string>
@@ -34,6 +36,38 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
       const isVideo = file.type.startsWith('video/') || /\.(mp4)$/i.test(file.name)
 
+      // Use the core placement engine to nudge the requested drop position away from collisions.
+      // This keeps all placement rules consistent across entrypoints (chat/AI/manual/upload).
+      let placedPosition = position
+      try {
+        const store = useBoardStore.getState() as any
+        const existingNodes = (store?.nodes || []) as any[]
+        const existingEdges = (store?.edges || []) as any[]
+        const ctx: any = {
+          existingNodes,
+          existingEdges,
+          viewport: { x: 0, y: 0, zoom: 1, width: window.innerWidth, height: window.innerHeight },
+          selectedNodeIds: Array.isArray(store?.selectedNodeIds) ? store.selectedNodeIds : [],
+          constraints: { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true, preferredDirection: 'radial' },
+        }
+        const nodeType = isVideo ? 'video' : (isImage ? 'image' : 'document')
+        const result = await placeNodes({
+          nodes: [{
+            id: nodeId,
+            title: file.name,
+            content: '',
+            type: nodeType as any,
+            preferredPosition: position,
+            data: { aiGenerated: false } as any,
+          }],
+          context: ctx,
+          strategy: PlacementStrategy.DOCUMENT_UPLOAD,
+          algorithm: LayoutAlgorithm.GRID,
+        } as any)
+        const p = result.placements?.[0]?.position
+        if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) placedPosition = { x: p.x, y: p.y }
+      } catch {}
+
       // Enforce per-plan upload size limit (all types)
       const plan = getPlanForRole(role)
       const { uploadLimitBytes, totalBytes } = getPlanLimits(plan)
@@ -56,7 +90,7 @@ export function useDocumentUpload({ boardStorage, supabaseStorage, isTextExtract
       const optimisticNode: any = {
         id: nodeId,
         type: isVideo ? 'video' : (isImage ? 'image' : 'document'),
-        position,
+        position: placedPosition,
         data: {
           title: file.name,
           type: isVideo ? 'video' : (isImage ? 'image' : 'document'),

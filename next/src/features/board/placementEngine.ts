@@ -19,6 +19,7 @@ import { useBoardStore } from './boardSlice'
 import { mapEdgePrefToRfType } from './boardUtils'
 import {
   calculateGridLayout,
+  calculateFanLayout,
   calculateLayoutQuality
 } from './layoutAlgorithms'
 import {
@@ -258,8 +259,17 @@ export class PlacementEngine {
     context: PlacementContext,
     options?: Partial<LayoutOptions>
   ): Promise<NodePlacement[]> {
-    // Force GRID everywhere for now
-    return calculateGridLayout(nodes, context, options as any)
+    const alg = algorithm === LayoutAlgorithm.SMART_AUTO
+      ? (context.focusNode || nodes.some(n => !!n.parentId) ? LayoutAlgorithm.FAN : LayoutAlgorithm.GRID)
+      : algorithm
+
+    switch (alg) {
+      case LayoutAlgorithm.FAN:
+        return calculateFanLayout(nodes, context, options as any)
+      case LayoutAlgorithm.GRID:
+      default:
+        return calculateGridLayout(nodes, context, options as any)
+    }
   }
   
   /**
@@ -479,6 +489,8 @@ export async function placeAIGeneratedNodes(
     nodes,
     context: enhancedContext,
     strategy: PlacementStrategy.AI_GENERATION,
+    // For mind-maps we prefer tiered rows under the parent (hierarchical grid),
+    // rather than an arc that can break perceived hierarchy.
     algorithm: LayoutAlgorithm.GRID
   })
 }
@@ -510,6 +522,6 @@ export async function reorganizeBoard(
     nodes,
     context,
     strategy: PlacementStrategy.REORGANIZE,
-    algorithm: LayoutAlgorithm.GRID
+    algorithm
   })
 }

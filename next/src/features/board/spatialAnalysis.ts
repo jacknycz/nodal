@@ -26,6 +26,11 @@ export function estimateNodeDimensions(
   const baseDimensions = {
     default: { width: 160, height: 80 },
     document: { width: 200, height: 120 },
+    image: { width: 240, height: 180 },
+    video: { width: 260, height: 200 },
+    link: { width: 200, height: 100 },
+    task: { width: 220, height: 110 },
+    headline: { width: 220, height: 90 },
     input: { width: 140, height: 60 },
     output: { width: 140, height: 60 }
   }

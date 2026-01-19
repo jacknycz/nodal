@@ -56,14 +56,11 @@ import type { BoardBrief } from './boardTypes'
 import BoardContextMenu from '../../components/BoardContextMenu'
 // import { supabase } from '../auth/supabaseClient'; // Using getSupabaseClient instead
 import type { BoardNode } from './boardTypes';
-import { boundsOverlap, checkCollision } from './spatialAnalysis'
 import { supabaseStorage } from '../storage/supabaseStorage'
 import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
-import { PlacementStrategy, LayoutAlgorithm } from './placementTypes'
-import { placeNodes as enginePlaceNodes } from './placementEngine'
 import { ArrowLeft, ArrowRight, Info, X } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
@@ -452,97 +449,7 @@ function BoardContent({
     }
   }, [])
 
-  const computeClusterShiftX = useCallback((
-    clusterIds: Set<string>,
-    existingNodes: any[],
-    newNodes: any[],
-  ): number => {
-    if (!clusterIds || clusterIds.size === 0) return 0
-    const nodesList = Array.isArray(existingNodes) ? existingNodes : []
-    const obstacles = nodesList.filter(n => !clusterIds.has(n.id))
-    if (obstacles.length === 0) return 0
-
-    const clusterExisting = nodesList.filter(n => clusterIds.has(n.id))
-    const clusterAll = [...clusterExisting, ...(Array.isArray(newNodes) ? newNodes : [])]
-
-    const STEP = 90
-    const MAX_STEPS = 40 // 0..3600px
-    const MIN_DISTANCE = 28
-
-    const collidesAt = (dx: number) => {
-      for (const n of clusterAll) {
-        const dims = getApproxDims(n)
-        const pos = { x: Number(n?.position?.x || 0) + dx, y: Number(n?.position?.y || 0) }
-        const col = checkCollision(pos as any, dims as any, obstacles as any, [], MIN_DISTANCE)
-        if (col?.hasCollision) return true
-      }
-      return false
-    }
-
-    for (let i = 0; i <= MAX_STEPS; i++) {
-      const dx = i * STEP
-      if (!collidesAt(dx)) return dx
-    }
-    // If still colliding after max shift, return last shift anyway (better than stacking)
-    return MAX_STEPS * STEP
-  }, [checkCollision, getApproxDims])
-
   const ROW_GAP = 220
-
-  const computeNewGroupShiftX = useCallback((
-    existingNodes: any[],
-    newNodes: any[],
-    excludeIds: string[] = [],
-  ): number => {
-    const obstacles = (Array.isArray(existingNodes) ? existingNodes : []).filter(n => !excludeIds.includes(n.id))
-    const group = Array.isArray(newNodes) ? newNodes : []
-    if (obstacles.length === 0 || group.length === 0) return 0
-
-    const STEP = 90
-    const MAX_STEPS = 60
-    const PAD = 28
-
-    // XYFlow node.position is top-left. Use top-left bounds for collision checks.
-    const boundsTL = (pos: { x: number; y: number }, dims: { width: number; height: number }, pad: number) => ({
-      minX: pos.x - pad,
-      minY: pos.y - pad,
-      maxX: pos.x + dims.width + pad,
-      maxY: pos.y + dims.height + pad,
-    })
-
-    const collisionCountAt = (dx: number) => {
-      let hits = 0
-      for (const g of group) {
-        const gDims = getApproxDims(g)
-        const gPos = { x: Number(g?.position?.x || 0) + dx, y: Number(g?.position?.y || 0) }
-        const gB = boundsTL(gPos, gDims, PAD)
-
-        for (const o of obstacles) {
-          const oDims = getApproxDims(o)
-          const oPos = { x: Number(o?.position?.x || 0), y: Number(o?.position?.y || 0) }
-          const oB = boundsTL(oPos, oDims, 0)
-          if (boundsOverlap(gB as any, oB as any)) hits++
-        }
-      }
-      return hits
-    }
-
-    // Search 0, +STEP, -STEP, +2STEP, -2STEP... and return the first collision-free shift.
-    let bestDx = 0
-    let bestHits = collisionCountAt(0)
-    if (bestHits === 0) return 0
-
-    for (let i = 1; i <= MAX_STEPS; i++) {
-      for (const dx of [i * STEP, -i * STEP]) {
-        const hits = collisionCountAt(dx)
-        if (hits === 0) return dx
-        if (hits < bestHits) { bestHits = hits; bestDx = dx }
-      }
-    }
-
-    // If no collision-free slot exists without moving other nodes, shift to the least-colliding position.
-    return bestDx
-  }, [boundsOverlap, getApproxDims])
 
   // Global toast listener (used by uploads and other flows)
   useEffect(() => {
@@ -960,14 +867,37 @@ function BoardContent({
         const json = await resp.json()
         return json?.choices?.[0]?.message?.content || ''
       }
-      // Ensure a topic parent node exists
+      // Ensure a topic parent node exists (via placement engine)
       const topicNodeId = `topic-${boardId}`
-      const topicNode = {
-        id: topicNodeId,
-        type: 'default' as const,
-        position: { x: 500, y: 400 },
-        data: { title: brief.boardTopic, content: '' },
+      const getViewportCenterForPlacement = () => {
+        const vp = reactFlowInstance.getViewport()
+        return {
+          x: -vp.x / vp.zoom + (window.innerWidth / 2) / vp.zoom,
+          y: -vp.y / vp.zoom + (window.innerHeight / 2) / vp.zoom,
+        }
       }
+      const ensureTopicNode = async (): Promise<any> => {
+        const existing = (useBoardStore.getState().nodes || []).find((n: any) => n?.id === topicNodeId)
+        if (existing) return existing
+        const center = getViewportCenterForPlacement()
+        const res = await placeManualNode(
+          { id: topicNodeId, title: brief.boardTopic, content: '', type: 'default', preferredPosition: center } as any,
+          center,
+          { minDistance: 80, avoidOverlap: true, preserveExistingLayout: true },
+          (useBoardStore.getState().nodes || []) as any
+        )
+        const placement = res.placements?.[0]
+        const created = placement
+          ? ({ id: placement.node.id, type: placement.node.type as any, position: placement.position, data: { ...placement.node.data } } as any)
+          : ({ id: topicNodeId, type: 'default' as const, position: center, data: { title: brief.boardTopic, content: '' } } as any)
+        setNodes((prev) => {
+          const list = Array.isArray(prev) ? prev : []
+          const exists = list.some((n: any) => n.id === topicNodeId)
+          return exists ? list : [created, ...list]
+        })
+        return created
+      }
+      const topicNode = await ensureTopicNode()
 
       const maybeAppendMediaNodes = async (baseNodes: any[], baseEdges: any[]) => {
         if (!brief.generateMediaNodes) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
@@ -985,53 +915,32 @@ function BoardContent({
           const items: Array<{ type: 'image' | 'video'; title: string; url: string; content?: string }> = Array.isArray(json?.nodes) ? json.nodes : []
           if (!items.length) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
 
-          // Place media nodes on a second row under the starter nodes
-          const ys = (baseNodes || []).map((n: any) => Number(n?.position?.y || 0))
-          const maxY = ys.length ? Math.max(...ys) : topicNode.position.y
-          const rowY = maxY + 220
-          const cellWidth = 320
-          const padding = 60
-          const count = items.length
-          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
-
-          const mediaNodes = items.map((it, index) => {
-            const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
-            const position = { x: startX + index * (cellWidth + padding), y: rowY }
-            if (it.type === 'image') {
+          // Place media nodes via placement engine (same core placement rules as everything else)
+          const nodesToPlace = items.map((it) => {
+            const t = String(it.type || '').toLowerCase()
+            if (t === 'image') {
               return {
-                id,
-                type: 'image' as const,
-                position,
-                data: {
-                  title: String(it.title || 'Image'),
-                  content: String(it.content || ''),
-                  previewUrl: String(it.url || ''),
-                  type: 'image',
-                  status: 'ready',
-                  titleSize: 'sm',
-                } as any
+                title: String(it.title || 'Image'),
+                content: String(it.content || ''),
+                type: 'image',
+                parentId: topicNode.id,
+                data: { previewUrl: String(it.url || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any,
               }
             }
             return {
-              id,
-              type: 'video' as const,
-              position,
-              data: {
-                title: String(it.title || 'Video'),
-                content: String(it.content || ''),
-                videoUrl: String(it.url || ''),
-                status: 'idle',
-                titleSize: 'sm',
-              } as any
+              title: String(it.title || 'Video'),
+              content: String(it.content || ''),
+              type: 'video',
+              parentId: topicNode.id,
+              data: { videoUrl: String(it.url || ''), status: 'idle', titleSize: 'sm' } as any,
             }
           })
-          const mediaEdges = mediaNodes.map((n: any) => ({
-            id: `edge-${Date.now()}-${n.id}`,
-            source: topicNode.id,
-            target: n.id,
-            type: toVisualEdgeType(edgeTypePref) as any,
-          }))
+
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          if (!result.success || !result.placements.length) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
+
+          const mediaNodes = result.placements.map((p) => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+          const mediaEdges = result.connections.map((c) => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
 
           const nextNodes = [...(baseNodes || []), ...mediaNodes]
           const nextEdges = [...(baseEdges || []), ...mediaEdges]
@@ -1044,11 +953,7 @@ function BoardContent({
           return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
         }
       }
-      setNodes((prev) => {
-        const list = Array.isArray(prev) ? prev : []
-        const exists = list.some((n: any) => n.id === topicNodeId)
-        return exists ? list : [topicNode, ...list]
-      })
+
       await boardStorage.updateBoard(boardId, {
         nodes: [topicNode],
         edges: [],
@@ -1080,24 +985,23 @@ function BoardContent({
             }
           } catch {}
         }
-        // Deterministic single-row placement under parent (match reorg fallback)
-        const count = brief.starterNodes.length
-        const cellWidth = 300
-        const padding = 60
-        const rowY = topicNode.position.y + (cellWidth - 100)
-        const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-        const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
-        const generatedNodes = brief.starterNodes.map((title, index) => {
-          const position = { x: startX + index * (cellWidth + padding), y: rowY }
-          return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title, content: descriptionsByTitle[title] || '' } }
-        })
-        const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
-        setNodes([topicNode, ...generatedNodes])
-        setEdges(generatedEdges as any)
-        const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+        const nodesToPlace = brief.starterNodes.map((title) => ({
+          title: String(title || '').trim() || 'Untitled',
+          content: descriptionsByTitle[title] || '',
+          type: 'default' as const,
+          parentId: topicNode.id,
+        }))
+        const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+        const placed = result.placements.map((p) => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+        const edgesPlaced = result.connections.map((c) => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+        setNodes([topicNode, ...placed])
+        setEdges(edgesPlaced as any)
+        const boardData = { nodes: [topicNode, ...placed], edges: edgesPlaced as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
         await boardStorage.updateBoard(boardId, boardData)
         setHasUnsavedChanges(false)
         if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+        // Optionally add media nodes too
+        await maybeAppendMediaNodes([topicNode, ...placed], edgesPlaced as any)
         router.push(`/board/${boardId}`)
         return
       }
@@ -1143,74 +1047,43 @@ function BoardContent({
           const textItems = planned.filter((n: any) => n?.type === 'text')
           const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
 
-          // Row 1: text nodes (directly under topic)
-          const cellWidth = 300
-          const padding = 60
-          const rowY = topicNode.position.y + ROW_GAP
-          const count = Math.max(1, textItems.length)
-          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
-          const generatedNodes: any[] = textItems.map((it: any, index: number) => {
-            const position = { x: startX + index * (cellWidth + padding), y: rowY }
-            return {
-              id: `starter-node-${Date.now()}-${index}`,
+          const nodesToPlace = [
+            ...textItems.map((it: any) => ({
+              title: String(it?.title || '').trim() || 'Untitled',
+              content: String(it?.content || ''),
               type: 'default' as const,
-              position,
-              data: { title: String(it?.title || ''), content: String(it?.content || '') }
-            }
-          })
-
-          // Row 2: media nodes (supporting)
-          const mCellWidth = 320
-          const mPadding = 60
-          const mRowY = topicNode.position.y + (ROW_GAP * 2)
-          const mCount = mediaItems.length
-          const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
-          const mStartX = topicNode.position.x - mGroupWidth / 2 + mCellWidth / 2
-          const mediaNodes: any[] = mediaItems.map((it: any, index: number) => {
-            const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
-            const position = { x: mStartX + index * (mCellWidth + mPadding), y: mRowY }
-            if (it?.type === 'image') {
-              return {
-                id,
-                type: 'image' as const,
-                position,
-                data: {
+              parentId: topicNode.id,
+            })),
+            ...mediaItems.map((it: any) => {
+              const t = String(it?.type || '').toLowerCase()
+              if (t === 'image') {
+                return {
                   title: String(it?.title || 'Image'),
                   content: String(it?.content || ''),
-                  previewUrl: String(it?.imageUrl || ''),
                   type: 'image',
-                  status: 'ready',
-                  titleSize: 'sm',
-                } as any
+                  parentId: topicNode.id,
+                  data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any,
+                }
               }
-            }
-            return {
-              id,
-              type: 'video' as const,
-              position,
-              data: {
+              return {
                 title: String(it?.title || 'Video'),
                 content: String(it?.content || ''),
-                videoUrl: String(it?.videoUrl || ''),
-                status: 'idle',
-                titleSize: 'sm',
-              } as any
-            }
-          })
+                type: 'video',
+                parentId: topicNode.id,
+                data: { videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any,
+              }
+            })
+          ]
 
-          const allNew = [...generatedNodes, ...mediaNodes]
-          const generatedEdges = allNew.map((n: any) => ({
-            id: `edge-${Date.now()}-${n.id}`,
-            source: topicNode.id,
-            target: n.id,
-            type: toVisualEdgeType(edgeTypePref) as any
-          }))
-          setNodes([topicNode, ...allNew])
-          setEdges(generatedEdges as any)
-          const boardData = { nodes: [topicNode, ...allNew], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          if (!result.success || !result.placements.length) throw new Error('Placement failed')
+          const placedNodes: any[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+          const placedEdges: any[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+          setNodes([topicNode, ...placedNodes])
+          setEdges(placedEdges as any)
+          const boardData = { nodes: [topicNode, ...placedNodes], edges: placedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
           await boardStorage.updateBoard(boardId, boardData)
-          showAddToast('added', allNew.length)
+          showAddToast('added', placedNodes.length)
           setHasUnsavedChanges(false)
           if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
           router.push(`/board/${boardId}`)
@@ -1235,35 +1108,29 @@ function BoardContent({
             const base = brief.description?.trim() ? `Context: ${brief.description.trim()}. ` : ''
             return `${base}${hint}`
           }
-          const cellWidth = 300
-          const padding = 60
-          const count = titles.length
-          const rowY = topicNode.position.y + (cellWidth - 100)
-          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-          const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
-          const generatedNodes = titles.map((title, index) => {
-            const position = { x: startX + index * (cellWidth + padding), y: rowY }
-            const contentHints = [
-              desc('Summarize the goals and scope.'),
-              desc('List 3–6 bullet points that capture the theme.'),
-              desc('Write a short step-by-step outline.'),
-              desc('List tools, links, or references to consider.'),
-              desc('Propose 3 immediate, concrete next steps.')
-            ]
-            return {
-              id: `starter-node-${Date.now()}-${index}`,
-              type: 'default' as const,
-              position,
-              data: { title, content: contentHints[index] || '' }
-            }
-          })
-          const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
-          setNodes([topicNode, ...generatedNodes])
-          setEdges(generatedEdges as any)
-          const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          const contentHints = [
+            desc('Summarize the goals and scope.'),
+            desc('List 3–6 bullet points that capture the theme.'),
+            desc('Write a short step-by-step outline.'),
+            desc('List tools, links, or references to consider.'),
+            desc('Propose 3 immediate, concrete next steps.')
+          ]
+          const nodesToPlace = titles.map((title, index) => ({
+            title,
+            content: contentHints[index] || '',
+            type: 'default' as const,
+            parentId: topicNode.id,
+          }))
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          if (!result.success || !result.placements.length) throw new Error('Placement failed')
+          const placedNodes: any[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+          const placedEdges: any[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+          setNodes([topicNode, ...placedNodes])
+          setEdges(placedEdges as any)
+          const boardData = { nodes: [topicNode, ...placedNodes], edges: placedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
           await boardStorage.updateBoard(boardId, boardData)
-          const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
-          showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
+          const appended = await maybeAppendMediaNodes([topicNode, ...placedNodes], placedEdges as any)
+          showAddToast('added', placedNodes.length + (appended?.mediaCount || 0))
           setHasUnsavedChanges(false)
           if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
           router.push(`/board/${boardId}`)
@@ -1283,99 +1150,63 @@ function BoardContent({
         }
         
         const nodeDataArray = JSON.parse(jsonContent)
-        if (Array.isArray(nodeDataArray) && nodeDataArray.length > 0) {
-          // Use our intelligent placement system for board creation
-          try {
-            // Deterministic single-row placement under parent (match reorg fallback)
-            const nodesToPlace = nodeDataArray.map((nodeData: any) => ({ title: nodeData.label, content: nodeData.content }))
-              const count = nodesToPlace.length
-            const cellWidth = 300
-            const padding = 60
-            const rowY = topicNode.position.y + (cellWidth - 100)
-            const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-            const startX = topicNode.position.x - groupWidth / 2 + cellWidth / 2
-              const generatedNodes = nodesToPlace.map((n: any, index: number) => {
-              const position = { x: startX + index * (cellWidth + padding), y: rowY }
-                return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: n.title, content: n.content } }
-              })
-            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
-              setNodes([topicNode, ...generatedNodes])
-              setEdges(generatedEdges as any)
-              const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-              await boardStorage.updateBoard(boardId, boardData)
-              const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
-              showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
-            
-          } catch (placementError) {
-            // Fallback: fan around topic
-            const count = nodeDataArray.length
-            const radius = 250
-            const angleCenter = Math.PI / 2
-            const angleStep = (Math.PI) / Math.max(count, 1)
-            const generatedNodes = nodeDataArray.map((nodeData: any, index: number) => {
-              const angle = angleCenter - (angleStep * ((count - 1) / 2 - index))
-              const position = { x: 500 + radius * Math.cos(angle), y: 400 + radius * Math.sin(angle) }
-              return { id: `starter-node-${Date.now()}-${index}`, type: 'default' as const, position, data: { title: nodeData.label, content: nodeData.content } }
-            })
-            const generatedEdges = generatedNodes.map(n => ({ id: `edge-${Date.now()}-${n.id}`, source: topicNode.id, target: n.id, type: toVisualEdgeType(edgeTypePref) as any }))
-            setNodes([topicNode, ...generatedNodes])
-            setEdges(generatedEdges as any)
-            const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-            await boardStorage.updateBoard(boardId, boardData)
-            const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
-            showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
-          }
-          
-          // Update save status
-          // Save state handled by autosave hook; avoid using setSaveStatus here
-          setHasUnsavedChanges(false)
-          
-          if (onBoardStateChange) {
-            onBoardStateChange(brief.boardName, 'saved', false)
-          }
-          
-          // Navigate to the board URL after successful AI generation
+        const asArray: any[] = Array.isArray(nodeDataArray) ? nodeDataArray : []
+
+        // Always go through the core placement engine for starter node placement.
+        const nodesToPlace = (asArray.length ? asArray : [{
+          label: `Getting Started with ${brief.boardTopic}`,
+          content: responseContent || '',
+        }]).map((nodeData: any) => ({
+          title: String(nodeData.label || 'Node'),
+          content: String(nodeData.content || ''),
+          type: 'default' as const,
+          parentId: topicNode.id,
+        }))
+
+        const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+        if (!result.success || !result.placements.length) {
           router.push(`/board/${boardId}`)
-        } else {
-          // Empty or non-array: fallback single node to avoid silent no-op
-          const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: response.content } }
-          const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: toVisualEdgeType(edgeTypePref) as any }
+          return
+        }
+
+        const generatedNodes: any[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
+        const generatedEdges: any[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+        setNodes([topicNode, ...generatedNodes])
+        setEdges(generatedEdges as any)
+        const boardData = { nodes: [topicNode, ...generatedNodes], edges: generatedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+        await boardStorage.updateBoard(boardId, boardData)
+        const appended = await maybeAppendMediaNodes([topicNode, ...generatedNodes], generatedEdges as any)
+        showAddToast('added', generatedNodes.length + (appended?.mediaCount || 0))
+
+        setHasUnsavedChanges(false)
+        if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+        router.push(`/board/${boardId}`)
+      } catch (parseError) {
+        // Could not parse node list; still create a single useful node via the placement engine.
+        try {
+          const nodesToPlace = [{
+            title: `Getting Started with ${brief.boardTopic}`,
+            content: String(responseContent || '').trim(),
+            type: 'default' as const,
+            parentId: topicNode.id,
+          }]
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          const placed = result.placements?.[0]
+          if (!placed) { router.push(`/board/${boardId}`); return }
+          const newNode: any = { id: placed.node.id, type: placed.node.type, position: placed.position, data: { ...placed.node.data } }
+          const newEdges: any[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
           setNodes([topicNode, newNode])
-          setEdges([newEdge] as any)
-          const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+          setEdges(newEdges as any)
+          const boardData = { nodes: [topicNode, newNode], edges: newEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
           await boardStorage.updateBoard(boardId, boardData)
-          const appended = await maybeAppendMediaNodes([topicNode, newNode], [newEdge] as any)
+          const appended = await maybeAppendMediaNodes([topicNode, newNode], newEdges as any)
           showAddToast('added', 1 + (appended?.mediaCount || 0))
           setHasUnsavedChanges(false)
           if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
           router.push(`/board/${boardId}`)
+        } catch {
+          router.push(`/board/${boardId}`)
         }
-      } catch (parseError) {
-        // console.error('Failed to parse AI response:', parseError)
-        const newNode = { id: `starter-node-${Date.now()}`, type: 'default' as const, position: { x: topicNode.position.x + 250, y: topicNode.position.y }, data: { title: `Getting Started with ${brief.boardTopic}`, content: responseContent } }
-        const newEdge = { id: `edge-${Date.now()}-${newNode.id}`, source: topicNode.id, target: newNode.id, type: toVisualEdgeType(edgeTypePref) as any }
-        setNodes([topicNode, newNode])
-        setEdges([newEdge] as any)
-        
-        // Save with topic and connection
-        const boardData = { nodes: [topicNode, newNode], edges: [newEdge] as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
-        
-        // console.log('💾 Saving single generated node immediately...')
-        await boardStorage.updateBoard(boardId, boardData)
-        const appended = await maybeAppendMediaNodes([topicNode, newNode], [newEdge] as any)
-        showAddToast('added', 1 + (appended?.mediaCount || 0))
-        // console.log('✅ Single generated node saved successfully')
-        
-        // Update save status
-        // Save state handled by autosave hook
-        setHasUnsavedChanges(false)
-        
-        if (onBoardStateChange) {
-          onBoardStateChange(brief.boardName, 'saved', false)
-        }
-        
-        // Navigate to the board URL after fallback node creation
-        router.push(`/board/${boardId}`)
       }
     } catch (error) {
       try {
@@ -1458,12 +1289,22 @@ function BoardContent({
           // console.log('✅ Blank board created and saved:', boardName)
           // Always create and persist a topic node immediately so the board is interactive
           const topicNodeId = `topic-${boardId}`
-          const topicNode = {
-            id: topicNodeId,
-            type: 'default' as const,
-            position: { x: 500, y: 400 },
-            data: { title: pendingBoardBrief.boardTopic, content: '' },
-          }
+          // Place topic node via the core placement engine (avoids overlaps and keeps placement consistent)
+          const center = getViewportCenter()
+          let topicNode: any = { id: topicNodeId, type: 'default' as const, position: center, data: { title: pendingBoardBrief.boardTopic, content: '' } }
+          try {
+            const res = await placeManualNode(
+              { id: topicNodeId, title: pendingBoardBrief.boardTopic, content: '', type: 'default', preferredPosition: center } as any,
+              center,
+              { minDistance: 80, avoidOverlap: true, preserveExistingLayout: true },
+              (useBoardStore.getState().nodes || []) as any
+            )
+            const placement = res.placements?.[0]
+            if (placement) {
+              topicNode = { id: placement.node.id, type: placement.node.type as any, position: placement.position, data: { ...placement.node.data } }
+            }
+          } catch {}
+
           setNodes((prev) => {
             const list = Array.isArray(prev) ? prev : []
             const exists = list.some((n: any) => n.id === topicNodeId)
@@ -1770,27 +1611,29 @@ function BoardContent({
   
   // Handle adding nodes
   const handleAddNode = useCallback((nodeData: { title: string; content?: string }, position: { x: number; y: number }) => {
-    pushHistory()
-    // console.log('➕ Adding new node:', { nodeData, position })
-    const newNode: Node = {
-      id: `node-${Date.now()}`,
-      type: 'default',
-      position,
-      data: { 
-        title: nodeData.title,
-        content: nodeData.content 
-      },
-    }
-    // Use React Flow's addNode utility
-    const addNode = (node: Node) => {
-      // console.log('📝 Adding node to state:', node.id)
-      setNodes((nds) => {
-        if (!Array.isArray(nds)) return [node]
-        return [...nds, node]
-      })
-    }
-    addNode(newNode)
-  }, [setNodes, pushHistory])
+    ;(async () => {
+      try {
+        pushHistory()
+        const title = String(nodeData.title || '').trim() || 'Untitled'
+        const content = nodeData.content
+
+        const result = await placeManualNode(
+          { title, content, type: 'default', preferredPosition: position } as any,
+          position,
+          { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+          (useBoardStore.getState().nodes || []) as any
+        )
+        const placement = result.placements?.[0]
+        if (!placement) return
+        const newNode: Node = { id: placement.node.id, type: placement.node.type as any, position: placement.position, data: { ...placement.node.data } as any }
+
+        setNodes((nds) => {
+          if (!Array.isArray(nds)) return [newNode]
+          return [...nds, newNode]
+        })
+      } catch {}
+    })()
+  }, [setNodes, pushHistory, placeManualNode])
 
   // Add handler for node setup modal
   const handleNodeSetupComplete = useCallback((nodeData: { title: string; content?: string }) => {
@@ -1819,65 +1662,47 @@ function BoardContent({
   useEffect(() => {
     const onAddNodes = (ev: Event) => {
       if (readOnly) return
-      try {
-        const detail = (ev as CustomEvent<any>)?.detail
-        const itemsAll: Array<{ title: string; content?: string }> = Array.isArray(detail?.nodes) ? detail.nodes : []
-        const items = itemsAll.slice(0, 10)
-        if (!items.length) return
-        pushHistory()
-        const selectedIds: string[] = (useBoardStore.getState().selectedNodeIds || []) as any
-        const singleSelectedId = Array.isArray(selectedIds) && selectedIds.length === 1 ? selectedIds[0] : null
+      ;(async () => {
+        try {
+          const detail = (ev as CustomEvent<any>)?.detail
+          const itemsAll: Array<{ title: string; content?: string }> = Array.isArray(detail?.nodes) ? detail.nodes : []
+          const MAX_NOBOT_ADD_NODES = 25
+          const items = itemsAll.slice(0, MAX_NOBOT_ADD_NODES)
+          if (!items.length) return
 
-        if (singleSelectedId) {
-          // Deterministic single row under parent, centered
-          const storeNodes = (useBoardStore.getState().nodes || []) as any[]
-          const parent = storeNodes.find((n) => n.id === singleSelectedId)
-          const cellWidth = 300
-          const padding = 60
-          const baseX = parent?.position?.x ?? getViewportCenter().x
-          const baseY = (parent?.position?.y ?? getViewportCenter().y) + (cellWidth - 100)
-          const count = items.length
-          const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-          const startX = baseX - groupWidth / 2 + cellWidth / 2
-          const createdIds: string[] = []
-          items.forEach((it, index) => {
-            const position = { x: startX + index * (cellWidth + padding), y: baseY }
-            const id = `node-${Date.now()}-${index}`
-            const newNode: Node = { id, type: 'default', position, data: { title: String(it.title || ''), content: String(it.content || '') } as any }
-            handleAddNodeToStore(newNode)
-            createdIds.push(id)
-          })
-          if (createdIds.length > 0) {
-            const edgesToAdd = createdIds.map((cid) => ({ id: `edge-${Date.now()}-${cid}`, source: singleSelectedId, target: cid, type: 'floating' as any }))
-            setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
+          pushHistory()
+          const selectedIds: string[] = (useBoardStore.getState().selectedNodeIds || []) as any
+          const singleSelectedId = Array.isArray(selectedIds) && selectedIds.length === 1 ? selectedIds[0] : null
+
+          const nodesToPlace = items.map((it) => ({
+            title: String(it.title || '').trim() || 'Untitled',
+            content: String(it.content || ''),
+            type: 'default' as const,
+            ...(singleSelectedId ? { parentId: singleSelectedId } : {})
+          }))
+
+          // Always go through the placement engine so behavior stays consistent across all entrypoints.
+          const result = await placeAINodes(
+            nodesToPlace,
+            singleSelectedId || undefined,
+            { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }
+          )
+
+          if (!result.success || !result.placements.length) return
+          const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+          setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+          if (result.connections.length > 0) {
+            const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+            setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
           }
-          showAddToast('generated', items.length)
-        } else {
-          // Place around viewport center without connections
-          const center = getViewportCenter()
-          const cols = Math.ceil(Math.sqrt(items.length))
-          const xGap = 240
-          const yGap = 160
-          const xOffsetBase = -((cols - 1) * xGap) / 2
-          items.forEach((it, idx) => {
-            const col = idx % cols
-            const row = Math.floor(idx / cols)
-            const position = { x: center.x + xOffsetBase + col * xGap, y: center.y + row * yGap }
-            const newNode: Node = {
-              id: `node-${Date.now()}-${idx}`,
-              type: 'default',
-              position,
-              data: { title: it.title || 'Untitled', content: it.content || '' } as any,
-            }
-            handleAddNodeToStore(newNode)
-          })
-          showAddToast('generated', items.length)
-        }
-      } catch {}
+          showAddToast('generated', newNodes.length)
+          centerOnNodeIds(newNodes.map(n => n.id))
+        } catch {}
+      })()
     }
     window.addEventListener('nodal:add-nodes', onAddNodes as EventListener)
     return () => window.removeEventListener('nodal:add-nodes', onAddNodes as EventListener)
-  }, [readOnly, getViewportCenter, handleAddNodeToStore, showAddToast, pushHistory])
+  }, [readOnly, pushHistory, placeAINodes, setNodes, setEdges, showAddToast, centerOnNodeIds, toVisualEdgeType, edgeTypePref])
 
   const saveBoard = useCallback(async (name?: string) => {
     await manualSave(nodes, pruneGhostEdges(nodes, edges), name)
@@ -2136,23 +1961,32 @@ function BoardContent({
 
           const newId = `summary-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
           const basePos = { x: cx + 60, y: cy + 40 }
-          const newNode: any = {
-            id: newId,
-            type: 'default',
-            position: basePos,
-            data: {
+
+          const placementResult = await placeManualNode(
+            {
+              id: newId,
               title,
               content: html,
-              summaryDerived: true,
-              summarySourceIds: ids,
-              titleSize: 'md',
-              // Summary nodes are intentionally wider to fit structured content.
-              width: 480,
+              type: 'default',
+              data: {
+                title,
+                content: html,
+                summaryDerived: true,
+                summarySourceIds: ids,
+                titleSize: 'md',
+                // Summary nodes are intentionally wider to fit structured content.
+                width: 480,
+              } as any,
+              preferredPosition: basePos,
             } as any,
-          }
+            basePos,
+            { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+            nodesList as any
+          )
 
-          const dx = computeNewGroupShiftX(nodesList as any, [newNode] as any, [])
-          const placed = dx ? { ...newNode, position: { x: basePos.x + dx, y: basePos.y } } : newNode
+          const placement = placementResult.placements?.[0]
+          if (!placement) throw new Error('No placement returned')
+          const placed: any = { id: placement.node.id, type: placement.node.type, position: placement.position, data: { ...placement.node.data } }
 
           pushHistory()
           setNodes((nds) => {
@@ -2182,7 +2016,7 @@ function BoardContent({
       window.removeEventListener('nodal:bulk-delete', onBulkDelete as EventListener)
       window.removeEventListener('nodal:summarize-selection', onSummarizeSelection as EventListener)
     }
-  }, [reactFlowInstance, readOnly, boardId, getApproxDims, computeNewGroupShiftX, pushHistory, setNodes, showAddToast, centerOnNodeIds, summarizingSelection])
+  }, [reactFlowInstance, readOnly, boardId, getApproxDims, pushHistory, setNodes, showAddToast, centerOnNodeIds, summarizingSelection, placeManualNode])
 
   // Global drag event listener to handle files dragged from outside
   useEffect(() => {
@@ -4106,83 +3940,45 @@ function BoardContent({
               const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
               if (!textItems.length && !mediaItems.length) return
 
-              const parent = parentId ? nodesList.find(n => n.id === parentId) : undefined
-              const cellWidth = 300
-              const padding = 60
-              const baseX = parent?.position?.x ?? getViewportCenter().x
-              const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
-              const count = textItems.length
-              const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-              const startX = baseX - groupWidth / 2 + cellWidth / 2
-
-              const created: Node[] = textItems.map((it: any, index: number) => ({
-                id: `node-${Date.now()}-${index}`,
-                type: 'default',
-                position: { x: startX + index * (cellWidth + padding), y: baseY },
-                data: { title: String(it?.title || ''), content: String(it?.content || '') } as any,
-              } as any))
-
-              const createdEdges: Edge[] = parentId
-                ? created.map((n) => ({
-                    id: `edge-${Date.now()}-${n.id}`,
-                    source: parentId!,
-                    target: n.id,
-                    type: toVisualEdgeType(edgeTypePref) as any,
-                  }) as any)
-                : []
-
-              let mediaNodes: Node[] = []
-              let mediaEdges: Edge[] = []
-              if (withMedia && mediaItems.length) {
-                const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
-                const mCellWidth = 320
-                const mPadding = 60
-                const mCount = mediaItems.length
-                const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
-                const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
-                mediaNodes = mediaItems.map((it: any, index: number) => {
-                  const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
-                  const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
-                  if (it?.type === 'image') {
-                    return { id, type: 'image' as any, position, data: { title: String(it?.title || 'Image'), content: String(it?.content || ''), previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
+              const nodesToPlace = [
+                ...textItems.map((it: any) => ({
+                  title: String(it?.title || '').trim() || 'Untitled',
+                  content: String(it?.content || ''),
+                  type: 'default' as const,
+                  ...(parentId ? { parentId } : {})
+                })),
+                ...(withMedia ? mediaItems.map((it: any) => {
+                  const t = String(it?.type || '').toLowerCase()
+                  if (t === 'image') {
+                    return {
+                      title: String(it?.title || 'Image'),
+                      content: String(it?.content || ''),
+                      type: 'image' as const,
+                      ...(parentId ? { parentId } : {}),
+                      data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
+                    }
                   }
-                  return { id, type: 'video' as any, position, data: { title: String(it?.title || 'Video'), content: String(it?.content || ''), videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any } as any
-                })
-                mediaEdges = parentId
-                  ? mediaNodes.map((n) => ({
-                      id: `edge-${Date.now()}-${n.id}`,
-                      source: parentId!,
-                      target: n.id,
-                      type: toVisualEdgeType(edgeTypePref) as any,
-                    }) as any)
-                  : []
+                  return {
+                    title: String(it?.title || 'Video'),
+                    content: String(it?.content || ''),
+                    type: 'video' as const,
+                    ...(parentId ? { parentId } : {}),
+                    data: { videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any
+                  }
+                }) : [])
+              ]
+
+              const result = await placeAINodes(nodesToPlace as any, parentId, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+              if (result.success && result.placements.length > 0) {
+                const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                if (result.connections.length > 0) {
+                  const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                }
+                showAddToast('added', newNodes.length)
+                centerOnNodeIds(newNodes.map(n => n.id))
               }
-
-              // Keep rows consistent: never move existing nodes on the board during AI placement.
-              // If we need room, shift ONLY the new group in X until it fits (otherwise accept overlap).
-              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
-              const shifted = dx > 0
-              const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
-              const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
-              const mediaShifted = mediaNodes.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
-
-              setNodes((nds) => {
-                const cur = Array.isArray(nds) ? nds : []
-                const next = shifted && parentId
-                  ? cur.map((n: any) => (n.id === parentId ? { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } } : n))
-                  : cur
-                return [...next, ...createdShifted, ...mediaShifted]
-              })
-              if (createdEdges.length || mediaEdges.length) {
-                setEdges((eds) => {
-                  const cur = Array.isArray(eds) ? eds : []
-                  return [...cur, ...(createdEdges as any), ...(mediaEdges as any)]
-                })
-              }
-
-              const totalNew = created.length + mediaNodes.length
-              showAddToast('added', totalNew, shifted ? 'Shifted cluster to fit new nodes' : undefined)
-              centerOnNodeIds([...createdShifted, ...mediaShifted].map(n => n.id))
             } catch {}
             finally { try { setQuickAiGenerating?.(false) } catch {} }
           }
@@ -4274,80 +4070,45 @@ function BoardContent({
               const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
               if (!textItems.length && !mediaItems.length) return
 
-              const parent = parentId ? nodesList.find(n => n.id === parentId) : undefined
-              const cellWidth = 300
-              const padding = 60
-              const baseX = parent?.position?.x ?? getViewportCenter().x
-              const baseY = (parent?.position?.y ?? getViewportCenter().y) + ROW_GAP
-              const count = textItems.length
-              const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-              const startX = baseX - groupWidth / 2 + cellWidth / 2
-              const created: Node[] = textItems.map((it: any, index: number) => ({
-                id: `node-${Date.now()}-${index}`,
-                type: 'default',
-                position: { x: startX + index * (cellWidth + padding), y: baseY },
-                data: { title: String(it?.title || ''), content: String(it?.content || '') } as any,
-              } as any))
-
-              const createdEdges: Edge[] = parentId
-                ? created.map((n) => ({
-                    id: `edge-${Date.now()}-${n.id}`,
-                    source: parentId!,
-                    target: n.id,
-                    type: toVisualEdgeType(edgeTypePref) as any,
-                  }) as any)
-                : []
-
-              let mediaNodes: Node[] = []
-              let mediaEdges: Edge[] = []
-              if (mediaItems.length) {
-                const rowY = (parent?.position?.y ?? getViewportCenter().y) + (ROW_GAP * 2)
-                const mCellWidth = 320
-                const mPadding = 60
-                const mCount = mediaItems.length
-                const mGroupWidth = (mCount * mCellWidth) + Math.max(0, mCount - 1) * mPadding
-                const mStartX = baseX - mGroupWidth / 2 + mCellWidth / 2
-                mediaNodes = mediaItems.map((it: any, index: number) => {
-                  const id = `media-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`
-                  const position = { x: mStartX + index * (mCellWidth + mPadding), y: rowY }
-                  if (it?.type === 'image') {
-                    return { id, type: 'image' as any, position, data: { title: String(it?.title || 'Image'), content: String(it?.content || ''), previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any } as any
+              const nodesToPlace = [
+                ...textItems.map((it: any) => ({
+                  title: String(it?.title || '').trim() || 'Untitled',
+                  content: String(it?.content || ''),
+                  type: 'default' as const,
+                  ...(parentId ? { parentId } : {})
+                })),
+                ...mediaItems.map((it: any) => {
+                  const t = String(it?.type || '').toLowerCase()
+                  if (t === 'image') {
+                    return {
+                      title: String(it?.title || 'Image'),
+                      content: String(it?.content || ''),
+                      type: 'image' as const,
+                      ...(parentId ? { parentId } : {}),
+                      data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
+                    }
                   }
-                  return { id, type: 'video' as any, position, data: { title: String(it?.title || 'Video'), content: String(it?.content || ''), videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any } as any
+                  return {
+                    title: String(it?.title || 'Video'),
+                    content: String(it?.content || ''),
+                    type: 'video' as const,
+                    ...(parentId ? { parentId } : {}),
+                    data: { videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any
+                  }
                 })
-                mediaEdges = parentId
-                  ? mediaNodes.map((n) => ({
-                      id: `edge-${Date.now()}-${n.id}`,
-                      source: parentId!,
-                      target: n.id,
-                      type: toVisualEdgeType(edgeTypePref) as any,
-                    }) as any)
-                  : []
+              ]
+
+              const result = await placeAINodes(nodesToPlace as any, parentId, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+              if (result.success && result.placements.length > 0) {
+                const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                if (result.connections.length > 0) {
+                  const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
+                }
+                showAddToast('added', newNodes.length)
+                centerOnNodeIds(newNodes.map(n => n.id))
               }
-
-              const dx = computeNewGroupShiftX(nodesList as any, [...created, ...mediaNodes] as any, parentId ? [parentId] : [])
-              const shifted = dx > 0
-              const shiftPos = (p: any) => ({ x: Number(p?.x || 0) + dx, y: Number(p?.y || 0) })
-              const createdShifted = created.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
-              const mediaShifted = mediaNodes.map((n: any) => ({ ...n, position: shiftPos(n.position) }))
-
-              setNodes((nds) => {
-                const cur = Array.isArray(nds) ? nds : []
-                const next = shifted && parentId
-                  ? cur.map((n: any) => (n.id === parentId ? { ...n, position: { x: Number(n.position?.x || 0) + dx, y: Number(n.position?.y || 0) } } : n))
-                  : cur
-                return [...next, ...createdShifted, ...mediaShifted]
-              })
-              if (createdEdges.length || mediaEdges.length) {
-                setEdges((eds) => {
-                  const cur = Array.isArray(eds) ? eds : []
-                  return [...cur, ...(createdEdges as any), ...(mediaEdges as any)]
-                })
-              }
-
-              const totalNew = created.length + mediaNodes.length
-              showAddToast('added', totalNew, shifted ? 'Shifted cluster to fit new nodes' : undefined)
-              centerOnNodeIds([...createdShifted, ...mediaShifted].map(n => n.id))
             } catch {}
             finally { try { setQuickAiGenerating?.(false) } catch {} }
           }
@@ -4847,24 +4608,48 @@ function BoardContent({
                 onAIGenerate={handleOpenAINodeGenerator}
                 onUploadDocument={openUploadPicker}
           onAddTask={() => {
-            // Mirror context menu Add Task behavior
-            const center = getViewportCenter()
-            const flowPosition = center
-            pushHistory()
-            const newId = `task-${Date.now()}`
-            const newNode: Node = { id: newId, type: 'task', position: flowPosition, data: { title: '', content: '', completed: false, focusOnMount: true } }
-            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
-            showAddToast('added', 1)
-            setTimeout(() => { try { setEditNodeId(newId); centerOnNodeIds([newId], { align: 'midLeft' }) } catch {} }, 0)
+            ;(async () => {
+              const center = getViewportCenter()
+              pushHistory()
+              const newId = `task-${Date.now()}`
+              try {
+                const res = await placeManualNode(
+                  { id: newId, title: '', content: '', type: 'task', preferredPosition: center, data: { title: '', content: '', completed: false, focusOnMount: true, aiGenerated: false } } as any,
+                  center,
+                  { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+                  (useBoardStore.getState().nodes || []) as any
+                )
+                const placed = res.placements?.[0]
+                const node: Node = placed
+                  ? ({ id: placed.node.id, type: placed.node.type as any, position: placed.position, data: { ...placed.node.data } } as any)
+                  : ({ id: newId, type: 'task', position: center, data: { title: '', content: '', completed: false, focusOnMount: true, aiGenerated: false } } as any)
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+                showAddToast('added', 1)
+                setTimeout(() => { try { setEditNodeId(node.id); centerOnNodeIds([node.id], { align: 'midLeft' }) } catch {} }, 0)
+              } catch {}
+            })()
           }}
           onAddHeadline={() => {
-            const center = getViewportCenter()
-            pushHistory()
-            const newId = `headline-${Date.now()}`
-            const newNode: Node = { id: newId, type: 'headline', position: center, data: { title: 'New headline', titleSize: 'sm' } as any }
-            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
-            showAddToast('added', 1)
-            setTimeout(() => { try { setEditNodeId(newId); centerOnNodeIds([newId], { align: 'midLeft' }) } catch {} }, 0)
+            ;(async () => {
+              const center = getViewportCenter()
+              pushHistory()
+              const newId = `headline-${Date.now()}`
+              try {
+                const res = await placeManualNode(
+                  { id: newId, title: 'New headline', content: '', type: 'headline', preferredPosition: center, data: { title: 'New headline', titleSize: 'sm', aiGenerated: false } } as any,
+                  center,
+                  { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+                  (useBoardStore.getState().nodes || []) as any
+                )
+                const placed = res.placements?.[0]
+                const node: Node = placed
+                  ? ({ id: placed.node.id, type: placed.node.type as any, position: placed.position, data: { ...placed.node.data } } as any)
+                  : ({ id: newId, type: 'headline', position: center, data: { title: 'New headline', titleSize: 'sm', aiGenerated: false } as any } as any)
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+                showAddToast('added', 1)
+                setTimeout(() => { try { setEditNodeId(node.id); centerOnNodeIds([node.id], { align: 'midLeft' }) } catch {} }, 0)
+              } catch {}
+            })()
                 }}
                 onReorganize={() => setShowReorganizeMenu(true)}
                 aiInitialized={aiInitialized}
@@ -4946,116 +4731,58 @@ function BoardContent({
             if (pendingSourceNodeId) {
               const nodesToPlace = titles.map((t) => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const, parentId: pendingSourceNodeId }))
               try {
-                const result = await placeAINodes(nodesToPlace, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40 })
-                if (result.success && result.placements.length > 0) {
-                  const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
-                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-                  if (result.connections.length > 0) {
-                    const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
-                    setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-                  }
-                  showAddToast('added', newNodes.length)
-                  centerOnNodeIds(newNodes.map(n => n.id))
-                } else {
-                  // Fallback deterministic single row directly under parent with edges (match board creation)
-                  const parent = (useBoardStore.getState().nodes || []).find(n => n.id === pendingSourceNodeId)
-                  const cellWidth = 300
-                  const padding = 60
-                  const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
-                  const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + (cellWidth - 100)
-                  const created: Node[] = []
-                  const edgesToAdd: Edge[] = []
-                  const count = titles.length
-                  const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-                  const startX = baseX - groupWidth / 2 + cellWidth / 2
-                  for (let idx = 0; idx < count; idx++) {
-                    const pos = { x: startX + idx * (cellWidth + padding), y: baseY }
-                    const id = `node-${Date.now()}-${idx}`
-                    created.push({ id, type: 'default', position: pos, data: { title: titles[idx], content: descriptionsByTitle[titles[idx]] || '' } } as any)
-                    edgesToAdd.push({ id: `edge-${Date.now()}-${id}`, source: pendingSourceNodeId, target: id, type: toVisualEdgeType(edgeTypePref) as any } as any)
-                  }
-                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
-                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
-                  showAddToast('added', created.length)
-                  centerOnNodeIds(created.map(n => n.id))
+                pushHistory()
+                const result = await placeAINodes(nodesToPlace as any, pendingSourceNodeId, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+                if (!result.success || result.placements.length === 0) return
+                const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                if (result.connections.length > 0) {
+                  const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
                 }
+                showAddToast('added', newNodes.length)
+                centerOnNodeIds(newNodes.map(n => n.id))
               } catch {}
             } else if (titles.length === 1) {
               const target = pendingNodePosition || center
-              const newId = `node-${Date.now()}`
-              const newNode: Node = { id: newId, type: 'default', position: target, data: { title: titles[0], content: desc } }
-              setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
-              showAddToast('added', 1)
-              centerOnNodeIds([newId])
+              pushHistory()
+              try {
+                const newId = `node-${Date.now()}`
+                const res = await placeManualNode(
+                  { id: newId, title: titles[0], content: desc, type: 'default', preferredPosition: target, data: { aiGenerated: false } } as any,
+                  target,
+                  { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+                  (useBoardStore.getState().nodes || []) as any
+                )
+                const placed = res.placements?.[0]
+                const node: Node = placed
+                  ? ({ id: placed.node.id, type: placed.node.type as any, position: placed.position, data: { ...placed.node.data } } as any)
+                  : ({ id: newId, type: 'default', position: target, data: { title: titles[0], content: desc, aiGenerated: false } } as any)
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+                showAddToast('added', 1)
+                centerOnNodeIds([node.id])
+              } catch {}
             } else {
-              if (pendingNodePosition) {
-                const count = titles.length
-                const columns = Math.ceil(Math.sqrt(count))
-                const rows = Math.ceil(count / columns)
-                const spacingX = 300
-                const spacingY = 200
-                const startX = pendingNodePosition.x - ((columns - 1) * spacingX) / 2
-                const startY = pendingNodePosition.y - ((rows - 1) * spacingY) / 2
-                const created: Node[] = []
-                let idx = 0
-                for (let r = 0; r < rows; r++) {
-                  for (let c = 0; c < columns; c++) {
-                    if (idx >= count) break
-                    const x = startX + c * spacingX
-                    const y = startY + r * spacingY
-                    created.push({ id: `node-${Date.now()}-${idx}`, type: 'default', position: { x, y }, data: { title: titles[idx], content: descriptionsByTitle[titles[idx]] || '' } })
-                    idx++
-                  }
-                }
-                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...created] : [...created]))
-                showAddToast('added', created.length)
-                centerOnNodeIds(created.map(n => n.id))
-              } else {
-                const nodesToPlace = titles.map(t => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const }))
-                let placed = false
-                try {
-                  const placementResult = await placeBoardNodes(nodesToPlace)
-                  if (placementResult.success && placementResult.placements.length > 0) {
-                    const newNodes: Node[] = placementResult.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
-                    setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-                    placed = true
-                    showAddToast('added', newNodes.length)
-                    centerOnNodeIds(newNodes.map(n => n.id))
-                  }
-                } catch {}
-                if (!placed) {
-                  const count = titles.length
-                  const columns = Math.ceil(Math.sqrt(count))
-                  const rows = Math.ceil(count / columns)
-                  const spacingX = 300
-                  const spacingY = 200
-                  const startX = center.x - ((columns - 1) * spacingX) / 2
-                  const startY = center.y - ((rows - 1) * spacingY) / 2
-                  const fallbackNodes: Node[] = []
-                  let idx = 0
-                  for (let r = 0; r < rows; r++) {
-                    for (let c = 0; c < columns; c++) {
-                      if (idx >= count) break
-                      const x = startX + c * spacingX
-                      const y = startY + r * spacingY
-                      fallbackNodes.push({ id: `node-${Date.now()}-${idx}`, type: 'default', position: { x, y }, data: { title: titles[idx], content: '' } })
-                      idx++
-                    }
-                  }
-                  setNodes((nds) => (Array.isArray(nds) ? [...nds, ...fallbackNodes] : [...fallbackNodes]))
-                  showAddToast('added', fallbackNodes.length)
-                  centerOnNodeIds(fallbackNodes.map(n => n.id))
-                }
-              }
+              pushHistory()
+              try {
+                const nodesToPlace = titles.map(t => ({ title: t, content: descriptionsByTitle[t] || '', type: 'default' as const, data: { aiGenerated: false } as any }))
+                const placementResult = await placeBoardNodes(nodesToPlace as any, { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+                if (!placementResult.success || placementResult.placements.length === 0) return
+                const newNodes: Node[] = placementResult.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
+                showAddToast('added', newNodes.length)
+                centerOnNodeIds(newNodes.map(n => n.id))
+              } catch {}
             }
             setShowUnifiedAddModal(false)
           }}
           onAIConfirm={async (items) => {
             try {
+              pushHistory()
               const nodesToPlace = items.map(p => ({ title: p.title, content: p.content || '', parentId: aiParentNodeId || pendingSourceNodeId }))
-              const result = await placeAINodes(nodesToPlace, aiParentNodeId || pendingSourceNodeId || undefined, { preferredDirection: 'down', minDistance: 40 })
+              const result = await placeAINodes(nodesToPlace as any, aiParentNodeId || pendingSourceNodeId || undefined, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
               if (result.success && result.placements.length > 0) {
-                const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type, position: p.position, data: { ...p.node.data } }))
+                const newNodes: Node[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
                 setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
                 if (result.connections.length > 0) {
                   const newEdges: Edge[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || 'floating' }))
@@ -5064,98 +4791,58 @@ function BoardContent({
                 showAddToast('generated', newNodes.length)
                 centerOnNodeIds(newNodes.map(n => n.id))
               } else {
-                // Secondary fallback: exact same single-row-under-parent placement used in board creation
-                const parentId = aiParentNodeId || pendingSourceNodeId
-                const parent = parentId ? (useBoardStore.getState().nodes || []).find(n => n.id === parentId) : undefined
-                const cellWidth = 300
-                const padding = 60
-                const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
-                const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + (cellWidth - 100)
-                const count = items.length
-                const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-                const startX = baseX - groupWidth / 2 + cellWidth / 2
-                const newNodes: Node[] = items.map((p, index) => {
-                  const position = { x: startX + index * (cellWidth + padding), y: baseY }
-                  return {
-                    id: `ai-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
-                    type: 'default',
-                    position,
-                    data: { title: p.title || '(untitled)', content: p.content || '' } as any
-                  }
-                })
-                setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-                if (parentId) {
-                  const newEdges: Edge[] = newNodes.map((n) => ({
-                    id: `e-${parentId}-${n.id}`,
-                    source: parentId,
-                    target: n.id,
-                    type: toVisualEdgeType(edgeTypePref) as any,
-                  }) as any)
-                  setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-                }
-                showAddToast('generated', newNodes.length)
-                centerOnNodeIds(newNodes.map(n => n.id))
+                try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'No nodes were placed. Please try again.', variant: 'warning' } })) } catch {}
               }
             } catch {
-              // Hard fallback on unexpected errors: same single-row-under-parent placement
-              const parentId = aiParentNodeId || pendingSourceNodeId
-              const parent = parentId ? (useBoardStore.getState().nodes || []).find(n => n.id === parentId) : undefined
-              const cellWidth = 300
-              const padding = 60
-              const baseX = parent?.position?.x ?? (pendingNodePosition?.x ?? getViewportCenter().x)
-              const baseY = (parent?.position?.y ?? (pendingNodePosition?.y ?? getViewportCenter().y)) + (cellWidth - 100)
-              const count = items.length
-              const groupWidth = (count * cellWidth) + Math.max(0, count - 1) * padding
-              const startX = baseX - groupWidth / 2 + cellWidth / 2
-              const newNodes: Node[] = items.map((p, index) => {
-                const position = { x: startX + index * (cellWidth + padding), y: baseY }
-                return {
-                  id: `ai-node-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
-                  type: 'default',
-                  position,
-                  data: { title: p.title || '(untitled)', content: p.content || '' } as any
-                }
-              })
-              setNodes((nds) => (Array.isArray(nds) ? [...nds, ...newNodes] : [...newNodes]))
-              if (parentId) {
-                const newEdges: Edge[] = newNodes.map((n) => ({
-                  id: `e-${parentId}-${n.id}`,
-                  source: parentId,
-                  target: n.id,
-                  type: toVisualEdgeType(edgeTypePref) as any,
-                }) as any)
-                setEdges((eds) => (Array.isArray(eds) ? [...eds, ...newEdges] : [...newEdges]))
-              }
-              showAddToast('generated', newNodes.length)
-              centerOnNodeIds(newNodes.map(n => n.id))
+              try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Failed to generate nodes. Please try again.', variant: 'warning' } })) } catch {}
             }
             setShowUnifiedAddModal(false)
           }}
           onVideoSubmit={(url) => {
-            const center = pendingNodePosition || getViewportCenter()
-            const newNode: Node = {
-              id: `video-${Date.now()}`,
-              type: 'video',
-              position: center,
-              data: { title: 'Video', videoUrl: url, status: 'idle' } as any,
-            }
-            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
-            setShowUnifiedAddModal(false)
-            showAddToast('added', 1)
-            centerOnNodeIds([newNode.id])
+            ;(async () => {
+              const center = pendingNodePosition || getViewportCenter()
+              pushHistory()
+              const newId = `video-${Date.now()}`
+              try {
+                const res = await placeManualNode(
+                  { id: newId, title: 'Video', content: '', type: 'video', preferredPosition: center, data: { videoUrl: url, status: 'idle', aiGenerated: false } } as any,
+                  center,
+                  { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+                  (useBoardStore.getState().nodes || []) as any
+                )
+                const placed = res.placements?.[0]
+                const node: Node = placed
+                  ? ({ id: placed.node.id, type: placed.node.type as any, position: placed.position, data: { ...placed.node.data } } as any)
+                  : ({ id: newId, type: 'video', position: center, data: { title: 'Video', videoUrl: url, status: 'idle', aiGenerated: false } } as any)
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+                setShowUnifiedAddModal(false)
+                showAddToast('added', 1)
+                centerOnNodeIds([node.id])
+              } catch {}
+            })()
           }}
           onLinkSubmit={(url) => {
-            const center = pendingNodePosition || getViewportCenter()
-            const newNode: Node = {
-              id: `link-${Date.now()}`,
-              type: 'link',
-              position: center,
-              data: { title: 'Link', linkUrl: url, status: 'idle' } as any,
-            }
-            setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
-            setShowUnifiedAddModal(false)
-            showAddToast('added', 1)
-            centerOnNodeIds([newNode.id])
+            ;(async () => {
+              const center = pendingNodePosition || getViewportCenter()
+              pushHistory()
+              const newId = `link-${Date.now()}`
+              try {
+                const res = await placeManualNode(
+                  { id: newId, title: 'Link', content: '', type: 'link', preferredPosition: center, data: { linkUrl: url, status: 'idle', aiGenerated: false } } as any,
+                  center,
+                  { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
+                  (useBoardStore.getState().nodes || []) as any
+                )
+                const placed = res.placements?.[0]
+                const node: Node = placed
+                  ? ({ id: placed.node.id, type: placed.node.type as any, position: placed.position, data: { ...placed.node.data } } as any)
+                  : ({ id: newId, type: 'link', position: center, data: { title: 'Link', linkUrl: url, status: 'idle', aiGenerated: false } } as any)
+                setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+                setShowUnifiedAddModal(false)
+                showAddToast('added', 1)
+                centerOnNodeIds([node.id])
+              } catch {}
+            })()
           }}
           onUploadSubmit={async (file) => {
             const center = pendingNodePosition || getViewportCenter()

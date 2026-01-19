@@ -16,7 +16,9 @@ import {
   estimateNodeDimensions, 
   findAvailablePosition,
   calculateDistance,
-  analyzeSpatialRegions
+  analyzeSpatialRegions,
+  getNodeBounds,
+  boundsOverlap
 } from './spatialAnalysis'
 
 // ===============================
@@ -228,6 +230,26 @@ export function calculateGridLayout(
   context: PlacementContext,
   options: Partial<GridLayoutOptions> = {}
 ): NodePlacement[] {
+  // If a single node has a preferred position (e.g. click/drop placement),
+  // honor it and nudge to the nearest non-colliding spot.
+  if (nodesToPlace.length === 1 && nodesToPlace[0]?.preferredPosition) {
+    const nodeToPlace = nodesToPlace[0]
+    const minDistance = context.constraints?.minDistance ?? 30
+    const dimensions = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+    const finalPosition = findAvailablePosition(
+      nodeToPlace.preferredPosition,
+      dimensions,
+      context.existingNodes,
+      { minDistance, maxSearchRadius: 240, searchStep: 30, preferredDirection: context.constraints?.preferredDirection || 'radial' }
+    )
+    return [{
+      node: createNodeFromToPlace(nodeToPlace),
+      position: finalPosition,
+      reason: 'Preferred position (nudged to avoid collisions)',
+      confidence: 0.95
+    }]
+  }
+
   // If parent/child relationships are present (or a focus parent exists),
   // use a hierarchical tiered grid: each depth is a row, siblings grouped under their parent.
   const hasHierarchy =
@@ -317,6 +339,82 @@ function calculateHierarchicalGridLayout(
 
   const placements: NodePlacement[] = []
   const center = getCenterPosition(context)
+  const minDistance = context.constraints?.minDistance ?? 30
+
+  // Precompute padded bounds for existing nodes so we can keep new nodes on-row while avoiding overlaps.
+  const existingBounds: Array<{ id: string; bounds: { minX: number; minY: number; maxX: number; maxY: number } }> = []
+  try {
+    ;(context.existingNodes || []).forEach((n: any) => {
+      const dims = estimateNodeDimensions(String(n?.data?.title || 'Node'), String(n?.data?.content || ''), String(n?.type || n?.data?.type || 'default'))
+      const b = getNodeBounds({ x: Number(n?.position?.x || 0), y: Number(n?.position?.y || 0) }, dims, minDistance)
+      existingBounds.push({ id: String(n?.id || ''), bounds: b })
+    })
+  } catch {}
+
+  const placedBounds: Array<{ id: string; bounds: { minX: number; minY: number; maxX: number; maxY: number } }> = []
+  const isFreeAt = (candidate: Position, dims: { width: number; height: number }) => {
+    const b = getNodeBounds(candidate, dims, minDistance)
+    for (const ex of existingBounds) {
+      if (boundsOverlap(b, ex.bounds)) return false
+    }
+    for (const ex of placedBounds) {
+      if (boundsOverlap(b, ex.bounds)) return false
+    }
+    return true
+  }
+
+  const findAvailableXOnRow = (base: Position, dims: { width: number; height: number }) => {
+    // Keep exact tier Y, but allow X nudges to avoid overlaps (last-resort fallback).
+    const step = Math.max(40, Math.round(cellWidth * 0.25))
+    const maxShift = Math.max(400, Math.round(cellWidth * 6))
+    if (isFreeAt(base, dims)) return base
+    for (let k = 1; k <= Math.ceil(maxShift / step); k++) {
+      const dx = k * step
+      const right = { x: base.x + dx, y: base.y }
+      if (isFreeAt(right, dims)) return right
+      const left = { x: base.x - dx, y: base.y }
+      if (isFreeAt(left, dims)) return left
+    }
+    return base
+  }
+
+  const findAvailableGroupShiftOnRow = (items: Array<{ base: Position; dims: { width: number; height: number } }>) => {
+    // Keep groups together: shift the entire sibling group as a block on its row.
+    // Returns dx if a collision-free shift exists, else null (caller may fall back).
+    const step = Math.max(40, Math.round(cellWidth * 0.25))
+    const maxShift = Math.max(600, Math.round(cellWidth * 10))
+    const tries = Math.ceil(maxShift / step)
+
+    const groupFitsAtDx = (dx: number) => {
+      const groupBounds: Array<{ minX: number; minY: number; maxX: number; maxY: number }> = []
+      for (const it of items) {
+        const cand = { x: it.base.x + dx, y: it.base.y }
+        const b = getNodeBounds(cand, it.dims, minDistance)
+        // against existing nodes
+        for (const ex of existingBounds) {
+          if (boundsOverlap(b, ex.bounds)) return false
+        }
+        // against already-placed nodes
+        for (const ex of placedBounds) {
+          if (boundsOverlap(b, ex.bounds)) return false
+        }
+        // within group (in case dims vary)
+        for (const gb of groupBounds) {
+          if (boundsOverlap(b, gb)) return false
+        }
+        groupBounds.push(b)
+      }
+      return true
+    }
+
+    if (groupFitsAtDx(0)) return 0
+    for (let k = 1; k <= tries; k++) {
+      const dx = k * step
+      if (groupFitsAtDx(dx)) return dx
+      if (groupFitsAtDx(-dx)) return -dx
+    }
+    return null
+  }
 
   // Stable ids for building tiers
   const idOf = (node: NodeToPlace, index: number) => node.id || `temp-${index}`
@@ -420,14 +518,21 @@ function calculateHierarchicalGridLayout(
   })
 
   const findRoot = (id: string): string => {
-    let cur: string | undefined = id
+    let cur: string = id
     const seen = new Set<string>()
-    while (cur && parentOf.get(cur) && idMap.has(parentOf.get(cur)!)) {
-      if (seen.has(cur)) break
+    while (true) {
+      const parent = parentOf.get(cur)
+      if (!parent) return cur
+      // If we're placing under a focus node (selected parent), treat that node as the family root
+      // even though it isn't part of nodesToPlace/idMap.
+      if (context.focusNode && parent === context.focusNode.id) return parent
+      // If parent isn't part of the nodes we're placing, it's an external root (existing node)
+      // and should define the family column.
+      if (!idMap.has(parent)) return parent
+      if (seen.has(cur)) return cur
       seen.add(cur)
-      cur = parentOf.get(cur)!
+      cur = parent
     }
-    return cur || id
   }
 
   const familyRoots: string[] = context.focusNode
@@ -488,20 +593,35 @@ function calculateHierarchicalGridLayout(
       const groupWidth = (group.length * cellWidth) + Math.max(0, group.length - 1) * padding
       const centerX = columnCenterByRoot.get(root) || center.x
       const startX = centerX - groupWidth / 2
-      group.forEach((id, idx) => {
+
+      const groupItems = group.map((id, idx) => {
         const nodeToPlace = idMap.get(id)
-        if (!nodeToPlace) return
+        if (!nodeToPlace) return null
         const baseX = startX + idx * (cellWidth + padding) + cellWidth / 2
-        const basePosition = { x: baseX, y }
-        // Deterministic placement: lock to exact base position (no collision search)
-        const lockedPosition = basePosition
+        const base = { x: baseX, y }
+        const dims = estimateNodeDimensions(nodeToPlace.title, nodeToPlace.content, nodeToPlace.type)
+        return { id, nodeToPlace, base, dims }
+      }).filter(Boolean) as Array<{ id: string; nodeToPlace: NodeToPlace; base: Position; dims: { width: number; height: number } }>
+
+      const dx = findAvailableGroupShiftOnRow(groupItems.map(it => ({ base: it.base, dims: it.dims })))
+
+      groupItems.forEach((it) => {
+        const basePosition = it.base
+        // Prefer cohesive block shifts; only fall back to per-node nudges if no dx exists.
+        const pos = (dx === null)
+          ? findAvailableXOnRow(basePosition, it.dims)
+          : { x: basePosition.x + dx, y: basePosition.y }
+
         const confidence = 1
         placements.push({
-          node: createNodeFromToPlace(nodeToPlace),
-          position: lockedPosition,
-          reason: `Hierarchical grid tier ${t + 1}`,
+          node: createNodeFromToPlace(it.nodeToPlace),
+          position: pos,
+          reason: dx === null ? `Hierarchical grid tier ${t + 1}` : `Hierarchical grid tier ${t + 1} (group shift)`,
           confidence
         })
+        try {
+          placedBounds.push({ id: it.id, bounds: getNodeBounds(pos, it.dims, minDistance) })
+        } catch {}
       })
     })
   }
