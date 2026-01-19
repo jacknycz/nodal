@@ -1822,11 +1822,14 @@ function BoardContent({
       try {
         const detail = (ev as CustomEvent<any>)?.detail
         const itemsAll: Array<{ title: string; content?: string }> = Array.isArray(detail?.nodes) ? detail.nodes : []
-        const items = itemsAll.slice(0, 10)
+        const MAX_NOBOT_ADD_NODES = 25
+        const items = itemsAll.slice(0, MAX_NOBOT_ADD_NODES)
         if (!items.length) return
         pushHistory()
         const selectedIds: string[] = (useBoardStore.getState().selectedNodeIds || []) as any
         const singleSelectedId = Array.isArray(selectedIds) && selectedIds.length === 1 ? selectedIds[0] : null
+        const ts = Date.now()
+        const nonce = Math.random().toString(36).slice(2, 6)
 
         if (singleSelectedId) {
           // Deterministic single row under parent, centered
@@ -1842,13 +1845,13 @@ function BoardContent({
           const createdIds: string[] = []
           items.forEach((it, index) => {
             const position = { x: startX + index * (cellWidth + padding), y: baseY }
-            const id = `node-${Date.now()}-${index}`
+            const id = `node-${ts}-${nonce}-${index}`
             const newNode: Node = { id, type: 'default', position, data: { title: String(it.title || ''), content: String(it.content || '') } as any }
             handleAddNodeToStore(newNode)
             createdIds.push(id)
           })
           if (createdIds.length > 0) {
-            const edgesToAdd = createdIds.map((cid) => ({ id: `edge-${Date.now()}-${cid}`, source: singleSelectedId, target: cid, type: 'floating' as any }))
+            const edgesToAdd = createdIds.map((cid) => ({ id: `edge-${ts}-${cid}`, source: singleSelectedId, target: cid, type: 'floating' as any }))
             setEdges((eds) => (Array.isArray(eds) ? [...eds, ...edgesToAdd] : [...edgesToAdd]))
           }
           showAddToast('generated', items.length)
@@ -1864,7 +1867,7 @@ function BoardContent({
             const row = Math.floor(idx / cols)
             const position = { x: center.x + xOffsetBase + col * xGap, y: center.y + row * yGap }
             const newNode: Node = {
-              id: `node-${Date.now()}-${idx}`,
+              id: `node-${ts}-${nonce}-${idx}`,
               type: 'default',
               position,
               data: { title: it.title || 'Untitled', content: it.content || '' } as any,
