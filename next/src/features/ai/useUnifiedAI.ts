@@ -10,6 +10,7 @@ import type {
   AIActionType
 } from './aiTypes'
 import type { BoardNode, BoardEdge } from '../board/boardTypes'
+import { NODAL_UX_SYSTEM_PROMPT } from './nodalUXPrompt'
 
 interface ChatMessage {
   id: string
@@ -197,6 +198,8 @@ export function useUnifiedAI(): UseUnifiedAIResult {
         systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.
 
 Be helpful and context-aware. Do not repeat sentences or phrases. Answer once, clearly and concisely. When the user asks to create or add nodes, return structured, non-repetitive content. Do not include sentinel tokens or artificial endings.`,
+
+${NODAL_UX_SYSTEM_PROMPT},
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -261,7 +264,7 @@ Be helpful and context-aware. Do not repeat sentences or phrases. Answer once, c
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nBe helpful and context-aware. Do not repeat sentences or phrases. Answer once, clearly and concisely. Do not include sentinel tokens or artificial endings.`,
+        systemPrompt: `You are Nodal, an AI assistant for a visual thinking and knowledge management application.\n\nBe helpful and context-aware. Do not repeat sentences or phrases. Answer once, clearly and concisely. Do not include sentinel tokens or artificial endings.\n\n${NODAL_UX_SYSTEM_PROMPT}`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,

@@ -5,6 +5,7 @@ import { useAIContext } from './aiContext'
 import type { AIContext as AIContextType } from './aiTypes'
 import { useBoardStore } from '../board/boardSlice'
 import { getAIStyleSystemDirective } from './aiStyle'
+import { NODAL_UX_SYSTEM_PROMPT } from './nodalUXPrompt'
 
 interface ChatMessage2 {
   id: string
@@ -117,7 +118,7 @@ Guidelines:
 
       const response = await aiContext.generate({
         prompt: content,
-        systemPrompt: `${CHAT_SYSTEM_PROMPT}\n\n${getAIStyleSystemDirective(aiStyle)}`,
+        systemPrompt: `${CHAT_SYSTEM_PROMPT}\n\n${NODAL_UX_SYSTEM_PROMPT}\n\n${getAIStyleSystemDirective(aiStyle)}`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
@@ -183,7 +184,7 @@ Guidelines:
 
       const streamOptions: any = {
         prompt: content,
-        systemPrompt: `${CHAT_SYSTEM_PROMPT}\n\n${getAIStyleSystemDirective(aiStyle)}`,
+        systemPrompt: `${CHAT_SYSTEM_PROMPT}\n\n${NODAL_UX_SYSTEM_PROMPT}\n\n${getAIStyleSystemDirective(aiStyle)}`,
         context: aiContextData,
         model: aiContext.selectOptimalModel('chat'),
         temperature: 0.7,
