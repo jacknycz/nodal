@@ -9,7 +9,7 @@ import { isAdmin } from '../features/auth/roles'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
-import { Graph, TreeStructure, UserCircle, Users } from '@phosphor-icons/react/dist/ssr'
+import { Graph, Lightbulb, TreeStructure, UserCircle, Users } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
 import ProfileTab from './ProfileTab'
@@ -18,6 +18,7 @@ import BoardCard from './BoardCard'
 import ConnectionsSidebar from './ConnectionsSidebar'
 import TasksSidebar from './TasksSidebar'
 import BoardsTab from './BoardsTab'
+import LearnTab from './LearnTab'
 // Gradient background only (no external images)
 import Tooltip from './ui/Tooltip'
 import Toast from './ui/Toast'
@@ -62,10 +63,10 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const canShowTemplatesHint = !loading && !hasAnyBoards
 
   // Derive active tab key from path
-  type TabKey = 'boards' | 'templates' | 'community' | 'profile'
+  type TabKey = 'boards' | 'templates' | 'community' | 'learn' | 'profile'
   const getActiveTab = (p: string): TabKey => {
     const seg = (p.replace(/^\/+/, '').toLowerCase().split('/')[0]) || 'boards'
-    return (['boards', 'templates', 'community', 'profile'] as const).includes(seg as TabKey) ? seg as TabKey : 'boards'
+    return (['boards', 'templates', 'community', 'learn', 'profile'] as const).includes(seg as TabKey) ? seg as TabKey : 'boards'
   }
   const activeTab: TabKey = getActiveTab(tabPath)
 
@@ -426,6 +427,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     })
   }
 
+  // Lightweight refresh for personal boards (used after create/delete/rename without re-running full bootstrap)
+  const loadBoards = async () => {
+    try {
+      const [{ boardStorage }] = await Promise.all([import('../features/storage/storage')])
+      const personal = await boardStorage.getAllBoardsSummary()
+      setBoards(Array.isArray(personal) ? personal : [])
+    } catch {
+      // Don't clobber existing lists; just surface error
+      setError('Failed to load boards')
+    }
+  }
+
   const handleRename = async (boardId: string, newName: string) => {
     // Optimistic update: avoid full reload/loader flicker
     setBoards(prev => prev.map(b => b.id === boardId ? { ...b, name: newName, lastModified: Date.now() } : b))
@@ -450,7 +463,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
     } catch {
       setError('Failed to delete board')
     } finally {
-      // loadBoards() toggles loading as well; ensure it's not stuck
+      // Ensure it's not stuck
       setLoading(false)
     }
   }
@@ -673,6 +686,15 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
           )}
 
           {/* TAB 4 */}
+          <Tab
+            label="learn"
+            headerLabel="learn"
+            icon={<Lightbulb size={44} className="h-6 w-6" weight="duotone" />}
+          >
+            <LearnTab />
+          </Tab>
+
+          {/* TAB 5 */}
           <Tab
             label="profile"
             icon={<UserCircle size={44} className="h-6 w-6" weight="duotone" />}
