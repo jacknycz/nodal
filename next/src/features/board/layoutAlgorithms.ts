@@ -423,12 +423,20 @@ export async function calculateElkHierarchyLayout(
     const layoutedChildren = Array.isArray(layoutedGraph?.children) ? layoutedGraph.children : []
     const byId = new Map<string, any>(layoutedChildren.map((n: any) => [String(n.id), n]))
 
-    // Get focus node position for offset (or use viewport center)
+    // Center the layout under the focus node
     const focusPosition = context.focusNode?.position ?? getCenterPosition(context)
-    const firstNode = layoutedChildren[0]
-    const offset = firstNode 
-      ? { x: focusPosition.x - (firstNode.x || 0), y: focusPosition.y - (firstNode.y || 0) }
-      : { x: focusPosition.x, y: focusPosition.y }
+    const visible = layoutedChildren.filter((n: any) => n.id !== '__root__')
+    if (!visible.length) return []
+
+    const minX = Math.min(...visible.map((n: any) => n.x || 0))
+    const maxX = Math.max(...visible.map((n: any) => (n.x || 0) + (n.width || 0)))
+    const minY = Math.min(...visible.map((n: any) => n.y || 0))
+    const centerX = (minX + maxX) / 2
+
+    const offset = {
+      x: focusPosition.x - centerX,
+      y: (focusPosition.y + 220) - minY,
+    }
 
     // Create placements from ELK positions
     const placements: NodePlacement[] = []
