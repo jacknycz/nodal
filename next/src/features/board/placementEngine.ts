@@ -297,62 +297,61 @@ export class PlacementEngine {
   ): EdgePlacement[] {
     const connections: EdgePlacement[] = []
     const context = request.context
-    
-    // Create connections to parent/focus node
+
+    const pref = useBoardStore.getState().edgeType || 'floating'
+    const edgeType = mapEdgePrefToRfType(pref) as any
+
+    const requestNodeForPlacement = (placement: NodePlacement) => {
+      return request.nodes.find(n =>
+        (n.id && n.id === placement.node.id) || n.title === placement.node.data.title
+      )
+    }
+
+    // 1) Parent-child edges (respect hierarchy)
+    placements.forEach((placement) => {
+      const nodeToPlace = requestNodeForPlacement(placement)
+      const parentId = nodeToPlace?.parentId
+      if (!parentId) return
+
+      const parentIsFocus = context.focusNode?.id === parentId
+      const parentIsNew = placements.some(p => p.node.id === parentId)
+      if (!parentIsFocus && !parentIsNew) return
+
+      const edge: BoardEdge = {
+        id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        source: parentId,
+        target: placement.node.id,
+        type: edgeType,
+        data: { type: 'ai', label: undefined }
+      }
+
+      connections.push({
+        edge,
+        reason: `Connection from parent ${parentId} to child ${placement.node.id}`
+      })
+    })
+
+    // 2) Fallback: connect to focus node if no parentId
     if (context.focusNode) {
-      placements.forEach(placement => {
-        const pref = useBoardStore.getState().edgeType || 'floating'
-        const edgeType = mapEdgePrefToRfType(pref) as any
+      placements.forEach((placement) => {
+        const nodeToPlace = requestNodeForPlacement(placement)
+        if (nodeToPlace?.parentId) return
+
         const edge: BoardEdge = {
           id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: context.focusNode!.id,
           target: placement.node.id,
           type: edgeType,
-          data: {
-            type: 'ai',
-            label: undefined
-          }
+          data: { type: 'ai', label: undefined }
         }
-        
+
         connections.push({
           edge,
-          reason: `Connection from focus node "${context.focusNode.data.title}" to generated node`
+          reason: `Fallback connection from focus node "${context.focusNode.data.title}"`
         })
       })
     }
-    
-    // Create connections based on node relationships
-    placements.forEach(placement => {
-      const nodeToPlace = request.nodes.find(n => 
-        n.title === placement.node.data.title
-      )
-      
-      if (nodeToPlace?.relationships) {
-        nodeToPlace.relationships.forEach(relatedId => {
-          const relatedPlacement = placements.find(p => p.node.id === relatedId)
-          if (relatedPlacement) {
-            const pref2 = useBoardStore.getState().edgeType || 'floating'
-            const edgeType = mapEdgePrefToRfType(pref2) as any
-            const edge: BoardEdge = {
-              id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              source: placement.node.id,
-              target: relatedPlacement.node.id,
-              type: edgeType,
-              data: {
-                type: 'default',
-                label: undefined
-              }
-            }
-            
-            connections.push({
-              edge,
-              reason: 'Connection based on node relationship'
-            })
-          }
-        })
-      }
-    })
-    
+
     return connections
   }
   
