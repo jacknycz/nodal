@@ -57,6 +57,16 @@ export class PlacementEngine {
       // Validate request
       const validationResult = this.validateRequest(request)
       if (!validationResult.isValid) {
+        try {
+          console.warn('[placement] invalid request', {
+            errors: validationResult.errors,
+            nodeCount: request.nodes?.length || 0,
+            hasContext: !!request.context,
+            hasViewport: !!request.context?.viewport,
+            focusNodeId: request.context?.focusNode?.id,
+            selectedCount: request.context?.selectedNodeIds?.length || 0,
+          })
+        } catch {}
         return this.createErrorResult(validationResult.errors, startTime)
       }
       
@@ -104,6 +114,9 @@ export class PlacementEngine {
       }
       
     } catch (error) {
+      try {
+        console.error('[placement] exception', error)
+      } catch {}
       return this.createErrorResult([`Placement failed: ${error.message}`], startTime)
     }
   }
