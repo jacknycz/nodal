@@ -898,6 +898,12 @@ function BoardContent({
         return created
       }
       const topicNode = await ensureTopicNode()
+      const getNodesWithTopic = () => {
+        const currentNodes = useBoardStore.getState().nodes || []
+        return currentNodes.some((n: any) => n?.id === topicNode.id)
+          ? currentNodes
+          : [...currentNodes, topicNode]
+      }
 
       const maybeAppendMediaNodes = async (baseNodes: any[], baseEdges: any[]) => {
         if (!brief.generateMediaNodes) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
@@ -936,7 +942,7 @@ function BoardContent({
             }
           })
 
-          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
           if (!result.success || !result.placements.length) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
 
           const mediaNodes = result.placements.map((p) => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
@@ -991,7 +997,7 @@ function BoardContent({
           type: 'default' as const,
           parentId: topicNode.id,
         }))
-        const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+        const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
         let placed: any[]
         let edgesPlaced: any[]
         if (!result.success || !result.placements.length) {
@@ -1098,7 +1104,7 @@ function BoardContent({
             })
           ]
 
-          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
           if (!result.success || !result.placements.length) {
             // Fallback: simple grid placement below topic node
             console.warn('[generateStarterNodes] Placement engine failed, using fallback grid layout', result.warnings || [])
@@ -1173,7 +1179,7 @@ function BoardContent({
             type: 'default' as const,
             parentId: topicNode.id,
           }))
-          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
           let placedNodes: any[]
           let placedEdges: any[]
           if (!result.success || !result.placements.length) {
@@ -1184,7 +1190,7 @@ function BoardContent({
             const startX = topicNode.position.x - ((nodesToPlace.length - 1) * (cellWidth + padding)) / 2
             const startY = topicNode.position.y + 250
             placedNodes = nodesToPlace.map((node, idx) => ({
-              id: `node-${Date.now()}-${idx}`,
+              id: (node as any).id || `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               type: node.type || 'default',
               position: { x: startX + idx * (cellWidth + padding), y: startY },
               data: { title: node.title, content: node.content || '' }
@@ -1237,7 +1243,7 @@ function BoardContent({
           parentId: topicNode.id,
         }))
 
-        const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+        const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
         if (!result.success || !result.placements.length) {
           router.push(`/board/${boardId}`)
           return
@@ -1264,7 +1270,7 @@ function BoardContent({
             type: 'default' as const,
             parentId: topicNode.id,
           }]
-          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
+          const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
           const placed = result.placements?.[0]
           if (!placed) { router.push(`/board/${boardId}`); return }
           const newNode: any = { id: placed.node.id, type: placed.node.type, position: placed.position, data: { ...placed.node.data } }

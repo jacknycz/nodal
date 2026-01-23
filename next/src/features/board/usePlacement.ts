@@ -241,14 +241,18 @@ export function usePlacement() {
   const placeAINodes = useCallback(async (
     nodes: NodeToPlace[],
     parentNodeId?: string,
-    constraints?: Partial<PlacementConstraints>
+    constraints?: Partial<PlacementConstraints>,
+    existingNodesOverride?: BoardNode[]
   ): Promise<PlacementResult> => {
     const context = createPlacementContext(parentNodeId, constraints)
+    const effectiveContext = existingNodesOverride
+      ? { ...context, existingNodes: existingNodesOverride }
+      : context
     const withFlags = (nodes || []).map((n) => ({
       ...n,
       data: { ...(n.data || {}), aiGenerated: (n.data as any)?.aiGenerated ?? true } as any,
     }))
-    return placeAIGeneratedNodes(withFlags as any, context, parentNodeId)
+    return placeAIGeneratedNodes(withFlags as any, effectiveContext, parentNodeId)
   }, [createPlacementContext])
 
   /**
