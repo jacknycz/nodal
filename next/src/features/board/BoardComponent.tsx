@@ -1071,6 +1071,10 @@ function BoardContent({
           throw new Error(j?.error || `Generate starters failed (${res.status})`)
         }
         const j = await res.json().catch(() => ({}))
+        try {
+          console.log('[generateStarterNodes] raw AI response:', j)
+          console.log('[generateStarterNodes] nodes payload:', (j as any)?.nodes)
+        } catch {}
         const planned: any[] = Array.isArray(j?.nodes) ? j.nodes : []
         if (planned.length > 0) {
           const textItems = planned.filter((n: any) => n?.type === 'text')
