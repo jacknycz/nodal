@@ -4090,8 +4090,11 @@ function BoardContent({
               )
               const fallbackParentId = parentId || parentIds.values().next().value || undefined
 
+              const makeId = (prefix: string) =>
+                `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
               const level1Nodes = plannedNodes.map((it: any, idx: number) => ({
-                id: String(it?.id || `n${idx + 1}`),
+                id: String(it?.id || makeId('n1')),
                 title: String(it?.title || '').trim() || 'Untitled',
                 content: String(it?.content || ''),
                 type: 'default' as const,
@@ -4104,7 +4107,7 @@ function BoardContent({
                 const resolvedParentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
                 if (t === 'image') {
                   return {
-                    id: String(it?.id || `cimg-${idx + 1}`),
+                    id: String(it?.id || makeId('cimg')),
                     title: String(it?.title || 'Image'),
                     content: String(it?.content || ''),
                     type: 'image' as const,
@@ -4114,7 +4117,7 @@ function BoardContent({
                 }
                 if (t === 'video') {
                   return {
-                    id: String(it?.id || `cvid-${idx + 1}`),
+                    id: String(it?.id || makeId('cvid')),
                     title: String(it?.title || 'Video'),
                     content: String(it?.content || ''),
                     type: 'video' as const,
@@ -4123,7 +4126,7 @@ function BoardContent({
                   }
                 }
                 return {
-                  id: String(it?.id || `ctxt-${idx + 1}`),
+                  id: String(it?.id || makeId('ctxt')),
                   title: String(it?.title || '').trim() || 'Untitled',
                   content: String(it?.content || ''),
                   type: 'default' as const,
