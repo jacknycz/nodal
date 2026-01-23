@@ -189,12 +189,23 @@ export function usePlacement() {
     focusNodeId?: string,
     constraints?: Partial<PlacementConstraints>
   ): PlacementContext => {
-    const viewport = getViewport()
-    const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
+    // Add error handling for when ReactFlow isn't ready yet (e.g., during board creation)
+    let viewport = { x: 0, y: 0, zoom: 1 }
+    let viewportWidth = window.innerWidth
+    let viewportHeight = window.innerHeight
     
-    // Calculate viewport dimensions
-    const viewportWidth = rect?.width || window.innerWidth
-    const viewportHeight = rect?.height || window.innerHeight
+    try {
+      viewport = getViewport()
+      const rect = document.querySelector('.react-flow')?.getBoundingClientRect()
+      if (rect) {
+        viewportWidth = rect.width
+        viewportHeight = rect.height
+      }
+    } catch (error) {
+      // ReactFlow not ready yet - use defaults
+      // This can happen during board creation before the component is fully mounted
+      console.warn('[createPlacementContext] ReactFlow not ready, using defaults', error)
+    }
     
     // Find focus node
     let focusNode: BoardNode | undefined

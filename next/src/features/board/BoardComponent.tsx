@@ -992,8 +992,31 @@ function BoardContent({
           parentId: topicNode.id,
         }))
         const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
-        const placed = result.placements.map((p) => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
-        const edgesPlaced = result.connections.map((c) => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+        let placed: any[]
+        let edgesPlaced: any[]
+        if (!result.success || !result.placements.length) {
+          // Fallback: simple grid placement below topic node
+          console.warn('[generateStarterNodes] Manual starter nodes placement failed, using fallback grid layout', result.warnings || [])
+          const cellWidth = 300
+          const padding = 60
+          const startX = topicNode.position.x - ((nodesToPlace.length - 1) * (cellWidth + padding)) / 2
+          const startY = topicNode.position.y + 250
+          placed = nodesToPlace.map((node, idx) => ({
+            id: (node as any).id || `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: node.type || 'default',
+            position: { x: startX + idx * (cellWidth + padding), y: startY },
+            data: { title: node.title, content: node.content || '' }
+          }))
+          edgesPlaced = placed.map((node) => ({
+            id: `edge-${topicNode.id}-${node.id}`,
+            source: topicNode.id,
+            target: node.id,
+            type: toVisualEdgeType(edgeTypePref) as any
+          }))
+        } else {
+          placed = result.placements.map((p) => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+          edgesPlaced = result.connections.map((c) => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+        }
         setNodes([topicNode, ...placed])
         setEdges(edgesPlaced as any)
         const boardData = { nodes: [topicNode, ...placed], edges: edgesPlaced as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
@@ -1076,7 +1099,36 @@ function BoardContent({
           ]
 
           const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
-          if (!result.success || !result.placements.length) throw new Error('Placement failed')
+          if (!result.success || !result.placements.length) {
+            // Fallback: simple grid placement below topic node
+            console.warn('[generateStarterNodes] Placement engine failed, using fallback grid layout', result.warnings || [])
+            const cellWidth = 300
+            const cellHeight = 200
+            const padding = 60
+            const startX = topicNode.position.x - ((nodesToPlace.length - 1) * (cellWidth + padding)) / 2
+            const startY = topicNode.position.y + 250
+            const placedNodes: any[] = nodesToPlace.map((node, idx) => ({
+              id: (node as any).id || `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              type: node.type || 'default',
+              position: { x: startX + idx * (cellWidth + padding), y: startY },
+              data: { title: node.title, content: node.content || '', ...(node.data || {}) }
+            }))
+            const placedEdges: any[] = placedNodes.map((node, idx) => ({
+              id: `edge-${topicNode.id}-${node.id}`,
+              source: topicNode.id,
+              target: node.id,
+              type: toVisualEdgeType(edgeTypePref) as any
+            }))
+            setNodes([topicNode, ...placedNodes])
+            setEdges(placedEdges as any)
+            const boardData = { nodes: [topicNode, ...placedNodes], edges: placedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
+            await boardStorage.updateBoard(boardId, boardData)
+            showAddToast('added', placedNodes.length)
+            setHasUnsavedChanges(false)
+            if (onBoardStateChange) onBoardStateChange(brief.boardName, 'saved', false)
+            router.push(`/board/${boardId}`)
+            return
+          }
           const placedNodes: any[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
           const placedEdges: any[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
           setNodes([topicNode, ...placedNodes])
@@ -1122,9 +1174,31 @@ function BoardContent({
             parentId: topicNode.id,
           }))
           const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
-          if (!result.success || !result.placements.length) throw new Error('Placement failed')
-          const placedNodes: any[] = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
-          const placedEdges: any[] = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+          let placedNodes: any[]
+          let placedEdges: any[]
+          if (!result.success || !result.placements.length) {
+            // Fallback: simple grid placement below topic node
+            console.warn('[generateStarterNodes] Fallback placement engine failed, using simple grid layout', result.warnings || [])
+            const cellWidth = 300
+            const padding = 60
+            const startX = topicNode.position.x - ((nodesToPlace.length - 1) * (cellWidth + padding)) / 2
+            const startY = topicNode.position.y + 250
+            placedNodes = nodesToPlace.map((node, idx) => ({
+              id: `node-${Date.now()}-${idx}`,
+              type: node.type || 'default',
+              position: { x: startX + idx * (cellWidth + padding), y: startY },
+              data: { title: node.title, content: node.content || '' }
+            }))
+            placedEdges = placedNodes.map((node) => ({
+              id: `edge-${topicNode.id}-${node.id}`,
+              source: topicNode.id,
+              target: node.id,
+              type: toVisualEdgeType(edgeTypePref) as any
+            }))
+          } else {
+            placedNodes = result.placements.map(p => ({ id: p.node.id, type: p.node.type as any, position: p.position, data: { ...p.node.data } }))
+            placedEdges = result.connections.map(c => ({ id: c.edge.id, source: c.edge.source, target: c.edge.target, type: c.edge.type || (toVisualEdgeType(edgeTypePref) as any) }))
+          }
           setNodes([topicNode, ...placedNodes])
           setEdges(placedEdges as any)
           const boardData = { nodes: [topicNode, ...placedNodes], edges: placedEdges as any, viewport: reactFlowInstance.getViewport(), topic: brief.boardTopic || null, colorgories: useBoardStore.getState().colorgories || [] }
