@@ -4081,38 +4081,58 @@ function BoardContent({
               })
               if (!plannedResp.ok) return
               const plannedJson = await plannedResp.json().catch(() => ({}))
-              const planned: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
-              const textItems = planned.filter((n: any) => n?.type === 'text')
-              const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
-              if (!textItems.length && !mediaItems.length) return
+              const plannedNodes: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
+              const plannedChildren: any[] = Array.isArray(plannedJson?.children) ? plannedJson.children : []
+              if (!plannedNodes.length && !plannedChildren.length) return
 
-              const nodesToPlace = [
-                ...textItems.map((it: any) => ({
-                  title: String(it?.title || '').trim() || 'Untitled',
-                  content: String(it?.content || ''),
-                  type: 'default' as const,
-                  ...(parentId ? { parentId } : {})
-                })),
-                ...(withMedia ? mediaItems.map((it: any) => {
-                  const t = String(it?.type || '').toLowerCase()
-                  if (t === 'image') {
-                    return {
-                      title: String(it?.title || 'Image'),
-                      content: String(it?.content || ''),
-                      type: 'image' as const,
-                      ...(parentId ? { parentId } : {}),
-                      data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
-                    }
-                  }
+              const parentIds = new Set<string>(
+                plannedNodes.map((n: any) => String(n?.id || '').trim()).filter((id: string) => !!id)
+              )
+              const fallbackParentId = parentId || parentIds.values().next().value || undefined
+
+              const level1Nodes = plannedNodes.map((it: any, idx: number) => ({
+                id: String(it?.id || `n${idx + 1}`),
+                title: String(it?.title || '').trim() || 'Untitled',
+                content: String(it?.content || ''),
+                type: 'default' as const,
+                ...(parentId ? { parentId } : {})
+              }))
+
+              const childNodes = plannedChildren.map((it: any, idx: number) => {
+                const t = String(it?.type || '').toLowerCase()
+                const rawParentId = String(it?.parentId || '').trim()
+                const resolvedParentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
+                if (t === 'image') {
                   return {
+                    id: String(it?.id || `cimg-${idx + 1}`),
+                    title: String(it?.title || 'Image'),
+                    content: String(it?.content || ''),
+                    type: 'image' as const,
+                    ...(resolvedParentId ? { parentId: resolvedParentId } : {}),
+                    data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
+                  }
+                }
+                if (t === 'video') {
+                  return {
+                    id: String(it?.id || `cvid-${idx + 1}`),
                     title: String(it?.title || 'Video'),
                     content: String(it?.content || ''),
                     type: 'video' as const,
-                    ...(parentId ? { parentId } : {}),
+                    ...(resolvedParentId ? { parentId: resolvedParentId } : {}),
                     data: { videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any
                   }
-                }) : [])
-              ]
+                }
+                return {
+                  id: String(it?.id || `ctxt-${idx + 1}`),
+                  title: String(it?.title || '').trim() || 'Untitled',
+                  content: String(it?.content || ''),
+                  type: 'default' as const,
+                  ...(resolvedParentId ? { parentId: resolvedParentId } : {})
+                }
+              })
+
+              const filteredChildren = withMedia ? childNodes : childNodes.filter((n: any) => n.type === 'default')
+              const nodesToPlace = [...level1Nodes, ...filteredChildren]
 
               const result = await placeAINodes(nodesToPlace as any, parentId, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
               if (result.success && result.placements.length > 0) {
@@ -4211,38 +4231,57 @@ function BoardContent({
               })
               if (!plannedResp.ok) return
               const plannedJson = await plannedResp.json().catch(() => ({}))
-              const planned: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
-              const textItems = planned.filter((n: any) => n?.type === 'text')
-              const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
-              if (!textItems.length && !mediaItems.length) return
+              const plannedNodes: any[] = Array.isArray(plannedJson?.nodes) ? plannedJson.nodes : []
+              const plannedChildren: any[] = Array.isArray(plannedJson?.children) ? plannedJson.children : []
+              if (!plannedNodes.length && !plannedChildren.length) return
 
-              const nodesToPlace = [
-                ...textItems.map((it: any) => ({
-                  title: String(it?.title || '').trim() || 'Untitled',
-                  content: String(it?.content || ''),
-                  type: 'default' as const,
-                  ...(parentId ? { parentId } : {})
-                })),
-                ...mediaItems.map((it: any) => {
-                  const t = String(it?.type || '').toLowerCase()
-                  if (t === 'image') {
-                    return {
-                      title: String(it?.title || 'Image'),
-                      content: String(it?.content || ''),
-                      type: 'image' as const,
-                      ...(parentId ? { parentId } : {}),
-                      data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
-                    }
-                  }
+              const parentIds = new Set<string>(
+                plannedNodes.map((n: any) => String(n?.id || '').trim()).filter((id: string) => !!id)
+              )
+              const fallbackParentId = parentId || parentIds.values().next().value || undefined
+
+              const level1Nodes = plannedNodes.map((it: any, idx: number) => ({
+                id: String(it?.id || `n${idx + 1}`),
+                title: String(it?.title || '').trim() || 'Untitled',
+                content: String(it?.content || ''),
+                type: 'default' as const,
+                ...(parentId ? { parentId } : {})
+              }))
+
+              const childNodes = plannedChildren.map((it: any, idx: number) => {
+                const t = String(it?.type || '').toLowerCase()
+                const rawParentId = String(it?.parentId || '').trim()
+                const resolvedParentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
+                if (t === 'image') {
                   return {
+                    id: String(it?.id || `cimg-${idx + 1}`),
+                    title: String(it?.title || 'Image'),
+                    content: String(it?.content || ''),
+                    type: 'image' as const,
+                    ...(resolvedParentId ? { parentId: resolvedParentId } : {}),
+                    data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
+                  }
+                }
+                if (t === 'video') {
+                  return {
+                    id: String(it?.id || `cvid-${idx + 1}`),
                     title: String(it?.title || 'Video'),
                     content: String(it?.content || ''),
                     type: 'video' as const,
-                    ...(parentId ? { parentId } : {}),
+                    ...(resolvedParentId ? { parentId: resolvedParentId } : {}),
                     data: { videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any
                   }
-                })
-              ]
+                }
+                return {
+                  id: String(it?.id || `ctxt-${idx + 1}`),
+                  title: String(it?.title || '').trim() || 'Untitled',
+                  content: String(it?.content || ''),
+                  type: 'default' as const,
+                  ...(resolvedParentId ? { parentId: resolvedParentId } : {})
+                }
+              })
+
+              const nodesToPlace = [...level1Nodes, ...childNodes]
 
               const result = await placeAINodes(nodesToPlace as any, parentId, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true })
               if (result.success && result.placements.length > 0) {
