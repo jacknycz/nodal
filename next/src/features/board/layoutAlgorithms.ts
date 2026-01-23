@@ -10,6 +10,7 @@ import type {
   LinearLayoutOptions,
   SpiralLayoutOptions,
   ClusterLayoutOptions,
+  ElkLayoutOptions,
   LayoutQualityMetrics
 } from './placementTypes'
 import { 
@@ -20,6 +21,16 @@ import {
   getNodeBounds,
   boundsOverlap
 } from './spatialAnalysis'
+
+let elkInstance: any | null = null
+
+async function getElkInstance() {
+  if (elkInstance) return elkInstance
+  const mod = await import('elkjs/lib/elk.bundled.js')
+  const ElkCtor = (mod as any).default ?? (mod as any)
+  elkInstance = new ElkCtor()
+  return elkInstance
+}
 
 // ===============================
 // FAN LAYOUT - Perfect for AI Generation
@@ -319,6 +330,104 @@ export function calculateGridLayout(
   })
   
   return placements
+}
+
+// ===============================
+// ELK HIERARCHY LAYOUT - Tree/Layered Layout
+// ===============================
+
+export async function calculateElkHierarchyLayout(
+  nodesToPlace: NodeToPlace[],
+  context: PlacementContext,
+  options: Partial<ElkLayoutOptions> = {}
+): Promise<NodePlacement[]> {
+  if (!nodesToPlace.length) return []
+
+  const focusPosition = context.focusNode?.position ?? getCenterPosition(context)
+  const minDistance = context.constraints?.minDistance ?? 30
+  const nodeSpacing = options.nodeSpacing ?? Math.max(80, minDistance * 2)
+  const layerSpacing = options.layerSpacing ?? Math.max(120, minDistance * 3)
+  const direction = options.direction ?? 'DOWN'
+
+  const idOf = (node: NodeToPlace, index: number) => node.id || `temp-${index}`
+  const idSet = new Set<string>()
+
+  const elkNodes = nodesToPlace.map((node, index) => {
+    const id = idOf(node, index)
+    idSet.add(id)
+    const dims = estimateNodeDimensions(node.title, node.content, node.type)
+    return {
+      id,
+      width: Math.max(80, dims.width),
+      height: Math.max(60, dims.height),
+    }
+  })
+
+  const edges: Array<{ id: string; sources: string[]; targets: string[] }> = []
+  const rootId = '__root__'
+  const useRoot = !!context.focusNode || nodesToPlace.some(n => !n.parentId || !idSet.has(String(n.parentId)))
+
+  nodesToPlace.forEach((node, index) => {
+    const id = idOf(node, index)
+    const parentId = node.parentId ? String(node.parentId) : ''
+    if (parentId && idSet.has(parentId)) {
+      edges.push({ id: `edge-${parentId}-${id}`, sources: [parentId], targets: [id] })
+      return
+    }
+    if (useRoot) {
+      edges.push({ id: `edge-${rootId}-${id}`, sources: [rootId], targets: [id] })
+    }
+  })
+
+  if (useRoot) {
+    elkNodes.unshift({ id: rootId, width: 40, height: 40 })
+  }
+
+  try {
+    const elk = await getElkInstance()
+    const layoutedGraph = await elk.layout({
+      id: 'root',
+      layoutOptions: {
+        'elk.algorithm': 'layered',
+        'elk.direction': direction,
+        'elk.layered.spacing.nodeNodeBetweenLayers': String(layerSpacing),
+        'elk.spacing.nodeNode': String(nodeSpacing),
+      },
+      children: elkNodes,
+      edges,
+    })
+
+    const layoutedChildren = Array.isArray(layoutedGraph?.children) ? layoutedGraph.children : []
+    const byId = new Map<string, any>(layoutedChildren.map((n: any) => [String(n.id), n]))
+
+    const rootNode = byId.get(rootId)
+    const fallbackAnchor = (() => {
+      if (layoutedChildren.length === 0) return focusPosition
+      const xs = layoutedChildren.map((n: any) => n.x || 0)
+      const ys = layoutedChildren.map((n: any) => n.y || 0)
+      return { x: Math.min(...xs), y: Math.min(...ys) }
+    })()
+
+    const anchor = rootNode ? { x: rootNode.x || 0, y: rootNode.y || 0 } : fallbackAnchor
+    const offset = { x: focusPosition.x - anchor.x, y: focusPosition.y - anchor.y }
+
+    const placements: NodePlacement[] = []
+    nodesToPlace.forEach((node, index) => {
+      const id = idOf(node, index)
+      const layouted = byId.get(id)
+      if (!layouted) return
+      placements.push({
+        node: createNodeFromToPlace(node),
+        position: { x: (layouted.x || 0) + offset.x, y: (layouted.y || 0) + offset.y },
+        reason: 'ELK layered hierarchy layout',
+        confidence: 0.85,
+      })
+    })
+
+    return placements
+  } catch (error) {
+    return calculateHierarchicalGridLayout(nodesToPlace, context)
+  }
 }
 
 /**

@@ -227,6 +227,12 @@ export interface ClusterLayoutOptions {
   clusterAlgorithm: 'kmeans' | 'hierarchical' | 'density'
 }
 
+export interface ElkLayoutOptions {
+  direction: 'UP' | 'DOWN' | 'LEFT' | 'RIGHT'
+  layerSpacing: number
+  nodeSpacing: number
+}
+
 // Union type for all layout options
 export type LayoutOptions = 
   | FanLayoutOptions 
@@ -235,6 +241,7 @@ export type LayoutOptions =
   | LinearLayoutOptions
   | SpiralLayoutOptions
   | ClusterLayoutOptions
+  | ElkLayoutOptions
 
 // ===============================
 // UTILITY TYPES
