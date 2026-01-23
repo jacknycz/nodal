@@ -429,9 +429,22 @@ export async function calculateElkHierarchyLayout(
     if (useFocus) {
       const focusLayout = byId.get(focusId)
       if (!focusLayout) return []
-      const offset = {
+      const minChildY = Math.min(
+        ...nodesToPlace.map((node, index) => {
+          const id = idOf(node, index)
+          const layouted = byId.get(id)
+          return layouted ? (layouted.y || 0) : Infinity
+        })
+      )
+
+      let offset = {
         x: focusPosition.x - (focusLayout.x || 0),
         y: focusPosition.y - (focusLayout.y || 0),
+      }
+
+      if (Number.isFinite(minChildY) && minChildY < (focusLayout.y || 0)) {
+        const pushDown = (focusLayout.y - minChildY) + layerSpacing
+        offset = { ...offset, y: offset.y + pushDown }
       }
 
       const placements: NodePlacement[] = []
