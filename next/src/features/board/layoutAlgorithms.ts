@@ -350,6 +350,12 @@ export async function calculateElkHierarchyLayout(
 
   const idOf = (node: NodeToPlace, index: number) => node.id || `temp-${index}`
 
+  const focusPosition = context.focusNode?.position ?? getCenterPosition(context)
+  const focusId = '__focus__'
+  const useFocus = !!context.focusNode
+  const focusWidth = 180
+  const focusHeight = 90
+
   // Build ELK graph structure
   const elkNodes = nodesToPlace.map((node, index) => {
     const id = idOf(node, index)
@@ -361,6 +367,10 @@ export async function calculateElkHierarchyLayout(
     }
   })
 
+  if (useFocus) {
+    elkNodes.unshift({ id: focusId, width: focusWidth, height: focusHeight })
+  }
+
   // Build edges from parent relationships
   // For pure ELK test: if all nodes share the same parent (focus node), 
   // ELK will place them as siblings in layers
@@ -370,9 +380,6 @@ export async function calculateElkHierarchyLayout(
     const id = idOf(node, index)
     idMap.set(id, index)
   })
-
-  const rootId = '__root__'
-  const useRoot = !!context.focusNode
 
   nodesToPlace.forEach((node, index) => {
     const id = idOf(node, index)
@@ -389,19 +396,15 @@ export async function calculateElkHierarchyLayout(
       return
     }
 
-    // If parent is focus node (not in nodesToPlace), attach to synthetic root
-    if (useRoot) {
+    // If parent is focus node (not in nodesToPlace), attach to synthetic focus
+    if (useFocus && parentId && context.focusNode?.id === parentId) {
       edges.push({
-        id: `edge-${rootId}-${id}`,
-        sources: [rootId],
+        id: `edge-${focusId}-${id}`,
+        sources: [focusId],
         targets: [id],
       })
     }
   })
-
-  if (useRoot) {
-    elkNodes.unshift({ id: rootId, width: 40, height: 40 })
-  }
 
   try {
     const elk = await getElkInstance()
@@ -423,16 +426,44 @@ export async function calculateElkHierarchyLayout(
     const layoutedChildren = Array.isArray(layoutedGraph?.children) ? layoutedGraph.children : []
     const byId = new Map<string, any>(layoutedChildren.map((n: any) => [String(n.id), n]))
 
-    // Center the layout under the focus node
-    const focusPosition = context.focusNode?.position ?? getCenterPosition(context)
-    const visible = layoutedChildren.filter((n: any) => n.id !== '__root__')
-    if (!visible.length) return []
+    if (useFocus) {
+      const focusLayout = byId.get(focusId)
+      if (!focusLayout) return []
+      const offset = {
+        x: focusPosition.x - (focusLayout.x || 0),
+        y: focusPosition.y - (focusLayout.y || 0),
+      }
 
+      const placements: NodePlacement[] = []
+      nodesToPlace.forEach((node, index) => {
+        const id = idOf(node, index)
+        const layouted = byId.get(id)
+        if (!layouted) {
+          console.warn('[ELK] No layout result for node:', id)
+          return
+        }
+        placements.push({
+          node: createNodeFromToPlace(node),
+          position: { x: (layouted.x || 0) + offset.x, y: (layouted.y || 0) + offset.y },
+          reason: 'ELK centered on focus node',
+          confidence: 0.9,
+        })
+      })
+
+      console.log('[ELK] Layout complete:', { 
+        nodes: placements.length, 
+        layers: new Set(layoutedChildren.map((n: any) => n.y)).size 
+      })
+
+      return placements
+    }
+
+    const visible = layoutedChildren
+    if (!visible.length) return []
     const minX = Math.min(...visible.map((n: any) => n.x || 0))
     const maxX = Math.max(...visible.map((n: any) => (n.x || 0) + (n.width || 0)))
     const minY = Math.min(...visible.map((n: any) => n.y || 0))
     const centerX = (minX + maxX) / 2
-
     const offset = {
       x: focusPosition.x - centerX,
       y: (focusPosition.y + 220) - minY,
