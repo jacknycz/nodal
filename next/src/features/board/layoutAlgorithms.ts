@@ -343,9 +343,9 @@ export async function calculateElkHierarchyLayout(
 ): Promise<NodePlacement[]> {
   if (!nodesToPlace.length) return []
 
-  // Pure ELK test - minimal config
-  const nodeSpacing = options.nodeSpacing ?? 100
-  const layerSpacing = options.layerSpacing ?? 150
+  // Tall/airy defaults to emphasize level spacing
+  const nodeSpacing = options.nodeSpacing ?? 220
+  const layerSpacing = options.layerSpacing ?? 260
   const direction = options.direction ?? 'DOWN'
 
   const idOf = (node: NodeToPlace, index: number) => node.id || `temp-${index}`
@@ -356,8 +356,8 @@ export async function calculateElkHierarchyLayout(
     const dims = estimateNodeDimensions(node.title, node.content, node.type)
     return {
       id,
-      width: Math.max(150, dims.width),
-      height: Math.max(80, dims.height),
+      width: Math.max(180, dims.width),
+      height: Math.max(90, dims.height),
     }
   })
 
@@ -371,6 +371,9 @@ export async function calculateElkHierarchyLayout(
     idMap.set(id, index)
   })
 
+  const rootId = '__root__'
+  const useRoot = !!context.focusNode
+
   nodesToPlace.forEach((node, index) => {
     const id = idOf(node, index)
     const parentId = node.parentId ? String(node.parentId) : null
@@ -383,10 +386,22 @@ export async function calculateElkHierarchyLayout(
         sources: [parentElkId], 
         targets: [id] 
       })
+      return
     }
-    // If parent is focus node (not in nodesToPlace), ELK will treat them as root-level siblings
-    // This is fine for testing - ELK will still create nice layered rows
+
+    // If parent is focus node (not in nodesToPlace), attach to synthetic root
+    if (useRoot) {
+      edges.push({
+        id: `edge-${rootId}-${id}`,
+        sources: [rootId],
+        targets: [id],
+      })
+    }
   })
+
+  if (useRoot) {
+    elkNodes.unshift({ id: rootId, width: 40, height: 40 })
+  }
 
   try {
     const elk = await getElkInstance()
