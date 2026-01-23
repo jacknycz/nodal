@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 
 type Density = 'low' | 'medium' | 'high'
 type PlannedNode =
-  | { type: 'text'; title: string; content: string }
-  | { type: 'image'; title: string; query: string; content?: string }
-  | { type: 'video'; title: string; query: string; content?: string }
+  | { type: 'text'; id?: string; title: string; content: string }
+  | { type: 'image'; id?: string; title: string; query: string; content?: string }
+  | { type: 'video'; id?: string; title: string; query: string; content?: string }
+
+type PlannedChild = PlannedNode & { parentId?: string; parentTitle?: string }
 
 type TextPlannedNode = Extract<PlannedNode, { type: 'text' }>
 type ImagePlannedNode = Extract<PlannedNode, { type: 'image' }>
@@ -42,10 +44,11 @@ type GenerateResponse = {
     counts: { text: number; image: number; video: number }
     rationale: string
   }
-  nodes: Array<
-    | { type: 'text'; title: string; content: string }
-    | { type: 'image'; title: string; content?: string; imageUrl: string }
-    | { type: 'video'; title: string; content?: string; videoUrl: string }
+  nodes: Array<{ id: string; type: 'text'; title: string; content: string }>
+  children: Array<
+    | { type: 'text'; title: string; content: string; parentId: string }
+    | { type: 'image'; title: string; content?: string; imageUrl: string; parentId: string }
+    | { type: 'video'; title: string; content?: string; videoUrl: string; parentId: string }
   >
 }
 
@@ -239,17 +242,29 @@ function normalizePlannedNode(raw: any): PlannedNode | null {
   const content = String(raw?.content || '').trim()
   if (!title) return null
   if (type === 'text') {
-    return { type: 'text', title, content: content || '' }
+    return { type: 'text', id: String(raw?.id || '').trim() || undefined, title, content: content || '' }
   }
   if (type === 'image') {
     const query = String(raw?.query || '').trim()
-    return { type: 'image', title, query: query || title, content: content || '' }
+    return { type: 'image', id: String(raw?.id || '').trim() || undefined, title, query: query || title, content: content || '' }
   }
   if (type === 'video') {
     const query = String(raw?.query || '').trim()
-    return { type: 'video', title, query: query || title, content: content || '' }
+    return { type: 'video', id: String(raw?.id || '').trim() || undefined, title, query: query || title, content: content || '' }
   }
   return null
+}
+
+function normalizePlannedChild(raw: any): PlannedChild | null {
+  const base = normalizePlannedNode(raw)
+  if (!base) return null
+  const parentId = String(raw?.parentId || '').trim()
+  const parentTitle = String(raw?.parentTitle || '').trim()
+  return {
+    ...(base as PlannedNode),
+    parentId: parentId || undefined,
+    parentTitle: parentTitle || undefined,
+  }
 }
 
 export async function POST(req: Request) {
@@ -301,22 +316,24 @@ export async function POST(req: Request) {
       '',
       'Guardrails:',
       requestedCount ? `- Explicit count requested: ${requestedCount} (honor it up to 20 text items).` : '',
-      `- Total nodes: ${effectiveTotalMin}–${effectiveTotalMax}`,
-      `- At least ${effectiveMinText} text nodes.`,
-      `- Total media nodes (images+videos): ${effectiveMinMedia}–${effectiveMaxMedia}.`,
+      `- Total nodes (level 1 + level 2): ${effectiveTotalMin}–${effectiveTotalMax}`,
+      `- Level 1 must include at least ${effectiveMinText} text nodes.`,
+      `- Total media nodes (images+videos) across all levels: ${effectiveMinMedia}–${effectiveMaxMedia}.`,
       `- Images: 0–${maxImages}.`,
       `- Videos: 0–${maxVideos}.`,
       '',
       'Output JSON with this exact shape:',
-      '{ "plan": { "density": "low|medium|high", "counts": { "text": number, "image": number, "video": number }, "rationale": string }, "nodes": [ { "type":"text|image|video", "title": string, "content": string, "query"?: string } ] }',
+      '{ "plan": { "density": "low|medium|high", "counts": { "text": number, "image": number, "video": number }, "rationale": string }, "nodes": [ { "id": string, "type":"text", "title": string, "content": string } ], "children": [ { "parentId": string, "type":"text|image|video", "title": string, "content": string, "query"?: string } ] }',
       '',
       'Rules:',
+      '- Level 1 nodes MUST be text only and must include unique "id" fields.',
+      '- Children must reference a valid parentId from level 1.',
       '- "query" is REQUIRED for image/video nodes and is a short search phrase (2–8 words). No URLs.',
       '- Avoid duplicating what is already on the board. Prefer filling gaps, adding complements, or going deeper.',
       '- If no explicit count is requested, fewer nodes is OK. Do not pad; prefer clarity over quantity.',
       '- Keep titles concise (<= 60 chars).',
       '- Content: 1–2 sentences max (short, actionable).',
-      '- Ensure counts match nodes length and obey guardrails.',
+      '- Ensure counts match combined nodes + children and obey guardrails.',
     ].join('\n')
 
     const existingContext = buildExistingNodesContext(existingNodes as any)
@@ -341,16 +358,14 @@ export async function POST(req: Request) {
     let parsed: any = null
     try { parsed = JSON.parse(stripJsonFences(ai.content || '')) } catch {}
     const plannedNodesRaw: any[] = Array.isArray(parsed?.nodes) ? parsed.nodes : []
+    const plannedChildrenRaw: any[] = Array.isArray(parsed?.children) ? parsed.children : []
     const plannedNodes: PlannedNode[] = plannedNodesRaw.map(normalizePlannedNode).filter(Boolean) as any
+    const plannedChildren: PlannedChild[] = plannedChildrenRaw.map(normalizePlannedChild).filter(Boolean) as any
 
-    // Enforce guardrails in code (clamp + trim)
+    // Enforce guardrails for level-1 text nodes
     const texts: TextPlannedNode[] = plannedNodes.filter((n): n is TextPlannedNode => n.type === 'text')
-    let images: ImagePlannedNode[] = plannedNodes.filter((n): n is ImagePlannedNode => n.type === 'image').slice(0, maxImages)
-    let videos: VideoPlannedNode[] = plannedNodes.filter((n): n is VideoPlannedNode => n.type === 'video').slice(0, maxVideos)
-
     let safeText = texts
     if (safeText.length < effectiveMinText) {
-      // add simple filler text nodes (rare, but ensures backbone)
       const need = effectiveMinText - safeText.length
       const fillers: TextPlannedNode[] = Array.from({ length: need }).map((_, i) => ({
         type: 'text',
@@ -360,27 +375,41 @@ export async function POST(req: Request) {
       safeText = [...safeText, ...fillers]
     }
 
+    let childImages: ImagePlannedNode[] = plannedChildren.filter((n): n is ImagePlannedNode => n.type === 'image').slice(0, maxImages)
+    let childVideos: VideoPlannedNode[] = plannedChildren.filter((n): n is VideoPlannedNode => n.type === 'video').slice(0, maxVideos)
+    const childTexts: TextPlannedNode[] = plannedChildren.filter((n): n is TextPlannedNode => n.type === 'text')
+
+    if (safeText.length === 0 && plannedChildren.length > 0) {
+      safeText = [{
+        type: 'text',
+        id: 'n1',
+        title: `Overview: ${topic}`,
+        content: 'High-level overview of the topic.',
+      }]
+    }
+
+    safeText = safeText.map((n, i) => ({ ...n, id: n.id || `n${i + 1}` }))
+    const parentIds = safeText.map(n => n.id || '').filter(Boolean)
+    const fallbackParentId = parentIds[0] || 'n1'
+
     // Ensure media count within bounds (minMedia..maxMedia), allowing any mix.
     const mediaSupported = supported.includes('image') || supported.includes('video')
     if (mediaSupported) {
-      const mediaNow = images.length + videos.length
+      const mediaNow = childImages.length + childVideos.length
       const cap = effectiveTotalMax
       const targetMinMedia = clamp(effectiveMinMedia, 0, cap)
       const targetMaxMedia = clamp(effectiveMaxMedia, targetMinMedia, cap)
 
-      // Add media if under minMedia (prefer images because they rarely fail to resolve)
-      const canAddImages = supported.includes('image') && images.length < maxImages
-      const canAddVideos = supported.includes('video') && videos.length < maxVideos
-      if (mediaNow < targetMinMedia && (canAddImages || canAddVideos)) {
+      if (mediaNow < targetMinMedia) {
         let need = targetMinMedia - mediaNow
-        while (need > 0 && (images.length < maxImages || videos.length < maxVideos)) {
-          if (supported.includes('image') && images.length < maxImages) {
-            images = [...images, { type: 'image', title: `Image reference`, query: topic, content: '' }]
+        while (need > 0 && (childImages.length < maxImages || childVideos.length < maxVideos)) {
+          if (supported.includes('image') && childImages.length < maxImages) {
+            childImages = [...childImages, { type: 'image', title: `Image reference`, query: topic, content: '' }]
             need--
             continue
           }
-          if (supported.includes('video') && videos.length < maxVideos) {
-            videos = [...videos, { type: 'video', title: `Video reference`, query: topic, content: '' }]
+          if (supported.includes('video') && childVideos.length < maxVideos) {
+            childVideos = [...childVideos, { type: 'video', title: `Video reference`, query: topic, content: '' }]
             need--
             continue
           }
@@ -388,55 +417,69 @@ export async function POST(req: Request) {
         }
       }
 
-      // Trim media if over maxMedia (drop from the end, preserve earlier picks)
-      const mediaAfterAdd = images.length + videos.length
+      const mediaAfterAdd = childImages.length + childVideos.length
       if (mediaAfterAdd > targetMaxMedia) {
         let extra = mediaAfterAdd - targetMaxMedia
-        // Trim videos first (harder to resolve), then images
-        while (extra > 0 && videos.length > 0) { videos = videos.slice(0, -1); extra-- }
-        while (extra > 0 && images.length > 0) { images = images.slice(0, -1); extra-- }
+        while (extra > 0 && childVideos.length > 0) { childVideos = childVideos.slice(0, -1); extra-- }
+        while (extra > 0 && childImages.length > 0) { childImages = childImages.slice(0, -1); extra-- }
       }
     }
 
-    let combined: PlannedNode[] = [...safeText, ...images, ...videos]
-    combined = combined.slice(0, effectiveTotalMax)
-    if (combined.length < effectiveTotalMin) {
-      const need = effectiveTotalMin - combined.length
-      const fillers: PlannedNode[] = Array.from({ length: need }).map((_, i) => ({
+    let childCombined: PlannedChild[] = [...childTexts, ...childImages, ...childVideos]
+    const totalCombinedCount = safeText.length + childCombined.length
+    if (totalCombinedCount < effectiveTotalMin) {
+      const need = effectiveTotalMin - totalCombinedCount
+      const fillers: PlannedChild[] = Array.from({ length: need }).map((_, i) => ({
         type: 'text',
-        title: `Starter ${combined.length + i + 1}`,
+        title: `Next Step ${i + 1}`,
         content: 'Add a short helpful note.',
+        parentId: fallbackParentId,
       }))
-      combined = [...combined, ...fillers].slice(0, effectiveTotalMax)
+      childCombined = [...childCombined, ...fillers]
+    }
+    const maxChildren = Math.max(0, effectiveTotalMax - safeText.length)
+    if (childCombined.length > maxChildren) {
+      childCombined = childCombined.slice(0, maxChildren)
     }
 
-    // Resolve media
-    const outNodes: GenerateResponse['nodes'] = []
-    for (const n of combined) {
+    const outNodes: GenerateResponse['nodes'] = safeText.map((n, i) => ({
+      id: String(n.id || `n${i + 1}`),
+      type: 'text',
+      title: n.title,
+      content: n.content || '',
+    }))
+
+    const outChildren: GenerateResponse['children'] = []
+    for (const n of childCombined) {
+      const parentId = String((n as any)?.parentId || '').trim()
+      const parentTitle = String((n as any)?.parentTitle || '').trim()
+      const resolvedParentId = parentId && parentIds.includes(parentId)
+        ? parentId
+        : (parentTitle ? (outNodes.find(p => p.title.toLowerCase() === parentTitle.toLowerCase())?.id || '') : '') || fallbackParentId
+
       if (n.type === 'text') {
-        outNodes.push({ type: 'text', title: n.title, content: n.content || '' })
+        outChildren.push({ type: 'text', title: n.title, content: n.content || '', parentId: resolvedParentId })
         continue
       }
       if (n.type === 'image') {
         const q = (n.query || n.title || topic).trim()
         const img = (await searchUnsplashImage(q)) || toUnsplashSourceUrl(q)
-        outNodes.push({ type: 'image', title: n.title, content: n.content || '', imageUrl: img })
+        outChildren.push({ type: 'image', title: n.title, content: n.content || '', imageUrl: img, parentId: resolvedParentId })
         continue
       }
       if (n.type === 'video') {
         const q = (n.query || n.title || topic).trim()
         const yt = await searchYouTubeEmbeddableVideos({ query: `${topic} ${q}`, maxVideos: 1 })
         const pick = yt?.[0]?.id ? buildYouTubeWatchUrl(yt[0].id) : ''
-        // If we can't resolve a working video, skip it (never return broken videos)
         if (!pick) continue
-        outNodes.push({ type: 'video', title: n.title, content: n.content || '', videoUrl: pick })
+        outChildren.push({ type: 'video', title: n.title, content: n.content || '', videoUrl: pick, parentId: resolvedParentId })
       }
     }
 
     const counts = {
-      text: outNodes.filter(n => n.type === 'text').length,
-      image: outNodes.filter(n => n.type === 'image').length,
-      video: outNodes.filter(n => n.type === 'video').length,
+      text: outNodes.length + outChildren.filter(n => n.type === 'text').length,
+      image: outChildren.filter(n => n.type === 'image').length,
+      video: outChildren.filter(n => n.type === 'video').length,
     }
 
     const plan = {
@@ -445,7 +488,7 @@ export async function POST(req: Request) {
       rationale: String(parsed?.plan?.rationale || '').trim() || 'Planned a balanced mix of text backbone with supporting media.',
     }
 
-    const response: GenerateResponse = { plan, nodes: outNodes }
+    const response: GenerateResponse = { plan, nodes: outNodes, children: outChildren }
     return NextResponse.json(response)
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Internal error' }, { status: 500 })

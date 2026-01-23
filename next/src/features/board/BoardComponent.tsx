@@ -1089,38 +1089,58 @@ function BoardContent({
           console.log('[generateStarterNodes] raw AI response:', j)
           console.log('[generateStarterNodes] nodes payload:', (j as any)?.nodes)
         } catch {}
-        const planned: any[] = Array.isArray(j?.nodes) ? j.nodes : []
-        if (planned.length > 0) {
-          const textItems = planned.filter((n: any) => n?.type === 'text')
-          const mediaItems = planned.filter((n: any) => n?.type === 'image' || n?.type === 'video')
+        const plannedLevel1: any[] = Array.isArray(j?.nodes) ? j.nodes : []
+        const plannedChildren: any[] = Array.isArray(j?.children) ? j.children : []
+        if (plannedLevel1.length > 0 || plannedChildren.length > 0) {
+          const parentIds = new Set<string>(
+            plannedLevel1
+              .map((n: any) => String(n?.id || '').trim())
+              .filter((id: string) => !!id)
+          )
+          const fallbackParentId = parentIds.values().next().value || topicNode.id
 
-          const nodesToPlace = [
-            ...textItems.map((it: any) => ({
-              title: String(it?.title || '').trim() || 'Untitled',
-              content: String(it?.content || ''),
-              type: 'default' as const,
-              parentId: topicNode.id,
-            })),
-            ...mediaItems.map((it: any) => {
-              const t = String(it?.type || '').toLowerCase()
-              if (t === 'image') {
-                return {
-                  title: String(it?.title || 'Image'),
-                  content: String(it?.content || ''),
-                  type: 'image',
-                  parentId: topicNode.id,
-                  data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any,
-                }
-              }
+          const level1Nodes = plannedLevel1.map((it: any, idx: number) => ({
+            id: String(it?.id || `n${idx + 1}`),
+            title: String(it?.title || '').trim() || 'Untitled',
+            content: String(it?.content || ''),
+            type: 'default' as const,
+            parentId: topicNode.id,
+          }))
+
+          const childNodes = plannedChildren.map((it: any, idx: number) => {
+            const t = String(it?.type || '').toLowerCase()
+            const rawParentId = String(it?.parentId || '').trim()
+            const parentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
+            if (t === 'image') {
               return {
+                id: String(it?.id || `cimg-${idx + 1}`),
+                title: String(it?.title || 'Image'),
+                content: String(it?.content || ''),
+                type: 'image',
+                parentId,
+                data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any,
+              }
+            }
+            if (t === 'video') {
+              return {
+                id: String(it?.id || `cvid-${idx + 1}`),
                 title: String(it?.title || 'Video'),
                 content: String(it?.content || ''),
                 type: 'video',
-                parentId: topicNode.id,
+                parentId,
                 data: { videoUrl: String(it?.videoUrl || ''), status: 'idle', titleSize: 'sm' } as any,
               }
-            })
-          ]
+            }
+            return {
+              id: String(it?.id || `ctxt-${idx + 1}`),
+              title: String(it?.title || '').trim() || 'Untitled',
+              content: String(it?.content || ''),
+              type: 'default' as const,
+              parentId,
+            }
+          })
+
+          const nodesToPlace = [...level1Nodes, ...childNodes]
 
           const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
           try {
@@ -1142,7 +1162,7 @@ function BoardContent({
               id: (node as any).id || `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               type: node.type || 'default',
               position: { x: startX + idx * (cellWidth + padding), y: startY },
-              data: { title: node.title, content: node.content || '', ...(node.data || {}) }
+              data: { title: node.title, content: node.content || '', ...((node as any).data || {}) }
             }))
             const placedEdges: any[] = placedNodes.map((node, idx) => ({
               id: `edge-${topicNode.id}-${node.id}`,
