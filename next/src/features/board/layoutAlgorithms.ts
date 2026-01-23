@@ -343,48 +343,55 @@ export async function calculateElkHierarchyLayout(
 ): Promise<NodePlacement[]> {
   if (!nodesToPlace.length) return []
 
-  const focusPosition = context.focusNode?.position ?? getCenterPosition(context)
-  const minDistance = context.constraints?.minDistance ?? 30
-  const nodeSpacing = options.nodeSpacing ?? Math.max(80, minDistance * 2)
-  const layerSpacing = options.layerSpacing ?? Math.max(120, minDistance * 3)
+  // Pure ELK test - minimal config
+  const nodeSpacing = options.nodeSpacing ?? 100
+  const layerSpacing = options.layerSpacing ?? 150
   const direction = options.direction ?? 'DOWN'
 
   const idOf = (node: NodeToPlace, index: number) => node.id || `temp-${index}`
-  const idSet = new Set<string>()
 
+  // Build ELK graph structure
   const elkNodes = nodesToPlace.map((node, index) => {
     const id = idOf(node, index)
-    idSet.add(id)
     const dims = estimateNodeDimensions(node.title, node.content, node.type)
     return {
       id,
-      width: Math.max(80, dims.width),
-      height: Math.max(60, dims.height),
+      width: Math.max(150, dims.width),
+      height: Math.max(80, dims.height),
     }
   })
 
+  // Build edges from parent relationships
+  // For pure ELK test: if all nodes share the same parent (focus node), 
+  // ELK will place them as siblings in layers
   const edges: Array<{ id: string; sources: string[]; targets: string[] }> = []
-  const rootId = '__root__'
-  const useRoot = !!context.focusNode || nodesToPlace.some(n => !n.parentId || !idSet.has(String(n.parentId)))
+  const idMap = new Map<string, number>()
+  nodesToPlace.forEach((node, index) => {
+    const id = idOf(node, index)
+    idMap.set(id, index)
+  })
 
   nodesToPlace.forEach((node, index) => {
     const id = idOf(node, index)
-    const parentId = node.parentId ? String(node.parentId) : ''
-    if (parentId && idSet.has(parentId)) {
-      edges.push({ id: `edge-${parentId}-${id}`, sources: [parentId], targets: [id] })
-      return
+    const parentId = node.parentId ? String(node.parentId) : null
+    
+    // If parent exists in nodesToPlace, create edge
+    if (parentId && idMap.has(parentId)) {
+      const parentElkId = idOf(nodesToPlace[idMap.get(parentId)!], idMap.get(parentId)!)
+      edges.push({ 
+        id: `edge-${parentElkId}-${id}`, 
+        sources: [parentElkId], 
+        targets: [id] 
+      })
     }
-    if (useRoot) {
-      edges.push({ id: `edge-${rootId}-${id}`, sources: [rootId], targets: [id] })
-    }
+    // If parent is focus node (not in nodesToPlace), ELK will treat them as root-level siblings
+    // This is fine for testing - ELK will still create nice layered rows
   })
-
-  if (useRoot) {
-    elkNodes.unshift({ id: rootId, width: 40, height: 40 })
-  }
 
   try {
     const elk = await getElkInstance()
+    
+    // Pure ELK layout - let it do its thing
     const layoutedGraph = await elk.layout({
       id: 'root',
       layoutOptions: {
@@ -397,36 +404,48 @@ export async function calculateElkHierarchyLayout(
       edges,
     })
 
+    // Extract positions directly from ELK
     const layoutedChildren = Array.isArray(layoutedGraph?.children) ? layoutedGraph.children : []
     const byId = new Map<string, any>(layoutedChildren.map((n: any) => [String(n.id), n]))
 
-    const rootNode = byId.get(rootId)
-    const fallbackAnchor = (() => {
-      if (layoutedChildren.length === 0) return focusPosition
-      const xs = layoutedChildren.map((n: any) => n.x || 0)
-      const ys = layoutedChildren.map((n: any) => n.y || 0)
-      return { x: Math.min(...xs), y: Math.min(...ys) }
-    })()
+    // Get focus node position for offset (or use viewport center)
+    const focusPosition = context.focusNode?.position ?? getCenterPosition(context)
+    const firstNode = layoutedChildren[0]
+    const offset = firstNode 
+      ? { x: focusPosition.x - (firstNode.x || 0), y: focusPosition.y - (firstNode.y || 0) }
+      : { x: focusPosition.x, y: focusPosition.y }
 
-    const anchor = rootNode ? { x: rootNode.x || 0, y: rootNode.y || 0 } : fallbackAnchor
-    const offset = { x: focusPosition.x - anchor.x, y: focusPosition.y - anchor.y }
-
+    // Create placements from ELK positions
     const placements: NodePlacement[] = []
     nodesToPlace.forEach((node, index) => {
       const id = idOf(node, index)
       const layouted = byId.get(id)
-      if (!layouted) return
+      if (!layouted) {
+        console.warn('[ELK] No layout result for node:', id)
+        return
+      }
+      
       placements.push({
         node: createNodeFromToPlace(node),
-        position: { x: (layouted.x || 0) + offset.x, y: (layouted.y || 0) + offset.y },
-        reason: 'ELK layered hierarchy layout',
-        confidence: 0.85,
+        position: { 
+          x: (layouted.x || 0) + offset.x, 
+          y: (layouted.y || 0) + offset.y 
+        },
+        reason: 'ELK pure layered layout',
+        confidence: 0.9,
       })
+    })
+
+    console.log('[ELK] Layout complete:', { 
+      nodes: placements.length, 
+      layers: new Set(layoutedChildren.map((n: any) => n.y)).size 
     })
 
     return placements
   } catch (error) {
-    return calculateHierarchicalGridLayout(nodesToPlace, context)
+    console.error('[ELK] Layout failed:', error)
+    // No fallback - just return empty so we can see ELK errors
+    return []
   }
 }
 
