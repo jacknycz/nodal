@@ -715,7 +715,18 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
             />
           </SidebarSection>
 
-          <SidebarSection showOn={['boards']}>
+          <SidebarSection showOn={['learn']}>
+            <div className="flex flex-col gap-3">
+              <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">What's coming</h2>
+              <ul className="text-sm text-gray-600 dark:text-gray-300 list-disc pl-5 space-y-1.5">
+                <li>Image + text walkthroughs</li>
+                <li>Deep-dive AI workflows</li>
+                <li>Board organization playbooks</li>
+              </ul>
+            </div>
+          </SidebarSection>
+
+          <SidebarSection showOn={['boards', 'learn']}>
             <div className="flex flex-col gap-3 mt-8">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">nodal news</h2>

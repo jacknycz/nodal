@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import Image from 'next/image'
+import bgLearn from '../assets/bg-learn.png'
 import Tabs, { Tab } from './ui/Tabs'
 import TextInput from './ui/TextInput'
 import Button from './ui/Button'
@@ -27,48 +29,67 @@ export default function LearnTab() {
   }, [query, videos])
 
   return (
-    <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 py-10">
-      <div className="flex flex-col gap-2 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-primary-500/10 text-primary-600 dark:text-primary-300">
-            <Sparkle className="w-5 h-5" weight="duotone" />
-          </div>
-          <div className="min-w-0">
-            <div className="font-fredoka text-3xl text-gray-900 dark:text-white truncate">Learn</div>
-            <div className="text-sm text-gray-600 dark:text-gray-300">
-              Tutorials, shortcuts, and guides. This area will grow over time.
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-12">
+      <div className="relative w-full rounded-3xl overflow-hidden">
+        {/* Background image */}
+        <div className="relative w-full flex justify-end">
+          {/* <Image
+            src={bgLearn}
+            alt=""
+            className="w-3xl h-auto object-contain"
+            priority
+            sizes="70vw"
+          /> */}
+        </div>
+        
+        {/* Content overlay */}
+        <div className="absolute top-16 inset-0 z-10 flex items-start">
+          <div className="flex items-top gap-3 max-w-2xl">
+            <div className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm text-primary-600 dark:text-primary-300 shrink-0">
+              <Sparkle className="w-5 h-5" weight="duotone" />
+            </div>
+            <div className="min-w-0 flex flex-col gap-2">
+              <div className="font-fredoka text-4xl text-gray-900 dark:text-white truncate drop-shadow-sm">Learn</div>
+              <div className="text-gray-700 dark:text-gray-200 drop-shadow-sm">
+                Tutorials, shortcuts, and guides. This area will grow over time.
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-3xl border border-gray-200/60 dark:border-primary-700/20 bg-white/80 dark:bg-slate-950/40 shadow-xl overflow-hidden">
+      <div className="rounded-3xl mt-10 border border-gray-200/60 dark:border-primary-700/20 bg-white/80 dark:bg-slate-950/40 shadow-xl overflow-hidden">
         <Tabs disableRouting>
           <Tab label="overview" headerLabel="Overview">
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 p-5">
-                <div className="font-fredoka text-xl text-gray-900 dark:text-white">Start here</div>
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  Watch a quick intro, then use Quick Tips as your “keyboard cheat-sheet”.
+            <div className="p-6 flex">
+              <div className="relative overflow-hidden">
+                {/* Background image */}
+                <div className="flex justify-end pt-32">
+                  <Image
+                    src={bgLearn}
+                    alt=""
+                    className="w-full max-w-[70%] h-auto object-contain"
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                  />
                 </div>
+                
+                {/* Content overlay */}
+                <div className="absolute inset-0 z-10 p-5 max-w-[600px]">
+                  <div className="font-fredoka text-xl text-gray-900 dark:text-white">Start here</div>
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    Watch a quick intro, then use Quick Tips as your "keyboard cheat-sheet".
+                  </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button onClick={() => setFullscreen(videos[0])}>
-                    <Play className="w-4 h-4 mr-2" /> Play first video
-                  </Button>
-                  <Button variant="secondary" onClick={() => setSelected(videos[0])}>
-                    Set as current lesson
-                  </Button>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button onClick={() => setFullscreen(videos[0])}>
+                      <Play className="w-4 h-4 mr-2" /> Play first video
+                    </Button>
+                    <Button variant="secondary" onClick={() => setSelected(videos[0])}>
+                      Set as current lesson
+                    </Button>
+                  </div>
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/40 p-5">
-                <div className="font-fredoka text-xl text-gray-900 dark:text-white">What’s coming</div>
-                <ul className="mt-2 text-sm text-gray-600 dark:text-gray-300 list-disc pl-5 space-y-1">
-                  <li>Image + text walkthroughs</li>
-                  <li>Deep-dive AI workflows</li>
-                  <li>Board organization playbooks</li>
-                </ul>
               </div>
             </div>
           </Tab>
@@ -89,8 +110,8 @@ export default function LearnTab() {
               </div>
 
               <div className="mt-5 grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6">
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/30 overflow-hidden">
-                  <div className="max-h-[60vh] overflow-y-auto scrollbar-themed p-3 space-y-2">
+                <div className="overflow-hidden">
+                  <div className="max-h-[60vh] overflow-y-auto scrollbar-themed pr-3 space-y-2">
                     {filtered.map((v) => (
                       <button
                         key={v.id}
@@ -193,14 +214,15 @@ export default function LearnTab() {
             </div>
           </Tab>
 
-          <Tab label="guides" headerLabel="Guides">
+          {/* Guides tab - hidden until ready */}
+          {/* <Tab label="guides" headerLabel="Guides">
             <div className="p-10 text-center">
               <div className="font-fredoka text-2xl text-gray-900 dark:text-white">Guides are coming next</div>
               <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 This tab is designed for future step-by-step lessons with images, text, and checklists.
               </div>
             </div>
-          </Tab>
+          </Tab> */}
         </Tabs>
       </div>
 
