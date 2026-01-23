@@ -51,7 +51,7 @@ export default function LearnTab() {
             <div className="min-w-0 flex flex-col gap-2">
               <div className="font-fredoka text-4xl text-gray-900 dark:text-white truncate drop-shadow-sm">Learn</div>
               <div className="text-gray-700 dark:text-gray-200 drop-shadow-sm">
-                Tutorials, shortcuts, and guides. This area will grow over time.
+                Tutorials, shortcuts and expert tips. This area will grow over time.
               </div>
             </div>
           </div>
