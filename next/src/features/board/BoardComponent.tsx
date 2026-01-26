@@ -4085,29 +4085,36 @@ function BoardContent({
               const plannedChildren: any[] = Array.isArray(plannedJson?.children) ? plannedJson.children : []
               if (!plannedNodes.length && !plannedChildren.length) return
 
-              const parentIds = new Set<string>(
-                plannedNodes.map((n: any) => String(n?.id || '').trim()).filter((id: string) => !!id)
-              )
-              const fallbackParentId = parentId || parentIds.values().next().value || undefined
+              const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+              const makeId = (prefix: string) => `${prefix}-${batchId}-${Math.random().toString(36).slice(2, 6)}`
+              const aiIdToNewId = new Map<string, string>()
+              const getMappedId = (aiId: any, fallbackPrefix: string) => {
+                const key = String(aiId || '').trim()
+                if (key) {
+                  if (!aiIdToNewId.has(key)) aiIdToNewId.set(key, makeId(fallbackPrefix))
+                  return aiIdToNewId.get(key)!
+                }
+                return makeId(fallbackPrefix)
+              }
 
-              const makeId = (prefix: string) =>
-                `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
-              const level1Nodes = plannedNodes.map((it: any, idx: number) => ({
-                id: String(it?.id || makeId('n1')),
+              const level1Nodes = plannedNodes.map((it: any) => ({
+                id: getMappedId(it?.id, 'n1'),
                 title: String(it?.title || '').trim() || 'Untitled',
                 content: String(it?.content || ''),
                 type: 'default' as const,
                 ...(parentId ? { parentId } : {})
               }))
 
+              const parentIds = new Set<string>(level1Nodes.map(n => n.id))
+              const fallbackParentId = parentId || level1Nodes[0]?.id || undefined
+
               const childNodes = plannedChildren.map((it: any, idx: number) => {
                 const t = String(it?.type || '').toLowerCase()
                 const rawParentId = String(it?.parentId || '').trim()
-                const resolvedParentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
+                const resolvedParentId = aiIdToNewId.get(rawParentId) || fallbackParentId
                 if (t === 'image') {
                   return {
-                    id: String(it?.id || makeId('cimg')),
+                    id: getMappedId(it?.id, 'cimg'),
                     title: String(it?.title || 'Image'),
                     content: String(it?.content || ''),
                     type: 'image' as const,
@@ -4117,7 +4124,7 @@ function BoardContent({
                 }
                 if (t === 'video') {
                   return {
-                    id: String(it?.id || makeId('cvid')),
+                    id: getMappedId(it?.id, 'cvid'),
                     title: String(it?.title || 'Video'),
                     content: String(it?.content || ''),
                     type: 'video' as const,
@@ -4126,7 +4133,7 @@ function BoardContent({
                   }
                 }
                 return {
-                  id: String(it?.id || makeId('ctxt')),
+                  id: getMappedId(it?.id, 'ctxt'),
                   title: String(it?.title || '').trim() || 'Untitled',
                   content: String(it?.content || ''),
                   type: 'default' as const,
@@ -4238,26 +4245,36 @@ function BoardContent({
               const plannedChildren: any[] = Array.isArray(plannedJson?.children) ? plannedJson.children : []
               if (!plannedNodes.length && !plannedChildren.length) return
 
-              const parentIds = new Set<string>(
-                plannedNodes.map((n: any) => String(n?.id || '').trim()).filter((id: string) => !!id)
-              )
-              const fallbackParentId = parentId || parentIds.values().next().value || undefined
+              const batchId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+              const makeId = (prefix: string) => `${prefix}-${batchId}-${Math.random().toString(36).slice(2, 6)}`
+              const aiIdToNewId = new Map<string, string>()
+              const getMappedId = (aiId: any, fallbackPrefix: string) => {
+                const key = String(aiId || '').trim()
+                if (key) {
+                  if (!aiIdToNewId.has(key)) aiIdToNewId.set(key, makeId(fallbackPrefix))
+                  return aiIdToNewId.get(key)!
+                }
+                return makeId(fallbackPrefix)
+              }
 
-              const level1Nodes = plannedNodes.map((it: any, idx: number) => ({
-                id: String(it?.id || `n${idx + 1}`),
+              const level1Nodes = plannedNodes.map((it: any) => ({
+                id: getMappedId(it?.id, 'n1'),
                 title: String(it?.title || '').trim() || 'Untitled',
                 content: String(it?.content || ''),
                 type: 'default' as const,
                 ...(parentId ? { parentId } : {})
               }))
 
+              const parentIds = new Set<string>(level1Nodes.map(n => n.id))
+              const fallbackParentId = parentId || level1Nodes[0]?.id || undefined
+
               const childNodes = plannedChildren.map((it: any, idx: number) => {
                 const t = String(it?.type || '').toLowerCase()
                 const rawParentId = String(it?.parentId || '').trim()
-                const resolvedParentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
+                const resolvedParentId = aiIdToNewId.get(rawParentId) || fallbackParentId
                 if (t === 'image') {
                   return {
-                    id: String(it?.id || `cimg-${idx + 1}`),
+                    id: getMappedId(it?.id, 'cimg'),
                     title: String(it?.title || 'Image'),
                     content: String(it?.content || ''),
                     type: 'image' as const,
@@ -4267,7 +4284,7 @@ function BoardContent({
                 }
                 if (t === 'video') {
                   return {
-                    id: String(it?.id || `cvid-${idx + 1}`),
+                    id: getMappedId(it?.id, 'cvid'),
                     title: String(it?.title || 'Video'),
                     content: String(it?.content || ''),
                     type: 'video' as const,
@@ -4276,7 +4293,7 @@ function BoardContent({
                   }
                 }
                 return {
-                  id: String(it?.id || `ctxt-${idx + 1}`),
+                  id: getMappedId(it?.id, 'ctxt'),
                   title: String(it?.title || '').trim() || 'Untitled',
                   content: String(it?.content || ''),
                   type: 'default' as const,
