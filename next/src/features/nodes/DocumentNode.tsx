@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil, TreeView, FileDoc, FileTxt, Image, File } from "@phosphor-icons/react/ssr";
+import { Trash, FrameCorners, Download, CheckCircle, SpinnerGap, Warning, FileText, FilePdf, PlusCircle, Pencil, TreeView, FileDoc, FileTxt, Image, File, Play } from "@phosphor-icons/react/ssr";
 import PDFPreviewModal from '../../components/PDFPreviewModal'
 import Modal from '../../components/ui/Modal'
 import NodeEditModal from '../../components/NodeEditModal'
@@ -45,6 +45,7 @@ interface DocumentNodeProps {
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
   onNodeShiftClickConnect?: (targetId: string) => void
+  onStartStoryMode?: (nodeId: string) => void
 }
 
 export default function DocumentNode({ 
@@ -54,7 +55,8 @@ export default function DocumentNode({
   onNodeUpdate,
   selected,
   onQuickAddNodes,
-  onOrganizeSubtree
+  onOrganizeSubtree,
+  onStartStoryMode
 }: DocumentNodeProps) {
   const { isDark } = useTheme()
   const SHOW_ADD_CONNECTED = false
@@ -315,7 +317,20 @@ export default function DocumentNode({
               </IconButton>
             )}
           </div>
-          
+          {(data as any)?.storyStarter && (
+            <div className="mt-2 flex items-center gap-2">
+              <Tag variant="primary">Story Starter Node</Tag>
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Play story"
+                onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+                title="Play story"
+              >
+                <Play size={14} weight="duotone" />
+              </IconButton>
+            </div>
+          )}
         </div>
         
         {/* Status indicator */}

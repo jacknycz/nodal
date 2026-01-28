@@ -3,13 +3,14 @@ import { useState, useEffect, useDeferredValue, useRef, startTransition, useMemo
 import type { SavedBoard, BoardSummary } from '../features/storage/storage'
 import type { BoardBrief } from '../features/board/boardTypes'
 import BoardSetupModal from './BoardSetupModal'
+import IconButton from './ui/IconButton'
 import Loader from './ui/Loader'
 import { templateStorage, type TemplateRecord } from '../features/storage/templateStorage'
 import { isAdmin } from '../features/auth/roles'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Checkbox from './ui/Checkbox'
 import Button from './ui/Button'
-import { Graph, Lightbulb, TreeStructure, UserCircle, Users } from '@phosphor-icons/react/dist/ssr'
+import { Graph, Lightbulb, TreeStructure, UserCircle, Users, X } from '@phosphor-icons/react/dist/ssr'
 import Search from './ui/Search'
 import { Tab, Tabs } from './ui/Tabs'
 import ProfileTab from './ProfileTab'
@@ -56,6 +57,8 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [pinnedBoardIds, setPinnedBoardIds] = useState<string[]>([])
   const [showSharedOnly, setShowSharedOnly] = useState(false)
+  const [welcomeDismissed, setWelcomeDismissed] = useState<boolean>(false)
+  const [welcomeDismissedLoading, setWelcomeDismissedLoading] = useState(true)
 
   const [templates, setTemplates] = useState<TemplateRecord[]>([])
   const [tabPath, setTabPath] = useState<string>(typeof window !== 'undefined' ? (window.location.pathname || '/boards') : '/boards')
@@ -257,6 +260,54 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       }
     }
   }, [])
+
+  // Load welcome dismissal from Supabase
+  useEffect(() => {
+    if (!user?.id) {
+      setWelcomeDismissedLoading(false)
+      return
+    }
+    const loadDismissal = async () => {
+      try {
+        const supabase = getSupabaseClient()
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('welcome_dismissed')
+          .eq('id', user.id)
+          .maybeSingle()
+        
+        if (!error && data) {
+          setWelcomeDismissed(Boolean((data as any).welcome_dismissed))
+        }
+      } catch (err) {
+        console.warn('[BoardRoom] Failed to load welcome dismissal', err)
+      } finally {
+        setWelcomeDismissedLoading(false)
+      }
+    }
+    loadDismissal()
+  }, [user?.id])
+
+  // Save welcome dismissal to Supabase
+  const handleDismissWelcome = async () => {
+    if (!user?.id) return
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase
+        .from('profiles')
+        // @ts-ignore - welcome_dismissed column exists in database but not in generated types
+        .update({ welcome_dismissed: true })
+        .eq('id', user.id)
+      
+      if (!error) {
+        setWelcomeDismissed(true)
+      } else {
+        console.warn('[BoardRoom] Failed to save welcome dismissal', error)
+      }
+    } catch (err) {
+      console.warn('[BoardRoom] Failed to save welcome dismissal', err)
+    }
+  }
 
   // Single bootstrap: load personal boards (client) + shared boards/connections/news (server) and commit atomically
   useEffect(() => {
@@ -613,7 +664,7 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
       {/* Scrollable Board/Sidebar Section */}
       <div className="relative flex flex-col lg:flex-row mx-4 md:mx-6 lg:mx-8 z-20 
       shadow dark:shadow-2xl dark:shadow-gray-950/70 
-      backdrop-blur-sm bg-white/70 dark:bg-slate-950/70
+      backdrop-blur-sm bg-white dark:bg-slate-950/70
       border-t border-gray-200/50 dark:border-gray-800/50 rounded-4xl">
 
         <Tabs>
@@ -706,6 +757,60 @@ const BoardRoom: React.FC<BoardRoomProps> = ({ onOpenBoard }) => {
         {/* SIDEBAR */}
         <div className="w-full lg:w-96 lg:min-w-[24rem] lg:max-w-[24rem] flex-none shrink-0 mt-8 lg:-mt-16 lg:min-h-screen rounded-t-4xl bg-white dark:bg-slate-950/90 
         p-6 shadow-2xl shadow-gray-400/20 dark:shadow-primary-950/50 lg:sticky lg:top-12 self-start z-30" style={{ scrollbarGutter: 'stable' }}>
+          <SidebarSection showOn={['boards', 'profile', 'templates']}>
+            {!hasAnyBoards && !loading && !welcomeDismissedLoading && !welcomeDismissed && (
+              <div className="flex relative flex-col gap-4 p-4 rounded-xl border border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-950/30 mb-6">
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-xl font-medium font-fredoka text-gray-900 dark:text-white">Welcome to Nodal!</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Get started by exploring our welcome template or learning the basics.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setTabPath('/learn')
+                      if (typeof window !== 'undefined') {
+                        window.history.pushState({}, '', '/templates')
+                      }
+                    }}
+                    className="w-full justify-start"
+                  >
+                    <TreeStructure className="w-4 h-4 mr-2" />
+                    Welcome Template
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setTabPath('/learn')
+                      if (typeof window !== 'undefined') {
+                        window.history.pushState({}, '', '/learn')
+                      }
+                    }}
+                    className="w-full justify-start"
+                  >
+                    <Lightbulb className="w-4 h-4 mr-2" />
+                    Learn the Basics
+                  </Button>
+
+                  
+                </div>
+
+                <IconButton
+                  variant="primaryGhost"
+                  size="sm"                  onClick={handleDismissWelcome}
+                  className="absolute right-0 top-0"
+                  aria-label="Dismiss welcome guide"
+                >  
+                  <X size={16} />
+                </IconButton>
+              </div>
+            )}
+          </SidebarSection>
+
           <SidebarSection showOn={['boards', 'profile']}>
             <TasksSidebar
               incompleteTasks={incompleteTasks}

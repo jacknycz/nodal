@@ -15,6 +15,7 @@ import { GearSix, Trash } from '@phosphor-icons/react/dist/ssr'
 import Image from 'next/image'
 import BoardSettingsModal from './BoardSettingsModal'
 import { useRouter } from 'next/navigation'
+import Tooltip from './ui/Tooltip'
 
 interface BoardCardProps {
   id: string
@@ -126,8 +127,8 @@ function BoardCard({
       className={`group relative flex flex-col 
       shadow-xl shadow-gray-200/20 hover:shadow-gray-400/20 hover:shadow-lg dark:hover:shadow-primary-800/20 dark:shadow-none dark:hover:shadow-xl 
       bg-white dark:bg-gray-900/60 dark:hover:bg-gray-900/90
-      ${isSharedBoard ? 'border-primary-200 dark:border-primary-500/40' : 'border-primary-100 dark:border-primary-900/20'}  
-      dark:hover:border-primary-600/20 p-4 rounded-3xl border transition-all duration-200`}
+      ${isSharedBoard ? 'border-primary-200 dark:border-primary-500/40' : 'border-white0707 dark:border-transparent'}  
+      dark:hover:border-primary-600/20  rounded-[36px] border transition-all duration-200`}
       // onClick={handleCardClick}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 160px' as any }}
     >
@@ -144,28 +145,39 @@ function BoardCard({
       )}
 
       <div className="mb-4">
-        <h3 className="flex-1 pr-2 md:line-clamp-2 text-xl font-fredoka font-medium text-gray-900 dark:text-white">
+        <h3 className="flex-1 p-5 pb-2 pr-6 md:line-clamp-2 text-xl font-fredoka font-medium text-gray-900 dark:text-white">
           {name}
         </h3>
-        {typeof topic === 'string' && topic.trim().length > 0 && (
-          <div className="mt-2 gap-1 flex items-center">
-            <TagIcon weight="duotone" className="w-3 h-3 text-gray-900 dark:text-white" size={12} />
-            <span className="text-sm text-gray-800 dark:text-gray-100">{topic}</span>
-          </div>
-        )}
 
-        <div className="flex items-center gap-2">
-          {lastModified !== undefined && (
-            <span className="flex gap-1 items-center justify-center text-sm text-gray-400 dark:text-gray-400">
-              <Pencil size={16} weight="duotone" className="w-3 h-3" /> {formatDate(lastModified)}
-            </span>
+        <div className="px-6">
+          {typeof topic === 'string' && topic.trim().length > 0 && (
+            <div className="mt-2 gap-1 flex items-center">
+              <TagIcon weight="duotone" className="w-4 h-4 text-gray-800 dark:text-white" size={12} />
+              <span className="text-sm text-gray-800 dark:text-gray-100">{topic}</span>
+            </div>
           )}
+
+          <div className="flex flex-row justify-between gap-4 my-2">
+            {lastModified !== undefined && (
+              <span className="flex gap-1 items-center justify-center text-sm text-gray-800 dark:text-white">
+                <Pencil size={16} weight="duotone" className="w-4 h-4 text-secondary-600 dark:text-secondary-400" /> {formatDate(lastModified)}
+              </span>
+            )}
+
+            {isSharedBoard && ( 
+              <span className="flex gap-1 items-center justify-center text-sm text-primary-800 dark:text-white">
+                
+                  <span className="inline-flex">
+                  <Tooltip content="Shared">
+                    <Users size={16} weight="duotone" className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    </Tooltip>
+                  </span>
+                
+              </span>
+            )}
+          </div>
+
         </div>
-
-        {invitedBy && (
-          <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">Invited by: {invitedBy}</span>
-        )}
-
       </div>
 
       {/* <div className="flex my-4 space-x-6 items-center">
@@ -202,14 +214,14 @@ function BoardCard({
       )}
 
       {/* Footer actions */}
-      <div className="col-span-2 mt-auto pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+      <div className="col-span-2 px-5 py-3 m-1 rounded-full bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between gap-2">
         {footerActions ? footerActions : (
           <>
             {/* Left: More menu */}
             <div className="flex items-center gap-2">
               <Menu
                 trigger={
-                  <IconButton aria-label="More actions" size="small" variant="secondaryOutline">
+                  <IconButton aria-label="More actions" size="small" variant="primaryOutline" className="bg-white dark:bg-gray-900">
                     <Image src="/nodal.svg" alt="More" width={16} height={16} className="opacity-90" />
                   </IconButton>
                 }
@@ -222,24 +234,14 @@ function BoardCard({
                   ...(canDelete ? [{ label: 'Delete', icon: Trash, danger: true, onClick: () => { setShowDeleteModal(true) } }] : []),
                 ]}
               />
-              {isSharedBoard && (
-                <IconButton
-                  variant="secondaryGhost"
-                  size="small"
-                  aria-label="Shared board"
-                  title="Shared board"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
-                >
-                  <Users size={16} weight="duotone" className="w-4 h-4" />
-                </IconButton>
-              )}
 
               {enableSharing && (
                 <IconButton
-                  variant="secondaryGhost"
+                  variant="primaryOutline"
                   size="small"
                   onClick={e => { e.stopPropagation(); setShowShareModal(true) }}
                   aria-label="Share board"
+                  className="bg-white dark:bg-gray-900"
                 >
                   <ShareFat size={16} weight="duotone" className="w-4 h-4" />
                 </IconButton>

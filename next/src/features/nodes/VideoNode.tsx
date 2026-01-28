@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle, TreeView } from '@phosphor-icons/react/ssr'
-import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, Warning } from '@phosphor-icons/react'
+import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, Warning, Play } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -16,6 +16,7 @@ import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
+import Tag from '../../components/ui/Tag'
 
 interface VideoNodeData {
   title?: string
@@ -35,9 +36,10 @@ interface VideoNodeProps {
   onQuickAddNodes?: (nodeId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
   onNodeShiftClickConnect?: (targetId: string) => void
+  onStartStoryMode?: (nodeId: string) => void
 }
 
-export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, onQuickAddNodes, onOrganizeSubtree }: VideoNodeProps) {
+export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, onQuickAddNodes, onOrganizeSubtree, onStartStoryMode }: VideoNodeProps) {
   const { isDark } = useTheme()
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -512,6 +514,20 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
             {data.title || 'Video'}
           </div>
+          {(data as any)?.storyStarter && (
+            <div className="mt-2 flex items-center gap-2">
+              <Tag variant="primary">Story Starter Node</Tag>
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Play story"
+                onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+                title="Play story"
+              >
+                <Play size={14} weight="duotone" />
+              </IconButton>
+            </div>
+          )}
           {data.status && data.status !== 'ready' && (
             <div className={`mt-1 pointer-events-none flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
               {getStatusIcon()}

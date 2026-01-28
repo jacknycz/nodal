@@ -3,11 +3,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import IconButton from '../../components/ui/IconButton'
-import { ArrowsIn, ArrowsOut, PlayCircle } from '@phosphor-icons/react/ssr'
+import { ArrowsIn, ArrowsOut, PlayCircle, Play } from '@phosphor-icons/react/ssr'
 import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import { useTheme } from '../../contexts/ThemeContext'
+import Tag from '../../components/ui/Tag'
 
 interface SpotifyNodeData {
   title?: string
@@ -26,9 +27,10 @@ interface SpotifyNodeProps {
   selected?: boolean
   onNodeUpdate?: (nodeId: string, updates: Partial<SpotifyNodeData>) => void
   readOnly?: boolean
+  onStartStoryMode?: (nodeId: string) => void
 }
 
-export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly = false }: SpotifyNodeProps) {
+export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly = false, onStartStoryMode }: SpotifyNodeProps) {
   const { isDark } = useTheme()
   // Testing: no collapsed state, always show full player
   const viewRef = useRef<HTMLDivElement | null>(null)
@@ -179,6 +181,20 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
           <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={data.title || 'Spotify'}>
             {data.title || 'Spotify'}
           </div>
+          {(data as any)?.storyStarter && (
+            <div className="mt-2 flex items-center gap-2">
+              <Tag variant="primary">Story Starter Node</Tag>
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Play story"
+                onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+                title="Play story"
+              >
+                <Play size={14} weight="duotone" />
+              </IconButton>
+            </div>
+          )}
           {data.authorName && (
             <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{data.authorName}</div>
           )}

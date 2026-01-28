@@ -1,6 +1,8 @@
 'use client'
 import React from 'react'
 import Modal from './ui/Modal'
+import IconButton from './ui/IconButton';
+import { ArrowRight } from '@phosphor-icons/react/dist/ssr';
 
 type TaskItem = { boardId: string; boardName: string; nodeId: string; title: string }
 
@@ -16,12 +18,7 @@ export default function TasksSidebar({ incompleteTasks, tasksLoading, allBoards,
   const previewCount = 3
 
   const TaskRow = ({ t }: { t: TaskItem }) => (
-    <button
-      key={`${t.boardId}-${t.nodeId}`}
-      onClick={() => {
-        const b = allBoards.find((bb) => bb.id === t.boardId) as any
-        if (b) onOpenBoard(b, undefined)
-      }}
+    <div
       className="group text-left flex items-center justify-between gap-3 rounded-lg px-3 py-2 bg-white/80 dark:bg-gray-900/70 border border-gray-200/80 dark:border-gray-700/80 hover:bg-white dark:hover:bg-gray-900 transition-colors"
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -31,13 +28,23 @@ export default function TasksSidebar({ incompleteTasks, tasksLoading, allBoards,
           <span className="text-[11px] text-gray-500 dark:text-gray-400">{t.boardName}</span>
         </div>
       </div>
-      <span className="text-[11px] text-primary-600 dark:text-primary-400">Open</span>
-    </button>
+      <IconButton
+        variant="secondary"
+        size="sm"
+        onClick={() => {
+          const b = allBoards.find((bb) => bb.id === t.boardId) as any
+          if (b) onOpenBoard(b, undefined)
+        }}
+        aria-label="Open task"
+      >
+        <ArrowRight size={16} />
+      </IconButton>
+    </div>
   )
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">task nodes</h2>
+      <h2 className="text-2xl font-medium font-fredoka text-gray-900 dark:text-white">tasks</h2>
       {tasksLoading && incompleteTasks.length === 0 && (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -59,7 +66,7 @@ export default function TasksSidebar({ incompleteTasks, tasksLoading, allBoards,
       {(incompleteTasks.length > 0 || !tasksLoading) && (
         <div className="flex flex-col gap-2">
           {incompleteTasks.length === 0 && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">No incomplete tasks. Nice work!</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">No incomplete tasks. </div>
           )}
 
           {incompleteTasks.slice(0, previewCount).map((t) => (

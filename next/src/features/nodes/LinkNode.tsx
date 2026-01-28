@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, TreeView } from '@phosphor-icons/react/ssr'
+import { Trash, TreeView, Play } from '@phosphor-icons/react/ssr'
 import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
@@ -14,6 +14,7 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import NodeEditModal from '../../components/NodeEditModal'
 import Tooltip from '../../components/ui/Tooltip'
+import Tag from '../../components/ui/Tag'
 
 interface LinkNodeData {
   title?: string
@@ -32,9 +33,10 @@ interface LinkNodeProps {
   onNodeUpdate?: (nodeId: string, updates: Partial<LinkNodeData>) => void
   onOrganizeSubtree?: (nodeId: string) => void
   onNodeShiftClickConnect?: (targetId: string) => void
+  onStartStoryMode?: (nodeId: string) => void
 }
 
-export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, onOrganizeSubtree }: LinkNodeProps) {
+export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdate, onOrganizeSubtree, onStartStoryMode }: LinkNodeProps) {
   const { isDark } = useTheme()
   const [loading, setLoading] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -154,6 +156,20 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             )}
             <span className="truncate">{data.title || safeHostname}</span>
           </div>
+          {(data as any)?.storyStarter && (
+            <div className="mt-2 flex items-center gap-2">
+              <Tag variant="primary">Story Starter Node</Tag>
+              <IconButton
+                variant="default"
+                size="sm"
+                aria-label="Play story"
+                onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+                title="Play story"
+              >
+                <Play size={14} weight="duotone" />
+              </IconButton>
+            </div>
+          )}
           {isValidHttpUrl(data.linkUrl) && (
             <a
               href={data.linkUrl}

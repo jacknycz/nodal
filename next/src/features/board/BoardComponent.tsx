@@ -2742,7 +2742,7 @@ function BoardContent({
         const isActive = n.id === activeId
         return {
           ...n,
-          className: isActive ? undefined : 'opacity-80'
+          className: isActive ? undefined : 'opacity-50 grayscale'
         }
       })
     })

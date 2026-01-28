@@ -255,7 +255,7 @@ export default function NodalNode(props: any) {
             <Tag variant="primary">Story Starter Node</Tag>
             <IconButton
               variant="default"
-              size="xs"
+              size="sm"
               aria-label="Play story"
               onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
               title="Play story"

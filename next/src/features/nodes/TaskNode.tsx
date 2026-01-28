@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
 import IconButton from '../../components/ui/IconButton'
-import { Trash, TreeView } from "@phosphor-icons/react/ssr";
+import { Trash, TreeView, Play } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
@@ -31,6 +31,7 @@ interface TaskNodeProps {
   // Connect helper
   onNodeShiftClickConnect?: (targetId: string) => void
   onOrganizeSubtree?: (nodeId: string) => void
+  onStartStoryMode?: (nodeId: string) => void
 }
 
 export default function TaskNode({
@@ -41,6 +42,7 @@ export default function TaskNode({
   onNodeUpdate,
   onNodeShiftClickConnect,
   onOrganizeSubtree,
+  onStartStoryMode,
 }: TaskNodeProps) {
   const [title, setTitle] = useState(data.title || '')
   const [completed, setCompleted] = useState<boolean>(!!data.completed)
@@ -203,6 +205,20 @@ export default function TaskNode({
             {title || 'Untitled Task'}
           </div>
         </div>
+        {(data as any)?.storyStarter && (
+          <div className="mt-2 flex items-center gap-2">
+            <Tag variant="primary">Story Starter Node</Tag>
+            <IconButton
+              variant="default"
+              size="sm"
+              aria-label="Play story"
+              onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+              title="Play story"
+            >
+              <Play size={14} weight="duotone" />
+            </IconButton>
+          </div>
+        )}
         {/* Optional description under title, full width */}
         {(data as any)?.content ? (
           <div
