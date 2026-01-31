@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Fredoka, Nunito_Sans } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import ClientViewportFix from './ClientViewportFix'
 
@@ -49,27 +48,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-B9L2XKLSWE'
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-
-        {/* Google Analytics (GA4) */}
-        <Script
-          async
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${GA_ID}');
-          `}
-        </Script>
 
       </head>
       <body
