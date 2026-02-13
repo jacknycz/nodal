@@ -5,7 +5,7 @@ export type IconButtonVariant = 'default' | 'primary' | 'danger' | 'primaryGhost
 
 interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: IconButtonVariant
-  size?: 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'small' | 'medium' | 'large'
   'aria-label': string // required for accessibility
 }
 
@@ -23,6 +23,7 @@ const variantClasses: Record<IconButtonVariant, string> = {
 
 const sizeClasses = {
   // Align control heights: sm=32px, md=40px, lg=48px
+  xs: 'w-6 h-6',
   sm: 'w-8 h-8',
   small: 'w-8 h-8',
   md: 'w-10 h-10',

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play, CheckCircle } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play, CheckCircle, DotsThreeOutlineVertical } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -13,7 +13,6 @@ import { getColorgoryHex } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
- 
  
 
 interface NodalNodeProps {
@@ -223,22 +222,34 @@ export default function NodalNode(props: any) {
           className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-40 flex items-center gap-2 rounded-full border border-primary-200/80 dark:border-primary-800 bg-white/90 dark:bg-gray-900/80 px-2 py-1 shadow-sm backdrop-blur"
           onMouseDown={(e) => { e.stopPropagation() }}
           onClick={(e) => { e.stopPropagation() }}
-        >
-          <span className="text-[11px] text-primary-700 dark:text-primary-300">Story:</span>
+        >{!!(data as any)?.storyCompleted && (
+          <span className="inline-flex items-center" title="Story complete">
+            <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+          </span>
+        )}
+          <IconButton
+            variant="secondaryGhost"
+            size="xs"
+            aria-label="Story settings"
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              try { window.dispatchEvent(new CustomEvent('nodal:open-story-settings', { detail: { id, title: storyTitle } })) } catch {}
+            }}
+            title="Story settings"
+          >
+            <DotsThreeOutlineVertical size={14} weight="duotone" />
+          </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"  
             title={storyTitle}
           >
             {storyTitle}
           </span>
-          {!!(data as any)?.storyCompleted && (
-            <span className="inline-flex items-center" title="Story complete">
-              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
-            </span>
-          )}
+          
           <IconButton
-            variant="default"
-            size="sm"
+            variant="primaryGhost"
+            size="xs"
             aria-label="Play story"
             onMouseDown={(e) => { e.stopPropagation() }}
             onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}

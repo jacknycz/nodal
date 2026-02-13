@@ -60,6 +60,20 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
     window.addEventListener('nodal:story-paused', onPaused as EventListener)
     return () => window.removeEventListener('nodal:story-paused', onPaused as EventListener)
   }, [])
+  // Allow opening the story settings modal from anywhere (e.g., node badges)
+  useEffect(() => {
+    const onOpenStorySettings = (e: Event) => {
+      try {
+        const d = (e as CustomEvent<any>)?.detail || {}
+        const id = String(d.id || '')
+        if (!id) return
+        const title = String(d.title || '')
+        setStoryModal({ id, title })
+      } catch {}
+    }
+    window.addEventListener('nodal:open-story-settings', onOpenStorySettings as EventListener)
+    return () => window.removeEventListener('nodal:open-story-settings', onOpenStorySettings as EventListener)
+  }, [])
   useEffect(() => {
     if (mobileOpen) {
       const t = setTimeout(() => setPanelEntered(true), 0)
