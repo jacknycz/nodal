@@ -224,9 +224,9 @@ export default function FloatingStraightEdge({
           />
           {!!arrowInfo && (
             <path
-              d="M0 0 L-10 -2.6 L-10 2.6 Z"
+              d="M0 0 L-15 -3.9 L-15 3.9 Z"
               fill="var(--color-secondary-600)"
-              opacity="0.95"
+              opacity="0.7"
               transform={`translate(${arrowInfo.x - Math.cos((arrowInfo.angle * Math.PI) / 180) * 3},${arrowInfo.y - Math.sin((arrowInfo.angle * Math.PI) / 180) * 3}) rotate(${arrowInfo.angle})`}
               pointerEvents="none"
             />
