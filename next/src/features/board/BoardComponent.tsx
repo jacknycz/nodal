@@ -2628,16 +2628,6 @@ function BoardContent({
       try { centerOnCurrentStoryNode(storyIndex) } catch {}
     }, 50)
   }, [centerOnCurrentStoryNode, storyIndex])
-  const closeStoryModeCompletely = useCallback(() => {
-    try {
-      if (storyStarterId) {
-        window.dispatchEvent(new CustomEvent('nodal:story-closed', { detail: { id: storyStarterId } }))
-      }
-    } catch {}
-    setStoryPaused(false)
-    // Exit without paused status
-    exitStoryMode(true)
-  }, [exitStoryMode, storyStarterId])
   const exitStoryMode = useCallback((suppressPause?: boolean) => {
     try {
       const curId = storyPath[storyIndex]
@@ -2671,6 +2661,16 @@ function BoardContent({
     setStoryPath([])
     setStoryIndex(0)
   }, [storyPath, storyIndex])
+  const closeStoryModeCompletely = useCallback(() => {
+    try {
+      if (storyStarterId) {
+        window.dispatchEvent(new CustomEvent('nodal:story-closed', { detail: { id: storyStarterId } }))
+      }
+    } catch {}
+    setStoryPaused(false)
+    // Exit without paused status
+    exitStoryMode(true)
+  }, [exitStoryMode, storyStarterId])
   const nextStory = useCallback(() => {
     setStoryIndex((i) => {
       try {
