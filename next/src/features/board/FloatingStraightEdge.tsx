@@ -228,9 +228,10 @@ export default function FloatingStraightEdge({
               />
               <IconButton
                 aria-label="Reverse direction"
-                title="Reverse direction"
+                title={showDirection ? 'Reverse direction' : 'Enable Dir to reverse'}
                 variant="secondaryGhost"
                 size="xs"
+                disabled={!showDirection}
                 onMouseDown={(e) => { e.stopPropagation() }}
                 onClick={(e) => { e.stopPropagation(); onEdgeReverse?.(id) }}
               >

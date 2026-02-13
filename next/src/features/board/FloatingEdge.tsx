@@ -151,7 +151,7 @@ export default function FloatingEdge({
   const centerX = labelX
   const centerY = labelY
 
-  
+
 
   // Dynamic styling based on edge type and state
   const getEdgeStyle = () => {
@@ -228,9 +228,9 @@ export default function FloatingEdge({
   return (
     <>
       {/* Visible edge */}
-      <BaseEdge 
-        id={id} 
-        path={edgePath} 
+      <BaseEdge
+        id={id}
+        path={edgePath}
         style={getEdgeStyle()}
         className={`edge-${data?.type || 'default'} ${selected ? 'selected' : ''} ${animated ? 'animated' : ''}`}
       />
@@ -261,7 +261,7 @@ export default function FloatingEdge({
           />
         </>
       )}
-      
+
       {/* Invisible interactive path for mouse events */}
       <path
         d={edgePath}
@@ -273,7 +273,7 @@ export default function FloatingEdge({
         onMouseLeave={handleMouseLeave}
         className="nodrag nopan"
       />
-      
+
       {/* Hover menu */}
       {isHovered && onEdgeDelete && (
         <EdgeLabelRenderer>
@@ -290,28 +290,31 @@ export default function FloatingEdge({
             onMouseDown={(e) => { e.stopPropagation() }}
             onClick={(e) => { e.stopPropagation() }}
           >
-            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
-              <Checkbox
-                size="sm"
-                shape="circle"
-                label="Dir"
-                labelTextClassName="text-[11px] text-gray-700 dark:text-gray-200"
-                checked={showDirection}
-                onChange={(checked, e) => {
-                  e.stopPropagation()
-                  onEdgeUpdate?.(id, { showDirection: checked })
-                }}
-              />
-              <IconButton
-                aria-label="Reverse direction"
-                title="Reverse direction"
-                variant="secondaryGhost"
-                size="xs"
-                onMouseDown={(e) => { e.stopPropagation() }}
-                onClick={(e) => { e.stopPropagation(); onEdgeReverse?.(id) }}
-              >
-                <ArrowClockwise size={14} weight="duotone" />
-              </IconButton>
+            <div className="flex flex-col items-center p-1 gap-1 rounded-lg bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  size="md"
+                  shape="circle"
+                  label="Direction"
+                  labelTextClassName="text-[11px] text-gray-700 dark:text-gray-200"
+                  checked={showDirection}
+                  onChange={(checked, e) => {
+                    e.stopPropagation()
+                    onEdgeUpdate?.(id, { showDirection: checked })
+                  }}
+                />
+                <IconButton
+                  aria-label="Reverse direction"
+                  title={showDirection ? 'Reverse direction' : 'Enable Direction to reverse'}
+                  variant="primaryGhost"
+                  size="xs"
+                  disabled={!showDirection}
+                  onMouseDown={(e) => { e.stopPropagation() }}
+                  onClick={(e) => { e.stopPropagation(); onEdgeReverse?.(id) }}
+                >
+                  <ArrowClockwise size={14} weight="duotone" />
+                </IconButton>
+              </div>
               <IconButton
                 aria-label="Delete connection"
                 title="Delete connection"
