@@ -305,4 +305,5 @@ When adding new persistent flags:
 - **Use events for decoupling**: if a modal is owned elsewhere (e.g. LeftDock), dispatch an event; don’t duplicate modal state.
 - **Prompt hygiene**: strip HTML before sending node content to AI; keep budgets capped.
 - **Local iteration default**: don’t push/deploy unless explicitly requested.
+- **Team note**: Jack is almost always working locally, so we don’t need to push every time. 😉
 
