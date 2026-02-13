@@ -9,7 +9,6 @@ import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
 import NodeEditModal from '../../components/NodeEditModal'
 import { useSupabaseUser } from '../auth/authUtils'
-import Tag from '../../components/ui/Tag'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
 import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
@@ -31,6 +30,8 @@ interface NodalNodeProps {
     titleSize?: 'sm' | 'md' | 'lg'
     pageMode?: boolean
     width?: number
+    storyStarter?: boolean
+    storyTitle?: string
   }
   id: string
   onNodeDelete?: (nodeId: string) => void
@@ -64,6 +65,7 @@ export default function NodalNode(props: any) {
   const [pendingColorgoryIds, setPendingColorgoryIds] = useState<string[]>(data.colorgoryIds || [])
 
   const displayTitle = data.label || data.title || 'Untitled'
+  const storyTitle = String((data as any)?.storyTitle || '').trim() || 'Story'
   const pageMode = !!data.pageMode
   const [expanded, setExpanded] = useState(false)
   // Resizable width for default nodes
@@ -221,7 +223,13 @@ export default function NodalNode(props: any) {
           onMouseDown={(e) => { e.stopPropagation() }}
           onClick={(e) => { e.stopPropagation() }}
         >
-          <Tag variant="primary">Story Starter Node</Tag>
+          <span className="text-[11px] text-primary-700 dark:text-primary-300">Story:</span>
+          <span
+            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            title={storyTitle}
+          >
+            {storyTitle}
+          </span>
           <IconButton
             variant="default"
             size="sm"
