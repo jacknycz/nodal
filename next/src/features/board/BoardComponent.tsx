@@ -937,7 +937,7 @@ function BoardContent({
           const res = await fetch('/api/boards/generate-media-nodes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-            body: JSON.stringify({ topic: brief.boardTopic, description: brief.description, maxImages: 2, maxVideos: 2 }),
+            body: JSON.stringify({ topic: brief.boardTopic, description: brief.description, maxImages: 0, maxVideos: 2 }),
           })
           if (!res.ok) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
           const json = await res.json().catch(() => ({}))
@@ -945,17 +945,10 @@ function BoardContent({
           if (!items.length) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
 
           // Place media nodes via placement engine (same core placement rules as everything else)
-          const nodesToPlace = items.map((it) => {
+          const nodesToPlace = items
+            .filter((it) => String(it?.type || '').toLowerCase() === 'video')
+            .map((it) => {
             const t = String(it.type || '').toLowerCase()
-            if (t === 'image') {
-              return {
-                title: String(it.title || 'Image'),
-                content: String(it.content || ''),
-                type: 'image',
-                parentId: topicNode.id,
-                data: { previewUrl: String(it.url || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any,
-              }
-            }
             return {
               title: String(it.title || 'Video'),
               content: String(it.content || ''),
@@ -964,6 +957,8 @@ function BoardContent({
               data: { videoUrl: String(it.url || ''), status: 'idle', titleSize: 'sm' } as any,
             }
           })
+
+          if (!nodesToPlace.length) return { nodes: baseNodes, edges: baseEdges, mediaCount: 0 }
 
           const result = await placeAINodes(nodesToPlace as any, topicNode.id, { preferredDirection: 'down', minDistance: 40, avoidOverlap: true, preserveExistingLayout: true }, getNodesWithTopic() as any)
           try {
@@ -1094,11 +1089,11 @@ function BoardContent({
               minText: 5,
               minMedia: brief.generateMediaNodes ? 1 : 0,
               maxMedia: brief.generateMediaNodes ? 4 : 0,
-              maxImages: brief.generateMediaNodes ? 4 : 0,
+              maxImages: 0,
               maxVideos: brief.generateMediaNodes ? 4 : 0,
             },
             board: {
-              supportedNodeTypes: brief.generateMediaNodes ? ['text', 'image', 'video'] : ['text'],
+              supportedNodeTypes: brief.generateMediaNodes ? ['text', 'video'] : ['text'],
               existingNodes: [],
             },
           })
@@ -1134,16 +1129,6 @@ function BoardContent({
             const t = String(it?.type || '').toLowerCase()
             const rawParentId = String(it?.parentId || '').trim()
             const parentId = parentIds.has(rawParentId) ? rawParentId : fallbackParentId
-            if (t === 'image') {
-              return {
-                id: String(it?.id || `cimg-${idx + 1}`),
-                title: String(it?.title || 'Image'),
-                content: String(it?.content || ''),
-                type: 'image',
-                parentId,
-                data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any,
-              }
-            }
             if (t === 'video') {
               return {
                 id: String(it?.id || `cvid-${idx + 1}`),
@@ -4235,11 +4220,11 @@ function BoardContent({
                     minText: 5,
                     minMedia: withMedia ? 1 : 0,
                     maxMedia: withMedia ? 4 : 0,
-                    maxImages: withMedia ? 4 : 0,
+                    maxImages: 0,
                     maxVideos: withMedia ? 4 : 0,
                   },
                   board: {
-                    supportedNodeTypes: withMedia ? ['text', 'image', 'video'] : ['text'],
+                    supportedNodeTypes: withMedia ? ['text', 'video'] : ['text'],
                     existingNodes: existingNodesPayload,
                   },
                   selected: { title: contextTitle, content: contextContent },
@@ -4278,16 +4263,6 @@ function BoardContent({
                 const t = String(it?.type || '').toLowerCase()
                 const rawParentId = String(it?.parentId || '').trim()
                 const resolvedParentId = aiIdToNewId.get(rawParentId) || fallbackParentId
-                if (t === 'image') {
-                  return {
-                    id: getMappedId(it?.id, 'cimg'),
-                    title: String(it?.title || 'Image'),
-                    content: String(it?.content || ''),
-                    type: 'image' as const,
-                    ...(resolvedParentId ? { parentId: resolvedParentId } : {}),
-                    data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
-                  }
-                }
                 if (t === 'video') {
                   return {
                     id: getMappedId(it?.id, 'cvid'),
@@ -4395,11 +4370,11 @@ function BoardContent({
                     minText: 5,
                     minMedia: 1,
                     maxMedia: 4,
-                    maxImages: 4,
+                    maxImages: 0,
                     maxVideos: 4,
                   },
                   board: {
-                    supportedNodeTypes: ['text', 'image', 'video'],
+                    supportedNodeTypes: ['text', 'video'],
                     existingNodes: existingNodesPayload,
                   },
                   selected: { title: contextTitle, content: contextContent },
@@ -4438,16 +4413,6 @@ function BoardContent({
                 const t = String(it?.type || '').toLowerCase()
                 const rawParentId = String(it?.parentId || '').trim()
                 const resolvedParentId = aiIdToNewId.get(rawParentId) || fallbackParentId
-                if (t === 'image') {
-                  return {
-                    id: getMappedId(it?.id, 'cimg'),
-                    title: String(it?.title || 'Image'),
-                    content: String(it?.content || ''),
-                    type: 'image' as const,
-                    ...(resolvedParentId ? { parentId: resolvedParentId } : {}),
-                    data: { previewUrl: String(it?.imageUrl || ''), type: 'image', status: 'ready', titleSize: 'sm' } as any
-                  }
-                }
                 if (t === 'video') {
                   return {
                     id: getMappedId(it?.id, 'cvid'),

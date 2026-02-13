@@ -375,7 +375,9 @@ export async function POST(req: Request) {
       safeText = [...safeText, ...fillers]
     }
 
-    let childImages: ImagePlannedNode[] = plannedChildren.filter((n): n is ImagePlannedNode => n.type === 'image').slice(0, maxImages)
+    let childImages: ImagePlannedNode[] = supported.includes('image')
+      ? plannedChildren.filter((n): n is ImagePlannedNode => n.type === 'image').slice(0, maxImages)
+      : []
     let childVideos: VideoPlannedNode[] = plannedChildren.filter((n): n is VideoPlannedNode => n.type === 'video').slice(0, maxVideos)
     const childTexts: TextPlannedNode[] = plannedChildren.filter((n): n is TextPlannedNode => n.type === 'text')
 
@@ -462,6 +464,7 @@ export async function POST(req: Request) {
         continue
       }
       if (n.type === 'image') {
+        if (!supported.includes('image')) continue
         const q = (n.query || n.title || topic).trim()
         const img = (await searchUnsplashImage(q)) || toUnsplashSourceUrl(q)
         outChildren.push({ type: 'image', title: n.title, content: n.content || '', imageUrl: img, parentId: resolvedParentId })
