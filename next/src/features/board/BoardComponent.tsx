@@ -3842,13 +3842,13 @@ function BoardContent({
             <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
               <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
                 <IconButton
-                  aria-label="Resume story mode"
-                  variant="secondaryGhost"
-                  size="sm"
-                  onClick={resumeStoryMode}
-                  title="Resume"
+                  aria-label="Close story mode"
+                  variant="dangerGhost"
+                  size="xs"
+                  onClick={closeStoryModeCompletely}
+                  title="Close"
                 >
-                  <Play size={18} weight="duotone" />
+                  <X size={18} weight="duotone" />
                 </IconButton>
                 <span
                   className="text-xs text-gray-800 dark:text-gray-100 max-w-[360px] truncate"
@@ -3857,13 +3857,15 @@ function BoardContent({
                   {storyHudTitle}
                 </span>
                 <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
-                <Button
-                  className="px-2 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
-                  onClick={closeStoryModeCompletely}
-                  aria-label="Close story mode"
+                <IconButton
+                  aria-label="Resume story mode"
+                  variant="primaryGhost"
+                  size="sm"
+                  onClick={resumeStoryMode}
+                  title="Resume"
                 >
-                  Close
-                </Button>
+                  <Play size={18} weight="duotone" />
+                </IconButton>
               </div>
             </div>
           )}
