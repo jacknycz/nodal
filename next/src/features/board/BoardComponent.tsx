@@ -2695,16 +2695,21 @@ function BoardContent({
     exitStoryMode(true)
   }, [exitStoryMode, storyStarterId])
   const nextStory = useCallback(() => {
-    setStoryIndex((i) => {
-      try {
-        const prevId = storyPath[i]
-        if (prevId) { window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: prevId } })) }
-      } catch {}
-      // End of story behavior
-      if (i >= Math.max(0, storyPath.length - 1)) {
+    try {
+      const curIndex = storyIndex
+      const curId = storyPath[curIndex]
+      if (curId) {
+        try { window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: curId } })) } catch {}
+      }
+
+      const lastIdx = Math.max(0, storyPath.length - 1)
+      const isAtEnd = curIndex >= lastIdx
+
+      // End of story: mark completed + persist, then exit story mode WITHOUT recentering.
+      if (isAtEnd) {
         try {
           const starterId = storyPath[0]
-          const finalIndex = Math.max(0, storyPath.length - 1)
+          const finalIndex = lastIdx
 
           // Mark the starter node as completed so the UI can show a check icon
           try {
@@ -2731,31 +2736,34 @@ function BoardContent({
               try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(finalIndex)) } catch {}
             }
           } catch {}
+        } catch {}
 
-          // Exit without paused status
-          exitStoryMode(true)
-        } catch {
-          exitStoryMode(true)
-        }
-        return i
+        // Exit without paused status; do not trigger any story recenter.
+        exitStoryMode(true)
+        return
       }
-      const ni = Math.min(i + 1, Math.max(0, storyPath.length - 1))
-      setTimeout(() => centerOnCurrentStoryNode(ni), 10)
+
+      // Advance to next chapter
+      const nextIdx = Math.min(curIndex + 1, lastIdx)
+      setStoryIndex(nextIdx)
+      setTimeout(() => centerOnCurrentStoryNode(nextIdx), 10)
+
       // Save progress
       try {
         const starterId = storyPath[0]
         const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
         if (starterId && effectiveBoardId && user?.id) {
           void getSupabaseClient().from('story_progress')
-            .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: ni, updated_at: new Date().toISOString() } as any,
+            .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: nextIdx, updated_at: new Date().toISOString() } as any,
               { onConflict: 'board_id,starter_node_id,user_id' } as any)
             .then(() => undefined)
-          try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(ni)) } catch {}
+          try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(nextIdx)) } catch {}
         }
       } catch {}
-      return ni
-    })
-  }, [storyPath, centerOnCurrentStoryNode, boardId, user?.id])
+    } catch {
+      try { exitStoryMode(true) } catch {}
+    }
+  }, [storyIndex, storyPath, boardId, user?.id, centerOnCurrentStoryNode, exitStoryMode, pushHistory, setNodes, setStoryIndex])
   const prevStory = useCallback(() => {
     setStoryIndex((i) => {
       try {
