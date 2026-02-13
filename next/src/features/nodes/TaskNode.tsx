@@ -4,11 +4,10 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import Checkbox from '../../components/ui/Checkbox'
 import IconButton from '../../components/ui/IconButton'
-import { Trash, TreeView, Play, CheckCircle } from "@phosphor-icons/react/ssr";
+import { Trash, TreeView, Play, CheckCircle, DotsThreeOutlineVertical } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
-import Tag from '../../components/ui/Tag'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -99,6 +98,7 @@ export default function TaskNode({
   // Build colorgory swatch colors
   const colorgories = useBoardStore.getState().colorgories || []
   const { isDark } = useTheme()
+  const storyTitle = String((data as any)?.storyTitle || (data as any)?.title || 'Story')
   const swatchColors: string[] = Array.isArray((data as any).colorgoryIds)
     ? colorgories
         .filter((c: any) => (data as any).colorgoryIds!.includes(c.id))
@@ -167,6 +167,48 @@ export default function TaskNode({
       className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'relative min-w-[220px] max-w-[420px]' })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
     >
+      {(data as any)?.storyStarter && (
+        <div
+          className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-40 flex items-center gap-2 rounded-full border border-primary-200/80 dark:border-primary-800 bg-white/90 dark:bg-gray-900/80 px-2 py-1 shadow-sm backdrop-blur"
+          onMouseDown={(e) => { e.stopPropagation() }}
+          onClick={(e) => { e.stopPropagation() }}
+        >
+          {!!(data as any)?.storyCompleted && (
+            <span className="inline-flex items-center" title="Story complete">
+              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+            </span>
+          )}
+          <IconButton
+            variant="secondaryGhost"
+            size="xs"
+            aria-label="Story settings"
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              try { window.dispatchEvent(new CustomEvent('nodal:open-story-settings', { detail: { id, title: storyTitle } })) } catch {}
+            }}
+            title="Story settings"
+          >
+            <DotsThreeOutlineVertical size={14} weight="duotone" />
+          </IconButton>
+          <span
+            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            title={storyTitle}
+          >
+            {storyTitle}
+          </span>
+          <IconButton
+            variant="primaryGhost"
+            size="xs"
+            aria-label="Play story"
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+            title="Play story"
+          >
+            <Play size={14} weight="duotone" />
+          </IconButton>
+        </div>
+      )}
       {/* Assignee avatar initials */}
       {(data as any)?.assigneeId && assigneeInitials && (
         <div className="absolute -top-2 -right-2 z-10 pointer-events-auto">
@@ -205,25 +247,7 @@ export default function TaskNode({
             {title || 'Untitled Task'}
           </div>
         </div>
-        {(data as any)?.storyStarter && (
-          <div className="mt-2 flex items-center gap-2">
-            <Tag variant="primary">Story Starter Node</Tag>
-            {!!(data as any)?.storyCompleted && (
-              <span className="inline-flex items-center" title="Story complete">
-                <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
-              </span>
-            )}
-            <IconButton
-              variant="default"
-              size="sm"
-              aria-label="Play story"
-              onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
-              title="Play story"
-            >
-              <Play size={14} weight="duotone" />
-            </IconButton>
-          </div>
-        )}
+
         {/* Optional description under title, full width */}
         {(data as any)?.content ? (
           <div

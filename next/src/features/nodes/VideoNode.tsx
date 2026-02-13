@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle, TreeView } from '@phosphor-icons/react/ssr'
-import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, Warning, Play } from '@phosphor-icons/react'
+import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, Warning, Play, DotsThreeOutlineVertical } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -16,7 +16,6 @@ import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
-import Tag from '../../components/ui/Tag'
 
 interface VideoNodeData {
   title?: string
@@ -41,6 +40,7 @@ interface VideoNodeProps {
 
 export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpdate, onQuickAddNodes, onOrganizeSubtree, onStartStoryMode }: VideoNodeProps) {
   const { isDark } = useTheme()
+  const storyTitle = String((data as any)?.storyTitle || data.title || 'Story')
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [inView, setInView] = useState(false)
@@ -383,6 +383,48 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
 
   return (
     <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
+      {(data as any)?.storyStarter && (
+        <div
+          className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-40 flex items-center gap-2 rounded-full border border-primary-200/80 dark:border-primary-800 bg-white/90 dark:bg-gray-900/80 px-2 py-1 shadow-sm backdrop-blur"
+          onMouseDown={(e) => { e.stopPropagation() }}
+          onClick={(e) => { e.stopPropagation() }}
+        >
+          {!!(data as any)?.storyCompleted && (
+            <span className="inline-flex items-center" title="Story complete">
+              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+            </span>
+          )}
+          <IconButton
+            variant="secondaryGhost"
+            size="xs"
+            aria-label="Story settings"
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              try { window.dispatchEvent(new CustomEvent('nodal:open-story-settings', { detail: { id, title: storyTitle } })) } catch {}
+            }}
+            title="Story settings"
+          >
+            <DotsThreeOutlineVertical size={14} weight="duotone" />
+          </IconButton>
+          <span
+            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            title={storyTitle}
+          >
+            {storyTitle}
+          </span>
+          <IconButton
+            variant="primaryGhost"
+            size="xs"
+            aria-label="Play story"
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+            title="Play story"
+          >
+            <Play size={14} weight="duotone" />
+          </IconButton>
+        </div>
+      )}
       {/* Colorgory ring overlay (shown in all states) */}
       {isDark && swatchColors.length > 0 && (
         <div
@@ -514,25 +556,6 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
             {data.title || 'Video'}
           </div>
-          {(data as any)?.storyStarter && (
-            <div className="mt-2 flex items-center gap-2">
-              <Tag variant="primary">Story Starter Node</Tag>
-              {!!(data as any)?.storyCompleted && (
-                <span className="inline-flex items-center" title="Story complete">
-                  <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
-                </span>
-              )}
-              <IconButton
-                variant="default"
-                size="sm"
-                aria-label="Play story"
-                onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
-                title="Play story"
-              >
-                <Play size={14} weight="duotone" />
-              </IconButton>
-            </div>
-          )}
           {data.status && data.status !== 'ready' && (
             <div className={`mt-1 pointer-events-none flex items-center gap-1 transition-opacity duration-300 ${showStatus ? 'opacity-100' : 'opacity-0'}`}>
               {getStatusIcon()}
