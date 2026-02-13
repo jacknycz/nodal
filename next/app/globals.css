@@ -244,6 +244,18 @@ body {
   }
 }
 
+/* Directional edge pulse (used when an edge has direction enabled) */
+.edge-direction-pulse {
+  stroke-dasharray: 12 54;
+  animation: edge-direction-pulse 1.6s linear infinite;
+}
+
+@keyframes edge-direction-pulse {
+  to {
+    stroke-dashoffset: -66;
+  }
+}
+
 /* Add this to your globals.css for the delete button animations */
 
 /* Subtle breathing animation for delete button */

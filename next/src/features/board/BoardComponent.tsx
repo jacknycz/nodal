@@ -136,10 +136,38 @@ export const nodeTypes = {
 };
 
 export const edgeTypes = {
-  floating: (props: any) => <FloatingEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
-  'floating-straight': (props: any) => <FloatingStraightEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
-  'floating-step': (props: any) => <FloatingStepEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
-  'floating-smoothstep': (props: any) => <FloatingSmoothEdge {...props} onEdgeDelete={stableHandlers.onEdgeDelete} />,
+  floating: (props: any) => (
+    <FloatingEdge
+      {...props}
+      onEdgeDelete={stableHandlers.onEdgeDelete}
+      onEdgeUpdate={stableHandlers.onEdgeUpdate}
+      onEdgeReverse={stableHandlers.onEdgeReverse}
+    />
+  ),
+  'floating-straight': (props: any) => (
+    <FloatingStraightEdge
+      {...props}
+      onEdgeDelete={stableHandlers.onEdgeDelete}
+      onEdgeUpdate={stableHandlers.onEdgeUpdate}
+      onEdgeReverse={stableHandlers.onEdgeReverse}
+    />
+  ),
+  'floating-step': (props: any) => (
+    <FloatingStepEdge
+      {...props}
+      onEdgeDelete={stableHandlers.onEdgeDelete}
+      onEdgeUpdate={stableHandlers.onEdgeUpdate}
+      onEdgeReverse={stableHandlers.onEdgeReverse}
+    />
+  ),
+  'floating-smoothstep': (props: any) => (
+    <FloatingSmoothEdge
+      {...props}
+      onEdgeDelete={stableHandlers.onEdgeDelete}
+      onEdgeUpdate={stableHandlers.onEdgeUpdate}
+      onEdgeReverse={stableHandlers.onEdgeReverse}
+    />
+  ),
 };
 
 function BoardContent({
@@ -819,14 +847,9 @@ function BoardContent({
         return null
       }
       await ensureAuth()
-      // Helper: server-side availability check (falls back if aiService not initialized)
+      // Helper: server-side availability check (ping /api/usage)
       const checkAvailable = async () => {
         try {
-          if (aiService?.isAvailable) {
-            const ok = await aiService.isAvailable()
-            return !!ok
-          }
-          // fallback: ping /api/usage
           const result = await fetchUsageCached({ maxAgeMs: 30_000 })
           return !!result.ok
         } catch { return false }
@@ -3036,6 +3059,22 @@ function BoardContent({
     setEdges((eds) => eds.filter((edge) => edge.id !== edgeId))
     try { channelRef.current?.send({ type: 'broadcast', event: 'edge:remove', payload: { edgeId, userId: user?.id || null, ts: Date.now() } }) } catch {}
   }, [setEdges, pushHistory, boardId, user?.id, readOnly])
+  const handleEdgeUpdate = useCallback((edgeId: string, patch: Record<string, any>) => {
+    if (readOnly) return
+    pushHistory()
+    setEdges((eds) => (Array.isArray(eds) ? eds.map((e: any) => (
+      e.id === edgeId ? { ...e, data: { ...(e.data || {}), ...patch } } : e
+    )) : eds))
+    try { channelRef.current?.send({ type: 'broadcast', event: 'edge:update', payload: { edgeId, patch, userId: user?.id || null, ts: Date.now() } }) } catch {}
+  }, [setEdges, pushHistory, boardId, user?.id, readOnly])
+  const handleEdgeReverse = useCallback((edgeId: string) => {
+    if (readOnly) return
+    pushHistory()
+    setEdges((eds) => (Array.isArray(eds) ? eds.map((e: any) => (
+      e.id === edgeId ? { ...e, source: e.target, target: e.source } : e
+    )) : eds))
+    try { channelRef.current?.send({ type: 'broadcast', event: 'edge:reverse', payload: { edgeId, userId: user?.id || null, ts: Date.now() } }) } catch {}
+  }, [setEdges, pushHistory, boardId, user?.id, readOnly])
 
   // Shift+Click connect: connect from the single selected node to clicked node
   const handleShiftClickConnect = useCallback((targetId: string) => {
@@ -3069,6 +3108,8 @@ function BoardContent({
       onNodeDelete: handleNodeDelete,
       onNodeUpdate: handleNodeUpdate,
       onEdgeDelete: handleEdgeDelete,
+      onEdgeUpdate: handleEdgeUpdate,
+      onEdgeReverse: handleEdgeReverse,
       readOnly,
       onStartStoryMode: (nodeId: string) => {
         // Start from the beginning when launched from the Story Starter Node button
@@ -3114,6 +3155,8 @@ function BoardContent({
     handleNodeDelete,
     handleNodeUpdate,
     handleEdgeDelete,
+    handleEdgeUpdate,
+    handleEdgeReverse,
     readOnly,
     // startStoryMode will be defined below; include via dependency to avoid stale closure
     acquireNodeLock,

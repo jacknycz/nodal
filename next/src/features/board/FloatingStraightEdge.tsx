@@ -2,8 +2,10 @@
 
 import React, { useRef, useState, useLayoutEffect, useEffect } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getStraightPath, Position, useReactFlow } from '@xyflow/react'
-import { X } from '@phosphor-icons/react'
+import { ArrowClockwise, X } from '@phosphor-icons/react'
 import { useBoardStore } from './boardSlice'
+import IconButton from '../../components/ui/IconButton'
+import Checkbox from '../../components/ui/Checkbox'
 
 interface FloatingEdgeProps {
   id: string
@@ -13,10 +15,12 @@ interface FloatingEdgeProps {
   targetY: number
   sourcePosition: Position
   targetPosition: Position
-  data?: { label?: string; type?: 'ai' | 'focus' | 'default' }
+  data?: { label?: string; type?: 'ai' | 'focus' | 'default'; showDirection?: boolean }
   selected?: boolean
   animated?: boolean
   onEdgeDelete?: (edgeId: string) => void
+  onEdgeUpdate?: (edgeId: string, patch: Record<string, any>) => void
+  onEdgeReverse?: (edgeId: string) => void
   source?: string
   target?: string
 }
@@ -33,6 +37,8 @@ export default function FloatingStraightEdge({
   selected = false,
   animated = false,
   onEdgeDelete,
+  onEdgeUpdate,
+  onEdgeReverse,
   source,
   target,
 }: FloatingEdgeProps) {
@@ -162,16 +168,86 @@ export default function FloatingStraightEdge({
   const handleButtonMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true) }
   const handleButtonMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false) }, 100) }
 
+  const showDirection = !!(data as any)?.showDirection
+  const gradientId = `edge-dir-grad-${id}`
+  const arrowId = `edge-dir-arrow-${id}`
+
   return (
     <>
       <BaseEdge id={id} path={edgePath} style={getEdgeStyle()} className={`edge-${data?.type || 'default'} ${selected ? 'selected' : ''} ${animated ? 'animated' : ''}`} />
+
+      {/* Direction overlay (arrowhead + subtle pulse) */}
+      {showDirection && (
+        <>
+          <defs>
+            <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={sx} y1={sy} x2={tx} y2={ty}>
+              <stop offset="0%" stopColor="var(--edge-default-color)" stopOpacity="0.06" />
+              <stop offset="60%" stopColor="var(--edge-ai-color)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="var(--edge-default-color)" stopOpacity="0.06" />
+            </linearGradient>
+            <marker id={arrowId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--edge-ai-color)" opacity="0.9" />
+            </marker>
+          </defs>
+          <path
+            d={edgePath}
+            fill="none"
+            stroke={`url(#${gradientId})`}
+            strokeWidth={selected ? 4 : 3}
+            strokeLinecap="round"
+            className="edge-direction-pulse"
+            markerEnd={`url(#${arrowId})`}
+            pointerEvents="none"
+            opacity={0.85}
+          />
+        </>
+      )}
+
       <path d={edgePath} fill="none" stroke="transparent" strokeWidth="20" style={{ cursor: 'pointer' }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="nodrag nopan" />
       {isHovered && onEdgeDelete && (
         <EdgeLabelRenderer>
-          <div style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${centerX}px,${centerY}px)`, pointerEvents: 'all', zIndex: 1000 }} className="nodrag nopan" onMouseEnter={handleButtonMouseEnter} onMouseLeave={handleButtonMouseLeave}>
-            <button onClick={handleDelete} className="flex items-center justify-center w-6 h-6 bg-tertiary-900 hover:bg-tertiary-600 text-white cursor-pointer rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-300 border-2 border-white delete-button-enter" title="Delete connection" aria-label="Delete connection">
-              <X size={14} />
-            </button>
+          <div
+            style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${centerX}px,${centerY}px)`, pointerEvents: 'all', zIndex: 1000 }}
+            className="nodrag nopan"
+            onMouseEnter={handleButtonMouseEnter}
+            onMouseLeave={handleButtonMouseLeave}
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => { e.stopPropagation() }}
+          >
+            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
+              <Checkbox
+                size="sm"
+                shape="circle"
+                label="Dir"
+                labelTextClassName="text-[11px] text-gray-700 dark:text-gray-200"
+                checked={showDirection}
+                onChange={(checked, e) => {
+                  e.stopPropagation()
+                  onEdgeUpdate?.(id, { showDirection: checked })
+                }}
+              />
+              <IconButton
+                aria-label="Reverse direction"
+                title="Reverse direction"
+                variant="secondaryGhost"
+                size="xs"
+                onMouseDown={(e) => { e.stopPropagation() }}
+                onClick={(e) => { e.stopPropagation(); onEdgeReverse?.(id) }}
+              >
+                <ArrowClockwise size={14} weight="duotone" />
+              </IconButton>
+              <IconButton
+                aria-label="Delete connection"
+                title="Delete connection"
+                variant="dangerGhost"
+                size="xs"
+                onMouseDown={(e) => { e.stopPropagation() }}
+                onClick={handleDelete}
+                className="delete-button-enter"
+              >
+                <X size={14} weight="duotone" />
+              </IconButton>
+            </div>
           </div>
         </EdgeLabelRenderer>
       )}
