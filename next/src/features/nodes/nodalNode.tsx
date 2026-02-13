@@ -155,7 +155,7 @@ export default function NodalNode(props: any) {
       ''
     return (
       <div
-        className={`tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed break-words [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline ${clampClass}`}
+        className={`tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed wrap-break-word [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline ${clampClass}`}
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     )
@@ -215,6 +215,25 @@ export default function NodalNode(props: any) {
       style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }), ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
       
     >
+      {!(pageMode) && (data as any)?.storyStarter && (
+        <div
+          className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-40 flex items-center gap-2 rounded-full border border-primary-200/80 dark:border-primary-800 bg-white/90 dark:bg-gray-900/80 px-2 py-1 shadow-sm backdrop-blur"
+          onMouseDown={(e) => { e.stopPropagation() }}
+          onClick={(e) => { e.stopPropagation() }}
+        >
+          <Tag variant="primary">Story Starter Node</Tag>
+          <IconButton
+            variant="default"
+            size="sm"
+            aria-label="Play story"
+            onMouseDown={(e) => { e.stopPropagation() }}
+            onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
+            title="Play story"
+          >
+            <Play size={14} weight="duotone" />
+          </IconButton>
+        </div>
+      )}
       {typeof props.isNodeLockedNow === 'function' && props.isNodeLockedNow(id) && (
         <div className="absolute top-1 right-1 z-50 flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/90 text-white text-[10px] font-medium shadow">
           <Lock className="w-3 h-3" weight="duotone" />
@@ -250,20 +269,6 @@ export default function NodalNode(props: any) {
             <BookOpenText size={20} weight="duotone" className="text-gray-400" />
           )}
         </div>
-        {!(pageMode) && (data as any)?.storyStarter && (
-          <div className="mt-1 px-0.5 flex items-center gap-2">
-            <Tag variant="primary">Story Starter Node</Tag>
-            <IconButton
-              variant="default"
-              size="sm"
-              aria-label="Play story"
-              onClick={(e) => { e.stopPropagation(); try { onStartStoryMode?.(id) } catch {} }}
-              title="Play story"
-            >
-              <Play size={14} weight="duotone" />
-            </IconButton>
-          </div>
-        )}
         {pageMode ? (
           <div className={`${expanded ? 'flex-1 min-h-0 nodrag nopan' : 'nodal-drag-handle cursor-move'} mb-3 px-2`}>
             {expanded ? (
@@ -277,7 +282,7 @@ export default function NodalNode(props: any) {
                 <div className="tiptap-content text-xs text-gray-600 dark:text-gray-200 leading-relaxed max-h-56 overflow-hidden">
                   {data.content ? renderRichContent(data.content) : null}
                 </div>
-                {data.content && <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white/90 dark:from-gray-900/90 to-transparent" />}
+                {data.content && <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-white/90 dark:from-gray-900/90 to-transparent" />}
               </div>
             )}
           </div>
