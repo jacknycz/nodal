@@ -76,6 +76,11 @@ Optional (used by some generation routes):
 - **TipTap** (rich text editing)
 - **Phosphor Icons** (primary icon set; TipTap uses `lucide-react` where needed)
 
+### Theme colors (CSS variables)
+Nodal’s brand palette is defined as CSS custom properties in `next/app/globals.css` under `@theme` (e.g. `--color-primary-500`, `--color-secondary-500`, `--color-tertiary-500`).
+
+- Prefer using these variables (or Tailwind utilities built on them) for new UI so colors stay consistent.
+
 ---
 
 ## Repo map (where things live)

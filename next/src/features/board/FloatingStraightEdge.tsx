@@ -181,12 +181,12 @@ export default function FloatingStraightEdge({
         <>
           <defs>
             <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={sx} y1={sy} x2={tx} y2={ty}>
-              <stop offset="0%" stopColor="var(--edge-default-color)" stopOpacity="0.06" />
-              <stop offset="60%" stopColor="var(--edge-ai-color)" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="var(--edge-default-color)" stopOpacity="0.06" />
+              <stop offset="0%" stopColor="var(--color-secondary-500)" stopOpacity="0.05" />
+              <stop offset="60%" stopColor="var(--color-secondary-500)" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="var(--color-secondary-500)" stopOpacity="0.05" />
             </linearGradient>
             <marker id={arrowId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 Z" fill="var(--edge-ai-color)" opacity="0.9" />
+              <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-secondary-600)" opacity="0.92" />
             </marker>
           </defs>
           <path
