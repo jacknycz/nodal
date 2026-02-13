@@ -61,7 +61,7 @@ import { useRouter } from 'next/navigation'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getSupabaseClient } from '../auth/supabaseClient'
 import BoardReorganizeMenu from '../../components/BoardReorganizeMenu'
-import { ArrowLeft, ArrowRight, Info, X } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, Info, X, Pause, Play } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
@@ -2428,11 +2428,12 @@ function BoardContent({
   
   // === Story Mode (MVP: linear flow) ===
   const [storyActive, setStoryActive] = useState(false)
+  const [storyPaused, setStoryPaused] = useState(false)
   const [storyPath, setStoryPath] = useState<string[]>([])
   const [storyIndex, setStoryIndex] = useState(0)
   // Choice nodes: when a chapter has multiple children, user must choose
   const [choiceOptions, setChoiceOptions] = useState<Array<{ id: string; title: string }>>([])
-  const isOnChoice = storyActive && choiceOptions.length > 0
+  const isOnChoice = storyActive && !storyPaused && choiceOptions.length > 0
   // Adjust this to control the zoom level when landing on a chapter in Story Mode
   const STORY_CHAPTER_ZOOM = 1.08
   const computeStoryPath = useCallback((starterId: string): string[] => {
@@ -2516,6 +2517,7 @@ function BoardContent({
   const startStoryMode = useCallback((starterId: string, startAtBeginning?: boolean) => {
     const path = computeStoryPath(starterId)
     if (!path || path.length === 0) return
+    setStoryPaused(false)
     setStoryPath(path)
     ;(async () => {
       // Pre-expand any video nodes in the story so sizing/centering uses expanded dimensions
@@ -2580,6 +2582,62 @@ function BoardContent({
       }
     })()
   }, [computeStoryPath, centerOnNodeIds, boardId, user?.id, centerOnCurrentStoryNode])
+  const storyStarterId = storyPath[0] || ''
+  const storyHudTitle = useMemo(() => {
+    try {
+      if (!storyStarterId) return 'Story'
+      const node = (useBoardStore.getState().nodes || nodes || []).find((n: any) => n.id === storyStarterId)
+      const d: any = node?.data || {}
+      return String(d.storyTitle || d.title || d.label || 'Story')
+    } catch {
+      return 'Story'
+    }
+  }, [storyStarterId, nodes])
+  const pauseStoryMode = useCallback(() => {
+    try {
+      const curId = storyPath[storyIndex]
+      if (curId) {
+        window.dispatchEvent(new CustomEvent('nodal:video-pause', { detail: { id: curId } }))
+      }
+
+      // Broadcast paused story status with title for LeftDock
+      try {
+        if (storyStarterId) {
+          window.dispatchEvent(new CustomEvent('nodal:story-paused', { detail: { id: storyStarterId, title: storyHudTitle } }))
+        }
+      } catch {}
+
+      // Persist last chapter index
+      try {
+        const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
+        if (storyStarterId && effectiveBoardId && user?.id) {
+          void getSupabaseClient().from('story_progress')
+            .upsert({ board_id: effectiveBoardId, starter_node_id: storyStarterId, user_id: user.id, current_index: storyIndex, updated_at: new Date().toISOString() } as any,
+              { onConflict: 'board_id,starter_node_id,user_id' } as any)
+            .then(() => undefined)
+          try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${storyStarterId}`, String(storyIndex)) } catch {}
+        }
+      } catch {}
+    } catch {}
+
+    setStoryPaused(true)
+  }, [storyPath, storyIndex, storyStarterId, storyHudTitle, boardId, user?.id])
+  const resumeStoryMode = useCallback(() => {
+    setStoryPaused(false)
+    setTimeout(() => {
+      try { centerOnCurrentStoryNode(storyIndex) } catch {}
+    }, 50)
+  }, [centerOnCurrentStoryNode, storyIndex])
+  const closeStoryModeCompletely = useCallback(() => {
+    try {
+      if (storyStarterId) {
+        window.dispatchEvent(new CustomEvent('nodal:story-closed', { detail: { id: storyStarterId } }))
+      }
+    } catch {}
+    setStoryPaused(false)
+    // Exit without paused status
+    exitStoryMode(true)
+  }, [exitStoryMode, storyStarterId])
   const exitStoryMode = useCallback((suppressPause?: boolean) => {
     try {
       const curId = storyPath[storyIndex]
@@ -2609,6 +2667,7 @@ function BoardContent({
       }
     } catch {}
     setStoryActive(false)
+    setStoryPaused(false)
     setStoryPath([])
     setStoryIndex(0)
   }, [storyPath, storyIndex])
@@ -2699,8 +2758,9 @@ function BoardContent({
   }, [storyPath, centerOnCurrentStoryNode, boardId, user?.id])
   useEffect(() => {
     if (!storyActive) return
+    if (storyPaused) return
     centerOnCurrentStoryNode(storyIndex)
-  }, [storyActive, storyIndex, centerOnCurrentStoryNode])
+  }, [storyActive, storyPaused, storyIndex, centerOnCurrentStoryNode])
   // Detect choice nodes (multiple children) for the current chapter
   useEffect(() => {
     if (!storyActive) { setChoiceOptions([]); return }
@@ -2747,7 +2807,7 @@ function BoardContent({
   }, [storyPath, storyIndex, computeStoryPath, centerOnNodeIdScreenAware])
   // Dim non-active nodes via node.className
   useEffect(() => {
-    if (!storyActive) {
+    if (!storyActive || storyPaused) {
       setNodes((nds) => (Array.isArray(nds) ? nds.map(n => ({ ...n, className: undefined })) : nds))
       return
     }
@@ -2762,7 +2822,7 @@ function BoardContent({
         }
       })
     })
-  }, [storyActive, storyPath, storyIndex])
+  }, [storyActive, storyPaused, storyPath, storyIndex])
   // Removed position-shift loop; we recenter viewport instead of moving nodes
   // Global: start story from LeftDock
   useEffect(() => {
@@ -3495,13 +3555,15 @@ function BoardContent({
         edges={edges}
         snapToGrid={gridEnabled}
         snapGrid={SNAP_GRID}
+        // In story mode (active or paused), nodes should not be draggable/connectable.
         nodesDraggable={!readOnly && !storyActive}
         nodesConnectable={!readOnly && !storyActive}
         onNodesChange={(readOnly || storyActive) ? undefined : handleNodesChange}
         onEdgesChange={(readOnly || storyActive) ? undefined : onEdgesChange}
         onConnect={(readOnly || storyActive) ? undefined : onConnect}
-        elementsSelectable={!storyActive}
-        panOnDrag={!storyActive}
+        // While paused, allow pan/select/interact (but still no dragging/connecting).
+        elementsSelectable={!(storyActive && !storyPaused)}
+        panOnDrag={!(storyActive && !storyPaused)}
         // Use mouse wheel for zooming instead of vertical panning
         panOnScroll={false}
         zoomOnScroll={true}
@@ -3517,13 +3579,15 @@ function BoardContent({
           try { window.dispatchEvent(new CustomEvent('nodal:edit-node', { detail: { id: node?.id } })) } catch {}
         }}
         onNodeClick={(event: React.MouseEvent, node: any) => {
-          if (storyActive) { return }
+          if (storyActive && !storyPaused) { return }
           if (readOnly) return
           const id = node?.id as string | undefined
           if (!id) return
 
           // Shift+click: connect from the single selected node to this node.
           if (event.shiftKey) {
+            // Do not allow shift-connect during story mode (including paused).
+            if (storyActive) return
             try {
               handleShiftClickConnect(id)
             } catch {}
@@ -3708,7 +3772,7 @@ function BoardContent({
       {/* Story Mode HUD */}
       {storyActive && (
         <>
-          {isOnChoice && (
+          {!storyPaused && isOnChoice && (
             <div className="fixed left-1/2 -translate-x-1/2 bottom-28 z-95">
               <div className="px-4 py-3 rounded-xl bg-white/95 dark:bg-gray-900/95 shadow-lg border border-gray-200 dark:border-gray-700 min-w-[280px]">
                 <div className="text-sm font-medium text-gray-800 dark:text-gray-100">Choose one of the following:</div>
@@ -3729,48 +3793,80 @@ function BoardContent({
               </div>
             </div>
           )}
-          <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
-            <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
-              <IconButton
-                className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-                onClick={prevStory}
-                disabled={storyIndex <= 0}
-                aria-label="Previous"
-              >
-                <ArrowLeft size={24} weight="duotone" />
-              </IconButton>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-700 dark:text-gray-200">Step {storyIndex + 1}</span>
-                <div className="w-28">
-                  <Range
-                    value={storyPath.length > 0 ? (storyIndex + 1) / storyPath.length : 0}
-                    onChange={() => {}}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    size="sm"
-                    aria-label="Story progress"
-                  />
+          {!storyPaused ? (
+            <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
+              <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                <IconButton
+                  className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  onClick={prevStory}
+                  disabled={storyIndex <= 0}
+                  aria-label="Previous"
+                >
+                  <ArrowLeft size={24} weight="duotone" />
+                </IconButton>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-700 dark:text-gray-200">Step {storyIndex + 1}</span>
+                  <div className="w-28">
+                    <Range
+                      value={storyPath.length > 0 ? (storyIndex + 1) / storyPath.length : 0}
+                      onChange={() => {}}
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      size="sm"
+                      aria-label="Story progress"
+                    />
+                  </div>
                 </div>
+                <IconButton
+                  className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                  onClick={nextStory}
+                  disabled={isOnChoice}
+                  aria-label="Next"
+                >
+                  <ArrowRight size={24} weight="duotone" />
+                </IconButton>
+                <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
+                <IconButton
+                  aria-label="Pause story mode"
+                  variant="secondaryGhost"
+                  size="sm"
+                  onClick={pauseStoryMode}
+                  title="Pause"
+                >
+                  <Pause size={18} weight="duotone" />
+                </IconButton>
               </div>
-              <IconButton
-                className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-                onClick={nextStory}
-                disabled={isOnChoice}
-                aria-label="Next"
-              >
-                <ArrowRight size={24} weight="duotone" />
-              </IconButton>
-              <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
-              <Button
-                className="px-2 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
-                onClick={() => exitStoryMode(false)}
-                aria-label="Exit story mode"
-              >
-                Close
-              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
+              <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                <IconButton
+                  aria-label="Resume story mode"
+                  variant="secondaryGhost"
+                  size="sm"
+                  onClick={resumeStoryMode}
+                  title="Resume"
+                >
+                  <Play size={18} weight="duotone" />
+                </IconButton>
+                <span
+                  className="text-xs text-gray-800 dark:text-gray-100 max-w-[360px] truncate"
+                  title={storyHudTitle}
+                >
+                  {storyHudTitle}
+                </span>
+                <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
+                <Button
+                  className="px-2 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
+                  onClick={closeStoryModeCompletely}
+                  aria-label="Close story mode"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
       {isBoardView && !editorMode && !readOnly && (

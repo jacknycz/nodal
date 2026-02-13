@@ -60,6 +60,19 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
     window.addEventListener('nodal:story-paused', onPaused as EventListener)
     return () => window.removeEventListener('nodal:story-paused', onPaused as EventListener)
   }, [])
+  // Remove paused status when a story is fully closed (not paused)
+  useEffect(() => {
+    const onClosed = (e: Event) => {
+      try {
+        const d = (e as CustomEvent<any>)?.detail || {}
+        const id = String(d.id || '')
+        if (!id) return
+        setPausedStories((prev) => prev.filter((s) => s.id !== id))
+      } catch {}
+    }
+    window.addEventListener('nodal:story-closed', onClosed as EventListener)
+    return () => window.removeEventListener('nodal:story-closed', onClosed as EventListener)
+  }, [])
   // Allow opening the story settings modal from anywhere (e.g., node badges)
   useEffect(() => {
     const onOpenStorySettings = (e: Event) => {
