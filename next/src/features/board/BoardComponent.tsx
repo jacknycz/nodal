@@ -2621,21 +2621,37 @@ function BoardContent({
       // End of story behavior
       if (i >= Math.max(0, storyPath.length - 1)) {
         try {
-          const center = getViewportCenter()
-          const completeId = `story-complete-${Date.now()}`
-          const node = {
-            id: completeId,
-            type: 'default' as const,
-            position: { x: center.x, y: center.y },
-            data: { title: 'Story Complete!', content: 'You’ve reached the end of this story.' } as any,
-          }
+          const starterId = storyPath[0]
+          const finalIndex = Math.max(0, storyPath.length - 1)
+
+          // Mark the starter node as completed so the UI can show a check icon
+          try {
+            pushHistory()
+            setNodes((nds) => {
+              const list = Array.isArray(nds) ? nds : []
+              return list.map((n: any) => {
+                if (n.id !== starterId) return n
+                const d: any = n.data || {}
+                if (!d.storyStarter) return n
+                return { ...n, data: { ...d, storyCompleted: true } }
+              })
+            })
+          } catch {}
+
+          // Persist completion progress as the final index
+          try {
+            const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
+            if (starterId && effectiveBoardId && user?.id) {
+              void getSupabaseClient().from('story_progress')
+                .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: finalIndex, updated_at: new Date().toISOString() } as any,
+                  { onConflict: 'board_id,starter_node_id,user_id' } as any)
+                .then(() => undefined)
+              try { window.localStorage.setItem(`nodal:storyProgress:${user.id}:${effectiveBoardId}:${starterId}`, String(finalIndex)) } catch {}
+            }
+          } catch {}
+
           // Exit without paused status
           exitStoryMode(true)
-          setTimeout(() => {
-            setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
-            try { showAddToast('added', 1) } catch {}
-            try { centerOnNodeIds([completeId]) } catch {}
-          }, 10)
         } catch {
           exitStoryMode(true)
         }
@@ -3406,6 +3422,7 @@ function BoardContent({
             const next = { ...d }
             delete (next as any).storyStarter
             delete (next as any).storyTitle
+            delete (next as any).storyCompleted
             return { ...n, data: next }
           })
         })
@@ -3847,7 +3864,7 @@ function BoardContent({
                 if (n.id !== nodeId) return n
                 const d: any = n.data || {}
                 const title = String(d.title || d.label || 'Story')
-                return { ...n, data: { ...d, storyStarter: true, storyTitle: d.storyTitle || title } }
+                return { ...n, data: { ...d, storyStarter: true, storyCompleted: false, storyTitle: d.storyTitle || title } }
               })
             })
             setToastVariant('success')

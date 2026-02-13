@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play, CheckCircle } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -32,6 +32,7 @@ interface NodalNodeProps {
     width?: number
     storyStarter?: boolean
     storyTitle?: string
+    storyCompleted?: boolean
   }
   id: string
   onNodeDelete?: (nodeId: string) => void
@@ -230,6 +231,11 @@ export default function NodalNode(props: any) {
           >
             {storyTitle}
           </span>
+          {!!(data as any)?.storyCompleted && (
+            <span className="inline-flex items-center" title="Story complete">
+              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+            </span>
+          )}
           <IconButton
             variant="default"
             size="sm"

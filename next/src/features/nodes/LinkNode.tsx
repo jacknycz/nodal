@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, TreeView, Play } from '@phosphor-icons/react/ssr'
+import { Trash, TreeView, Play, CheckCircle } from '@phosphor-icons/react/ssr'
 import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
@@ -159,6 +159,11 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           {(data as any)?.storyStarter && (
             <div className="mt-2 flex items-center gap-2">
               <Tag variant="primary">Story Starter Node</Tag>
+              {!!(data as any)?.storyCompleted && (
+                <span className="inline-flex items-center" title="Story complete">
+                  <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+                </span>
+              )}
               <IconButton
                 variant="default"
                 size="sm"

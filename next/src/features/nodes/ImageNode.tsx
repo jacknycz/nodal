@@ -479,6 +479,11 @@ export default function ImageNode({
               {(data as any)?.storyStarter && (
                 <div className="mt-2 flex items-center gap-2">
                   <Tag variant="primary">Story Starter Node</Tag>
+                  {!!(data as any)?.storyCompleted && (
+                    <span className="inline-flex items-center" title="Story complete">
+                      <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+                    </span>
+                  )}
                   <IconButton
                     variant="default"
                     size="sm"
