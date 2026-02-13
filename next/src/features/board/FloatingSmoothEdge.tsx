@@ -215,29 +215,31 @@ export default function FloatingSmoothEdge({
             onMouseDown={(e) => { e.stopPropagation() }}
             onClick={(e) => { e.stopPropagation() }}
           >
-            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
-              <Checkbox
-                size="sm"
-                shape="circle"
-                label="Dir"
-                labelTextClassName="text-[11px] text-gray-700 dark:text-gray-200"
-                checked={showDirection}
-                onChange={(checked, e) => {
-                  e.stopPropagation()
-                  onEdgeUpdate?.(id, { showDirection: checked })
-                }}
-              />
-              <IconButton
-                aria-label="Reverse direction"
-                title={showDirection ? 'Reverse direction' : 'Enable Dir to reverse'}
-                variant="secondaryGhost"
-                size="xs"
-                disabled={!showDirection}
-                onMouseDown={(e) => { e.stopPropagation() }}
-                onClick={(e) => { e.stopPropagation(); onEdgeReverse?.(id) }}
-              >
-                <ArrowClockwise size={14} weight="duotone" />
-              </IconButton>
+            <div className="flex flex-col items-center p-1 gap-1 rounded-lg bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  size="md"
+                  shape="circle"
+                  label="Direction"
+                  labelTextClassName="text-[11px] text-gray-700 dark:text-gray-200"
+                  checked={showDirection}
+                  onChange={(checked, e) => {
+                    e.stopPropagation()
+                    onEdgeUpdate?.(id, { showDirection: checked })
+                  }}
+                />
+                <IconButton
+                  aria-label="Reverse direction"
+                  title={showDirection ? 'Reverse direction' : 'Enable Direction to reverse'}
+                  variant="primaryGhost"
+                  size="xs"
+                  disabled={!showDirection}
+                  onMouseDown={(e) => { e.stopPropagation() }}
+                  onClick={(e) => { e.stopPropagation(); onEdgeReverse?.(id) }}
+                >
+                  <ArrowClockwise size={14} weight="duotone" />
+                </IconButton>
+              </div>
               <IconButton
                 aria-label="Delete connection"
                 title="Delete connection"
