@@ -196,7 +196,32 @@ export default function FloatingEdge({
 
   const showDirection = !!(data as any)?.showDirection
   const gradientId = `edge-dir-grad-${id}`
-  const arrowId = `edge-dir-arrow-${id}`
+  const overlayPathRef = useRef<SVGPathElement | null>(null)
+  const [arrowInfo, setArrowInfo] = useState<{ x: number; y: number; angle: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!showDirection) {
+      setArrowInfo(null)
+      return
+    }
+    let raf = 0 as any
+    try {
+      raf = requestAnimationFrame(() => {
+        try {
+          const el = overlayPathRef.current
+          if (!el) return
+          const len = el.getTotalLength()
+          const p1 = el.getPointAtLength(len)
+          const p0 = el.getPointAtLength(Math.max(0, len - 12))
+          const angle = (Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180) / Math.PI
+          setArrowInfo({ x: p1.x, y: p1.y, angle })
+        } catch {}
+      })
+    } catch {}
+    return () => {
+      try { cancelAnimationFrame(raf) } catch {}
+    }
+  }, [edgePath, showDirection])
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) {
@@ -240,25 +265,31 @@ export default function FloatingEdge({
         <>
           <defs>
             <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={sx} y1={sy} x2={tx} y2={ty}>
-              <stop offset="0%" stopColor="var(--color-secondary-500)" stopOpacity="0.05" />
-              <stop offset="60%" stopColor="var(--color-secondary-500)" stopOpacity="0.75" />
-              <stop offset="100%" stopColor="var(--color-secondary-500)" stopOpacity="0.05" />
+              <stop offset="0%" stopColor="var(--color-primary-500)" stopOpacity="0.05" />
+              <stop offset="60%" stopColor="var(--color-primary-500)" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="var(--color-primary-500)" stopOpacity="0.05" />
             </linearGradient>
-            <marker id={arrowId} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-secondary-600)" opacity="0.92" />
-            </marker>
           </defs>
           <path
+            ref={overlayPathRef}
             d={edgePath}
             fill="none"
             stroke={`url(#${gradientId})`}
             strokeWidth={selected ? 4 : 3}
             strokeLinecap="round"
             className="edge-direction-pulse"
-            markerEnd={`url(#${arrowId})`}
             pointerEvents="none"
             opacity={0.85}
           />
+          {!!arrowInfo && (
+            <path
+              d="M0 0 L-10 -2.6 L-10 2.6 Z"
+              fill="var(--color-primary-600)"
+              opacity="0.95"
+              transform={`translate(${arrowInfo.x - Math.cos((arrowInfo.angle * Math.PI) / 180) * 3},${arrowInfo.y - Math.sin((arrowInfo.angle * Math.PI) / 180) * 3}) rotate(${arrowInfo.angle})`}
+              pointerEvents="none"
+            />
+          )}
         </>
       )}
 
