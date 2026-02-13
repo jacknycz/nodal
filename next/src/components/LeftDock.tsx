@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { ListChecks, Tag as TagIcon, Info, X, ArrowCounterClockwise, ArrowClockwise, Sidebar, BookOpen, DotsThreeOutlineVertical, Play } from '@phosphor-icons/react'
 import TaskList from './TaskList'
 import ColorgoryManager from './ColorgoryManager'
@@ -36,6 +36,33 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
   const [panelEntered, setPanelEntered] = useState(false)
   const [storyModal, setStoryModal] = useState<{ id: string | null; title: string }>({ id: null, title: '' })
   const [pausedStories, setPausedStories] = useState<Array<{ id: string; title: string }>>([])
+  const currentBoardId = useBoardStore((s: any) => s.currentBoardId)
+
+  const storyShareUrl = useMemo(() => {
+    try {
+      const storyId = String(storyModal.id || '')
+      if (!storyId) return ''
+      let bid = String(currentBoardId || '')
+      if (!bid && typeof window !== 'undefined') {
+        const m = window.location.pathname.match(/\/board\/([^\/?#]+)/)
+        if (m?.[1]) bid = m[1]
+      }
+      if (!bid || typeof window === 'undefined') return ''
+      return `${window.location.origin}/board/${encodeURIComponent(bid)}?story=${encodeURIComponent(storyId)}`
+    } catch {
+      return ''
+    }
+  }, [storyModal.id, currentBoardId])
+
+  const onCopyStoryLink = useCallback(async () => {
+    if (!storyShareUrl) return
+    try {
+      await navigator.clipboard.writeText(storyShareUrl)
+      try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Story link copied', variant: 'info' } })) } catch {}
+    } catch {
+      try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Copy failed (clipboard blocked)', variant: 'warning' } })) } catch {}
+    }
+  }, [storyShareUrl])
   useEffect(() => {
     const mq = typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)') : null
     const onChange = () => setIsMdUp(!!mq?.matches)
@@ -356,6 +383,20 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
               onChange={(e: any) => setStoryModal({ id: storyModal.id, title: String(e?.target?.value || '') })}
               placeholder="Story title"
             />
+            <div className="space-y-2">
+              <TextInput
+                label="Share link"
+                value={storyShareUrl}
+                readOnly
+                onFocus={(e: any) => { try { e?.target?.select?.() } catch {} }}
+                placeholder="Link will appear here…"
+              />
+              <div className="flex justify-end">
+                <Button variant="secondary" disabled={!storyShareUrl} onClick={onCopyStoryLink}>
+                  Copy link
+                </Button>
+              </div>
+            </div>
           </div>
         </Modal>
       )}

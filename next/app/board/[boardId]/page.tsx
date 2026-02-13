@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSupabaseUser } from '../../../src/features/auth/authUtils'
 import { getSupabaseClient } from '../../../src/features/auth/supabaseClient'
 import { useRouter } from 'next/navigation'
@@ -29,6 +29,8 @@ export default function BoardPage() {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved' | 'error'>('saved');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const screenshotMode = searchParams.get('screenshot') === 'true';
+  const storyId = searchParams.get('story')
+  const deepLinkHandledRef = useRef(false)
   const user = useSupabaseUser()
   const router = useRouter()
   const supabase = getSupabaseClient()
@@ -128,6 +130,21 @@ export default function BoardPage() {
   const isAccessBlocked = !loading && !board
   const isPublicViewer = !!board?.isPublic && !user?.id
   const ready = !!board && String((board as any)?.id || '') === String(boardId || '')
+
+  // Deep link: start story immediately when opened with ?story=<starterNodeId>
+  useEffect(() => {
+    if (!ready) return
+    if (!storyId) return
+    if (deepLinkHandledRef.current) return
+    deepLinkHandledRef.current = true
+    const t = setTimeout(() => {
+      try {
+        window.dispatchEvent(new CustomEvent('nodal:start-story', { detail: { id: String(storyId), startAtBeginning: true } }))
+      } catch {}
+    }, 300)
+    return () => clearTimeout(t)
+  }, [ready, storyId])
+
   return (
     <ThemeProvider>
       <AIProvider>
