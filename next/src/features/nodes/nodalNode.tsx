@@ -3,7 +3,7 @@
 import React, { useState, useRef, useMemo } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useBoardStore } from '../board/boardSlice'
-import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play, CheckCircle, DotsThreeOutlineVertical } from "@phosphor-icons/react/ssr";
+import { ArrowsOut, ArrowsIn, BookOpenText, Resize, Lock, Play, CheckCircle, CheckFat, DotsThreeOutlineVertical } from "@phosphor-icons/react/ssr";
 import Modal from '../../components/ui/Modal'
 import IconButton from '../../components/ui/IconButton'
 import Button from '../../components/ui/Button'
@@ -228,7 +228,7 @@ export default function NodalNode(props: any) {
               className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center rounded-full bg-white dark:bg-gray-900 border border-primary-200/80 dark:border-primary-800 shadow-sm"
               title="Story complete"
             >
-              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+              <CheckFat size={14} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
             </span>
           )}
           <IconButton

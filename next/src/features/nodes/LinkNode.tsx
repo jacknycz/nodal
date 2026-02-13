@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { Trash, TreeView, Play, CheckCircle, DotsThreeOutlineVertical } from '@phosphor-icons/react/ssr'
+import { Trash, TreeView, Play, CheckCircle, CheckFat, DotsThreeOutlineVertical } from '@phosphor-icons/react/ssr'
 import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
@@ -137,7 +137,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
               className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center rounded-full bg-white dark:bg-gray-900 border border-primary-200/80 dark:border-primary-800 shadow-sm"
               title="Story complete"
             >
-              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+              <CheckFat size={14} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
             </span>
           )}
           <IconButton
@@ -197,7 +197,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white truncate flex items-center gap-2`}>
             {Boolean((data as any).faviconUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm flex-shrink-0" />
+              <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm shrink-0" />
             )}
             <span className="truncate">{data.title || safeHostname}</span>
           </div>
@@ -215,7 +215,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             </a>
           )}
           {plainDescription && (
-            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line break-words line-clamp-2">
+            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line wrap-break-word line-clamp-2">
               {plainDescription.length > 200 ? `${plainDescription.slice(0, 200)}…` : plainDescription}
             </div>
           )}

@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import IconButton from '../../components/ui/IconButton'
-import { ArrowsIn, ArrowsOut, PlayCircle, Play, CheckCircle, DotsThreeOutlineVertical } from '@phosphor-icons/react/ssr'
+import { ArrowsIn, ArrowsOut, PlayCircle, Play, CheckCircle, CheckFat, DotsThreeOutlineVertical } from '@phosphor-icons/react/ssr'
 import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
@@ -145,7 +145,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
               className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center rounded-full bg-white dark:bg-gray-900 border border-primary-200/80 dark:border-primary-800 shadow-sm"
               title="Story complete"
             >
-              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+              <CheckFat size={14} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
             </span>
           )}
           <IconButton

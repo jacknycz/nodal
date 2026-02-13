@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { Trash, PlusCircle, TreeView } from '@phosphor-icons/react/ssr'
-import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, Warning, Play, DotsThreeOutlineVertical } from '@phosphor-icons/react'
+import { ArrowsOut, ArrowsIn, Pencil, PlayCircle, Spinner, CheckCircle, CheckFat, Warning, Play, DotsThreeOutlineVertical } from '@phosphor-icons/react'
 import Modal from '../../components/ui/Modal'
 import TextInput from '../../components/ui/TextInput'
 import TextArea from '../../components/ui/TextArea'
@@ -394,7 +394,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
               className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center rounded-full bg-white dark:bg-gray-900 border border-primary-200/80 dark:border-primary-800 shadow-sm"
               title="Story complete"
             >
-              <CheckCircle size={14} weight="duotone" className="text-emerald-600 dark:text-emerald-400" />
+              <CheckFat size={14} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
             </span>
           )}
           <IconButton
