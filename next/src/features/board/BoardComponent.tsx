@@ -2442,6 +2442,12 @@ function BoardContent({
   // Choice nodes: when a chapter has multiple children, user must choose
   const [choiceOptions, setChoiceOptions] = useState<Array<{ id: string; title: string }>>([])
   const isOnChoice = storyActive && !storyPaused && choiceOptions.length > 0
+
+  // Global CSS hook so we can hide node chrome (e.g., story starter badges) while story mode is active.
+  useEffect(() => {
+    try { document.documentElement.classList.toggle('nodal-story-mode', !!storyActive) } catch {}
+    return () => { try { document.documentElement.classList.remove('nodal-story-mode') } catch {} }
+  }, [storyActive])
   // Adjust this to control the zoom level when landing on a chapter in Story Mode
   const STORY_CHAPTER_ZOOM = 1.08
   const computeStoryPath = useCallback((starterId: string): string[] => {

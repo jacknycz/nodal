@@ -136,6 +136,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
     <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {(data as any)?.storyStarter && (
         <div
+          data-story-starter-badge
           className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-40 flex items-center gap-2 rounded-full border border-primary-200/80 dark:border-primary-800 bg-white/90 dark:bg-gray-900/80 px-2 py-1 shadow-sm backdrop-blur"
           onMouseDown={(e) => { e.stopPropagation() }}
           onClick={(e) => { e.stopPropagation() }}

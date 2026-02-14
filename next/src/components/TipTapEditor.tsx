@@ -54,6 +54,10 @@ export default function TipTapEditor({
           listItem: false,
           // keep default strike (boolean supported in TipTap v2 types)
           strike: false,
+          // Limit headings to H1–H4
+          heading: {
+            levels: [1, 2, 3, 4],
+          },
         }),
         Placeholder.configure({
           placeholder,
@@ -219,6 +223,32 @@ export default function TipTapEditor({
           <Strikethrough size={14} />
         </IconButton>
         
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        {/* Headings (P / H1–H4) */}
+        <IconButton
+          variant={editor.isActive('paragraph') ? 'primary' : 'default'}
+          size="sm"
+          onClick={() => editor.chain().focus().setParagraph().run()}
+          aria-label="Paragraph"
+          title="Paragraph"
+        >
+          <span className="text-[11px] font-semibold">P</span>
+        </IconButton>
+
+        {([1, 2, 3, 4] as const).map((level) => (
+          <IconButton
+            key={level}
+            variant={editor.isActive('heading', { level }) ? 'primary' : 'default'}
+            size="sm"
+            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+            aria-label={`Heading ${level}`}
+            title={`Heading ${level}`}
+          >
+            <span className="text-[11px] font-semibold">{`H${level}`}</span>
+          </IconButton>
+        ))}
+
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
         
         <IconButton
