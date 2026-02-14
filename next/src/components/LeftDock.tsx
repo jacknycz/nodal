@@ -18,9 +18,10 @@ interface LeftDockProps {
   active: DockKey
   onToggle: (key: Exclude<DockKey, null>) => void
   disabled?: boolean
+  hidden?: boolean
 }
 
-export default function LeftDock({ active, onToggle, disabled = false }: LeftDockProps) {
+export default function LeftDock({ active, onToggle, disabled = false, hidden = false }: LeftDockProps) {
   const baseBtn = "w-10 h-10 cursor-pointer rounded-lg flex items-center justify-center transition-colors duration-150"
   const neutral = "bg-gray-100/80 hover:bg-gray-200/80 text-gray-700 dark:bg-gray-800/80 dark:hover:bg-gray-700/80 dark:text-gray-200"
   const activeCls = "bg-primary-600 text-white hover:bg-primary-600"
@@ -144,6 +145,13 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
       document.removeEventListener('touchstart', handler, true)
     }
   }, [openKey])
+
+  // When hidden (e.g., story mode), close any open panels so it returns cleanly.
+  useEffect(() => {
+    if (!hidden) return
+    try { setOpenKey(null) } catch {}
+    try { setMobileOpen(false) } catch {}
+  }, [hidden])
 
   useEffect(() => {
     const onHist = (e: any) => {
@@ -309,7 +317,12 @@ export default function LeftDock({ active, onToggle, disabled = false }: LeftDoc
   )
 
   return (
-    <div className="fixed z-50 left-0 top-12 md:top-16" data-left-dock aria-label="Left dock" ref={containerRef}>
+    <div
+      className={`fixed z-50 left-0 top-12 md:top-16 transition-[transform,opacity] duration-200 ease-in-out ${hidden ? '-translate-x-[120%] opacity-0 pointer-events-none' : 'translate-x-0 opacity-100 pointer-events-auto'}`}
+      data-left-dock
+      aria-label="Left dock"
+      ref={containerRef}
+    >
       {/* Desktop/Tablet */}
       <div className="hidden md:block">
         {Panel}

@@ -3766,7 +3766,7 @@ function BoardContent({
         </div>
         {/* Story tint inside ReactFlow so it appears above pane but below nodes */}
         {storyActive && (
-          <div className={`pointer-events-none absolute inset-0 z-[1] ${theme === 'dark' ? 'bg-black/90' : 'bg-primary-400/50'}`} />
+          <div className={`pointer-events-none absolute inset-0 z-[1] ${theme === 'dark' ? 'bg-black/50' : 'bg-primary-900/50'}`} />
         )}
         {/* Place MiniMap bottom-left next to Controls */}
         <MiniMap
@@ -3803,6 +3803,7 @@ function BoardContent({
           active={leftDockActive}
           onToggle={(key) => setLeftDockActive(prev => (prev === key ? null : key))}
           disabled={readOnly}
+          hidden={storyActive}
         />
       )}
       {/* Story Mode HUD */}
@@ -3978,7 +3979,7 @@ function BoardContent({
       )}
       {isBoardView && (
         <div className={editorMode ? 'hidden lg:block' : ''}>
-        <OmniSearch />
+        <OmniSearch hidden={storyActive} />
         </div>
       )}
       {/* Removed old Tips button; now opened via LeftDock */}

@@ -1,18 +1,26 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useBoardStore } from '../features/board/boardSlice'
 import FloatingSearch from './ui/Search'
 import { useReactFlow } from '@xyflow/react'
 import { CrosshairSimple } from '@phosphor-icons/react'
 import { Z_INDEX } from './ui/zIndex'
 
-export default function OmniSearch() {
+export default function OmniSearch({ hidden = false }: { hidden?: boolean }) {
   const [query, setQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [isHoveringResults, setIsHoveringResults] = useState(false)
   const nodes = useBoardStore((s) => s.nodes || [])
   const rf = useReactFlow()
+
+  useEffect(() => {
+    if (!hidden) return
+    // Keep the UI "clean" when hidden: close results + clear query.
+    try { setIsFocused(false) } catch {}
+    try { setIsHoveringResults(false) } catch {}
+    try { setQuery('') } catch {}
+  }, [hidden])
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -54,7 +62,7 @@ export default function OmniSearch() {
 
   return (
     <div
-      className="fixed bottom-3 md:bottom-auto md:top-2 left-1/2 -translate-x-1/2 w-64 nodal-no-select"
+      className={`fixed bottom-3 md:bottom-auto md:top-2 left-1/2 -translate-x-1/2 w-64 nodal-no-select transition-[transform,opacity] duration-200 ease-in-out ${hidden ? '-translate-y-[80px] opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}`}
       style={{ zIndex: Z_INDEX.omniSearch }}
     >
       <div className="relative">
