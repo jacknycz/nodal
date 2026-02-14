@@ -49,6 +49,9 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
   const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
+  const [loadedIsPublic, setLoadedIsPublic] = useState<boolean | null>(null)
+  const [savingVisibility, setSavingVisibility] = useState(false)
+  const [visibilityError, setVisibilityError] = useState<string | null>(null)
   const [gridEnabled, setGridEnabled] = useState<boolean>(true)
   const [pendingAIStyle, setPendingAIStyle] = useState<AIStyleKey>('balanced')
 
@@ -69,13 +72,21 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     ;(async () => {
       try {
         const { data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle()
-        setPendingIsPublic(!!(data as any)?.is_public)
+        const isPub = !!(data as any)?.is_public
+        setPendingIsPublic(isPub)
+        setLoadedIsPublic(isPub)
         const style = String((data as any)?.ai_style || 'balanced') as AIStyleKey
         setPendingAIStyle(style)
         try { setAIStyle?.(style) } catch {}
       } catch { setPendingIsPublic(false) }
     })()
   }, [open, boardId, supabase])
+
+  useEffect(() => {
+    if (!open) return
+    setVisibilityError(null)
+    setSavingVisibility(false)
+  }, [open])
 
   // Load grid setting from localStorage on open
   useEffect(() => {
@@ -149,8 +160,9 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         actions={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={async () => {
+            <Button disabled={savingVisibility} onClick={async () => {
               try {
+                setVisibilityError(null)
                 const newName = (pendingBoardName || '').trim()
                 if (isOwnerView && boardId && newName && newName !== (initialName || '')) {
                   try {
@@ -158,8 +170,34 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                     try { window.dispatchEvent(new CustomEvent('nodal:board-name-updated', { detail: { boardId, name: newName } })) } catch { }
                   } catch { }
                 }
+
+                // Persist visibility ONLY on Save (client-side Supabase update may be blocked by RLS)
+                if (isOwnerView && loadedIsPublic !== null && pendingIsPublic !== loadedIsPublic) {
+                  setSavingVisibility(true)
+                  try {
+                    const { data: sess } = await supabase.auth.getSession()
+                    const token = sess?.session?.access_token
+                    if (!token) throw new Error('Not signed in')
+                    const resp = await fetch('/api/board/public', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ boardId, isPublic: pendingIsPublic }),
+                    })
+                    if (!resp.ok) {
+                      const j = await resp.json().catch(() => ({}))
+                      throw new Error(j?.error || `Failed (${resp.status})`)
+                    }
+                    setLoadedIsPublic(pendingIsPublic)
+                  } finally {
+                    setSavingVisibility(false)
+                  }
+                }
+
                 onClose()
-              } catch { }
+              } catch (e: any) {
+                setVisibilityError(String(e?.message || 'Failed to save'))
+                try { setSavingVisibility(false) } catch {}
+              }
             }}>Save</Button>
           </>
         }
@@ -171,6 +209,9 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-white">Visibility</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">Private boards are members-only. Public boards can be viewed by anyone with the link (editing is members-only).</div>
+                  {visibilityError && (
+                    <div className="mt-1 text-xs text-red-600 dark:text-red-400">{visibilityError}</div>
+                  )}
                 </div>
                 <div>
                   <Select
@@ -180,7 +221,6 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                       const next = v === 'public'
                       setPendingIsPublic(next)
                       if (!isOwnerView) return
-                      try { await supabase.from('boards').update({ is_public: next }).eq('id', boardId) } catch {}
                     }}
                     options={[{ label: 'Private', value: 'private' }, { label: 'Public', value: 'public' }]}
                     className="w-24!"
