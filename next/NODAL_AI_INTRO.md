@@ -309,6 +309,7 @@ When adding new persistent flags:
 - **Prefer small changes**: avoid broad refactors unless explicitly requested.
 - **Use events for decoupling**: if a modal is owned elsewhere (e.g. LeftDock), dispatch an event; don’t duplicate modal state.
 - **Prompt hygiene**: strip HTML before sending node content to AI; keep budgets capped.
+- **Git workflow**: don’t commit/push by default. Jack will handle git unless he explicitly asks you to commit/push.
 - **Local iteration default**: don’t push/deploy unless explicitly requested.
 - **Team note**: Jack is almost always working locally, so we don’t need to push every time. 😉
 

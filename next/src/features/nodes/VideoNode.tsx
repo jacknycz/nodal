@@ -391,7 +391,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
         >
           {!!(data as any)?.storyCompleted && (
             <span
-              className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center rounded-full bg-white dark:bg-gray-900 border border-primary-200/80 dark:border-primary-800 shadow-sm"
+              className="absolute -top-1.5 -left-1.5 inline-flex items-center justify-center p-0.5 rounded-full bg-white dark:bg-gray-900 border border-primary-200/80 dark:border-primary-800 shadow-sm"
               title="Story complete"
             >
               <CheckFat size={14} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
