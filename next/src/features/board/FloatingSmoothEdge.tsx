@@ -5,6 +5,7 @@ import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, Position, useReactFlow 
 import { ArrowClockwise, X } from '@phosphor-icons/react'
 import { useBoardStore } from './boardSlice'
 import IconButton from '../../components/ui/IconButton'
+import Button from '../../components/ui/Button'
 import Checkbox from '../../components/ui/Checkbox'
 
 interface FloatingEdgeProps {
@@ -45,6 +46,11 @@ export default function FloatingSmoothEdge({
   const [isHovered, setIsHovered] = useState(false)
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const rf = useReactFlow()
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
+  const hoverPosRafRef = useRef<number | null>(null)
+  const showMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastClientPointRef = useRef<{ x: number; y: number } | null>(null)
+  const [menuEntered, setMenuEntered] = useState(false)
   const connectingSourceId = useBoardStore((s: any) => s.connectingSourceId)
   // Hover fading removed
   const selectedNodeIds: string[] = useBoardStore((s: any) => s.selectedNodeIds || [])
@@ -52,6 +58,9 @@ export default function FloatingSmoothEdge({
   const isRelatedToSource = isInConnectionMode && (source === connectingSourceId || target === connectingSourceId)
   const hasContext = (selectedNodeIds || []).length > 0
   const isRelatedToContext = hasContext && (selectedNodeIds.includes(source as string) || selectedNodeIds.includes(target as string))
+
+  const HOVER_MENU_SHOW_DELAY_MS = 30
+  const HOVER_MENU_OFFSET_PX = 1
 
   const computeAnchors = (): { sx: number; sy: number; tx: number; ty: number; sp: Position; tp: Position } => {
     try {
@@ -164,10 +173,102 @@ export default function FloatingSmoothEdge({
   }
 
   const handleDelete = (e: React.MouseEvent) => { e.stopPropagation(); onEdgeDelete?.(id) }
-  const handleMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true) }
-  const handleMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false) }, 100) }
-  const handleButtonMouseEnter = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setIsHovered(true) }
+
+  const computeHoverPosImmediate = (clientX: number, clientY: number) => {
+    try {
+      const p = rf.screenToFlowPosition({ x: clientX, y: clientY })
+      const zoom = (rf as any)?.getZoom?.() ?? 1
+      setHoverPos({ x: p.x, y: p.y + (HOVER_MENU_OFFSET_PX / zoom) })
+    } catch {}
+  }
+
+  const updateHoverPosFromClientPoint = (clientX: number, clientY: number) => {
+    try {
+      if (hoverPosRafRef.current) cancelAnimationFrame(hoverPosRafRef.current)
+      hoverPosRafRef.current = requestAnimationFrame(() => {
+        try {
+          computeHoverPosImmediate(clientX, clientY)
+        } catch {}
+      })
+    } catch {}
+  }
+
+  const handleMouseEnter = (e: React.MouseEvent<SVGPathElement>) => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+    if (showMenuTimeoutRef.current) {
+      clearTimeout(showMenuTimeoutRef.current)
+      showMenuTimeoutRef.current = null
+    }
+
+    lastClientPointRef.current = { x: e.clientX, y: e.clientY }
+    computeHoverPosImmediate(e.clientX, e.clientY)
+
+    if (isHovered) return
+
+    showMenuTimeoutRef.current = setTimeout(() => {
+      setIsHovered(true)
+      const p = lastClientPointRef.current
+      if (p) computeHoverPosImmediate(p.x, p.y)
+    }, HOVER_MENU_SHOW_DELAY_MS)
+  }
+  const handleMouseMove = (e: React.MouseEvent<SVGPathElement>) => {
+    lastClientPointRef.current = { x: e.clientX, y: e.clientY }
+
+    if (isHovered) {
+      updateHoverPosFromClientPoint(e.clientX, e.clientY)
+      return
+    }
+    if (showMenuTimeoutRef.current) {
+      computeHoverPosImmediate(e.clientX, e.clientY)
+    }
+  }
+  const handleMouseLeave = () => {
+    if (showMenuTimeoutRef.current) {
+      clearTimeout(showMenuTimeoutRef.current)
+      showMenuTimeoutRef.current = null
+    }
+    if (!isHovered) return
+    hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false) }, 100)
+  }
+  const handleButtonMouseEnter = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+    if (showMenuTimeoutRef.current) {
+      clearTimeout(showMenuTimeoutRef.current)
+      showMenuTimeoutRef.current = null
+    }
+    setIsHovered(true)
+  }
   const handleButtonMouseLeave = () => { hoverTimeoutRef.current = setTimeout(() => { setIsHovered(false) }, 100) }
+
+  useEffect(() => {
+    if (!isHovered) setHoverPos(null)
+  }, [isHovered])
+
+  useEffect(() => {
+    return () => {
+      try {
+        if (hoverPosRafRef.current) cancelAnimationFrame(hoverPosRafRef.current)
+      } catch {}
+      try {
+        if (showMenuTimeoutRef.current) clearTimeout(showMenuTimeoutRef.current)
+      } catch {}
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isHovered) {
+      setMenuEntered(false)
+      return
+    }
+    setMenuEntered(false)
+    let raf = 0 as any
+    try {
+      raf = requestAnimationFrame(() => setMenuEntered(true))
+    } catch {}
+    return () => {
+      try { cancelAnimationFrame(raf) } catch {}
+    }
+  }, [isHovered])
 
   const showDirection = !!(data as any)?.showDirection
   const gradientId = `edge-dir-grad-${id}`
@@ -235,22 +336,39 @@ export default function FloatingSmoothEdge({
         </>
       )}
 
-      <path d={edgePath} fill="none" stroke="transparent" strokeWidth="20" style={{ cursor: 'pointer' }} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className="nodrag nopan" />
-      {isHovered && onEdgeDelete && (
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth="20"
+        style={{ cursor: 'pointer' }}
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="nodrag nopan"
+      />
+      {isHovered && !!hoverPos && onEdgeDelete && (
         <EdgeLabelRenderer>
           <div
-            style={{ position: 'absolute', transform: `translate(-50%, -50%) translate(${centerX}px,${centerY}px)`, pointerEvents: 'all', zIndex: 1000 }}
-            className="nodrag nopan"
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${hoverPos.x}px,${hoverPos.y}px) scale(${menuEntered ? 1 : 0.96})`,
+              pointerEvents: 'all',
+              zIndex: 1000,
+              opacity: menuEntered ? 1 : 0,
+              transition: 'opacity 80ms ease-out, transform 80ms ease-out',
+            }}
+            className="nodrag nopan cursor-pointer"
             onMouseEnter={handleButtonMouseEnter}
             onMouseLeave={handleButtonMouseLeave}
             onMouseDown={(e) => { e.stopPropagation() }}
             onClick={(e) => { e.stopPropagation() }}
           >
-            <div className="flex flex-col items-center p-1 gap-1 rounded-lg bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
+            <div className="flex flex-col cursor-pointer items-center p-2 gap-4 rounded-lg bg-white/95 dark:bg-gray-900/95 border border-gray-200 dark:border-gray-700 shadow-lg">
               <div className="flex items-center gap-2">
                 <Checkbox
                   size="md"
-                  shape="circle"
+                  shape="rounded"
                   label="Direction"
                   labelTextClassName="text-[11px] text-gray-700 dark:text-gray-200"
                   checked={showDirection}
@@ -262,7 +380,7 @@ export default function FloatingSmoothEdge({
                 <IconButton
                   aria-label="Reverse direction"
                   title={showDirection ? 'Reverse direction' : 'Enable Direction to reverse'}
-                  variant="primaryGhost"
+                  variant="secondary"
                   size="xs"
                   disabled={!showDirection}
                   onMouseDown={(e) => { e.stopPropagation() }}
@@ -271,17 +389,17 @@ export default function FloatingSmoothEdge({
                   <ArrowClockwise size={14} weight="duotone" />
                 </IconButton>
               </div>
-              <IconButton
+              <Button
                 aria-label="Delete connection"
                 title="Delete connection"
                 variant="dangerGhost"
                 size="xs"
                 onMouseDown={(e) => { e.stopPropagation() }}
                 onClick={handleDelete}
-                className="delete-button-enter"
+                iconLeft={<X size={14} weight="duotone" />}
               >
-                <X size={14} weight="duotone" />
-              </IconButton>
+                Delete
+              </Button>
             </div>
           </div>
         </EdgeLabelRenderer>

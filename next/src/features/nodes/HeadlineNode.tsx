@@ -30,7 +30,9 @@ export default function HeadlineNode({ data }: HeadlineNodeProps) {
         position={Position.Top}
         className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`}
       />
-      <div className={`font-bold whitespace-nowrap flex leading-tight ${sizeClass} text-gray-900 dark:text-white select-text`}>{title}</div>
+      <div className={`font-bold whitespace-pre-wrap wrap-break-word flex leading-tight ${sizeClass} text-gray-900 dark:text-white select-text`}>
+        {title}
+      </div>
       <Handle
         type="source"
         position={Position.Bottom}

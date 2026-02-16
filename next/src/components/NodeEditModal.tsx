@@ -9,6 +9,7 @@ import Tooltip from './ui/Tooltip'
 import Checkbox from './ui/Checkbox'
 import TipTapEditor from './TipTapEditor'
 import TextInput from './ui/TextInput'
+import TextArea from './ui/TextArea'
 import MultiSelect from './ui/MultiSelect'
 import Select from './ui/Select'
 import ToggleGroup from './ui/ToggleGroup'
@@ -32,6 +33,12 @@ interface NodeEditModalProps {
   titleSizeOptions?: TitleSize[]
   showTitle?: boolean
   showTitleSize?: boolean
+  // When true, the title field is a multiline textarea instead of a single-line input.
+  // Enter inserts a newline; Ctrl/Cmd+Enter saves.
+  titleMultiline?: boolean
+  // When true, the modal height is automatic (no forced 85vh).
+  // Useful for compact node types like headlines.
+  autoHeight?: boolean
   // Optional assignment selector
   assignOptions?: Array<{ value: string; label: string }>
   assignValue?: string | null
@@ -57,6 +64,8 @@ export default function NodeEditModal({
   titleSizeOptions = ['sm','md','lg'],
   showTitle = true,
   showTitleSize = true,
+  titleMultiline = false,
+  autoHeight = false,
   assignOptions,
   assignValue,
   onAssignChange,
@@ -69,6 +78,7 @@ export default function NodeEditModal({
   const [titleSize, setTitleSize] = useState<TitleSize>(initialTitleSize)
   const [pageMode, setPageMode] = useState<boolean>(!!initialPageMode)
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const titleTextAreaRef = useRef<HTMLTextAreaElement>(null)
   const editorHandleRef = useRef<{ focus: () => void } | null>(null)
   const didAutoFocusRef = useRef<boolean>(false)
   const colorgories = useBoardStore.getState().colorgories || []
@@ -95,22 +105,29 @@ export default function NodeEditModal({
     const t = setTimeout(() => {
       didAutoFocusRef.current = true
       const active = document.activeElement as HTMLElement | null
-      if (active && titleInputRef.current && active === titleInputRef.current) return
+      if (active) {
+        if (!titleMultiline && titleInputRef.current && active === titleInputRef.current) return
+        if (titleMultiline && titleTextAreaRef.current && active === titleTextAreaRef.current) return
+      }
       try {
         if (!focusTitleFirst && showContent && editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
           editorHandleRef.current.focus()
         } else {
-          titleInputRef.current?.focus()
+          if (titleMultiline) titleTextAreaRef.current?.focus()
+          else titleInputRef.current?.focus()
         }
       } catch {}
     }, 100)
     return () => clearTimeout(t)
-  }, [open, showContent, focusTitleFirst])
+  }, [open, showContent, focusTitleFirst, titleMultiline])
 
   const handleSave = () => {
     const trimmed = (title || '').trim()
     if (!trimmed) {
-      try { titleInputRef.current?.focus() } catch {}
+      try {
+        if (titleMultiline) titleTextAreaRef.current?.focus()
+        else titleInputRef.current?.focus()
+      } catch {}
       return
     }
     onSave(trimmed, content, selectedColorgoryIds, titleSize, pageMode)
@@ -124,7 +141,12 @@ export default function NodeEditModal({
       setTimeout(() => editorHandleRef.current?.focus(), 0)
       return
     }
-    if (e.key === 'Enter') {
+    if (titleMultiline && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      handleSave()
+      return
+    }
+    if (!titleMultiline && e.key === 'Enter') {
       e.preventDefault()
       handleSave()
     }
@@ -137,12 +159,20 @@ export default function NodeEditModal({
     }
   }
 
+  const modalClassName = autoHeight
+    ? 'w-full lg:max-w-[40%]! max-w-7xl!'
+    : 'w-full lg:max-w-[40%]! max-w-7xl! h-[85vh]!'
+
+  const bodyClassName = autoHeight
+    ? 'gap-4 py-2 flex flex-col'
+    : 'gap-4 py-2 flex-1 min-h-0 h-full flex flex-col overflow-hidden basis-0'
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Edit Node"
-      className="w-full lg:max-w-[40%]! max-w-7xl! h-[85vh]!"
+      className={modalClassName}
       backdropClassName="bg-black lg:bg-orange-950/5 dark:lg:bg-gray-950/5"
       backdropInteractive={false}
       closeOnBackdropClick={false}
@@ -176,22 +206,36 @@ export default function NodeEditModal({
         </div>
       }
     >
-      <div className="gap-4 py-2 flex-1 min-h-0 h-full flex flex-col overflow-hidden basis-0">
+      <div className={bodyClassName}>
         {(showTitle || showTitleSize) && (
           <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-none">
             {showTitle && (
               <div className="flex-1">
-                <TextInput
-                  ref={titleInputRef}
-                  id="edit-title"
-                  type="text"
-                  value={title}
-                  onChange={(e) => { const v = e.target.value; setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
-                  onKeyDown={handleTitleKeyDown}
-                  placeholder="Enter node title..."
-                  fullWidth
-                  label="Title"
-                />
+                {titleMultiline ? (
+                  <TextArea
+                    ref={titleTextAreaRef}
+                    id="edit-title"
+                    value={title}
+                    onChange={(e) => { const v = e.target.value; setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
+                    onKeyDown={handleTitleKeyDown}
+                    placeholder="Enter node title..."
+                    fullWidth
+                    label="Title"
+                    rows={3}
+                  />
+                ) : (
+                  <TextInput
+                    ref={titleInputRef}
+                    id="edit-title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => { const v = e.target.value; setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
+                    onKeyDown={handleTitleKeyDown}
+                    placeholder="Enter node title..."
+                    fullWidth
+                    label="Title"
+                  />
+                )}
               </div>
             )}
             {showTitleSize && titleSizeOptions.length > 0 && (

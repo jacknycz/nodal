@@ -3,7 +3,7 @@ import clsx from 'clsx'
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'icon' | 'primaryGhost' | 'secondaryGhost' | 'dangerGhost' | 'secondaryOutline' | 'primaryOutline' | 'dangerOutline'
 
-export type ButtonSize = 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
+export type ButtonSize = 'xs' | 'small' | 'medium' | 'large' | 'sm' | 'md' | 'lg'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -31,6 +31,7 @@ const variantClasses: Record<ButtonVariant, string> = {
 
 const sizeClasses: Record<ButtonSize, string> = {
   // Aim for 32/40/48px total heights with baseline padding
+  xs: 'h-6 px-2 text-xs',
   small: 'h-8 px-3 text-sm',
   sm: 'h-8 px-3 text-sm',
   medium: 'h-10 px-4 text-base',
