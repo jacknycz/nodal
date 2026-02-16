@@ -3772,7 +3772,7 @@ function BoardContent({
         </div>
         {/* Story tint inside ReactFlow so it appears above pane but below nodes */}
         {storyActive && (
-          <div className={`pointer-events-none absolute inset-0 z-[1] ${theme === 'dark' ? 'bg-black/50' : 'bg-primary-900/50'}`} />
+          <div className="pointer-events-none absolute inset-0 z-[1] bg-primary-900/50 dark:bg-black/50" />
         )}
         {/* Place MiniMap bottom-left next to Controls */}
         <MiniMap
