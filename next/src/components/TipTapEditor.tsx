@@ -25,6 +25,7 @@ interface TipTapEditorProps {
   className?: string
   onKeyDown?: (e: React.KeyboardEvent) => void
   editorHandleRef?: React.MutableRefObject<{ focus: () => void } | null>
+  variant?: 'default' | 'headline'
 }
 
 export default function TipTapEditor({ 
@@ -33,7 +34,8 @@ export default function TipTapEditor({
   placeholder = 'Start writing...', 
   className = '',
   onKeyDown,
-  editorHandleRef
+  editorHandleRef,
+  variant = 'default'
 }: TipTapEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   // Removed resizer
@@ -44,61 +46,83 @@ export default function TipTapEditor({
 
   const editor = useEditor({
     extensions: (() => {
-      const raw = [
-        StarterKit.configure({
-          // Disable extensions that we're adding separately
-          codeBlock: false,
-          blockquote: false,
-          bulletList: false,
-          orderedList: false,
-          listItem: false,
-          // keep default strike (boolean supported in TipTap v2 types)
-          strike: false,
-          // Limit headings to H1–H4
-          heading: {
-            levels: [1, 2, 3, 4],
-          },
-        }),
-        Placeholder.configure({
-          placeholder,
-        }),
-        Link.configure({
-          openOnClick: false,
-          HTMLAttributes: {
-            class: 'text-blue-600 hover:text-blue-800 underline',
-          },
-        }),
-        Image.configure({
-          HTMLAttributes: {
-            class: 'max-w-full h-auto rounded',
-          },
-        }),
-        TextAlign.configure({
-          types: ['heading', 'paragraph'],
-        }),
-        Underline,
-        CodeBlock.configure({
-          HTMLAttributes: {
-            class: 'bg-gray-100 dark:bg-gray-800 rounded p-2 font-mono text-sm',
-          },
-        }),
-        Blockquote.configure({
-          HTMLAttributes: {
-            class: 'border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic',
-          },
-        }),
-        BulletList.configure({
-          HTMLAttributes: {
-            class: 'list-disc pl-5 my-2',
-          },
-        }),
-        OrderedList.configure({
-          HTMLAttributes: {
-            class: 'list-decimal pl-5 my-2',
-          },
-        }),
-        ListItem,
-      ] as any[]
+      const raw: any[] = []
+
+      if (variant === 'headline') {
+        raw.push(
+          StarterKit.configure({
+            // Keep the document structure simple: paragraphs + inline marks only.
+            codeBlock: false,
+            blockquote: false,
+            bulletList: false,
+            orderedList: false,
+            listItem: false,
+            heading: false,
+            // keep default strike (boolean supported in TipTap v2 types)
+            strike: false,
+          }),
+          Placeholder.configure({ placeholder }),
+          TextAlign.configure({ types: ['paragraph'] }),
+          Underline,
+        )
+      } else {
+        raw.push(
+          StarterKit.configure({
+            // Disable extensions that we're adding separately
+            codeBlock: false,
+            blockquote: false,
+            bulletList: false,
+            orderedList: false,
+            listItem: false,
+            // keep default strike (boolean supported in TipTap v2 types)
+            strike: false,
+            // Limit headings to H1–H4
+            heading: {
+              levels: [1, 2, 3, 4],
+            },
+          }),
+          Placeholder.configure({
+            placeholder,
+          }),
+          Link.configure({
+            openOnClick: false,
+            HTMLAttributes: {
+              class: 'text-blue-600 hover:text-blue-800 underline',
+            },
+          }),
+          Image.configure({
+            HTMLAttributes: {
+              class: 'max-w-full h-auto rounded',
+            },
+          }),
+          TextAlign.configure({
+            types: ['heading', 'paragraph'],
+          }),
+          Underline,
+          CodeBlock.configure({
+            HTMLAttributes: {
+              class: 'bg-gray-100 dark:bg-gray-800 rounded p-2 font-mono text-sm',
+            },
+          }),
+          Blockquote.configure({
+            HTMLAttributes: {
+              class: 'border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic',
+            },
+          }),
+          BulletList.configure({
+            HTMLAttributes: {
+              class: 'list-disc pl-5 my-2',
+            },
+          }),
+          OrderedList.configure({
+            HTMLAttributes: {
+              class: 'list-decimal pl-5 my-2',
+            },
+          }),
+          ListItem,
+        )
+      }
+
       const seen = new Set<string>()
       return raw.filter((ext: any) => {
         const name = ext?.name || ''
@@ -114,7 +138,10 @@ export default function TipTapEditor({
     },
     editorProps: {
       attributes: {
-        class: 'tiptap-content prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full min-h-full',
+        class:
+          variant === 'headline'
+            ? 'tiptap-content max-w-none focus:outline-none h-full min-h-full'
+            : 'tiptap-content prose prose-sm dark:prose-invert max-w-none focus:outline-none h-full min-h-full',
       },
       handleKeyDown: (view, event) => {
         // Call the parent onKeyDown if provided
@@ -225,69 +252,73 @@ export default function TipTapEditor({
         
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
 
-        {/* Headings (P / H1–H4) */}
-        <IconButton
-          variant={editor.isActive('paragraph') ? 'primary' : 'default'}
-          size="sm"
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          aria-label="Paragraph"
-          title="Paragraph"
-        >
-          <span className="text-[11px] font-semibold">P</span>
-        </IconButton>
+        {variant !== 'headline' && (
+          <>
+            {/* Headings (P / H1–H4) */}
+            <IconButton
+              variant={editor.isActive('paragraph') ? 'primary' : 'default'}
+              size="sm"
+              onClick={() => editor.chain().focus().setParagraph().run()}
+              aria-label="Paragraph"
+              title="Paragraph"
+            >
+              <span className="text-[11px] font-semibold">P</span>
+            </IconButton>
 
-        {([1, 2, 3, 4] as const).map((level) => (
-          <IconButton
-            key={level}
-            variant={editor.isActive('heading', { level }) ? 'primary' : 'default'}
-            size="sm"
-            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
-            aria-label={`Heading ${level}`}
-            title={`Heading ${level}`}
-          >
-            <span className="text-[11px] font-semibold">{`H${level}`}</span>
-          </IconButton>
-        ))}
+            {([1, 2, 3, 4] as const).map((level) => (
+              <IconButton
+                key={level}
+                variant={editor.isActive('heading', { level }) ? 'primary' : 'default'}
+                size="sm"
+                onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+                aria-label={`Heading ${level}`}
+                title={`Heading ${level}`}
+              >
+                <span className="text-[11px] font-semibold">{`H${level}`}</span>
+              </IconButton>
+            ))}
 
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-        
-        <IconButton
-          variant={editor.isActive('bulletList') ? 'primary' : 'default'}
-          size="sm"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          aria-label="Bullet list"
-        >
-          <List size={14} />
-        </IconButton>
-        
-        <IconButton
-          variant={editor.isActive('orderedList') ? 'primary' : 'default'}
-          size="sm"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          aria-label="Numbered list"
-        >
-          <ListOrdered size={14} />
-        </IconButton>
-        
-        <IconButton
-          variant={editor.isActive('blockquote') ? 'primary' : 'default'}
-          size="sm"
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          aria-label="Quote"
-        >
-          <Quote size={14} />
-        </IconButton>
-        
-        <IconButton
-          variant={editor.isActive('codeBlock') ? 'primary' : 'default'}
-          size="sm"
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          aria-label="Code block"
-        >
-          <Code size={14} />
-        </IconButton>
-        
-        <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+          
+            <IconButton
+              variant={editor.isActive('bulletList') ? 'primary' : 'default'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              aria-label="Bullet list"
+            >
+              <List size={14} />
+            </IconButton>
+          
+            <IconButton
+              variant={editor.isActive('orderedList') ? 'primary' : 'default'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              aria-label="Numbered list"
+            >
+              <ListOrdered size={14} />
+            </IconButton>
+          
+            <IconButton
+              variant={editor.isActive('blockquote') ? 'primary' : 'default'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              aria-label="Quote"
+            >
+              <Quote size={14} />
+            </IconButton>
+          
+            <IconButton
+              variant={editor.isActive('codeBlock') ? 'primary' : 'default'}
+              size="sm"
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+              aria-label="Code block"
+            >
+              <Code size={14} />
+            </IconButton>
+          
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+          </>
+        )}
         
         <IconButton
           variant={editor.isActive({ textAlign: 'left' }) ? 'primary' : 'default'}
@@ -317,24 +348,28 @@ export default function TipTapEditor({
         </IconButton>
         
         <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-        
-        <IconButton
-          variant="default"
-          size="sm"
-          onClick={addLink}
-          aria-label="Add link"
-        >
-          <LinkIcon size={14} />
-        </IconButton>
-        
-        <IconButton
-          variant="default"
-          size="sm"
-          onClick={addImage}
-          aria-label="Add image"
-        >
-          <ImageIcon size={14} />
-        </IconButton>
+
+        {variant !== 'headline' && (
+          <>
+            <IconButton
+              variant="default"
+              size="sm"
+              onClick={addLink}
+              aria-label="Add link"
+            >
+              <LinkIcon size={14} />
+            </IconButton>
+            
+            <IconButton
+              variant="default"
+              size="sm"
+              onClick={addImage}
+              aria-label="Add image"
+            >
+              <ImageIcon size={14} />
+            </IconButton>
+          </>
+        )}
       </div>
       
       {/* Editor content with resize handle */}

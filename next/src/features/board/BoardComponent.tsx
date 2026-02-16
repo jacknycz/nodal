@@ -4125,7 +4125,7 @@ function BoardContent({
             id: newId,
             type: 'headline',
             position: flowPosition,
-            data: { title: 'New headline', titleSize: 'sm' },
+            data: { title: '<p>New headline</p>', titleSize: 'sm' },
           }
           setNodes((nds) => (Array.isArray(nds) ? [...nds, newNode] : [newNode]))
           showAddToast('added', 1)
@@ -4835,7 +4835,19 @@ function BoardContent({
           )
         }
         if (n.type === 'headline') {
-          const initialTitle = (d.title ?? 'New headline')
+          const escapeHtml = (s: string) =>
+            String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+          const normalizeHeadlineHtml = (v: any) => {
+            const raw = String(v ?? '')
+            if (!raw.trim()) return '<p>New headline</p>'
+            // If it already looks like HTML, keep it.
+            if (/<\/?[a-z][\s\S]*>/i.test(raw)) return raw
+            // Legacy plain text (including \n) -> HTML paragraph with <br>
+            const escaped = escapeHtml(raw).replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '<br />')
+            return `<p>${escaped}</p>`
+          }
+
+          const initialTitle = normalizeHeadlineHtml(d.title ?? 'New headline')
           const initialTitleSize = (d.titleSize as any) || 'sm'
           return (
             <NodeEditModal
@@ -4846,7 +4858,8 @@ function BoardContent({
               initialColorgoryIds={[]}
               initialTitleSize={initialTitleSize}
               titleSizeOptions={['sm','md','lg','xl']}
-              titleMultiline={true}
+              titleUseTipTap={true}
+              titleTipTapVariant="headline"
               autoHeight={true}
               onLocate={() => { if (editNodeId) centerOnNodeIds([editNodeId], { align: 'midLeft' }) }}
               onSave={(title, _content, _cids, titleSize) => {
@@ -4981,7 +4994,7 @@ function BoardContent({
               const newId = `headline-${Date.now()}`
               try {
                 const res = await placeManualNode(
-                  { id: newId, title: 'New headline', content: '', type: 'headline', preferredPosition: center, data: { title: 'New headline', titleSize: 'sm', aiGenerated: false } } as any,
+                  { id: newId, title: 'New headline', content: '', type: 'headline', preferredPosition: center, data: { title: '<p>New headline</p>', titleSize: 'sm', aiGenerated: false } } as any,
                   center,
                   { minDistance: 40, avoidOverlap: true, preserveExistingLayout: true },
                   (useBoardStore.getState().nodes || []) as any
@@ -4989,7 +5002,7 @@ function BoardContent({
                 const placed = res.placements?.[0]
                 const node: Node = placed
                   ? ({ id: placed.node.id, type: placed.node.type as any, position: placed.position, data: { ...placed.node.data } } as any)
-                  : ({ id: newId, type: 'headline', position: center, data: { title: 'New headline', titleSize: 'sm', aiGenerated: false } as any } as any)
+                  : ({ id: newId, type: 'headline', position: center, data: { title: '<p>New headline</p>', titleSize: 'sm', aiGenerated: false } as any } as any)
                 setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
                 showAddToast('added', 1)
                 setTimeout(() => { try { setEditNodeId(node.id); centerOnNodeIds([node.id], { align: 'midLeft' }) } catch {} }, 0)

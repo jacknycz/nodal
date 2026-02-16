@@ -36,6 +36,10 @@ interface NodeEditModalProps {
   // When true, the title field is a multiline textarea instead of a single-line input.
   // Enter inserts a newline; Ctrl/Cmd+Enter saves.
   titleMultiline?: boolean
+  // When true, the title field is edited as rich text via TipTapEditor.
+  // Useful for headline nodes to support text align and inline styling.
+  titleUseTipTap?: boolean
+  titleTipTapVariant?: 'default' | 'headline'
   // When true, the modal height is automatic (no forced 85vh).
   // Useful for compact node types like headlines.
   autoHeight?: boolean
@@ -65,6 +69,8 @@ export default function NodeEditModal({
   showTitle = true,
   showTitleSize = true,
   titleMultiline = false,
+  titleUseTipTap = false,
+  titleTipTapVariant = 'default',
   autoHeight = false,
   assignOptions,
   assignValue,
@@ -79,9 +85,22 @@ export default function NodeEditModal({
   const [pageMode, setPageMode] = useState<boolean>(!!initialPageMode)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const titleTextAreaRef = useRef<HTMLTextAreaElement>(null)
+  const titleEditorHandleRef = useRef<{ focus: () => void } | null>(null)
   const editorHandleRef = useRef<{ focus: () => void } | null>(null)
   const didAutoFocusRef = useRef<boolean>(false)
   const colorgories = useBoardStore.getState().colorgories || []
+
+  const getTitlePlainText = (htmlOrText: string) => {
+    try {
+      const el = document.createElement('div')
+      el.innerHTML = String(htmlOrText ?? '')
+      return (el.textContent || '').replace(/\u00A0/g, ' ')
+    } catch {
+      return String(htmlOrText ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ')
+    }
+  }
+
+  const isTitleEmpty = titleUseTipTap ? !getTitlePlainText(title).trim() : !title.trim()
 
   useEffect(() => {
     if (open) {
@@ -106,6 +125,7 @@ export default function NodeEditModal({
       didAutoFocusRef.current = true
       const active = document.activeElement as HTMLElement | null
       if (active) {
+        if (titleUseTipTap) return
         if (!titleMultiline && titleInputRef.current && active === titleInputRef.current) return
         if (titleMultiline && titleTextAreaRef.current && active === titleTextAreaRef.current) return
       }
@@ -113,40 +133,48 @@ export default function NodeEditModal({
         if (!focusTitleFirst && showContent && editorHandleRef.current && typeof editorHandleRef.current.focus === 'function') {
           editorHandleRef.current.focus()
         } else {
-          if (titleMultiline) titleTextAreaRef.current?.focus()
+          if (titleUseTipTap) {
+            // TipTapEditor mounts async; don't steal focus.
+          } else if (titleMultiline) titleTextAreaRef.current?.focus()
           else titleInputRef.current?.focus()
         }
       } catch {}
     }, 100)
     return () => clearTimeout(t)
-  }, [open, showContent, focusTitleFirst, titleMultiline])
+  }, [open, showContent, focusTitleFirst, titleMultiline, titleUseTipTap])
 
   const handleSave = () => {
-    const trimmed = (title || '').trim()
+    const trimmed = titleUseTipTap ? getTitlePlainText(title).trim() : (title || '').trim()
     if (!trimmed) {
       try {
-        if (titleMultiline) titleTextAreaRef.current?.focus()
+        if (titleUseTipTap) {
+          titleEditorHandleRef.current?.focus()
+        } else if (titleMultiline) titleTextAreaRef.current?.focus()
         else titleInputRef.current?.focus()
       } catch {}
       return
     }
-    onSave(trimmed, content, selectedColorgoryIds, titleSize, pageMode)
+    // Preserve TipTap HTML for rich title editing; otherwise save trimmed plain text.
+    onSave(titleUseTipTap ? title : trimmed, content, selectedColorgoryIds, titleSize, pageMode)
     onClose()
   }
 
   const handleTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Tab' && !e.shiftKey) {
+      if (!showContent) return
       e.preventDefault()
       e.stopPropagation()
       setTimeout(() => editorHandleRef.current?.focus(), 0)
       return
     }
-    if (titleMultiline && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    const isMultilineTitle = titleMultiline || titleUseTipTap
+    if (isMultilineTitle && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       handleSave()
       return
     }
-    if (!titleMultiline && e.key === 'Enter') {
+    // Only single-line titles should save on Enter. TipTap and multiline textarea should allow Enter for newlines.
+    if (!isMultilineTitle && e.key === 'Enter') {
       e.preventDefault()
       handleSave()
     }
@@ -166,6 +194,10 @@ export default function NodeEditModal({
   const bodyClassName = autoHeight
     ? 'gap-4 py-2 flex flex-col'
     : 'gap-4 py-2 flex-1 min-h-0 h-full flex flex-col overflow-hidden basis-0'
+
+  const titleRowClassName = titleUseTipTap
+    ? 'flex flex-col gap-3 flex-none'
+    : 'flex flex-col sm:flex-row sm:items-end gap-3 flex-none'
 
   return (
     <Modal
@@ -198,7 +230,7 @@ export default function NodeEditModal({
             <Button
               variant="primary"
               onClick={handleSave}
-              disabled={!title.trim()}
+              disabled={isTitleEmpty}
             >
               Save Changes
             </Button>
@@ -208,10 +240,20 @@ export default function NodeEditModal({
     >
       <div className={bodyClassName}>
         {(showTitle || showTitleSize) && (
-          <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-none">
+          <div className={titleRowClassName}>
             {showTitle && (
               <div className="flex-1">
-                {titleMultiline ? (
+                {titleUseTipTap ? (
+                  <TipTapEditor
+                    content={title}
+                    onChange={(v) => { setTitle(v); onLiveChange?.(v, content, selectedColorgoryIds, titleSize, pageMode) }}
+                    placeholder="Enter node title..."
+                    onKeyDown={handleTitleKeyDown}
+                    editorHandleRef={titleEditorHandleRef}
+                    variant={titleTipTapVariant}
+                    className="min-h-[120px]"
+                  />
+                ) : titleMultiline ? (
                   <TextArea
                     ref={titleTextAreaRef}
                     id="edit-title"
