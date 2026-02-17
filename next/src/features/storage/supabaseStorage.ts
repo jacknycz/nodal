@@ -11,6 +11,7 @@ interface SavedBoard {
   edgeCount: number
   userId: string
   isPublic?: boolean
+  isDemo?: boolean
 }
 
 export type BoardSummary = {
@@ -325,7 +326,7 @@ class SupabaseStorage {
       // IMPORTANT: avoid returning persisted chat history (meta.chat) which can balloon payloads.
       const { data, error } = await supabase
         .from('boards')
-        .select('id, name, data, created_at, last_modified, node_count, edge_count, user_id, is_public, ai_style, edgeType:data->meta->>edgeType')
+        .select('id, name, data, created_at, last_modified, node_count, edge_count, user_id, is_public, is_demo, ai_style, edgeType:data->meta->>edgeType')
         .eq('id', boardId)
         .single()
 
@@ -370,6 +371,7 @@ class SupabaseStorage {
         edgeCount: data.edge_count as number,
         userId: data.user_id as string,
         isPublic: !!(data as any).is_public,
+        isDemo: !!(data as any).is_demo,
         aiStyle: (data as any)?.ai_style ? String((data as any).ai_style) : undefined,
       } : null
     } catch (error) {

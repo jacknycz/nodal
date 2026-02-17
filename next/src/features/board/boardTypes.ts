@@ -92,6 +92,8 @@ export interface BoardState {
   aiStyle?: AIStyleKey
   // UI hovered edge id (optional UI-only state)
   hoveredEdgeId?: string | null
+  // Demo boards: allow "pro-like" UI without persistence
+  demoMode?: boolean
 }
 
 export interface BoardActions {
@@ -116,4 +118,5 @@ export interface BoardActions {
   setConnectingSource: (id: string | null) => void
   setEdgeType?: (t: BoardState['edgeType']) => void
   setAIStyle?: (style: BoardState['aiStyle']) => void
+  setDemoMode?: (demo: boolean) => void
 } 

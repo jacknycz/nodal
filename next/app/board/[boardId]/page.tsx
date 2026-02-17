@@ -129,7 +129,16 @@ export default function BoardPage() {
 
   const isAccessBlocked = !loading && !board
   const isPublicViewer = !!board?.isPublic && !user?.id
+  const isDemoBoard = !!(board as any)?.isDemo
+  const isOwner = !!(user?.id && (board as any)?.userId && user.id === (board as any).userId)
+  const demoViewer = isDemoBoard && !isOwner
   const ready = !!board && String((board as any)?.id || '') === String(boardId || '')
+
+  // Expose demo mode via board store so UI components can relax Pro gating (uploads, etc.)
+  useEffect(() => {
+    try { useBoardStore.getState().setDemoMode?.(isDemoBoard) } catch {}
+    return () => { try { useBoardStore.getState().setDemoMode?.(false) } catch {} }
+  }, [isDemoBoard])
 
   // Deep link: start story immediately when opened with ?story=<starterNodeId>
   useEffect(() => {
@@ -161,6 +170,7 @@ export default function BoardPage() {
                 isBoardView={true}
                 onOpenBoardRoom={handleOpenBoardRoom}
                 publicViewer={isPublicViewer}
+                demoViewer={demoViewer}
               />
             </div>
           )}
@@ -174,7 +184,8 @@ export default function BoardPage() {
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}
-              readOnly={!canEdit}
+              readOnly={demoViewer ? false : !canEdit}
+              persistenceDisabled={demoViewer}
             />
           ) : (
             <div className="h-full" />

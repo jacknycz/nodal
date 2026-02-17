@@ -88,6 +88,7 @@ interface BoardProps {
   screenshotMode?: boolean // Add screenshot mode
   onDeleteNode?: (nodeId: string) => void // Add delete function prop
   readOnly?: boolean
+  persistenceDisabled?: boolean
 }
 
 // Add migrateNodeData definition if missing
@@ -184,12 +185,14 @@ function BoardContent({
   screenshotMode = false, // Add screenshotMode
   onDeleteNode, // Add delete function prop
   readOnly = false,
+  persistenceDisabled = false,
 }: BoardProps) {
   const { theme } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
   const router = useRouter() // Add this line
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
+  const persistenceOff = !!persistenceDisabled
   // Collaborative cursor presence (yjs)
 
   // Centralized realtime subscriptions: cursors, locks, and board updates
@@ -204,6 +207,7 @@ function BoardContent({
     boardId,
     userId: user?.id || null,
     supabase,
+    disabled: persistenceOff,
     applyRemoteNodeContent: (nodeId, data) => {
       setNodes((nds) => nds.map((node) => node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node))
     }
@@ -666,14 +670,16 @@ function BoardContent({
 
   // Wrappers for lock operations bound to current board/user
   const acquireNodeLock = useCallback(async (nodeId: string) => {
+    if (persistenceOff) return true
     if (!boardId) return false
     return acquireNodeLockRaw(boardId, nodeId, user?.id || null)
-  }, [acquireNodeLockRaw, boardId, user?.id])
+  }, [acquireNodeLockRaw, boardId, user?.id, persistenceOff])
 
   const releaseNodeLock = useCallback(async (nodeId: string) => {
+    if (persistenceOff) return
     if (!boardId) return
     return releaseNodeLockRaw(boardId, nodeId, user?.id || null)
-  }, [releaseNodeLockRaw, boardId, user?.id])
+  }, [releaseNodeLockRaw, boardId, user?.id, persistenceOff])
 
   // isNodeLocked, getNodeLockOwner, isNodeLockedByMe provided by useBoardRealtime
 
@@ -708,7 +714,7 @@ function BoardContent({
     localBoardIdRef,
     onBoardStateChange,
     currentBoardName,
-    disabled: readOnly,
+    disabled: readOnly || persistenceOff,
   })
   const triggerAutosaveRef = useRef(triggerAutosave)
   triggerAutosaveRef.current = triggerAutosave
@@ -761,13 +767,14 @@ function BoardContent({
   useEffect(() => {
     if (!isInitializedRef.current) return
     if (!localBoardIdRef.current) return
+    if (persistenceOff) return
     // Mark and autosave current state including meta.edgeType
     setHasUnsavedChanges(true)
     if (onBoardStateChangeRef.current) {
       onBoardStateChangeRef.current(currentBoardName, 'saving', true)
     }
     triggerAutosaveRef.current(nodes, pruneGhostEdges(nodes, edges))
-  }, [edgeTypePref])
+  }, [edgeTypePref, persistenceOff])
   
   // Simple effect to trigger autosave when nodes/edges change (excluding pure position/selection moves)
   useEffect(() => {
@@ -780,6 +787,8 @@ function BoardContent({
     if (!localBoardIdRef.current) {
       return
     }
+
+    if (persistenceOff) return
     
     // Skip if we're currently saving
     if (saveStatus === 'saving') {
@@ -803,12 +812,13 @@ function BoardContent({
     // Update previous values
     prevNodesRef.current = nodes
     prevEdgesRef.current = edges
-  }, [nodes, edges, currentBoardName, saveStatus, normalizeNodesForCompare])
+  }, [nodes, edges, currentBoardName, saveStatus, normalizeNodesForCompare, persistenceOff])
   
   // Trigger save when colorgories (names/order/visibility) change
   useEffect(() => {
     if (!isInitializedRef.current) return
     if (saveStatus === 'saving') return
+    if (persistenceOff) return
     const changed = JSON.stringify(colorgoriesState) !== JSON.stringify(prevColorgoriesRef.current)
     if (changed) {
       setHasUnsavedChanges(true)
@@ -819,7 +829,7 @@ function BoardContent({
       manualSave(nodes, pruneGhostEdges(nodes, edges)).catch(() => {})
       prevColorgoriesRef.current = colorgoriesState
     }
-  }, [colorgoriesState, nodes, edges, saveStatus, currentBoardName, manualSave])
+  }, [colorgoriesState, nodes, edges, saveStatus, currentBoardName, manualSave, persistenceOff])
   
   // No local autosave timeout cleanup needed; handled in hook
 
@@ -1867,7 +1877,7 @@ function BoardContent({
 
   
   // Document upload via hook
-  const { handleDocumentUpload } = useDocumentUpload({
+  const { handleDocumentUpload: handleDocumentUploadRaw } = useDocumentUpload({
     boardStorage,
     supabaseStorage,
     isTextExtractable,
@@ -1875,12 +1885,124 @@ function BoardContent({
     addNodeToStore: handleAddNodeToStore,
     setNodes,
   })
+  // Demo-mode "fake uploads": create local object URLs and nodes without persisting anything.
+  const localBlobUrlsRef = useRef<Set<string>>(new Set())
+  const revokeLocalBlobUrl = useCallback((url?: string | null) => {
+    try {
+      if (!url) return
+      if (!String(url).startsWith('blob:')) return
+      URL.revokeObjectURL(url)
+      localBlobUrlsRef.current.delete(url)
+    } catch {}
+  }, [])
+  const registerLocalBlobUrl = useCallback((url: string) => {
+    try {
+      if (url && String(url).startsWith('blob:')) localBlobUrlsRef.current.add(url)
+    } catch {}
+    return url
+  }, [])
+  useEffect(() => {
+    return () => {
+      try {
+        const urls = Array.from(localBlobUrlsRef.current || [])
+        urls.forEach((u) => {
+          try { URL.revokeObjectURL(u) } catch {}
+        })
+      } catch {}
+    }
+  }, [])
+
+  const handleLocalDemoUpload = useCallback(async (file: File, position: { x: number; y: number }) => {
+    try {
+      const now = Date.now()
+      const name = file?.name || 'Upload'
+      const type = file?.type || 'application/octet-stream'
+      const ext = name.toLowerCase()
+      const isVideo = type.startsWith('video/') || /\.mp4$/i.test(ext)
+      const isImage = type.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg|heic)$/i.test(ext)
+      const nodeType = isVideo ? 'video' : (isImage ? 'image' : 'document')
+      const id = `${nodeType}-demo-${now}-${Math.random().toString(16).slice(2)}`
+
+      const objectUrl = registerLocalBlobUrl(URL.createObjectURL(file))
+
+      const base: any = {
+        title: name,
+        fileName: name,
+        fileType: type || 'unknown',
+        fileSize: typeof file.size === 'number' ? file.size : undefined,
+        uploadedAt: now,
+        status: 'ready',
+      }
+
+      const node: Node = {
+        id,
+        type: nodeType as any,
+        position,
+        data: isVideo
+          ? { ...base, title: name, videoUrl: objectUrl, status: 'ready', content: 'Demo upload (not saved)' }
+          : (isImage
+            ? { ...base, type: 'image', previewUrl: objectUrl, status: 'ready', content: 'Demo upload (not saved)' }
+            : { ...base, type: 'document', previewUrl: objectUrl, status: 'ready', content: '' }),
+      } as any
+
+      setNodes((nds) => (Array.isArray(nds) ? [...nds, node] : [node]))
+
+      // Optional: attempt local text extraction for documents (keeps it snappy with hard caps)
+      if (!isVideo && !isImage) {
+        ;(async () => {
+          try {
+            let text = ''
+            const looksTexty =
+              type.startsWith('text/') ||
+              /\.(txt|md|markdown|csv|json)$/i.test(ext) ||
+              type.includes('json') ||
+              type.includes('markdown') ||
+              type.includes('csv')
+
+            if (looksTexty && typeof (file as any).text === 'function') {
+              text = await (file as any).text()
+            } else {
+              // Attempt broader extraction (pdf/docx/etc.) via existing helper
+              const { extractTextFromFile } = await import('../storage/textExtractor')
+              text = await extractTextFromFile(file, type, name)
+            }
+
+            const snippet = (text || '').slice(0, 8000).trim()
+            if (!snippet) return
+            setNodes((cur) => (Array.isArray(cur) ? cur.map((n: any) => n.id === id ? { ...n, data: { ...(n.data || {}), content: snippet, extractedText: snippet } } : n) : cur))
+          } catch {}
+        })()
+      }
+
+      // Pulse highlight the newly added node
+      try {
+        setTimeout(() => {
+          const nodeOuter = document.querySelector(`.react-flow__node[data-id="${id}"]`) as HTMLElement | null
+          const nodeInner = nodeOuter?.querySelector(':scope > div') as HTMLElement | null
+          const el = nodeInner || nodeOuter
+          if (el) { el.classList.add('node-pulse-highlight'); window.setTimeout(() => el.classList.remove('node-pulse-highlight'), 1500) }
+        }, 50)
+      } catch {}
+
+      return true
+    } catch {
+      return false
+    }
+  }, [registerLocalBlobUrl, setNodes])
+
+  const handleDocumentUpload = useCallback(async (file: File, position: { x: number; y: number }) => {
+    if (persistenceOff) {
+      return await handleLocalDemoUpload(file, position)
+    }
+    return await handleDocumentUploadRaw(file, position)
+  }, [persistenceOff, handleLocalDemoUpload, handleDocumentUploadRaw])
 
   // Open a mobile-safe file picker and handle upload
   const openUploadPicker = useCallback(() => {
     try {
       const input = document.createElement('input')
       input.type = 'file'
+      if (persistenceOff) input.multiple = true
       // Accept images, documents, and supported video uploads (mp4)
       input.accept = '.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.json,.png,.jpg,.jpeg,.gif,.webp,.svg,.heic,image/*,.mp4,video/mp4'
       // Ensure element stays alive during native picker
@@ -1893,11 +2015,18 @@ function BoardContent({
       }
 
       input.addEventListener('change', async () => {
-        const file = input.files?.[0]
-        if (file) {
+        const list = input.files ? Array.from(input.files) : []
+        if (list.length > 0) {
           const viewportCenter = getViewportCenter()
-          const ok = await handleDocumentUpload(file, viewportCenter)
-          if (ok) showAddToast('added', 1)
+          let okCount = 0
+          for (let i = 0; i < list.length; i++) {
+            const f = list[i]
+            const pos = { x: viewportCenter.x + i * 40, y: viewportCenter.y + i * 40 }
+            // eslint-disable-next-line no-await-in-loop
+            const ok = await handleDocumentUpload(f, pos)
+            if (ok) okCount += 1
+          }
+          if (okCount > 0) showAddToast('added', okCount)
         }
         cleanup()
       }, { once: true })
@@ -1909,7 +2038,7 @@ function BoardContent({
     } catch (err) {
       console.error('Failed to open file picker', err)
     }
-  }, [getViewportCenter, handleDocumentUpload, showAddToast])
+  }, [getViewportCenter, handleDocumentUpload, showAddToast, persistenceOff])
 
   // Drag and drop handlers
   const [isDragOver, setIsDragOver] = useState(false)
@@ -2288,15 +2417,24 @@ function BoardContent({
                 file.name.toLowerCase().endsWith('.mp4')
             })
 
-              if (validFiles.length > 1) {
+              if (!persistenceOff && validFiles.length > 1) {
                 setShowPasteLimitModal(true)
-              } else if (validFiles.length === 1) {
-                const file = validFiles[0]
-                  const flowPosition = reactFlowInstance.screenToFlowPosition({
-                    x: e.clientX,
-                    y: e.clientY,
-                  })
-                  ;(async () => { const ok = await handleDocumentUpload(file, flowPosition); if (ok) showAddToast('added', 1) })()
+              } else if (validFiles.length >= 1) {
+                const flowPosition = reactFlowInstance.screenToFlowPosition({
+                  x: e.clientX,
+                  y: e.clientY,
+                })
+                ;(async () => {
+                  let okCount = 0
+                  for (let i = 0; i < validFiles.length; i++) {
+                    const f = validFiles[i]
+                    const pos = { x: flowPosition.x + i * 40, y: flowPosition.y + i * 40 }
+                    // eslint-disable-next-line no-await-in-loop
+                    const ok = await handleDocumentUpload(f, pos)
+                    if (ok) okCount += 1
+                  }
+                  if (okCount > 0) showAddToast('added', okCount)
+                })()
               }
           }
         }
@@ -2321,7 +2459,7 @@ function BoardContent({
       window.removeEventListener("dragend", handleWindowDragEnd)
       window.removeEventListener("drop", handleWindowDrop)
     }
-  }, [handleDocumentUpload, showAddToast, readOnly])
+  }, [handleDocumentUpload, showAddToast, readOnly, persistenceOff])
   
   // Paste handler: supports URLs (video/link) and files (image/pdf/etc.)
   useEffect(() => {
@@ -2340,7 +2478,7 @@ function BoardContent({
 
         // If files are present, prefer files
         if (cd.files && cd.files.length > 0) {
-          if (cd.files.length > 1) {
+          if (!persistenceOff && cd.files.length > 1) {
             // Block multi-item paste
             e.preventDefault()
             setShowPasteLimitModal(true)
@@ -2350,9 +2488,18 @@ function BoardContent({
           const hasProcessable = files.some(f => !!f.type)
           if (hasProcessable) {
             e.preventDefault()
-            // Only allow one
-            const file = files[0]
-            ;(async () => { const ok = await handleDocumentUpload(file as File, center); if (ok) showAddToast('added', 1) })()
+            ;(async () => {
+              const list = persistenceOff ? files : files.slice(0, 1)
+              let okCount = 0
+              for (let i = 0; i < list.length; i++) {
+                const f = list[i] as File
+                const pos = { x: center.x + i * 40, y: center.y + i * 40 }
+                // eslint-disable-next-line no-await-in-loop
+                const ok = await handleDocumentUpload(f, pos)
+                if (ok) okCount += 1
+              }
+              if (okCount > 0) showAddToast('added', okCount)
+            })()
             return
           }
         }
@@ -2429,7 +2576,7 @@ function BoardContent({
 
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
-  }, [getViewportCenter, handleDocumentUpload, setNodes, showAddToast, readOnly])
+  }, [getViewportCenter, handleDocumentUpload, setNodes, showAddToast, readOnly, persistenceOff])
   
   // Keyboard shortcuts via hook
   useBoardShortcuts(() => { if (!readOnly) { saveBoard() } })
@@ -2557,7 +2704,7 @@ function BoardContent({
         let resumeIdx = 0
         try {
           const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
-          if (effectiveBoardId && user?.id) {
+          if (!persistenceOff && effectiveBoardId && user?.id) {
             const { data, error } = await getSupabaseClient()
               .from('story_progress')
               .select('current_index')
@@ -2595,7 +2742,7 @@ function BoardContent({
         }, 250)
       }
     })()
-  }, [computeStoryPath, centerOnNodeIds, boardId, user?.id, centerOnCurrentStoryNode])
+  }, [computeStoryPath, centerOnNodeIds, boardId, user?.id, centerOnCurrentStoryNode, persistenceOff])
   const storyStarterId = storyPath[0] || ''
   const storyHudTitle = useMemo(() => {
     try {
@@ -2624,7 +2771,7 @@ function BoardContent({
       // Persist last chapter index
       try {
         const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
-        if (storyStarterId && effectiveBoardId && user?.id) {
+        if (!persistenceOff && storyStarterId && effectiveBoardId && user?.id) {
           void getSupabaseClient().from('story_progress')
             .upsert({ board_id: effectiveBoardId, starter_node_id: storyStarterId, user_id: user.id, current_index: storyIndex, updated_at: new Date().toISOString() } as any,
               { onConflict: 'board_id,starter_node_id,user_id' } as any)
@@ -2635,7 +2782,7 @@ function BoardContent({
     } catch {}
 
     setStoryPaused(true)
-  }, [storyPath, storyIndex, storyStarterId, storyHudTitle, boardId, user?.id])
+  }, [storyPath, storyIndex, storyStarterId, storyHudTitle, boardId, user?.id, persistenceOff])
   const resumeStoryMode = useCallback(() => {
     setStoryPaused(false)
     setTimeout(() => {
@@ -2660,7 +2807,7 @@ function BoardContent({
         try {
           const starterId = storyPath[0]
           const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
-          if (starterId && effectiveBoardId && user?.id) {
+          if (!persistenceOff && starterId && effectiveBoardId && user?.id) {
             void getSupabaseClient().from('story_progress')
               .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: storyIndex, updated_at: new Date().toISOString() } as any,
                 { onConflict: 'board_id,starter_node_id,user_id' } as any)
@@ -2719,7 +2866,7 @@ function BoardContent({
           // Persist completion progress as the final index
           try {
             const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
-            if (starterId && effectiveBoardId && user?.id) {
+            if (!persistenceOff && starterId && effectiveBoardId && user?.id) {
               void getSupabaseClient().from('story_progress')
                 .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: finalIndex, updated_at: new Date().toISOString() } as any,
                   { onConflict: 'board_id,starter_node_id,user_id' } as any)
@@ -2743,7 +2890,7 @@ function BoardContent({
       try {
         const starterId = storyPath[0]
         const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
-        if (starterId && effectiveBoardId && user?.id) {
+        if (!persistenceOff && starterId && effectiveBoardId && user?.id) {
           void getSupabaseClient().from('story_progress')
             .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: nextIdx, updated_at: new Date().toISOString() } as any,
               { onConflict: 'board_id,starter_node_id,user_id' } as any)
@@ -2754,7 +2901,7 @@ function BoardContent({
     } catch {
       try { exitStoryMode(true) } catch {}
     }
-  }, [storyIndex, storyPath, boardId, user?.id, centerOnCurrentStoryNode, exitStoryMode, pushHistory, setNodes, setStoryIndex])
+  }, [storyIndex, storyPath, boardId, user?.id, centerOnCurrentStoryNode, exitStoryMode, pushHistory, setNodes, setStoryIndex, persistenceOff])
   const prevStory = useCallback(() => {
     setStoryIndex((i) => {
       try {
@@ -2767,7 +2914,7 @@ function BoardContent({
       try {
         const starterId = storyPath[0]
         const effectiveBoardId = boardId || useBoardStore.getState().currentBoardId
-        if (starterId && effectiveBoardId && user?.id) {
+        if (!persistenceOff && starterId && effectiveBoardId && user?.id) {
           void getSupabaseClient().from('story_progress')
             .upsert({ board_id: effectiveBoardId, starter_node_id: starterId, user_id: user.id, current_index: ni, updated_at: new Date().toISOString() } as any,
               { onConflict: 'board_id,starter_node_id,user_id' } as any)
@@ -2777,7 +2924,7 @@ function BoardContent({
       } catch {}
       return ni
     })
-  }, [storyPath, centerOnCurrentStoryNode, boardId, user?.id])
+  }, [storyPath, centerOnCurrentStoryNode, boardId, user?.id, persistenceOff])
   useEffect(() => {
     if (!storyActive) return
     if (storyPaused) return
@@ -2881,6 +3028,15 @@ function BoardContent({
     if (isEditingRef.current) { console.log('[BoardComponent] ignore delete while editing'); return }
     console.log('[BoardComponent] handleNodeDelete called for', nodeId)
     pushHistory()
+    try {
+      const list = (useBoardStore.getState().nodes || nodes || []) as any[]
+      const n = list.find((x: any) => x?.id === nodeId)
+      const d: any = n?.data || {}
+      // Revoke local demo object URLs to avoid leaking memory
+      revokeLocalBlobUrl(d?.previewUrl)
+      revokeLocalBlobUrl(d?.videoUrl)
+      revokeLocalBlobUrl(d?.thumbnailUrl)
+    } catch {}
     setNodes((nds) => (Array.isArray(nds) ? nds.filter((node) => node.id !== nodeId) : nds))
     setEdges((eds) => (Array.isArray(eds) ? eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId) : eds))
     try {
@@ -2895,7 +3051,7 @@ function BoardContent({
       console.log('[BoardComponent] post-delete nodes', (store.nodes || []).length, 'edges', (store.edges || []).length)
     }, 0)
     if (onDeleteNode) onDeleteNode(nodeId)
-  }, [onDeleteNode, setNodes, setEdges, pushHistory])
+  }, [onDeleteNode, setNodes, setEdges, pushHistory, revokeLocalBlobUrl, nodes])
 
   // Keyboard navigation in Story Mode: ArrowLeft/ArrowRight
   useEffect(() => {
@@ -3030,7 +3186,7 @@ function BoardContent({
     ))
 
     // Broadcast the update to other users via Supabase
-    if (boardId && user?.id) {
+    if (!persistenceOff && boardId && user?.id) {
       try {
         const { error } = await (supabase.from('board_updates') as any)
           .insert({
@@ -3050,7 +3206,7 @@ function BoardContent({
         // console.error('[BoardComponent] Error broadcasting node update:', error)
       }
     }
-  }, [setNodes, boardId, user?.id, supabase, pushHistory])
+  }, [setNodes, boardId, user?.id, supabase, pushHistory, persistenceOff])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
     if (readOnly) return
@@ -3221,6 +3377,7 @@ function BoardContent({
   const [wsLocks, setWsLocks] = useState<Record<string, string>>({})
   const channelRef = useRef<any>(null)
   useEffect(() => {
+    if (persistenceOff) return
     if (!boardId || !user?.id) return
     const channel = getSupabaseClient().channel(`board:${boardId}`, {
       config: { broadcast: { self: false }, presence: { key: user.id } }
@@ -3284,7 +3441,7 @@ function BoardContent({
       try { getSupabaseClient().removeChannel(channel) } catch {}
       channelRef.current = null
     }
-  }, [boardId, user?.id])
+  }, [boardId, user?.id, persistenceOff])
 
   const sendBroadcast = useCallback((event: string, payload: any) => {
     try { channelRef.current?.send({ type: 'broadcast', event, payload }) } catch {}
@@ -3334,27 +3491,28 @@ function BoardContent({
   useEffect(() => {
     return () => {
       const id = editNodeId
-      if (id && boardId && user?.id) {
-        releaseNodeLockRaw(boardId, id, user.id)
+      if (id) {
+        try { releaseNodeLock(id) } catch {}
       }
     }
-  }, [editNodeId, boardId, user?.id, releaseNodeLockRaw])
+  }, [editNodeId, releaseNodeLock])
 
   const handleCloseEditModal = useCallback(() => {
     try {
-      if (editNodeId && boardId && user?.id) {
-        releaseNodeLockRaw(boardId, editNodeId, user.id)
+      if (editNodeId) {
+        try { releaseNodeLock(editNodeId) } catch {}
         try { channelRef.current?.track({ userId: user.id, editingNodeId: null }) } catch {}
         console.log('[locks] released & tracked unlock', { nodeId: editNodeId, boardId })
       }
     } catch {}
     setEditNodeId(null)
-  }, [editNodeId, boardId, user?.id, releaseNodeLockRaw])
+  }, [editNodeId, releaseNodeLock, boardId, user?.id])
 
   // Safety: release lock if tab closes while editing
   useEffect(() => {
     const onBeforeUnload = () => {
       try {
+        if (persistenceOff) return
         if (editNodeId && boardId && user?.id) {
           navigator.sendBeacon?.('/api/board/locks', new Blob([JSON.stringify({ boardId, nodeId: editNodeId, userId: user.id })], { type: 'application/json' }))
         }
@@ -3366,7 +3524,7 @@ function BoardContent({
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
-  }, [editorMode, editNodeId, boardId, user?.id])
+  }, [editorMode, editNodeId, boardId, user?.id, persistenceOff])
 
   // Cleanup: remove edges that reference nodes that no longer exist (prevents "runaway" edges)
   useEffect(() => {
@@ -4767,7 +4925,7 @@ function BoardContent({
                 // Persist assignment to DB (board_updates row; durable storage handled by autosave elsewhere)
                 try {
                   const bid = useBoardStore.getState().currentBoardId
-                  if (bid) {
+                  if (!persistenceOff && bid) {
                     await fetch('/api/board/updates', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },

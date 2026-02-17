@@ -48,6 +48,7 @@ interface TopbarProps {
   isBoardView?: boolean;
   onDeleteNode?: (nodeId: string) => void;
   publicViewer?: boolean;
+  demoViewer?: boolean;
 }
 
 export default function Topbar({
@@ -64,7 +65,8 @@ export default function Topbar({
   onLoadBoard,
   isBoardView = false,
   onDeleteNode,
-  publicViewer = false
+  publicViewer = false,
+  demoViewer = false
 }: TopbarProps) {
   const { isDark } = useTheme()
   const router = useRouter()
@@ -191,6 +193,7 @@ export default function Topbar({
 
   // Presence: upsert on mount and every 15s
   useEffect(() => {
+    if (demoViewer) return
     if (!currentBoardId || !user?.id) return
     let interval: NodeJS.Timeout | null = null
     let cancelled = false
@@ -228,7 +231,7 @@ export default function Topbar({
       if (interval) clearInterval(interval)
       try { document.removeEventListener('visibilitychange', onVis) } catch {}
     }
-  }, [currentBoardId, user?.id, supabase])
+  }, [currentBoardId, user?.id, supabase, demoViewer])
 
   // Fade out Saved status text after 2s
   useEffect(() => {
@@ -244,6 +247,7 @@ export default function Topbar({
 
   // Presence: subscribe to changes
   useEffect(() => {
+    if (demoViewer) return
     if (!currentBoardId) return
     let cancelled = false
     let debounceTimer: any = null
@@ -289,7 +293,7 @@ export default function Topbar({
       try { if (debounceTimer) clearTimeout(debounceTimer) } catch {}
       supabase.removeChannel(channel)
     }
-  }, [currentBoardId, supabase])
+  }, [currentBoardId, supabase, demoViewer])
 
   // Helper to get avatar for a user_id (others only: small circle)
   const getPresenceAvatar = (userId: string, email?: string | null) => {
@@ -342,7 +346,7 @@ export default function Topbar({
                 <div className="flex items-start gap-2 sm:gap-3 min-w-0 w-full">
                   <div className="flex gap-1">
                     <div className="flex items-center gap-0">
-                      {(boardMemberRole === 'owner' || boardMemberRole === 'editor') && (
+                      {!demoViewer && (boardMemberRole === 'owner' || boardMemberRole === 'editor') && (
                         <IconButton aria-label="Board settings" size="md" variant="secondaryGhost" onClick={() => { setPendingBoardName(currentBoardName || ''); setPendingBoardTopic2(topic || ''); (async () => { try { if (currentBoardId) { const { data } = await supabase.from('boards').select('is_public').eq('id', currentBoardId).maybeSingle(); setPendingIsPublic(!!(data as any)?.is_public); } } catch { } finally { setShowBoardSettings(true) } })() }}>
                           <GearSix className="w-4 h-4" />
                         </IconButton>
@@ -388,25 +392,31 @@ export default function Topbar({
 
                     {/* Save Status */}
                     <div className="flex items-center gap-2 text-xs">
-                      {!publicViewer && saveStatus === 'saving' && (
+                      {demoViewer && !publicViewer && (
+                        <div className="flex items-center text-amber-700 dark:text-amber-300">
+                          <div className="w-2 h-2 mr-2 bg-amber-500 rounded-full"></div>
+                          <span>Demo (changes won’t save)</span>
+                        </div>
+                      )}
+                      {!publicViewer && !demoViewer && saveStatus === 'saving' && (
                         <div className="flex items-center text-blue-600 dark:text-blue-400">
                           <div className="w-2 h-2 mr-1 bg-blue-600 rounded-full animate-pulse"></div>
                           <span>Saving...</span>
                         </div>
                       )}
-                      {!publicViewer && saveStatus === 'saved' && !hasUnsavedChanges && (
+                      {!publicViewer && !demoViewer && saveStatus === 'saved' && !hasUnsavedChanges && (
                         <div className="flex items-center text-green-600 dark:text-green-400">
                           <div className="w-2 h-2 mr-1 bg-green-600 rounded-full"></div>
                           <span className={`transition-opacity duration-500 ${showSavedStatus ? 'opacity-100' : 'opacity-0'}`}>Saved</span>
                         </div>
                       )}
-                      {!publicViewer && saveStatus === 'unsaved' && hasUnsavedChanges && (
+                      {!publicViewer && !demoViewer && saveStatus === 'unsaved' && hasUnsavedChanges && (
                         <div className="flex items-center text-orange-600 dark:text-orange-400">
                           <div className="w-2 h-2 mr-2 bg-orange-600 rounded-full"></div>
                           <span>Unsaved changes</span>
                         </div>
                       )}
-                      {!publicViewer && saveStatus === 'error' && (
+                      {!publicViewer && !demoViewer && saveStatus === 'error' && (
                         <div className="flex items-center text-red-600 dark:text-red-400">
                           <div className="w-2 h-2 mr-2 bg-red-600 rounded-full"></div>
                           <span>Save failed</span>
@@ -435,7 +445,7 @@ export default function Topbar({
               </div>
             )}
 
-            {isBoardView && !publicViewer && (
+            {isBoardView && !publicViewer && !demoViewer && (
               <>
                 <div className="hidden sm:flex items-center gap-1 lg:gap-3">
                   <IconButton

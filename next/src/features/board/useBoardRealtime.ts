@@ -13,14 +13,16 @@ interface UseBoardRealtimeParams {
   supabase: SupabaseClientLike
   // Called when a remote content update arrives
   applyRemoteNodeContent: (nodeId: string, data: Record<string, any>) => void
+  disabled?: boolean
 }
 
-export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeContent }: UseBoardRealtimeParams) {
+export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeContent, disabled = false }: UseBoardRealtimeParams) {
   const [remoteCursors, setRemoteCursors] = useState<any[]>([])
   const [nodeLocks, setNodeLocks] = useState<any[]>([])
 
   // Subscribe to remote cursors
   useEffect(() => {
+    if (disabled) return
     if (!boardId) return
 
     let cancelled = false
@@ -80,6 +82,7 @@ export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeCon
   // Subscribe to node locks (disabled when only one user is present on the board).
   // IMPORTANT: derive active users from in-memory cursor state to avoid re-querying board_cursors on every cursor event.
   useEffect(() => {
+    if (disabled) return
     if (!boardId) return
 
     let locksChannel: any = null
@@ -120,10 +123,11 @@ export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeCon
     return () => {
       if (locksChannel) supabase.removeChannel(locksChannel)
     }
-  }, [boardId, supabase, remoteCursors])
+  }, [boardId, supabase, remoteCursors, disabled])
 
   // Subscribe to board updates for real-time content sync
   useEffect(() => {
+    if (disabled) return
     if (!boardId) return
 
     const applyRemoteUpdate = (payload: any) => {
@@ -144,7 +148,7 @@ export function useBoardRealtime({ boardId, userId, supabase, applyRemoteNodeCon
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
-  }, [boardId, userId, supabase, applyRemoteNodeContent])
+  }, [boardId, userId, supabase, applyRemoteNodeContent, disabled])
 
   // Lock helpers
   const isNodeLocked = useCallback((nodeId: string) => {

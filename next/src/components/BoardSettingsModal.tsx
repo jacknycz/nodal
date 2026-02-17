@@ -22,6 +22,7 @@ import Toast from './ui/Toast'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Tag from './ui/Tag'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
+import { isAdmin } from '../features/auth/roles'
 
 interface Props {
   open: boolean
@@ -48,12 +49,17 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const { isDark, setTheme } = useTheme()
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
+  const admin = isAdmin(user)
   const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
   const [loadedIsPublic, setLoadedIsPublic] = useState<boolean | null>(null)
   const [savingVisibility, setSavingVisibility] = useState(false)
   const [visibilityError, setVisibilityError] = useState<string | null>(null)
   const [gridEnabled, setGridEnabled] = useState<boolean>(true)
   const [pendingAIStyle, setPendingAIStyle] = useState<AIStyleKey>('balanced')
+  const [demoCreating, setDemoCreating] = useState(false)
+  const [demoError, setDemoError] = useState<string | null>(null)
+  const [demoUrl, setDemoUrl] = useState<string>('')
+  const [demoCopiedToast, setDemoCopiedToast] = useState(false)
 
   // Inline share/invite state (mirrors ShareBoardModal)
   const [shareInput, setShareInput] = useState('')
@@ -86,6 +92,9 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     if (!open) return
     setVisibilityError(null)
     setSavingVisibility(false)
+    setDemoCreating(false)
+    setDemoError(null)
+    setDemoUrl('')
   }, [open])
 
   // Load grid setting from localStorage on open
@@ -147,6 +156,43 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     } catch { setShareError('Failed to send invites') }
   }
 
+  const createDemoBoardCopy = async () => {
+    setDemoError(null)
+    setDemoCreating(true)
+    try {
+      const { data: sess } = await supabase.auth.getSession()
+      const token = sess?.session?.access_token
+      if (!token) throw new Error('Not signed in')
+      const resp = await fetch('/api/board/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ boardId }),
+      })
+      const json = await resp.json().catch(() => ({}))
+      if (!resp.ok) throw new Error(json?.error || `Failed (${resp.status})`)
+      const id = String(json?.id || '')
+      if (!id) throw new Error('Missing demo board id')
+      const url = `${window.location.origin}/board/${id}`
+      setDemoUrl(url)
+    } catch (e: any) {
+      setDemoError(String(e?.message || 'Failed to create demo board'))
+    } finally {
+      setDemoCreating(false)
+    }
+  }
+
+  const copyDemoLink = async () => {
+    if (!demoUrl) return
+    try {
+      await navigator.clipboard.writeText(demoUrl)
+      setDemoCopiedToast(true)
+      setTimeout(() => setDemoCopiedToast(false), 1600)
+      try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Demo link copied', variant: 'success' } })) } catch {}
+    } catch {
+      setDemoError('Failed to copy link')
+    }
+  }
+
   return (
     <>
       <Modal
@@ -205,6 +251,40 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         <Tabs disableRouting>
           <Tab label="board" headerLabel="Board">
             <div className="space-y-6 py-4">
+              {admin && (
+                <div className="flex items-start justify-between gap-3 rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">Demo board</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Create a public demo copy where anyone can edit, but nothing saves (refresh resets).
+                    </div>
+                    {demoError && (
+                      <div className="mt-1 text-xs text-red-600 dark:text-red-400">{demoError}</div>
+                    )}
+                    {demoUrl && (
+                      <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                        <TextInput
+                          label=""
+                          value={demoUrl}
+                          onChange={() => {}}
+                          fullWidth
+                        />
+                        <Button size="sm" onClick={copyDemoLink}>Copy link</Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-none">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={demoCreating || !boardId}
+                      onClick={createDemoBoardCopy}
+                    >
+                      {demoCreating ? 'Creating…' : 'Save as demo board'}
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-2 rounded-md border border-gray-200 dark:border-gray-700 p-3">
                 <div>
                   <div className="text-sm font-medium text-gray-900 dark:text-white">Visibility</div>
@@ -293,7 +373,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                   try { setAIStyle?.(next) } catch {}
                   try {
                     if (boardId) {
-                      await supabase.from('boards').update({ ai_style: next }).eq('id', boardId)
+                      await (supabase.from('boards') as any).update({ ai_style: next } as any).eq('id', boardId)
                       try { window.dispatchEvent(new CustomEvent('nodal:board-ai-style-updated', { detail: { boardId, aiStyle: next } })) } catch {}
                     }
                   } catch {}
@@ -306,7 +386,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 label="AI mode"
                 value={model as any}
                 onChange={(v) => setModel(v as OpenAIModel)}
-                options={MODELS}
+                options={MODELS as any}
                 fullWidth
               />
               <Range
@@ -396,6 +476,9 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
       </Modal>
       <Toast open={showSentToast} onClose={() => setShowSentToast(false)} variant="success" autoHideMs={1800}>
         Invites sent!
+      </Toast>
+      <Toast open={demoCopiedToast} onClose={() => setDemoCopiedToast(false)} variant="success" autoHideMs={1600}>
+        Demo link copied!
       </Toast>
     </>
   )

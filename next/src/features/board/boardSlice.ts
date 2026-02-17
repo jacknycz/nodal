@@ -25,6 +25,7 @@ const initialState: BoardState = {
   edgeType: 'floating',
   aiStyle: 'balanced' as AIStyleKey,
   hoveredEdgeId: null,
+  demoMode: false,
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -53,6 +54,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   unassignNodeColorgory: (nodeId: string, colorgoryId: string) => void
   setHoveredEdgeId: (id: string | null) => void
   setAIStyle: (style: AIStyleKey) => void
+  setDemoMode: (demo: boolean) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -193,6 +195,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setEdgeType: (t) => set({ edgeType: t || 'floating' }),
   setHoveredEdgeId: (id) => set({ hoveredEdgeId: id }),
   setAIStyle: (style) => set({ aiStyle: (style || 'balanced') as AIStyleKey }),
+  setDemoMode: (demo) => set({ demoMode: !!demo }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),
