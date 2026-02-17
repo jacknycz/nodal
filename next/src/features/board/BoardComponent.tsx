@@ -3997,6 +3997,11 @@ function BoardContent({
           {!storyPaused ? (
             <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-90">
               <div className="px-3 py-2 rounded-full bg-white/90 dark:bg-gray-900/90 shadow-lg border border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                {(() => {
+                  const lastIdx = Math.max(0, (storyPath?.length || 0) - 1)
+                  const isLastChapter = (storyPath?.length || 0) > 0 && storyIndex >= lastIdx
+                  return (
+                    <>
                 <IconButton
                   className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
                   onClick={prevStory}
@@ -4006,7 +4011,9 @@ function BoardContent({
                   <ArrowLeft size={24} weight="duotone" />
                 </IconButton>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-700 dark:text-gray-200">Step {storyIndex + 1}</span>
+                  <span className="text-xs text-gray-700 dark:text-gray-200">
+                    {isLastChapter ? '100%' : `Step ${storyIndex + 1}`}
+                  </span>
                   <div className="w-28">
                     <Range
                       value={storyPath.length > 0 ? (storyIndex + 1) / storyPath.length : 0}
@@ -4019,24 +4026,39 @@ function BoardContent({
                     />
                   </div>
                 </div>
-                <IconButton
-                  className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-                  onClick={nextStory}
-                  disabled={isOnChoice}
-                  aria-label="Next"
-                >
-                  <ArrowRight size={24} weight="duotone" />
-                </IconButton>
-                <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
-                <IconButton
-                  aria-label="Pause story mode"
-                  variant="secondaryGhost"
-                  size="sm"
-                  onClick={pauseStoryMode}
-                  title="Pause"
-                >
-                  <Pause size={18} weight="duotone" />
-                </IconButton>
+                {isLastChapter ? (
+                  <Button
+                    size="sm"
+                    onClick={nextStory}
+                    className="ml-1"
+                  >
+                    Finish
+                  </Button>
+                ) : (
+                  <>
+                    <IconButton
+                      className="px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                      onClick={nextStory}
+                      disabled={isOnChoice}
+                      aria-label="Next"
+                    >
+                      <ArrowRight size={24} weight="duotone" />
+                    </IconButton>
+                    <div className="mx-2 h-4 w-px bg-gray-300 dark:bg-gray-700" />
+                    <IconButton
+                      aria-label="Pause story mode"
+                      variant="secondaryGhost"
+                      size="sm"
+                      onClick={pauseStoryMode}
+                      title="Pause"
+                    >
+                      <Pause size={18} weight="duotone" />
+                    </IconButton>
+                  </>
+                )}
+                    </>
+                  )
+                })()}
               </div>
             </div>
           ) : (
