@@ -12,7 +12,7 @@ import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import { supabaseStorage } from '../storage/supabaseStorage'
-import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -382,7 +382,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
   }, [expanded, embedHtml, inView, id])
 
   return (
-    <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
+    <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: [containerWidthClass, swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : ''].filter(Boolean).join(' ') })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {(data as any)?.storyStarter && (
         <div
           data-story-starter-badge
@@ -412,7 +412,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"
             title={storyTitle}
           >
             {storyTitle}
@@ -433,7 +433,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -557,7 +557,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           </div>
         )}
         <div className="pt-1 pb-6 px-3">
-          <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
+          <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-[var(--board-node-title)]`}>
             {data.title || 'Video'}
           </div>
           {data.status && data.status !== 'ready' && (
@@ -588,7 +588,7 @@ export default function VideoNode({ data, id, selected, onNodeDelete, onNodeUpda
           )}
           {data.content && (
             <div
-              className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed tiptap-content break-words line-clamp-2 [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
+              className="mt-2 text-xs text-[var(--board-node-content)] leading-relaxed tiptap-content break-words line-clamp-2 [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
               dangerouslySetInnerHTML={{ __html: data.content }}
             />
           )}

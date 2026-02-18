@@ -12,7 +12,7 @@ import { useBoardStore } from '../board/boardSlice'
 // supabaseStorage is already imported above
 import Checkbox from '../../components/ui/Checkbox'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -258,7 +258,7 @@ export default function DocumentNode({
  
   return (
     <div 
-      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `p-4 ${containerWidthClass} bg-white/90 dark:bg-gray-800 rounded-lg shadow-sm shadow-orange-950/20` })}
+      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: [`p-4 ${containerWidthClass} rounded-lg shadow-sm shadow-orange-950/20`, swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : ''].filter(Boolean).join(' ') })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
       onClick={(e) => {
         if ((e as any).pointerType === 'touch' || window.matchMedia('(pointer: coarse)').matches) {
@@ -295,7 +295,7 @@ export default function DocumentNode({
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"
             title={storyTitle}
           >
             {storyTitle}
@@ -316,7 +316,7 @@ export default function DocumentNode({
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -332,7 +332,7 @@ export default function DocumentNode({
         <div className="flex items-center gap-2 mb-2">
           <span className="text-2xl">{getFileIcon()}</span>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+            <h3 className="text-sm font-semibold text-[var(--board-node-title)] truncate">
               {data.title || data.fileName || 'Untitled Document'}
             </h3>
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
@@ -379,7 +379,7 @@ export default function DocumentNode({
 
         {/* Document description */}
         {hasContent && (
-          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line break-words line-clamp-2">
+          <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-700 rounded text-xs text-[var(--board-node-content)] leading-relaxed whitespace-pre-line break-words line-clamp-2">
             {plainContent.length > 280 ? `${plainContent.slice(0, 280)}…` : plainContent}
           </div>
         )}

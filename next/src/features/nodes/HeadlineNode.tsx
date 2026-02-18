@@ -31,7 +31,8 @@ export default function HeadlineNode({ data }: HeadlineNodeProps) {
         className={`${NODE_HANDLE_CLASS} ${NODE_HANDLE_VISIBILITY_CLASS}`}
       />
       <div
-        className={`tiptap-content wrap-break-word flex !leading-tight ${sizeClass} text-gray-900 dark:text-white select-text`}
+        className={`tiptap-content wrap-break-word flex !leading-tight ${sizeClass} select-text`}
+        style={{ color: 'var(--board-headline-color)' }}
         // Headline content is authored by TipTap (stored as HTML).
         // This is internal user content; we render it directly for inline styling + text-align support.
         dangerouslySetInnerHTML={{ __html: titleHtml }}

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import IconButton from '../../components/ui/IconButton'
 import { ArrowsIn, ArrowsOut, PlayCircle, Play, CheckCircle, CheckFat, DotsThreeOutlineVertical } from '@phosphor-icons/react/ssr'
-import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -133,7 +133,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
   }, [data.content])
 
   return (
-    <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: containerWidthClass })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
+    <div className={getMediaNodeContainerClasses({ selected, receiveMode: false, extra: [containerWidthClass, swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : ''].filter(Boolean).join(' ') })} ref={viewRef} style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}>
       {(data as any)?.storyStarter && (
         <div
           data-story-starter-badge
@@ -163,7 +163,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"
             title={storyTitle}
           >
             {storyTitle}
@@ -183,7 +183,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -224,7 +224,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
           </div>
         </div>
         <div className="mt-1">
-          <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={data.title || 'Spotify'}>
+          <div className="text-sm font-medium text-[var(--board-node-title)] truncate" title={data.title || 'Spotify'}>
             {data.title || 'Spotify'}
           </div>
 
@@ -246,7 +246,7 @@ export default function SpotifyNode({ data, id, selected, onNodeUpdate, readOnly
             </div>
           )}
           {plainContent && (
-            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words line-clamp-2">{plainContent}</div>
+            <div className="mt-2 text-xs text-[var(--board-node-content)] leading-relaxed whitespace-pre-wrap break-words line-clamp-2">{plainContent}</div>
           )}
         </div>
       </div>

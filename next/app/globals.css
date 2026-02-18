@@ -161,8 +161,15 @@ body {
   --edge-default-glow: #C7B7AE;
   --edge-ai-glow: #3b82f6;
   --edge-focus-glow: #10b981;
+  --edge-direction-pulse-color: var(--color-primary-500);
+  --edge-direction-arrow-color: var(--color-primary-600);
   --connection-outline: #ffffff;
   --connection-outline-glow: rgba(255, 255, 255, 0.8);
+  --board-node-bg: rgba(255, 255, 255, 0.9);
+  --board-node-radius: 0.5rem; /* matches rounded-lg */
+  --board-node-title: #111827; /* gray-900 */
+  --board-node-content: #4b5563; /* gray-600 */
+  --board-headline-color: #111827; /* gray-900 */
 }
 
 .dark {
@@ -172,8 +179,15 @@ body {
   --edge-default-glow: #9ca3af;
   --edge-ai-glow: #60a5fa;
   --edge-focus-glow: #34d399;
+  --edge-direction-pulse-color: var(--color-primary-400);
+  --edge-direction-arrow-color: var(--color-primary-500);
   --connection-outline: #1f2937;
   --connection-outline-glow: rgba(31, 41, 55, 0.8);
+  --board-node-bg: #1f2937; /* gray-800 */
+  --board-node-radius: 0.5rem; /* matches rounded-lg */
+  --board-node-title: #f9fafb; /* gray-50 */
+  --board-node-content: #e5e7eb; /* gray-200 */
+  --board-headline-color: #ffffff;
 }
 
 /* Ensure smooth filter transitions for all edges */

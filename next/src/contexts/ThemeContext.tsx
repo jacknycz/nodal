@@ -29,11 +29,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return document.documentElement.classList.contains('dark');
     }
     function updateTheme() {
+      const forced = String((document.documentElement as any)?.dataset?.boardUiMode || '').toLowerCase()
+      const forcedDark = forced === 'dark' ? true : forced === 'light' ? false : null
       document.documentElement.classList.toggle(
         'dark',
-        localStorage.theme === 'dark' ||
-          (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
-      );
+        forcedDark ?? (
+          localStorage.theme === 'dark' ||
+            (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        )
+      )
     }
 
     setThemeState(getCurrentTheme());
@@ -49,7 +53,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       }
     };
     mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    const onRefresh = () => {
+      try { updateTheme() } catch {}
+      try { setIsDark(getIsDark()) } catch {}
+    }
+    window.addEventListener('nodal:theme-refresh', onRefresh as any)
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+      window.removeEventListener('nodal:theme-refresh', onRefresh as any)
+    }
   }, []);
 
   const setTheme = (newTheme: Theme) => {
@@ -61,11 +73,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       localStorage.removeItem('theme');
     }
+    const forced = String((document.documentElement as any)?.dataset?.boardUiMode || '').toLowerCase()
+    const forcedDark = forced === 'dark' ? true : forced === 'light' ? false : null
     document.documentElement.classList.toggle(
       'dark',
-      newTheme === 'dark' ||
-        (!newTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    );
+      forcedDark ?? (
+        newTheme === 'dark' ||
+          (!newTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      )
+    )
     setIsDark(document.documentElement.classList.contains('dark'));
   };
 

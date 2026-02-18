@@ -14,6 +14,7 @@ interface SavedBoard {
   isDemo?: boolean
   boardTheme?: string
   boardThemeOverrides?: any
+  boardUiMode?: 'light' | 'dark' | null
 }
 
 export type BoardSummary = {
@@ -327,7 +328,7 @@ class SupabaseStorage {
       // Remove user check for shared boards.
       // IMPORTANT: avoid returning persisted chat history (meta.chat) which can balloon payloads.
       const selectWithTheme =
-        'id, name, data, created_at, last_modified, node_count, edge_count, user_id, is_public, is_demo, ai_style, board_theme, board_theme_overrides, edgeType:data->meta->>edgeType'
+        'id, name, data, created_at, last_modified, node_count, edge_count, user_id, is_public, is_demo, ai_style, board_theme, board_ui_mode, board_theme_overrides, edgeType:data->meta->>edgeType'
       const selectLegacy =
         'id, name, data, created_at, last_modified, node_count, edge_count, user_id, is_public, is_demo, ai_style, edgeType:data->meta->>edgeType'
 
@@ -340,7 +341,10 @@ class SupabaseStorage {
         .single())
 
       // Backward-compatible fallback when schema hasn't been migrated yet
-      if (error && String(error?.message || '').toLowerCase().includes('board_theme')) {
+      if (error && (
+        String(error?.message || '').toLowerCase().includes('board_theme') ||
+        String(error?.message || '').toLowerCase().includes('board_ui_mode')
+      )) {
         ;({ data, error } = await supabase
           .from('boards')
           .select(selectLegacy as any)
@@ -393,6 +397,7 @@ class SupabaseStorage {
         aiStyle: (data as any)?.ai_style ? String((data as any).ai_style) : undefined,
         boardTheme: (data as any)?.board_theme ? String((data as any).board_theme) : undefined,
         boardThemeOverrides: (data as any)?.board_theme_overrides ?? undefined,
+        boardUiMode: (data as any)?.board_ui_mode ? (String((data as any).board_ui_mode).toLowerCase() as any) : null,
       } : null
     } catch (error) {
       console.error('Failed to load board from Supabase:', error)

@@ -39,6 +39,7 @@ interface SavedBoard {
   isDemo?: boolean
   boardTheme?: string
   boardThemeOverrides?: any
+  boardUiMode?: 'light' | 'dark' | null
 }
 
 // Document storage interfaces

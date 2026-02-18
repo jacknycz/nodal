@@ -58,6 +58,8 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const [visibilityError, setVisibilityError] = useState<string | null>(null)
   const [pendingBoardTheme, setPendingBoardTheme] = useState<string>('default')
   const [loadedBoardTheme, setLoadedBoardTheme] = useState<string | null>(null)
+  const [pendingBoardUiMode, setPendingBoardUiMode] = useState<'light' | 'dark'>('light')
+  const [loadedBoardUiMode, setLoadedBoardUiMode] = useState<'light' | 'dark' | null>(null)
   const [savingTheme, setSavingTheme] = useState(false)
   const [themeError, setThemeError] = useState<string | null>(null)
   const [gridEnabled, setGridEnabled] = useState<boolean>(true)
@@ -85,9 +87,12 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
       try {
         let data: any = null
         let err: any = null
-        ;({ data, error: err } = await supabase.from('boards').select('is_public, ai_style, board_theme').eq('id', boardId).maybeSingle() as any)
+        ;({ data, error: err } = await supabase.from('boards').select('is_public, ai_style, board_theme, board_ui_mode').eq('id', boardId).maybeSingle() as any)
         // Backward-compatible fallback when schema hasn't been migrated yet
-        if (err && String(err?.message || '').toLowerCase().includes('board_theme')) {
+        if (err && (
+          String(err?.message || '').toLowerCase().includes('board_theme') ||
+          String(err?.message || '').toLowerCase().includes('board_ui_mode')
+        )) {
           ;({ data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle() as any)
         }
         const isPub = !!(data as any)?.is_public
@@ -99,11 +104,17 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         const themeKey = String((data as any)?.board_theme || 'default')
         setPendingBoardTheme(themeKey)
         setLoadedBoardTheme(themeKey)
+        const uiRaw = String((data as any)?.board_ui_mode || '').toLowerCase()
+        const uiKey: any = (uiRaw === 'dark' || uiRaw === 'light') ? uiRaw : null
+        setLoadedBoardUiMode(uiKey)
+        setPendingBoardUiMode((uiKey as any) || 'light')
       } catch {
         setPendingIsPublic(false)
         setLoadedIsPublic(false)
         setPendingBoardTheme('default')
         setLoadedBoardTheme('default')
+        setPendingBoardUiMode('light')
+        setLoadedBoardUiMode(null)
       }
     })()
   }, [open, boardId, supabase])
@@ -221,8 +232,12 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         open={open}
         onClose={onClose}
         // title="Board Settings"
-        className={className}
-        backdropClassName={backdropClassName}
+        className={[
+          // Transparent modal panel so the board stays visible behind settings.
+          'bg-transparent dark:bg-transparent shadow-none p-0 max-w-2xl',
+          className || '',
+        ].filter(Boolean).join(' ')}
+        backdropClassName={backdropClassName || 'bg-transparent'}
         backdropInteractive={typeof backdropInteractive === 'boolean' ? backdropInteractive : true}
         closeOnBackdropClick={typeof closeOnBackdropClick === 'boolean' ? closeOnBackdropClick : true}
         actions={
@@ -263,8 +278,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                   }
                 }
 
-                // Persist board theme ONLY on Save (and only for Pro/Admin; admins can override ownership)
-                if (canThemeBoard && loadedBoardTheme !== null && pendingBoardTheme !== loadedBoardTheme) {
+                // Persist board theme + UI mode ONLY on Save (and only for Pro/Admin; admins can override ownership)
+                const uiModeToSave: any = pendingBoardTheme === 'default' ? null : (pendingBoardUiMode || 'light')
+                const themeChanged = loadedBoardTheme !== null && pendingBoardTheme !== loadedBoardTheme
+                const uiChanged = pendingBoardTheme !== 'default' && uiModeToSave !== loadedBoardUiMode
+                if (canThemeBoard && (themeChanged || uiChanged)) {
                   setSavingTheme(true)
                   try {
                     const { data: sess } = await supabase.auth.getSession()
@@ -273,7 +291,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                     const resp = await fetch('/api/board/theme', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                      body: JSON.stringify({ boardId, theme: pendingBoardTheme }),
+                      body: JSON.stringify({ boardId, theme: pendingBoardTheme, uiMode: uiModeToSave }),
                     })
                     if (!resp.ok) {
                       const j = await resp.json().catch(() => ({}))
@@ -281,6 +299,8 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                     }
                     setLoadedBoardTheme(pendingBoardTheme)
                     try { useBoardStore.getState().setBoardTheme?.(pendingBoardTheme) } catch {}
+                    setLoadedBoardUiMode(uiModeToSave)
+                    try { useBoardStore.getState().setBoardUiMode?.(uiModeToSave) } catch {}
                   } catch (e: any) {
                     themeFailed = true
                     setThemeError(String(e?.message || 'Failed to save theme'))
@@ -300,9 +320,10 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
           </>
         }
       >
-        <Tabs disableRouting>
-          <Tab label="board" headerLabel="Board">
-            <div className="space-y-6 py-4">
+        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-4xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 p-4 md:p-6">
+          <Tabs disableRouting>
+            <Tab label="board" headerLabel="Board">
+              <div className="space-y-6 py-4">
               {admin && (
                 <div className="flex items-start justify-between gap-3 rounded-md border border-gray-200 dark:border-gray-700 p-3">
                   <div className="min-w-0">
@@ -368,30 +389,6 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 fullWidth
                 disabled={!isOwnerView}
               />
-              <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-                <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">Board theme</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Themes change the board background (more customization coming later).</div>
-                  {themeError && (
-                    <div className="mt-1 text-xs text-red-600 dark:text-red-400">{themeError}</div>
-                  )}
-                  {!canThemeBoard && (
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upgrade to Pro to unlock board themes.</div>
-                  )}
-                </div>
-                <Select
-                  label=""
-                  value={pendingBoardTheme as any}
-                  onChange={(v: any) => setPendingBoardTheme(String(v || 'default'))}
-                  options={[
-                    { label: 'Default', value: 'default' },
-                    { label: 'Blue', value: 'blue' },
-                    { label: 'Red', value: 'red' },
-                  ]}
-                  fullWidth
-                  disabled={!canThemeBoard}
-                />
-              </div>
               <TextInput
                 label="Board topic"
                 value={topic}
@@ -415,14 +412,6 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
               />
               <div className="pt-1">
                 <Toggle
-                  checked={isDark}
-                  onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                  label="Dark mode"
-                  description="Toggle between light and dark themes."
-                />
-              </div>
-              <div className="pt-1">
-                <Toggle
                   checked={gridEnabled}
                   onChange={(checked) => {
                     setGridEnabled(checked)
@@ -436,6 +425,79 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                   description="Snap nodes to a 10px grid and show the grid overlay."
                 />
               </div>
+            </div>
+          </Tab>
+          <Tab label="theme" headerLabel="Theme">
+            <div className="space-y-6 py-4">
+              <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">Board theme</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Themes change the board background (more customization coming later).</div>
+                  {themeError && (
+                    <div className="mt-1 text-xs text-red-600 dark:text-red-400">{themeError}</div>
+                  )}
+                  {!canThemeBoard && (
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upgrade to Pro to unlock board themes.</div>
+                  )}
+                </div>
+                <Select
+                  label=""
+                  value={pendingBoardTheme as any}
+                  onChange={(v: any) => {
+                    // Live preview: apply theme immediately on selection.
+                    const next = String(v || 'default')
+                    setPendingBoardTheme(next)
+                    try { useBoardStore.getState().setBoardTheme?.(next) } catch {}
+                    if (next === 'default') {
+                      try { useBoardStore.getState().setBoardUiMode?.(null as any) } catch {}
+                    } else {
+                      // Ensure we have a default UI mode when a theme is active.
+                      const ui = (pendingBoardUiMode === 'dark') ? 'dark' : 'light'
+                      setPendingBoardUiMode(ui)
+                      try { useBoardStore.getState().setBoardUiMode?.(ui as any) } catch {}
+                    }
+                  }}
+                  options={[
+                    { label: 'Default', value: 'default' },
+                    { label: 'Red', value: 'red' },
+                    { label: 'Presentation', value: 'presentation' },
+                    { label: 'Education', value: 'education' },
+                    { label: 'Creative', value: 'creative' },
+                    { label: 'Technical', value: 'technical' },
+                    { label: 'Sci-fi', value: 'scifi' },
+                  ]}
+                  fullWidth
+                  disabled={!canThemeBoard}
+                />
+                {pendingBoardTheme !== 'default' && (
+                  <Select
+                    label="UI Colors"
+                    value={pendingBoardUiMode as any}
+                    onChange={(v: any) => {
+                      // Live preview: apply UI mode immediately on selection.
+                      const next = String(v || 'light').toLowerCase() === 'dark' ? 'dark' : 'light'
+                      setPendingBoardUiMode(next as any)
+                      try { useBoardStore.getState().setBoardUiMode?.(next as any) } catch {}
+                    }}
+                    options={[
+                      { label: 'Light', value: 'light' },
+                      { label: 'Dark', value: 'dark' },
+                    ]}
+                    fullWidth
+                    disabled={!canThemeBoard}
+                  />
+                )}
+              </div>
+              {pendingBoardTheme === 'default' && (
+                <div className="pt-1">
+                  <Toggle
+                    checked={isDark}
+                    onChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                    label="Dark mode"
+                    description="Toggle between light and dark themes."
+                  />
+                </div>
+              )}
             </div>
           </Tab>
           <Tab label="aisettings" headerLabel="AI Settings">
@@ -548,7 +610,8 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
               <ColorgoryManager inline boardId={boardId} />
             </div>
           </Tab>
-        </Tabs>
+          </Tabs>
+        </div>
       </Modal>
       <Toast open={showSentToast} onClose={() => setShowSentToast(false)} variant="success" autoHideMs={1800}>
         Invites sent!

@@ -307,9 +307,9 @@ export default function FloatingStraightEdge({
         <>
           <defs>
             <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={sx} y1={sy} x2={tx} y2={ty}>
-              <stop offset="0%" stopColor="var(--color-secondary-500)" stopOpacity="0.05" />
-              <stop offset="60%" stopColor="var(--color-secondary-500)" stopOpacity="0.75" />
-              <stop offset="100%" stopColor="var(--color-secondary-500)" stopOpacity="0.05" />
+              <stop offset="0%" stopColor="var(--edge-direction-pulse-color)" stopOpacity="0.05" />
+              <stop offset="60%" stopColor="var(--edge-direction-pulse-color)" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="var(--edge-direction-pulse-color)" stopOpacity="0.05" />
             </linearGradient>
           </defs>
           <path
@@ -326,7 +326,7 @@ export default function FloatingStraightEdge({
           {!!arrowInfo && (
             <path
               d="M0 0 L-15 -3.9 L-15 3.9 Z"
-              fill="var(--color-secondary-600)"
+              fill="var(--edge-direction-arrow-color)"
               opacity="0.7"
               transform={`translate(${arrowInfo.x - Math.cos((arrowInfo.angle * Math.PI) / 180) * 3},${arrowInfo.y - Math.sin((arrowInfo.angle * Math.PI) / 180) * 3}) rotate(${arrowInfo.angle})`}
               pointerEvents="none"

@@ -7,7 +7,7 @@ import { Pencil } from '@phosphor-icons/react'
 import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Modal from '../../components/ui/Modal'
@@ -123,7 +123,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: false, extra: `${containerWidthClass}` })}
+      className={getNodeContainerClasses({ selected, receiveMode: false, extra: [containerWidthClass, swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : ''].filter(Boolean).join(' ') })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
     >
       {(data as any)?.storyStarter && (
@@ -155,7 +155,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"
             title={storyTitle}
           >
             {storyTitle}
@@ -176,7 +176,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -195,7 +195,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
           )}
         </div>
         <div className="mt-2">
-          <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white truncate flex items-center gap-2`}>
+          <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-[var(--board-node-title)] truncate flex items-center gap-2`}>
             {Boolean((data as any).faviconUrl) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={(data as any).faviconUrl} alt="favicon" className="w-4 h-4 rounded-sm shrink-0" />
@@ -216,7 +216,7 @@ export default function LinkNode({ data, id, selected, onNodeDelete, onNodeUpdat
             </a>
           )}
           {plainDescription && (
-            <div className="mt-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line wrap-break-word line-clamp-2">
+            <div className="mt-2 text-xs text-[var(--board-node-content)] leading-relaxed whitespace-pre-line wrap-break-word line-clamp-2">
               {plainDescription.length > 200 ? `${plainDescription.slice(0, 200)}…` : plainDescription}
             </div>
           )}

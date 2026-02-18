@@ -4,6 +4,12 @@ import type { BoardState, BoardActions, BoardNode, BoardEdge, BoardBrief, Docume
 import { COLORGORY_DEFS, registerColorgoriesGetter } from './colorgoryColors'
 import type { AIStyleKey } from '../ai/aiStyle'
 
+const ALLOWED_BOARD_THEME_KEYS = new Set(['default', 'red', 'presentation', 'education', 'creative', 'technical', 'scifi'])
+function normalizeBoardThemeKey(key: string): string {
+  const k = String(key || 'default').toLowerCase()
+  return ALLOWED_BOARD_THEME_KEYS.has(k) ? k : 'default'
+}
+
 const initialState: BoardState = {
   nodes: [],
   edges: [],
@@ -27,6 +33,7 @@ const initialState: BoardState = {
   hoveredEdgeId: null,
   demoMode: false,
   boardTheme: 'default',
+  boardUiMode: null,
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -57,6 +64,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setAIStyle: (style: AIStyleKey) => void
   setDemoMode: (demo: boolean) => void
   setBoardTheme: (theme: string) => void
+  setBoardUiMode: (mode: BoardState['boardUiMode']) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -198,7 +206,8 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setHoveredEdgeId: (id) => set({ hoveredEdgeId: id }),
   setAIStyle: (style) => set({ aiStyle: (style || 'balanced') as AIStyleKey }),
   setDemoMode: (demo) => set({ demoMode: !!demo }),
-  setBoardTheme: (theme) => set({ boardTheme: String(theme || 'default') }),
+  setBoardTheme: (theme) => set({ boardTheme: normalizeBoardThemeKey(String(theme || 'default')) }),
+  setBoardUiMode: (mode) => set({ boardUiMode: (mode === 'light' || mode === 'dark') ? mode : null }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),

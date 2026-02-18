@@ -11,7 +11,7 @@ import IconButton from '../../components/ui/IconButton'
 import { useBoardStore } from '../board/boardSlice'
 import Checkbox from '../../components/ui/Checkbox'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getMediaNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
 
 import { supabaseStorage } from '../storage/supabaseStorage'
@@ -264,7 +264,7 @@ export default function ImageNode({
 
   return (
     <div
-      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: `hover:cursor-move group` })}
+      className={getMediaNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: [`hover:cursor-move group`, swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : ''].filter(Boolean).join(' ') })}
       style={{ width: `${Math.round(displayWidth)}px`, ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
     >
       {(data as any)?.storyStarter && (
@@ -296,7 +296,7 @@ export default function ImageNode({
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"
             title={storyTitle}
           >
             {storyTitle}
@@ -317,7 +317,7 @@ export default function ImageNode({
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -516,7 +516,7 @@ export default function ImageNode({
           {/* Accordion content */}
           <div className={`overflow-hidden transition-[max-height] duration-300 ease-in-out ${detailsOpen ? 'max-h-[600px]' : 'max-h-0'}`}>
             <div className="pt-1 pb-6 px-3">
-              <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
+              <div className={`${(data as any).titleSize === 'lg' ? 'text-xl' : (data as any).titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-[var(--board-node-title)]`}>
                 {data.title || data.fileName || 'Image'}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -524,7 +524,7 @@ export default function ImageNode({
               </div>
               {data.content && (
                 <div
-                  className="mt-2 tiptap-content text-xs text-gray-700 dark:text-gray-300 leading-relaxed break-words line-clamp-2 [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
+                  className="mt-2 tiptap-content text-xs text-[var(--board-node-content)] leading-relaxed break-words line-clamp-2 [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
                   dangerouslySetInnerHTML={{ __html: data.content }}
                 />
               )}

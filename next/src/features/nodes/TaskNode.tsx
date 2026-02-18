@@ -9,7 +9,7 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import { useBoardStore } from '../board/boardSlice'
 import { getColorgoryHex } from '../board/colorgoryColors'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 import Tooltip from '../../components/ui/Tooltip'
@@ -164,7 +164,7 @@ export default function TaskNode({
 
   return (
     <div
-      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: 'relative min-w-[220px] max-w-[420px]' })}
+      className={getNodeContainerClasses({ selected, receiveMode: isReceiveMode, extra: ['relative min-w-[220px] max-w-[420px]', swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : ''].filter(Boolean).join(' ') })}
       style={!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : undefined}
     >
       {(data as any)?.storyStarter && (
@@ -196,7 +196,7 @@ export default function TaskNode({
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"
             title={storyTitle}
           >
             {storyTitle}
@@ -227,7 +227,7 @@ export default function TaskNode({
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 3,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -247,7 +247,7 @@ export default function TaskNode({
             size="lg"
             shape="circle"
           />
-          <div className={`text-sm font-medium flex-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+          <div className={`text-sm font-medium flex-1 ${completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-[var(--board-node-title)]'}`}>
             {title || 'Untitled Task'}
           </div>
         </div>
@@ -256,7 +256,7 @@ export default function TaskNode({
         {(data as any)?.content ? (
           <div
             ref={descriptionRef}
-            className="mt-2 text-xs leading-relaxed tiptap-content text-gray-700 dark:text-gray-300 break-words whitespace-pre-wrap [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
+            className="mt-2 text-xs leading-relaxed tiptap-content text-[var(--board-node-content)] break-words whitespace-pre-wrap [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline"
             dangerouslySetInnerHTML={{ __html: (data as any)?.content || '' }}
           />
         ) : null}

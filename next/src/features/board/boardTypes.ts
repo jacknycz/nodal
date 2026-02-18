@@ -96,6 +96,8 @@ export interface BoardState {
   demoMode?: boolean
   // Board theme key (base theme)
   boardTheme?: string
+  // When a non-default board theme is active, the owner chooses whether UI uses Light/Dark colors.
+  boardUiMode?: 'light' | 'dark' | null
 }
 
 export interface BoardActions {
@@ -122,4 +124,5 @@ export interface BoardActions {
   setAIStyle?: (style: BoardState['aiStyle']) => void
   setDemoMode?: (demo: boolean) => void
   setBoardTheme?: (theme: string) => void
+  setBoardUiMode?: (mode: BoardState['boardUiMode']) => void
 } 

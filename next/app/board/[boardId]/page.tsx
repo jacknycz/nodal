@@ -187,6 +187,7 @@ export default function BoardPage() {
               initialEdgeType={(board.data as any)?.meta?.edgeType || null}
               initialAIStyle={(board as any)?.aiStyle || null}
               initialBoardTheme={(board as any)?.boardTheme || null}
+              initialBoardUiMode={(board as any)?.boardUiMode ?? null}
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}

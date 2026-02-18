@@ -73,6 +73,7 @@ import useNodeActions from './useNodeActions'
 import useDocumentUpload from './useDocumentUpload'
 import useBoardShortcuts from './useBoardShortcuts'
 import NodeEditModal from '../../components/NodeEditModal'
+import { getBoardTheme } from '../../themes/board'
 
 interface BoardProps {
   initialBoard?: { nodes: Node[]; edges: Edge[] }
@@ -80,6 +81,7 @@ interface BoardProps {
   initialEdgeType?: string | null
   initialAIStyle?: any
   initialBoardTheme?: string | null
+  initialBoardUiMode?: 'light' | 'dark' | null
   pendingBoardBrief?: BoardBrief // Now includes id
   onBoardStateChange?: (name: string, status: string, hasChanges: boolean) => void
   clearPendingBoardBrief?: () => void
@@ -178,6 +180,7 @@ function BoardContent({
   initialEdgeType,
   initialAIStyle,
   initialBoardTheme,
+  initialBoardUiMode,
   pendingBoardBrief,
   onBoardStateChange,
   clearPendingBoardBrief,
@@ -189,7 +192,7 @@ function BoardContent({
   readOnly = false,
   persistenceDisabled = false,
 }: BoardProps) {
-  const { theme } = useTheme()
+  const { theme, isDark: globalIsDark } = useTheme()
   const { isInitialized: aiInitialized } = useAIContext()
   const router = useRouter() // Add this line
   const user = useSupabaseUser()
@@ -277,8 +280,11 @@ function BoardContent({
       if (initialBoardTheme) {
         useBoardStore.getState().setBoardTheme?.(String(initialBoardTheme || 'default'))
       }
+      if (typeof initialBoardUiMode !== 'undefined') {
+        useBoardStore.getState().setBoardUiMode?.(initialBoardUiMode as any)
+      }
     } catch {}
-  }, [boardId, initialColorgories, initialEdgeType, initialAIStyle, initialBoardTheme])
+  }, [boardId, initialColorgories, initialEdgeType, initialAIStyle, initialBoardTheme, initialBoardUiMode])
   
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
@@ -296,6 +302,62 @@ function BoardContent({
   const [quickAiGenerating, setQuickAiGenerating] = useState(false)
   const [summarizingSelection, setSummarizingSelection] = useState(false)
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
+  const boardThemeKey = useBoardStore((s: any) => String((s as any)?.boardTheme || 'default'))
+  const boardUiMode = useBoardStore((s: any) => (s as any)?.boardUiMode || null)
+  const effectiveIsDark = boardThemeKey !== 'default'
+    ? ((boardUiMode || 'light') === 'dark')
+    : !!globalIsDark
+
+  // Force Tailwind `dark:` variants to use the board's chosen UI mode when a non-default theme is active.
+  // ThemeProvider will respect this via document.documentElement.dataset.boardUiMode.
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    try {
+      const root = document.documentElement as any
+      if (boardThemeKey === 'default') {
+        delete root.dataset.boardUiMode
+      } else {
+        root.dataset.boardUiMode = effectiveIsDark ? 'dark' : 'light'
+      }
+      try { window.dispatchEvent(new CustomEvent('nodal:theme-refresh')) } catch {}
+    } catch {}
+  }, [boardThemeKey, effectiveIsDark])
+
+  const boardThemeCssVars = useMemo(() => {
+    const isDark = effectiveIsDark
+    const def = getBoardTheme(boardThemeKey)
+    const nodeBg = def?.nodeColor || (isDark ? '#1f2937' : 'rgba(255, 255, 255, 0.9)')
+    const nodeRadius = (def as any)?.nodeBorderRadius || '0.5rem'
+    const nodeTitle = def?.nodeTitleColor || (isDark ? '#f9fafb' : '#111827')
+    const nodeContent = def?.nodeContentColor || (isDark ? '#e5e7eb' : '#4b5563')
+    const headlineColor = def?.headlineColor || (isDark ? '#ffffff' : '#111827')
+
+    const cssVars: Record<string, string> = {
+      '--board-node-bg': String(nodeBg),
+      '--board-node-radius': String(nodeRadius),
+      '--board-node-title': String(nodeTitle),
+      '--board-node-content': String(nodeContent),
+      '--board-headline-color': String(headlineColor),
+    }
+
+    // Allow themes to override edge palette too.
+    if (boardThemeKey !== 'default' && def?.edgeColor) {
+      cssVars['--edge-default-color'] = String(def.edgeColor)
+    }
+    if (boardThemeKey !== 'default' && def?.edgeHighlightColor) {
+      cssVars['--edge-default-glow'] = String(def.edgeHighlightColor)
+    }
+
+    // Direction overlay (pulse + arrowhead) theme hooks
+    if (boardThemeKey !== 'default') {
+      const pulse = (def as any)?.edgeHighlightPulseColor || (def as any)?.edgeAccentColor
+      const arrow = (def as any)?.edgeArrowColor || pulse
+      if (pulse) cssVars['--edge-direction-pulse-color'] = String(pulse)
+      if (arrow) cssVars['--edge-direction-arrow-color'] = String(arrow)
+    }
+
+    return cssVars as any
+  }, [boardThemeKey, effectiveIsDark])
   const toVisualEdgeType = useCallback((pref: string) => {
     switch (pref) {
       case 'straight': return 'floating-straight'
@@ -3914,8 +3976,8 @@ function BoardContent({
         minZoom={0.2}
         maxZoom={1.5}
         proOptions={{ hideAttribution: true }}
-        className={`${theme === 'dark' ? 'dark !bg-transparent' : '!bg-transparent'}`}
-        style={{ background: 'transparent' }} // Make ReactFlow background transparent
+        className={`${effectiveIsDark ? 'dark !bg-transparent' : '!bg-transparent'}`}
+        style={{ background: 'transparent', ...(boardThemeCssVars as any) }} // Make ReactFlow background transparent + theme vars
         multiSelectionKeyCode="Meta"
         // Disable built-in Delete behavior; we show a confirm modal instead
       >
@@ -3923,7 +3985,7 @@ function BoardContent({
         {gridEnabled && (
           <Background
             gap={SNAP_GRID[0]}
-            color={theme === 'dark' ? 'rgba(148,163,184,0.3)' : 'rgba(148,163,184,0.6)'}
+            color={effectiveIsDark ? 'rgba(148,163,184,0.3)' : 'rgba(148,163,184,0.6)'}
           />
         )}
         <div className="hidden sm:block">

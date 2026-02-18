@@ -11,7 +11,7 @@ import NodeEditModal from '../../components/NodeEditModal'
 import { useSupabaseUser } from '../auth/authUtils'
 import { getColorgoryHex } from '../board/colorgoryColors'
 import Checkbox from '../../components/ui/Checkbox'
-import { getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
+import { FORCE_UI_TEXT_VARS_CLASS, getNodeContainerClasses, NODE_HANDLE_CLASS, NODE_HANDLE_VISIBILITY_CLASS } from './nodeStyles'
 import { useTheme } from '../../contexts/ThemeContext'
  
 
@@ -157,7 +157,7 @@ export default function NodalNode(props: any) {
       ''
     return (
       <div
-        className={`tiptap-content text-xs text-gray-600 dark:text-gray-200 mb-3 leading-relaxed wrap-break-word [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline ${clampClass}`}
+        className={`tiptap-content text-xs text-[var(--board-node-content)] mb-3 leading-relaxed wrap-break-word [&_a]:text-primary-600 dark:[&_a]:text-primary-400 [&_a:hover]:underline ${clampClass}`}
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     )
@@ -212,6 +212,7 @@ export default function NodalNode(props: any) {
           // Use a ring so the “derived” highlight stays visible even when selected
           // (selected state applies a primary border with !important).
           data?.summaryDerived ? 'ring-2 ring-emerald-400/70 border-emerald-500/80 bg-emerald-50/40 dark:bg-emerald-900/10' : '',
+          swatchColors.length > 0 ? FORCE_UI_TEXT_VARS_CLASS : '',
         ].filter(Boolean).join(' ')
       })}
       style={{ position: 'relative', zIndex: expanded ? 1000 : undefined, ...(pageMode ? {} : { width: `${Math.round(nodeWidth)}px` }), ...(!isDark && swatchColors.length > 0 ? { background: (swatchColors.length === 1 ? swatchColors[0] : (`linear-gradient(to right, ${gradientStops})`)) } : {}) }}
@@ -246,7 +247,7 @@ export default function NodalNode(props: any) {
             <DotsThreeOutlineVertical size={14} weight="duotone" />
           </IconButton>
           <span
-            className="max-w-[220px] truncate text-[11px] font-medium text-gray-900 dark:text-white"  
+            className="max-w-[220px] truncate text-[11px] font-medium text-[var(--board-node-title)]"  
             title={storyTitle}
           >
             {storyTitle}
@@ -273,7 +274,7 @@ export default function NodalNode(props: any) {
       {isDark && swatchColors.length > 0 && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg"
+          className="pointer-events-none absolute inset-0 rounded-[var(--board-node-radius)]"
           style={{
             padding: 4,
             background: swatchColors.length === 1 ? gradientStops : `linear-gradient(to right, ${gradientStops})`,
@@ -292,7 +293,7 @@ export default function NodalNode(props: any) {
 
       <div className={`${expanded ? 'cursor-default flex-1' : 'cursor-move'} flex flex-col min-h-0`}>
         <div className={`nodal-drag-handle flex items-center gap-2 w-full justify-between flex-none ${expanded ? 'cursor-default' : 'cursor-move'} ${pageMode ? 'px-2' : ''}`}>
-          <h3 className={`${data.titleSize === 'lg' ? 'text-xl' : data.titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-gray-900 dark:text-white`}>
+          <h3 className={`${data.titleSize === 'lg' ? 'text-xl' : data.titleSize === 'md' ? 'text-base' : 'text-sm'} font-medium text-[var(--board-node-title)]`}>
             {displayTitle}
           </h3>
           {pageMode && (
@@ -309,7 +310,7 @@ export default function NodalNode(props: any) {
               </div>
             ) : (
               <div className="relative">
-                <div className="tiptap-content text-xs text-gray-600 dark:text-gray-200 leading-relaxed max-h-56 overflow-hidden">
+                <div className="tiptap-content text-xs text-[var(--board-node-content)] leading-relaxed max-h-56 overflow-hidden">
                   {data.content ? renderRichContent(data.content) : null}
                 </div>
                 {data.content && <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-white/90 dark:from-gray-900/90 to-transparent" />}

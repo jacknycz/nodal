@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServiceClient } from '../../../../src/features/storage/supabaseService'
 
-const ALLOWED_THEMES = new Set(['default', 'blue', 'red'])
+const ALLOWED_THEMES = new Set(['default', 'red', 'presentation', 'education', 'creative', 'technical', 'scifi'])
+const ALLOWED_UI_MODES = new Set(['light', 'dark'])
 
 function isAdminUser(user: any): boolean {
   if (!user) return false
@@ -26,10 +27,16 @@ function isProUser(user: any): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { boardId, theme } = await req.json()
+    const { boardId, theme, uiMode } = await req.json()
     const themeKey = String(theme || '').trim().toLowerCase()
     if (!boardId || !ALLOWED_THEMES.has(themeKey)) {
       return NextResponse.json({ error: 'Missing boardId or invalid theme' }, { status: 400 })
+    }
+
+    const rawUiMode = (uiMode === null || typeof uiMode === 'undefined') ? null : String(uiMode || '').trim().toLowerCase()
+    const uiModeKey = rawUiMode ? (ALLOWED_UI_MODES.has(rawUiMode) ? rawUiMode : null) : null
+    if (rawUiMode && !uiModeKey) {
+      return NextResponse.json({ error: 'Invalid uiMode' }, { status: 400 })
     }
 
     const authHeader = req.headers.get('authorization') || ''
@@ -62,15 +69,36 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { error } = await supabase
+    const payload: any = {
+      board_theme: themeKey,
+      board_theme_overrides: null, // switching base theme nukes overrides
+      // UI mode is only meaningful for non-default themes. If theme is default, clear it.
+      board_ui_mode: themeKey === 'default' ? null : (uiModeKey || 'light'),
+      last_modified: Date.now(),
+    }
+    let { error } = await supabase
       .from('boards')
-      .update({
-        board_theme: themeKey,
-        board_theme_overrides: null, // switching base theme nukes overrides
-        last_modified: Date.now(),
-      } as any)
+      .update(payload)
       .eq('id', boardId)
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Backward-compatible fallback when schema hasn't been migrated yet
+    if (error && String(error?.message || '').toLowerCase().includes('board_ui_mode')) {
+      const legacyPayload: any = { ...payload }
+      delete legacyPayload.board_ui_mode
+      ;({ error } = await supabase.from('boards').update(legacyPayload).eq('id', boardId))
+    }
+
+    if (error) {
+      const msg = String(error?.message || '')
+      // Helpful guidance when the database hasn't been migrated for new theme keys.
+      if (msg.toLowerCase().includes('boards_board_theme_check')) {
+        return NextResponse.json(
+          { error: 'Database constraint blocks this theme. Run the migration to update boards_board_theme_check to allow the new theme keys.' },
+          { status: 500 }
+        )
+      }
+      return NextResponse.json({ error: msg }, { status: 500 })
+    }
     return NextResponse.json({ success: true })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed to update board theme' }, { status: 500 })
