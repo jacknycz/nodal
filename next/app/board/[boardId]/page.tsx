@@ -143,6 +143,8 @@ export default function BoardPage() {
   // Expose board theme via board store so background components can render consistently
   useEffect(() => {
     try { useBoardStore.getState().setBoardTheme?.(String((board as any)?.boardTheme || 'default')) } catch {}
+    try { useBoardStore.getState().setBoardUiMode?.(((board as any)?.boardUiMode ?? null) as any) } catch {}
+    try { useBoardStore.getState().setBoardThemeOverrides?.(((board as any)?.boardThemeOverrides ?? null) as any) } catch {}
   }, [board])
 
   // Deep link: start story immediately when opened with ?story=<starterNodeId>
@@ -188,6 +190,7 @@ export default function BoardPage() {
               initialAIStyle={(board as any)?.aiStyle || null}
               initialBoardTheme={(board as any)?.boardTheme || null}
               initialBoardUiMode={(board as any)?.boardUiMode ?? null}
+              initialBoardThemeOverrides={(board as any)?.boardThemeOverrides ?? null}
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}

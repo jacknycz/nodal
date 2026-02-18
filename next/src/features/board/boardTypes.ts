@@ -98,6 +98,8 @@ export interface BoardState {
   boardTheme?: string
   // When a non-default board theme is active, the owner chooses whether UI uses Light/Dark colors.
   boardUiMode?: 'light' | 'dark' | null
+  // Advanced theme overrides (stored in boards.board_theme_overrides). Only meaningful for non-default themes.
+  boardThemeOverrides?: Record<string, any> | null
 }
 
 export interface BoardActions {
@@ -125,4 +127,5 @@ export interface BoardActions {
   setDemoMode?: (demo: boolean) => void
   setBoardTheme?: (theme: string) => void
   setBoardUiMode?: (mode: BoardState['boardUiMode']) => void
+  setBoardThemeOverrides?: (overrides: BoardState['boardThemeOverrides']) => void
 } 

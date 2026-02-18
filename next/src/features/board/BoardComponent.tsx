@@ -82,6 +82,7 @@ interface BoardProps {
   initialAIStyle?: any
   initialBoardTheme?: string | null
   initialBoardUiMode?: 'light' | 'dark' | null
+  initialBoardThemeOverrides?: Record<string, any> | null
   pendingBoardBrief?: BoardBrief // Now includes id
   onBoardStateChange?: (name: string, status: string, hasChanges: boolean) => void
   clearPendingBoardBrief?: () => void
@@ -181,6 +182,7 @@ function BoardContent({
   initialAIStyle,
   initialBoardTheme,
   initialBoardUiMode,
+  initialBoardThemeOverrides,
   pendingBoardBrief,
   onBoardStateChange,
   clearPendingBoardBrief,
@@ -283,8 +285,11 @@ function BoardContent({
       if (typeof initialBoardUiMode !== 'undefined') {
         useBoardStore.getState().setBoardUiMode?.(initialBoardUiMode as any)
       }
+      if (typeof initialBoardThemeOverrides !== 'undefined') {
+        useBoardStore.getState().setBoardThemeOverrides?.((initialBoardThemeOverrides as any) || null)
+      }
     } catch {}
-  }, [boardId, initialColorgories, initialEdgeType, initialAIStyle, initialBoardTheme, initialBoardUiMode])
+  }, [boardId, initialColorgories, initialEdgeType, initialAIStyle, initialBoardTheme, initialBoardUiMode, initialBoardThemeOverrides])
   
   const [currentBoardName, setCurrentBoardName] = useState('Untitled Board')
   const localBoardIdRef = useRef<string | null>(null)
@@ -304,6 +309,7 @@ function BoardContent({
   const edgeTypePref = useBoardStore((s: any) => s.edgeType || 'floating')
   const boardThemeKey = useBoardStore((s: any) => String((s as any)?.boardTheme || 'default'))
   const boardUiMode = useBoardStore((s: any) => (s as any)?.boardUiMode || null)
+  const boardThemeOverrides = useBoardStore((s: any) => (s as any)?.boardThemeOverrides || null)
   const effectiveIsDark = boardThemeKey !== 'default'
     ? ((boardUiMode || 'light') === 'dark')
     : !!globalIsDark
@@ -326,11 +332,15 @@ function BoardContent({
   const boardThemeCssVars = useMemo(() => {
     const isDark = effectiveIsDark
     const def = getBoardTheme(boardThemeKey)
-    const nodeBg = def?.nodeColor || (isDark ? '#1f2937' : 'rgba(255, 255, 255, 0.9)')
-    const nodeRadius = (def as any)?.nodeBorderRadius || '0.5rem'
-    const nodeTitle = def?.nodeTitleColor || (isDark ? '#f9fafb' : '#111827')
-    const nodeContent = def?.nodeContentColor || (isDark ? '#e5e7eb' : '#4b5563')
-    const headlineColor = def?.headlineColor || (isDark ? '#ffffff' : '#111827')
+    const overrides: any = (boardThemeKey !== 'default' && boardThemeOverrides && typeof boardThemeOverrides === 'object')
+      ? boardThemeOverrides
+      : null
+
+    const nodeBg = overrides?.nodeColor || def?.nodeColor || (isDark ? '#1f2937' : 'rgba(255, 255, 255, 0.9)')
+    const nodeRadius = overrides?.nodeBorderRadius || (def as any)?.nodeBorderRadius || '0.5rem'
+    const nodeTitle = overrides?.nodeTitleColor || def?.nodeTitleColor || (isDark ? '#f9fafb' : '#111827')
+    const nodeContent = overrides?.nodeContentColor || def?.nodeContentColor || (isDark ? '#e5e7eb' : '#4b5563')
+    const headlineColor = overrides?.headlineColor || def?.headlineColor || (isDark ? '#ffffff' : '#111827')
 
     const cssVars: Record<string, string> = {
       '--board-node-bg': String(nodeBg),
@@ -341,23 +351,25 @@ function BoardContent({
     }
 
     // Allow themes to override edge palette too.
-    if (boardThemeKey !== 'default' && def?.edgeColor) {
-      cssVars['--edge-default-color'] = String(def.edgeColor)
+    if (boardThemeKey !== 'default') {
+      const edgeColor = overrides?.edgeColor || def?.edgeColor
+      if (edgeColor) cssVars['--edge-default-color'] = String(edgeColor)
     }
-    if (boardThemeKey !== 'default' && def?.edgeHighlightColor) {
-      cssVars['--edge-default-glow'] = String(def.edgeHighlightColor)
+    if (boardThemeKey !== 'default') {
+      const edgeGlow = overrides?.edgeHighlightColor || def?.edgeHighlightColor
+      if (edgeGlow) cssVars['--edge-default-glow'] = String(edgeGlow)
     }
 
     // Direction overlay (pulse + arrowhead) theme hooks
     if (boardThemeKey !== 'default') {
-      const pulse = (def as any)?.edgeHighlightPulseColor || (def as any)?.edgeAccentColor
-      const arrow = (def as any)?.edgeArrowColor || pulse
+      const pulse = overrides?.edgeHighlightPulseColor || (def as any)?.edgeHighlightPulseColor || overrides?.edgeAccentColor || (def as any)?.edgeAccentColor
+      const arrow = overrides?.edgeArrowColor || (def as any)?.edgeArrowColor || pulse
       if (pulse) cssVars['--edge-direction-pulse-color'] = String(pulse)
       if (arrow) cssVars['--edge-direction-arrow-color'] = String(arrow)
     }
 
     return cssVars as any
-  }, [boardThemeKey, effectiveIsDark])
+  }, [boardThemeKey, effectiveIsDark, boardThemeOverrides])
   const toVisualEdgeType = useCallback((pref: string) => {
     switch (pref) {
       case 'straight': return 'floating-straight'

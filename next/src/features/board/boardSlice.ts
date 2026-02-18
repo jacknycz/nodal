@@ -34,6 +34,7 @@ const initialState: BoardState = {
   demoMode: false,
   boardTheme: 'default',
   boardUiMode: null,
+  boardThemeOverrides: null,
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -65,6 +66,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setDemoMode: (demo: boolean) => void
   setBoardTheme: (theme: string) => void
   setBoardUiMode: (mode: BoardState['boardUiMode']) => void
+  setBoardThemeOverrides: (overrides: BoardState['boardThemeOverrides']) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -208,6 +210,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setDemoMode: (demo) => set({ demoMode: !!demo }),
   setBoardTheme: (theme) => set({ boardTheme: normalizeBoardThemeKey(String(theme || 'default')) }),
   setBoardUiMode: (mode) => set({ boardUiMode: (mode === 'light' || mode === 'dark') ? mode : null }),
+  setBoardThemeOverrides: (overrides) => set({ boardThemeOverrides: (overrides && typeof overrides === 'object') ? overrides : null }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Modal from './ui/Modal'
 import TextInput from './ui/TextInput'
 import Select from './ui/Select'
@@ -23,6 +23,45 @@ import { useSupabaseUser } from '../features/auth/authUtils'
 import Tag from './ui/Tag'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import { isAdmin, useUserRole } from '../features/auth/roles'
+import { getBoardTheme } from '../themes/board'
+
+function toHexColor(raw: string): string | null {
+  const v0 = String(raw || '').trim()
+  if (!v0) return null
+  let v = v0
+
+  // Resolve var(--token) from :root if possible
+  const m = v.match(/^var\((--[^)\s]+)\)$/)
+  if (m && typeof window !== 'undefined') {
+    try {
+      const resolved = window.getComputedStyle(document.documentElement).getPropertyValue(m[1]).trim()
+      if (resolved) v = resolved
+    } catch { }
+  }
+
+  // rgb/rgba → hex (ignore alpha)
+  const rgb = v.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
+  if (rgb) {
+    const r = Math.max(0, Math.min(255, Number(rgb[1] || 0)))
+    const g = Math.max(0, Math.min(255, Number(rgb[2] || 0)))
+    const b = Math.max(0, Math.min(255, Number(rgb[3] || 0)))
+    const hex = (n: number) => n.toString(16).padStart(2, '0')
+    return `#${hex(r)}${hex(g)}${hex(b)}`.toLowerCase()
+  }
+
+  // Normalize hex
+  const hex = v.startsWith('#') ? v : `#${v}`
+  if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hex)) return null
+  const h = hex.toLowerCase()
+  if (h.length === 4) {
+    return `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}`
+  }
+  if (h.length === 9) {
+    // Drop alpha for <input type="color" />
+    return h.slice(0, 7)
+  }
+  return h
+}
 
 interface Props {
   open: boolean
@@ -36,7 +75,7 @@ interface Props {
   closeOnBackdropClick?: boolean
 }
 
-export default function BoardSettingsModal({ open, onClose, boardId, initialName, isOwnerView = false, className, backdropClassName, backdropInteractive, closeOnBackdropClick }: Props) {
+export default function BoardSettingsModal({ open, onClose: onCloseRaw, boardId, initialName, isOwnerView = false, className, backdropClassName, backdropInteractive, closeOnBackdropClick }: Props) {
   // Using UI Tabs component instead of manual tabs
   const [pendingBoardName, setPendingBoardName] = useState(initialName || '')
   const edgeType = useBoardStore((s: any) => s.edgeType || 'floating')
@@ -60,6 +99,9 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const [loadedBoardTheme, setLoadedBoardTheme] = useState<string | null>(null)
   const [pendingBoardUiMode, setPendingBoardUiMode] = useState<'light' | 'dark'>('light')
   const [loadedBoardUiMode, setLoadedBoardUiMode] = useState<'light' | 'dark' | null>(null)
+  const [pendingBoardThemeOverrides, setPendingBoardThemeOverrides] = useState<Record<string, string>>({})
+  const [loadedBoardThemeOverrides, setLoadedBoardThemeOverrides] = useState<Record<string, string> | null>(null)
+  const [advancedThemeOpen, setAdvancedThemeOpen] = useState(false)
   const [savingTheme, setSavingTheme] = useState(false)
   const [themeError, setThemeError] = useState<string | null>(null)
   const [gridEnabled, setGridEnabled] = useState<boolean>(true)
@@ -78,45 +120,88 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const [shareError, setShareError] = useState<string | null>(null)
   const [showSentToast, setShowSentToast] = useState(false)
 
+  // Snapshot current live-preview settings so Cancel/Escape/backdrop click can restore them.
+  const previewSnapshotRef = useRef<{
+    edgeType: string
+    boardTheme: string
+    boardUiMode: any
+    boardThemeOverrides: any
+  } | null>(null)
+
+  useEffect(() => {
+    if (!open) { previewSnapshotRef.current = null; return }
+    try {
+      const s: any = useBoardStore.getState()
+      previewSnapshotRef.current = {
+        edgeType: String(s?.edgeType || 'floating'),
+        boardTheme: String(s?.boardTheme || 'default'),
+        boardUiMode: s?.boardUiMode ?? null,
+        boardThemeOverrides: s?.boardThemeOverrides ?? null,
+      }
+    } catch { }
+  }, [open, boardId])
+
+  const restorePreviewSnapshot = () => {
+    const snap = previewSnapshotRef.current
+    if (!snap) return
+    try { useBoardStore.getState().setEdgeType?.(snap.edgeType as any) } catch { }
+    try { useBoardStore.getState().setBoardTheme?.(snap.boardTheme as any) } catch { }
+    try { useBoardStore.getState().setBoardUiMode?.(snap.boardUiMode as any) } catch { }
+    try { useBoardStore.getState().setBoardThemeOverrides?.(snap.boardThemeOverrides as any) } catch { }
+  }
+
+  const handleCancelClose = () => {
+    restorePreviewSnapshot()
+    onCloseRaw()
+  }
+
   useEffect(() => { if (open) setPendingBoardName(initialName || '') }, [open, initialName])
   // no local tab state
 
   useEffect(() => {
     if (!open || !boardId) return
-    ;(async () => {
-      try {
-        let data: any = null
-        let err: any = null
-        ;({ data, error: err } = await supabase.from('boards').select('is_public, ai_style, board_theme, board_ui_mode').eq('id', boardId).maybeSingle() as any)
-        // Backward-compatible fallback when schema hasn't been migrated yet
-        if (err && (
-          String(err?.message || '').toLowerCase().includes('board_theme') ||
-          String(err?.message || '').toLowerCase().includes('board_ui_mode')
-        )) {
-          ;({ data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle() as any)
+      ; (async () => {
+        try {
+          let data: any = null
+          let err: any = null
+            ; ({ data, error: err } = await supabase.from('boards').select('is_public, ai_style, board_theme, board_ui_mode, board_theme_overrides').eq('id', boardId).maybeSingle() as any)
+          // Backward-compatible fallback when schema hasn't been migrated yet
+          if (err && (
+            String(err?.message || '').toLowerCase().includes('board_theme') ||
+            String(err?.message || '').toLowerCase().includes('board_ui_mode') ||
+            String(err?.message || '').toLowerCase().includes('board_theme_overrides')
+          )) {
+            ; ({ data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle() as any)
+          }
+          const isPub = !!(data as any)?.is_public
+          setPendingIsPublic(isPub)
+          setLoadedIsPublic(isPub)
+          const style = String((data as any)?.ai_style || 'balanced') as AIStyleKey
+          setPendingAIStyle(style)
+          try { setAIStyle?.(style) } catch { }
+          const themeKey = String((data as any)?.board_theme || 'default')
+          setPendingBoardTheme(themeKey)
+          setLoadedBoardTheme(themeKey)
+          const uiRaw = String((data as any)?.board_ui_mode || '').toLowerCase()
+          const uiKey: any = (uiRaw === 'dark' || uiRaw === 'light') ? uiRaw : null
+          setLoadedBoardUiMode(uiKey)
+          setPendingBoardUiMode((uiKey as any) || 'light')
+          const ovRaw = (data as any)?.board_theme_overrides
+          const ov = (ovRaw && typeof ovRaw === 'object') ? (ovRaw as any) : null
+          setLoadedBoardThemeOverrides(ov)
+          setPendingBoardThemeOverrides(ov || {})
+          try { useBoardStore.getState().setBoardThemeOverrides?.(ov || null) } catch { }
+        } catch {
+          setPendingIsPublic(false)
+          setLoadedIsPublic(false)
+          setPendingBoardTheme('default')
+          setLoadedBoardTheme('default')
+          setPendingBoardUiMode('light')
+          setLoadedBoardUiMode(null)
+          setPendingBoardThemeOverrides({})
+          setLoadedBoardThemeOverrides(null)
         }
-        const isPub = !!(data as any)?.is_public
-        setPendingIsPublic(isPub)
-        setLoadedIsPublic(isPub)
-        const style = String((data as any)?.ai_style || 'balanced') as AIStyleKey
-        setPendingAIStyle(style)
-        try { setAIStyle?.(style) } catch {}
-        const themeKey = String((data as any)?.board_theme || 'default')
-        setPendingBoardTheme(themeKey)
-        setLoadedBoardTheme(themeKey)
-        const uiRaw = String((data as any)?.board_ui_mode || '').toLowerCase()
-        const uiKey: any = (uiRaw === 'dark' || uiRaw === 'light') ? uiRaw : null
-        setLoadedBoardUiMode(uiKey)
-        setPendingBoardUiMode((uiKey as any) || 'light')
-      } catch {
-        setPendingIsPublic(false)
-        setLoadedIsPublic(false)
-        setPendingBoardTheme('default')
-        setLoadedBoardTheme('default')
-        setPendingBoardUiMode('light')
-        setLoadedBoardUiMode(null)
-      }
-    })()
+      })()
   }, [open, boardId, supabase])
 
   useEffect(() => {
@@ -129,6 +214,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     setDemoError(null)
     setDemoUrl('')
   }, [open])
+
+  // UX: collapse advanced overrides when switching base theme
+  useEffect(() => {
+    setAdvancedThemeOpen(false)
+  }, [pendingBoardTheme])
 
   // Load grid setting from localStorage on open
   useEffect(() => {
@@ -220,7 +310,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
       await navigator.clipboard.writeText(demoUrl)
       setDemoCopiedToast(true)
       setTimeout(() => setDemoCopiedToast(false), 1600)
-      try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Demo link copied', variant: 'success' } })) } catch {}
+      try { window.dispatchEvent(new CustomEvent('nodal:toast', { detail: { message: 'Demo link copied', variant: 'success' } })) } catch { }
     } catch {
       setDemoError('Failed to copy link')
     }
@@ -230,11 +320,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     <>
       <Modal
         open={open}
-        onClose={onClose}
+        onClose={handleCancelClose}
         // title="Board Settings"
         className={[
           // Transparent modal panel so the board stays visible behind settings.
-          'bg-transparent dark:bg-transparent shadow-none p-0 max-w-2xl',
+          'bg-transparent dark:bg-transparent p-0 max-w-3xl!',
           className || '',
         ].filter(Boolean).join(' ')}
         backdropClassName={backdropClassName || 'bg-transparent'}
@@ -242,7 +332,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         closeOnBackdropClick={typeof closeOnBackdropClick === 'boolean' ? closeOnBackdropClick : true}
         actions={
           <>
-            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="secondary" onClick={handleCancelClose}>Cancel</Button>
             <Button disabled={savingVisibility || savingTheme} onClick={async () => {
               try {
                 setVisibilityError(null)
@@ -282,7 +372,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 const uiModeToSave: any = pendingBoardTheme === 'default' ? null : (pendingBoardUiMode || 'light')
                 const themeChanged = loadedBoardTheme !== null && pendingBoardTheme !== loadedBoardTheme
                 const uiChanged = pendingBoardTheme !== 'default' && uiModeToSave !== loadedBoardUiMode
-                if (canThemeBoard && (themeChanged || uiChanged)) {
+                const overridesToSave: any = pendingBoardTheme === 'default'
+                  ? null
+                  : (Object.keys(pendingBoardThemeOverrides || {}).length ? pendingBoardThemeOverrides : null)
+                const overridesChanged = JSON.stringify(overridesToSave || null) !== JSON.stringify(loadedBoardThemeOverrides || null)
+                if (canThemeBoard && (themeChanged || uiChanged || overridesChanged)) {
                   setSavingTheme(true)
                   try {
                     const { data: sess } = await supabase.auth.getSession()
@@ -291,16 +385,18 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                     const resp = await fetch('/api/board/theme', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                      body: JSON.stringify({ boardId, theme: pendingBoardTheme, uiMode: uiModeToSave }),
+                      body: JSON.stringify({ boardId, theme: pendingBoardTheme, uiMode: uiModeToSave, overrides: overridesToSave }),
                     })
                     if (!resp.ok) {
                       const j = await resp.json().catch(() => ({}))
                       throw new Error(j?.error || `Failed (${resp.status})`)
                     }
                     setLoadedBoardTheme(pendingBoardTheme)
-                    try { useBoardStore.getState().setBoardTheme?.(pendingBoardTheme) } catch {}
+                    try { useBoardStore.getState().setBoardTheme?.(pendingBoardTheme) } catch { }
                     setLoadedBoardUiMode(uiModeToSave)
-                    try { useBoardStore.getState().setBoardUiMode?.(uiModeToSave) } catch {}
+                    try { useBoardStore.getState().setBoardUiMode?.(uiModeToSave) } catch { }
+                    setLoadedBoardThemeOverrides(overridesToSave || null)
+                    try { useBoardStore.getState().setBoardThemeOverrides?.(overridesToSave || null) } catch { }
                   } catch (e: any) {
                     themeFailed = true
                     setThemeError(String(e?.message || 'Failed to save theme'))
@@ -310,20 +406,19 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                   if (themeFailed) return
                 }
 
-                onClose()
+                onCloseRaw()
               } catch (e: any) {
                 setVisibilityError(String(e?.message || 'Failed to save'))
-                try { setSavingVisibility(false) } catch {}
-                try { setSavingTheme(false) } catch {}
+                try { setSavingVisibility(false) } catch { }
+                try { setSavingTheme(false) } catch { }
               }
             }}>Save</Button>
           </>
         }
       >
-        <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-4xl shadow-2xl border border-gray-200/60 dark:border-gray-700/60 p-4 md:p-6">
-          <Tabs disableRouting>
-            <Tab label="board" headerLabel="Board">
-              <div className="space-y-6 py-4">
+        <Tabs disableRouting>
+          <Tab label="board" headerLabel="Board">
+            <div className="space-y-6 py-4">
               {admin && (
                 <div className="flex items-start justify-between gap-3 rounded-md border border-gray-200 dark:border-gray-700 p-3">
                   <div className="min-w-0">
@@ -339,7 +434,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                         <TextInput
                           label=""
                           value={demoUrl}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           fullWidth
                         />
                         <Button size="sm" onClick={copyDemoLink}>Copy link</Button>
@@ -418,8 +513,8 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                     try {
                       const key = `nodal:board:${boardId}:gridEnabled`
                       if (typeof window !== 'undefined') window.localStorage.setItem(key, String(checked))
-                      try { window.dispatchEvent(new CustomEvent('nodal:grid-updated', { detail: { boardId, enabled: checked } })) } catch {}
-                    } catch {}
+                      try { window.dispatchEvent(new CustomEvent('nodal:grid-updated', { detail: { boardId, enabled: checked } })) } catch { }
+                    } catch { }
                   }}
                   label="Snap to grid"
                   description="Snap nodes to a 10px grid and show the grid overlay."
@@ -429,65 +524,70 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
           </Tab>
           <Tab label="theme" headerLabel="Theme">
             <div className="space-y-6 py-4">
-              <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-                <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">Board theme</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Themes change the board background (more customization coming later).</div>
-                  {themeError && (
-                    <div className="mt-1 text-xs text-red-600 dark:text-red-400">{themeError}</div>
-                  )}
-                  {!canThemeBoard && (
-                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upgrade to Pro to unlock board themes.</div>
-                  )}
-                </div>
+              <div>
+                {themeError && (
+                  <div className="mt-1 text-xs text-red-600 dark:text-red-400">{themeError}</div>
+                )}
+                {!canThemeBoard && (
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upgrade to Pro to unlock board themes.</div>
+                )}
+              </div>
+
+              <Select
+                label="Select theme"
+                value={pendingBoardTheme as any}
+                onChange={(v: any) => {
+                  // Live preview: apply theme immediately on selection.
+                  const next = String(v || 'default')
+                  setPendingBoardTheme(next)
+                  try { useBoardStore.getState().setBoardTheme?.(next) } catch { }
+                  if (next === 'default') {
+                    try { useBoardStore.getState().setBoardUiMode?.(null as any) } catch { }
+                    setPendingBoardThemeOverrides({})
+                    try { useBoardStore.getState().setBoardThemeOverrides?.(null as any) } catch { }
+                  } else {
+                    // Ensure we have a default UI mode when a theme is active.
+                    const ui = (pendingBoardUiMode === 'dark') ? 'dark' : 'light'
+                    setPendingBoardUiMode(ui)
+                    try { useBoardStore.getState().setBoardUiMode?.(ui as any) } catch { }
+
+                    // Switching base theme nukes overrides; switching back restores loaded overrides.
+                    const shouldRestore = loadedBoardTheme && next === loadedBoardTheme
+                    const ov = shouldRestore ? (loadedBoardThemeOverrides || null) : null
+                    setPendingBoardThemeOverrides((ov as any) || {})
+                    try { useBoardStore.getState().setBoardThemeOverrides?.(ov as any) } catch { }
+                  }
+                }}
+                options={[
+                  { label: 'Default', value: 'default' },
+                  { label: 'Red', value: 'red' },
+                  { label: 'Presentation', value: 'presentation' },
+                  { label: 'Education', value: 'education' },
+                  { label: 'Creative', value: 'creative' },
+                  { label: 'Technical', value: 'technical' },
+                  { label: 'Sci-fi', value: 'scifi' },
+                ]}
+                fullWidth
+                disabled={!canThemeBoard}
+              />
+              {pendingBoardTheme !== 'default' && (
                 <Select
-                  label=""
-                  value={pendingBoardTheme as any}
+                  label="UI Colors"
+                  value={pendingBoardUiMode as any}
                   onChange={(v: any) => {
-                    // Live preview: apply theme immediately on selection.
-                    const next = String(v || 'default')
-                    setPendingBoardTheme(next)
-                    try { useBoardStore.getState().setBoardTheme?.(next) } catch {}
-                    if (next === 'default') {
-                      try { useBoardStore.getState().setBoardUiMode?.(null as any) } catch {}
-                    } else {
-                      // Ensure we have a default UI mode when a theme is active.
-                      const ui = (pendingBoardUiMode === 'dark') ? 'dark' : 'light'
-                      setPendingBoardUiMode(ui)
-                      try { useBoardStore.getState().setBoardUiMode?.(ui as any) } catch {}
-                    }
+                    // Live preview: apply UI mode immediately on selection.
+                    const next = String(v || 'light').toLowerCase() === 'dark' ? 'dark' : 'light'
+                    setPendingBoardUiMode(next as any)
+                    try { useBoardStore.getState().setBoardUiMode?.(next as any) } catch { }
                   }}
                   options={[
-                    { label: 'Default', value: 'default' },
-                    { label: 'Red', value: 'red' },
-                    { label: 'Presentation', value: 'presentation' },
-                    { label: 'Education', value: 'education' },
-                    { label: 'Creative', value: 'creative' },
-                    { label: 'Technical', value: 'technical' },
-                    { label: 'Sci-fi', value: 'scifi' },
+                    { label: 'Light', value: 'light' },
+                    { label: 'Dark', value: 'dark' },
                   ]}
                   fullWidth
                   disabled={!canThemeBoard}
                 />
-                {pendingBoardTheme !== 'default' && (
-                  <Select
-                    label="UI Colors"
-                    value={pendingBoardUiMode as any}
-                    onChange={(v: any) => {
-                      // Live preview: apply UI mode immediately on selection.
-                      const next = String(v || 'light').toLowerCase() === 'dark' ? 'dark' : 'light'
-                      setPendingBoardUiMode(next as any)
-                      try { useBoardStore.getState().setBoardUiMode?.(next as any) } catch {}
-                    }}
-                    options={[
-                      { label: 'Light', value: 'light' },
-                      { label: 'Dark', value: 'dark' },
-                    ]}
-                    fullWidth
-                    disabled={!canThemeBoard}
-                  />
-                )}
-              </div>
+              )}
               {pendingBoardTheme === 'default' && (
                 <div className="pt-1">
                   <Toggle
@@ -496,6 +596,267 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                     label="Dark mode"
                     description="Toggle between light and dark themes."
                   />
+                </div>
+              )}
+
+              {pendingBoardTheme !== 'default' && (
+                <div className="space-y-4 pt-2">
+                  <div className="rounded-md border border-gray-200/80 dark:border-gray-700/80 bg-white/70 dark:bg-gray-900/50 backdrop-blur-sm overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-start justify-between gap-3 px-3 py-2 text-left"
+                      onClick={() => setAdvancedThemeOpen((v) => !v)}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Advanced theme settings</div>
+                        <div className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+                          Advanced theme settings are cleared if you switch the theme.
+                        </div>
+                      </div>
+                      <div className="flex-none pt-0.5">
+                        <span
+                          className={[
+                            'inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 transition-transform',
+                            advancedThemeOpen ? 'rotate-180' : 'rotate-0',
+                          ].join(' ')}
+                          aria-hidden="true"
+                        >
+                          ▾
+                        </span>
+                      </div>
+                    </button>
+
+                    {advancedThemeOpen && (
+                      <div className="px-3 pb-3 pt-1 space-y-6">
+                        {/* Background */}
+                        <div className="space-y-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Background</div>
+                          {(() => {
+                            const def: any = getBoardTheme(String(pendingBoardTheme || 'default'))
+                            const baseRaw = String(def?.background || '')
+                            const overrideRaw = String((pendingBoardThemeOverrides as any)?.background || '')
+                            const appliedRaw = overrideRaw || baseRaw
+                            const baseHex = toHexColor(baseRaw)
+                            const appliedHex = toHexColor(appliedRaw)
+                            const overrideHex = toHexColor(overrideRaw)
+                            const pickerValue = overrideHex || appliedHex || baseHex || '#000000'
+
+                            const setOverride = (value: string | null) => {
+                              setPendingBoardThemeOverrides((prev) => {
+                                const next = { ...(prev || {}) } as any
+                                if (!value) delete next.background
+                                else next.background = value
+                                try { useBoardStore.getState().setBoardThemeOverrides?.(Object.keys(next).length ? next : null) } catch { }
+                                return next
+                              })
+                            }
+
+                            return (
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white">Board background</div>
+                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                                    Applied: {appliedHex || appliedRaw || '—'}{baseHex && !overrideHex ? ` (theme ${baseHex})` : ''}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="color"
+                                    value={pickerValue}
+                                    onChange={(e) => setOverride(toHexColor((e.target as any).value))}
+                                    disabled={!canThemeBoard}
+                                    className="h-9 w-10 rounded-md border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/50"
+                                    aria-label="Board background color picker"
+                                  />
+                                  <input
+                                    value={overrideRaw}
+                                    onChange={(e) => {
+                                      const raw = String((e.target as HTMLInputElement).value || '')
+                                      const normalized = toHexColor(raw)
+                                      setPendingBoardThemeOverrides((prev) => ({ ...(prev || {}), background: raw } as any))
+                                      if (normalized) setOverride(normalized)
+                                    }}
+                                    placeholder={appliedHex || '#000000'}
+                                    disabled={!canThemeBoard}
+                                    className="h-9 w-28 px-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white font-mono"
+                                    aria-label="Board background hex"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setOverride(null)}
+                                    disabled={!canThemeBoard || !overrideRaw}
+                                    className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white disabled:opacity-50"
+                                  >
+                                    Reset
+                                  </button>
+                                </div>
+                              </div>
+                            )
+                          })()}
+                        </div>
+
+                        {/* Nodes */}
+                        <div className="space-y-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Nodes</div>
+                          {(() => {
+                            const def: any = getBoardTheme(String(pendingBoardTheme || 'default'))
+                            const base: any = {
+                              nodeColor: String(def?.nodeColor || ''),
+                              nodeTitleColor: String(def?.nodeTitleColor || ''),
+                              nodeContentColor: String(def?.nodeContentColor || ''),
+                              headlineColor: String(def?.headlineColor || ''),
+                            }
+                            const setKey = (key: string, value: string | null) => {
+                              setPendingBoardThemeOverrides((prev) => {
+                                const next = { ...(prev || {}) } as any
+                                if (!value) delete next[key]
+                                else next[key] = value
+                                try { useBoardStore.getState().setBoardThemeOverrides?.(Object.keys(next).length ? next : null) } catch { }
+                                return next
+                              })
+                            }
+                            const row = (key: string, label: string) => {
+                              const overrideRaw = String((pendingBoardThemeOverrides as any)?.[key] || '')
+                              const appliedRaw = overrideRaw || base[key] || ''
+                              const baseHex = toHexColor(base[key] || '')
+                              const appliedHex = toHexColor(appliedRaw)
+                              const overrideHex = toHexColor(overrideRaw)
+                              const pickerValue = overrideHex || appliedHex || baseHex || '#000000'
+                              return (
+                                <div key={key} className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">{label}</div>
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                                      Applied: {appliedHex || appliedRaw || '—'}{baseHex && !overrideHex ? ` (theme ${baseHex})` : ''}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="color"
+                                      value={pickerValue}
+                                      onChange={(e) => setKey(key, toHexColor((e.target as any).value))}
+                                      disabled={!canThemeBoard}
+                                      className="h-9 w-10 rounded-md border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/50"
+                                      aria-label={`${label} color picker`}
+                                    />
+                                    <input
+                                      value={overrideRaw}
+                                      onChange={(e) => {
+                                        const raw = String((e.target as HTMLInputElement).value || '')
+                                        const normalized = toHexColor(raw)
+                                        setPendingBoardThemeOverrides((prev) => ({ ...(prev || {}), [key]: raw } as any))
+                                        if (normalized) setKey(key, normalized)
+                                      }}
+                                      placeholder={appliedHex || '#000000'}
+                                      disabled={!canThemeBoard}
+                                      className="h-9 w-28 px-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white font-mono"
+                                      aria-label={`${label} hex`}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setKey(key, null)}
+                                      disabled={!canThemeBoard || !overrideRaw}
+                                      className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white disabled:opacity-50"
+                                    >
+                                      Reset
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return (
+                              <div className="space-y-3">
+                                {row('nodeColor', 'Node background')}
+                                {row('nodeTitleColor', 'Node title')}
+                                {row('nodeContentColor', 'Node content')}
+                                {row('headlineColor', 'Headline')}
+                              </div>
+                            )
+                          })()}
+                        </div>
+
+                        {/* Edges */}
+                        <div className="space-y-3">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Edges</div>
+                          {(() => {
+                            const def: any = getBoardTheme(String(pendingBoardTheme || 'default'))
+                            const base: any = {
+                              edgeColor: String(def?.edgeColor || ''),
+                              edgeHighlightColor: String(def?.edgeHighlightColor || ''),
+                              edgeHighlightPulseColor: String(def?.edgeHighlightPulseColor || def?.edgeAccentColor || ''),
+                              edgeArrowColor: String(def?.edgeArrowColor || def?.edgeAccentColor || ''),
+                            }
+                            const setKey = (key: string, value: string | null) => {
+                              setPendingBoardThemeOverrides((prev) => {
+                                const next = { ...(prev || {}) } as any
+                                if (!value) delete next[key]
+                                else next[key] = value
+                                try { useBoardStore.getState().setBoardThemeOverrides?.(Object.keys(next).length ? next : null) } catch { }
+                                return next
+                              })
+                            }
+                            const row = (key: string, label: string) => {
+                              const overrideRaw = String((pendingBoardThemeOverrides as any)?.[key] || '')
+                              const appliedRaw = overrideRaw || base[key] || ''
+                              const baseHex = toHexColor(base[key] || '')
+                              const appliedHex = toHexColor(appliedRaw)
+                              const overrideHex = toHexColor(overrideRaw)
+                              const pickerValue = overrideHex || appliedHex || baseHex || '#000000'
+                              return (
+                                <div key={key} className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">{label}</div>
+                                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 font-mono break-all">
+                                      Applied: {appliedHex || appliedRaw || '—'}{baseHex && !overrideHex ? ` (theme ${baseHex})` : ''}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="color"
+                                      value={pickerValue}
+                                      onChange={(e) => setKey(key, toHexColor((e.target as any).value))}
+                                      disabled={!canThemeBoard}
+                                      className="h-9 w-10 rounded-md border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/50"
+                                      aria-label={`${label} color picker`}
+                                    />
+                                    <input
+                                      value={overrideRaw}
+                                      onChange={(e) => {
+                                        const raw = String((e.target as HTMLInputElement).value || '')
+                                        const normalized = toHexColor(raw)
+                                        setPendingBoardThemeOverrides((prev) => ({ ...(prev || {}), [key]: raw } as any))
+                                        if (normalized) setKey(key, normalized)
+                                      }}
+                                      placeholder={appliedHex || '#000000'}
+                                      disabled={!canThemeBoard}
+                                      className="h-9 w-28 px-2 rounded-md border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/50 text-sm text-gray-900 dark:text-white font-mono"
+                                      aria-label={`${label} hex`}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setKey(key, null)}
+                                      disabled={!canThemeBoard || !overrideRaw}
+                                      className="text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white disabled:opacity-50"
+                                    >
+                                      Reset
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return (
+                              <div className="space-y-3">
+                                {row('edgeColor', 'Edge color')}
+                                {row('edgeHighlightColor', 'Edge highlight')}
+                                {row('edgeHighlightPulseColor', 'Direction pulse')}
+                                {row('edgeArrowColor', 'Arrow')}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -508,13 +869,13 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 onChange={async (v: any) => {
                   const next = String(v || 'balanced') as AIStyleKey
                   setPendingAIStyle(next)
-                  try { setAIStyle?.(next) } catch {}
+                  try { setAIStyle?.(next) } catch { }
                   try {
                     if (boardId) {
                       await (supabase.from('boards') as any).update({ ai_style: next } as any).eq('id', boardId)
-                      try { window.dispatchEvent(new CustomEvent('nodal:board-ai-style-updated', { detail: { boardId, aiStyle: next } })) } catch {}
+                      try { window.dispatchEvent(new CustomEvent('nodal:board-ai-style-updated', { detail: { boardId, aiStyle: next } })) } catch { }
                     }
-                  } catch {}
+                  } catch { }
                 }}
                 options={AI_STYLE_OPTIONS as any}
                 fullWidth
@@ -610,8 +971,7 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
               <ColorgoryManager inline boardId={boardId} />
             </div>
           </Tab>
-          </Tabs>
-        </div>
+        </Tabs>
       </Modal>
       <Toast open={showSentToast} onClose={() => setShowSentToast(false)} variant="success" autoHideMs={1800}>
         Invites sent!

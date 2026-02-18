@@ -3,6 +3,42 @@ import { getSupabaseServiceClient } from '../../../../src/features/storage/supab
 
 const ALLOWED_THEMES = new Set(['default', 'red', 'presentation', 'education', 'creative', 'technical', 'scifi'])
 const ALLOWED_UI_MODES = new Set(['light', 'dark'])
+const ALLOWED_OVERRIDE_KEYS = new Set([
+  'background',
+  'nodeColor',
+  'nodeTitleColor',
+  'nodeContentColor',
+  'headlineColor',
+  'nodeBorderRadius',
+  'edgeColor',
+  'edgeHighlightColor',
+  'edgeHighlightPulseColor',
+  'edgeArrowColor',
+  'edgeAccentColor',
+])
+
+function isValidHexColor(v: string): boolean {
+  const s = String(v || '').trim()
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(s)
+}
+
+function sanitizeOverrides(input: any): any | null {
+  if (!input || typeof input !== 'object') return null
+  const out: any = {}
+  for (const [k, raw] of Object.entries(input)) {
+    if (!ALLOWED_OVERRIDE_KEYS.has(String(k))) continue
+    const v = typeof raw === 'string' ? raw.trim() : ''
+    if (!v) continue
+    if (String(k) === 'nodeBorderRadius') {
+      // Not a color; allow simple CSS length strings like "12px" / "0.75rem"
+      out[k] = v
+      continue
+    }
+    if (!isValidHexColor(v)) continue
+    out[k] = v
+  }
+  return Object.keys(out).length ? out : null
+}
 
 function isAdminUser(user: any): boolean {
   if (!user) return false
@@ -27,7 +63,7 @@ function isProUser(user: any): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const { boardId, theme, uiMode } = await req.json()
+    const { boardId, theme, uiMode, overrides } = await req.json()
     const themeKey = String(theme || '').trim().toLowerCase()
     if (!boardId || !ALLOWED_THEMES.has(themeKey)) {
       return NextResponse.json({ error: 'Missing boardId or invalid theme' }, { status: 400 })
@@ -69,9 +105,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const sanitizedOverrides = themeKey === 'default' ? null : sanitizeOverrides(overrides)
+
     const payload: any = {
       board_theme: themeKey,
-      board_theme_overrides: null, // switching base theme nukes overrides
+      // If switching base theme, client should send overrides=null; we sanitize either way.
+      board_theme_overrides: themeKey === 'default' ? null : sanitizedOverrides,
       // UI mode is only meaningful for non-default themes. If theme is default, clear it.
       board_ui_mode: themeKey === 'default' ? null : (uiModeKey || 'light'),
       last_modified: Date.now(),
