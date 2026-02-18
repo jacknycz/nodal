@@ -37,6 +37,8 @@ interface SavedBoard {
   isPublic?: boolean
   aiStyle?: string
   isDemo?: boolean
+  boardTheme?: string
+  boardThemeOverrides?: any
 }
 
 // Document storage interfaces

@@ -94,6 +94,8 @@ export interface BoardState {
   hoveredEdgeId?: string | null
   // Demo boards: allow "pro-like" UI without persistence
   demoMode?: boolean
+  // Board theme key (base theme)
+  boardTheme?: string
 }
 
 export interface BoardActions {
@@ -119,4 +121,5 @@ export interface BoardActions {
   setEdgeType?: (t: BoardState['edgeType']) => void
   setAIStyle?: (style: BoardState['aiStyle']) => void
   setDemoMode?: (demo: boolean) => void
+  setBoardTheme?: (theme: string) => void
 } 

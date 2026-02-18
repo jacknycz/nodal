@@ -22,7 +22,7 @@ import Toast from './ui/Toast'
 import { useSupabaseUser } from '../features/auth/authUtils'
 import Tag from './ui/Tag'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
-import { isAdmin } from '../features/auth/roles'
+import { isAdmin, useUserRole } from '../features/auth/roles'
 
 interface Props {
   open: boolean
@@ -49,11 +49,17 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
   const { isDark, setTheme } = useTheme()
   const user = useSupabaseUser()
   const supabase = getSupabaseClient()
-  const admin = isAdmin(user)
+  const { isPro, isAdmin: isAdminRole } = useUserRole()
+  const admin = isAdmin(user) || isAdminRole
+  const canThemeBoard = admin || (isOwnerView && isPro)
   const [pendingIsPublic, setPendingIsPublic] = useState<boolean>(false)
   const [loadedIsPublic, setLoadedIsPublic] = useState<boolean | null>(null)
   const [savingVisibility, setSavingVisibility] = useState(false)
   const [visibilityError, setVisibilityError] = useState<string | null>(null)
+  const [pendingBoardTheme, setPendingBoardTheme] = useState<string>('default')
+  const [loadedBoardTheme, setLoadedBoardTheme] = useState<string | null>(null)
+  const [savingTheme, setSavingTheme] = useState(false)
+  const [themeError, setThemeError] = useState<string | null>(null)
   const [gridEnabled, setGridEnabled] = useState<boolean>(true)
   const [pendingAIStyle, setPendingAIStyle] = useState<AIStyleKey>('balanced')
   const [demoCreating, setDemoCreating] = useState(false)
@@ -77,14 +83,28 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     if (!open || !boardId) return
     ;(async () => {
       try {
-        const { data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle()
+        let data: any = null
+        let err: any = null
+        ;({ data, error: err } = await supabase.from('boards').select('is_public, ai_style, board_theme').eq('id', boardId).maybeSingle() as any)
+        // Backward-compatible fallback when schema hasn't been migrated yet
+        if (err && String(err?.message || '').toLowerCase().includes('board_theme')) {
+          ;({ data } = await supabase.from('boards').select('is_public, ai_style').eq('id', boardId).maybeSingle() as any)
+        }
         const isPub = !!(data as any)?.is_public
         setPendingIsPublic(isPub)
         setLoadedIsPublic(isPub)
         const style = String((data as any)?.ai_style || 'balanced') as AIStyleKey
         setPendingAIStyle(style)
         try { setAIStyle?.(style) } catch {}
-      } catch { setPendingIsPublic(false) }
+        const themeKey = String((data as any)?.board_theme || 'default')
+        setPendingBoardTheme(themeKey)
+        setLoadedBoardTheme(themeKey)
+      } catch {
+        setPendingIsPublic(false)
+        setLoadedIsPublic(false)
+        setPendingBoardTheme('default')
+        setLoadedBoardTheme('default')
+      }
     })()
   }, [open, boardId, supabase])
 
@@ -92,6 +112,8 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
     if (!open) return
     setVisibilityError(null)
     setSavingVisibility(false)
+    setThemeError(null)
+    setSavingTheme(false)
     setDemoCreating(false)
     setDemoError(null)
     setDemoUrl('')
@@ -206,9 +228,11 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
         actions={
           <>
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button disabled={savingVisibility} onClick={async () => {
+            <Button disabled={savingVisibility || savingTheme} onClick={async () => {
               try {
                 setVisibilityError(null)
+                setThemeError(null)
+                let themeFailed = false
                 const newName = (pendingBoardName || '').trim()
                 if (isOwnerView && boardId && newName && newName !== (initialName || '')) {
                   try {
@@ -239,10 +263,38 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                   }
                 }
 
+                // Persist board theme ONLY on Save (and only for Pro/Admin; admins can override ownership)
+                if (canThemeBoard && loadedBoardTheme !== null && pendingBoardTheme !== loadedBoardTheme) {
+                  setSavingTheme(true)
+                  try {
+                    const { data: sess } = await supabase.auth.getSession()
+                    const token = sess?.session?.access_token
+                    if (!token) throw new Error('Not signed in')
+                    const resp = await fetch('/api/board/theme', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ boardId, theme: pendingBoardTheme }),
+                    })
+                    if (!resp.ok) {
+                      const j = await resp.json().catch(() => ({}))
+                      throw new Error(j?.error || `Failed (${resp.status})`)
+                    }
+                    setLoadedBoardTheme(pendingBoardTheme)
+                    try { useBoardStore.getState().setBoardTheme?.(pendingBoardTheme) } catch {}
+                  } catch (e: any) {
+                    themeFailed = true
+                    setThemeError(String(e?.message || 'Failed to save theme'))
+                  } finally {
+                    setSavingTheme(false)
+                  }
+                  if (themeFailed) return
+                }
+
                 onClose()
               } catch (e: any) {
                 setVisibilityError(String(e?.message || 'Failed to save'))
                 try { setSavingVisibility(false) } catch {}
+                try { setSavingTheme(false) } catch {}
               }
             }}>Save</Button>
           </>
@@ -316,6 +368,30 @@ export default function BoardSettingsModal({ open, onClose, boardId, initialName
                 fullWidth
                 disabled={!isOwnerView}
               />
+              <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">Board theme</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Themes change the board background (more customization coming later).</div>
+                  {themeError && (
+                    <div className="mt-1 text-xs text-red-600 dark:text-red-400">{themeError}</div>
+                  )}
+                  {!canThemeBoard && (
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">Upgrade to Pro to unlock board themes.</div>
+                  )}
+                </div>
+                <Select
+                  label=""
+                  value={pendingBoardTheme as any}
+                  onChange={(v: any) => setPendingBoardTheme(String(v || 'default'))}
+                  options={[
+                    { label: 'Default', value: 'default' },
+                    { label: 'Blue', value: 'blue' },
+                    { label: 'Red', value: 'red' },
+                  ]}
+                  fullWidth
+                  disabled={!canThemeBoard}
+                />
+              </div>
               <TextInput
                 label="Board topic"
                 value={topic}

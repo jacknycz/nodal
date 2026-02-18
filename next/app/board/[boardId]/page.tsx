@@ -140,6 +140,11 @@ export default function BoardPage() {
     return () => { try { useBoardStore.getState().setDemoMode?.(false) } catch {} }
   }, [isDemoBoard])
 
+  // Expose board theme via board store so background components can render consistently
+  useEffect(() => {
+    try { useBoardStore.getState().setBoardTheme?.(String((board as any)?.boardTheme || 'default')) } catch {}
+  }, [board])
+
   // Deep link: start story immediately when opened with ?story=<starterNodeId>
   useEffect(() => {
     if (!ready) return
@@ -181,6 +186,7 @@ export default function BoardPage() {
               initialColorgories={(board.data as any)?.colorgories || []}
               initialEdgeType={(board.data as any)?.meta?.edgeType || null}
               initialAIStyle={(board as any)?.aiStyle || null}
+              initialBoardTheme={(board as any)?.boardTheme || null}
               onBoardStateChange={handleBoardStateChange}
               screenshotMode={screenshotMode}
               boardId={boardId}

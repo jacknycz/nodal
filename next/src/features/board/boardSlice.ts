@@ -26,6 +26,7 @@ const initialState: BoardState = {
   aiStyle: 'balanced' as AIStyleKey,
   hoveredEdgeId: null,
   demoMode: false,
+  boardTheme: 'default',
 }
 
 export const useBoardStore = create<BoardState & BoardActions & {
@@ -55,6 +56,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setHoveredEdgeId: (id: string | null) => void
   setAIStyle: (style: AIStyleKey) => void
   setDemoMode: (demo: boolean) => void
+  setBoardTheme: (theme: string) => void
 }>((set, _get) => ({
   ...initialState,
 
@@ -196,6 +198,7 @@ export const useBoardStore = create<BoardState & BoardActions & {
   setHoveredEdgeId: (id) => set({ hoveredEdgeId: id }),
   setAIStyle: (style) => set({ aiStyle: (style || 'balanced') as AIStyleKey }),
   setDemoMode: (demo) => set({ demoMode: !!demo }),
+  setBoardTheme: (theme) => set({ boardTheme: String(theme || 'default') }),
 
   // Colorgories
   setColorgories: (c) => set({ colorgories: c }),

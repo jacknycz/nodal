@@ -15,6 +15,7 @@ import IconButton from './ui/IconButton'
 import { getSupabaseClient } from '../features/auth/supabaseClient'
 import Avatar from './ui/Avatar'
 import { useRouter } from 'next/navigation'
+import { useBoardStore } from '../features/board/boardSlice'
 
 interface AvatarMenuProps {
   currentBoardName?: string
@@ -195,6 +196,8 @@ export default function AvatarMenu({
     return source.slice(0, 2).toUpperCase()
   }
 
+  const boardTheme = useBoardStore((s: any) => String((s as any)?.boardTheme || 'default'))
+
 
   return (
     <>
@@ -291,10 +294,12 @@ export default function AvatarMenu({
             </div>
           )}
 
-          {/* Theme Toggle */}
-          <div className="px-4 py-2">
-            <ThemeToggle />
-          </div>
+          {/* Theme Toggle (hidden when board theme is not default) */}
+          {boardTheme === 'default' && (
+            <div className="px-4 py-2">
+              <ThemeToggle />
+            </div>
+          )}
 
           {/* Separator */}
           <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
